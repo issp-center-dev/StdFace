@@ -2,13 +2,13 @@
 cmake_minimum_required(VERSION 2.8.0 )
 
 if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
-  message(FATAL_ERROR "cmake should be executed not for 'src' subdirectory, but for the top directory of UHF.")
+  message(FATAL_ERROR "cmake should be executed not for 'src' subdirectory, but for the top directory of StdFace.")
 endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
 include_directories(include)
 include_directories(common)
-set(SOURCES_UHF
-        UHFmain.c output.c cal_energy.c green.c makeham.c diag.c initial.c matrixlapack.c readdef.c common/setmemory.c
+set(SOURCES_StdFace
+        StdFacemain.c output.c cal_energy.c green.c makeham.c diag.c initial.c matrixlapack.c readdef.c common/setmemory.c
  )
 
 include_directories(sfmt)
@@ -17,9 +17,9 @@ add_definitions(-DMEXP=19937)
 add_library(StdFace STATIC ChainLattice.c HoneycombLattice.c SquareLattice.c StdFace_main.c StdFace_ModelUtil.c TriangularLattice.c Ladder.c Kagome.c Orthorhombic.c Pyrochlore.c Wannier90.c FCOrtho.c setmemory.c)
 
 if (UHF)
-   add_executable(UHF_dry.out dry.c)
-   target_link_libraries(UHF_dry.out StdFace m)
-   install(TARGETS UHF_dry.out RUNTIME DESTINATION bin)
+   add_executable(uhf_dry.out dry.c)
+   target_link_libraries(uhf_dry.out StdFace m)
+   install(TARGETS StdFace_dry.out RUNTIME DESTINATION bin)
 endif(UHF)
 
 if (MVMC)
