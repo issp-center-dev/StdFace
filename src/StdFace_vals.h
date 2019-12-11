@@ -374,7 +374,7 @@ struct StdIntList {
     double mix; /**<@brief linear mixing ratio for update*/
     int eps; /**<@brief convergence threshold for Green's functions */
     int eps_slater;/**<@brief convergence threshold for Slater's functions */
-    int iteration_max;/**<@brief max number for iterations*/
+    int Iteration_max;/**<@brief max number for iterations*/
     int NMPTrans;/**<@brief Number of translation symmetry*/
     /*
      Sub-lattice

@@ -1022,7 +1022,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->mix = NaN_d;
   StdI->eps = StdI->NaN_i;
   StdI->eps_slater = StdI->NaN_i;
-  StdI->iteration_max = StdI->NaN_i;
+  StdI->Iteration_max = StdI->NaN_i;
   for (i = 0; i < 3; i++)
     for (j = 0; j < 3; j++)
       StdI->boxsub[i][j] = StdI->NaN_i;
@@ -1407,7 +1407,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "Nsite          %d\n", StdI->nsite);
   if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %-5d\n", StdI->Sz2);
   fprintf(fp, "Ncond          %-5d\n", StdI->nelec);
-  fprintf(fp, "IterationMax   %d\n", StdI->iteration_max);
+  fprintf(fp, "IterationMax   %d\n", StdI->Iteration_max);
   fprintf(fp, "EPS            %d\n", StdI->eps);
   fprintf(fp, "Mix            %.10f\n", StdI->mix);
   fprintf(fp, "RndSeed        %d\n", StdI->RndSeed);
@@ -1834,7 +1834,7 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_d("DSROptStepDt", &StdI->DSROptStepDt, 0.02);
 #elif defined(_UHF)
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
-  StdFace_PrintVal_i("Iteration_max", &StdI->iteration_max, 1000);
+  StdFace_PrintVal_i("Iteration_max", &StdI->Iteration_max, 1000);
   StdFace_PrintVal_d("Mix", &StdI->mix, 0.5);
   StdFace_PrintVal_i("eps", &StdI->eps, 8);
   StdFace_PrintVal_i("EpsSlater", &StdI->eps_slater, 6);
@@ -2635,6 +2635,7 @@ void StdFace_main(
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RndSeed);
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
 #elif defined(_UHF)
+    else if (strcmp(keyword, "iteration_max") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Iteration_max);
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RndSeed);
     else if (strcmp(keyword, "nmptrans") == 0) StoreWithCheckDup_i(keyword, value, &StdI->NMPTrans);
     else if (strcmp(keyword, "a0hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][2]);
