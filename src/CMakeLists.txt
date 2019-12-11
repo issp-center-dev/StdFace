@@ -19,7 +19,7 @@ add_library(StdFace STATIC ChainLattice.c HoneycombLattice.c SquareLattice.c Std
 if (UHF)
    add_executable(uhf_dry.out dry.c)
    target_link_libraries(uhf_dry.out StdFace m)
-   install(TARGETS StdFace_dry.out RUNTIME DESTINATION bin)
+   install(TARGETS uhf_dry.out RUNTIME DESTINATION bin)
 endif(UHF)
 
 if (MVMC)
