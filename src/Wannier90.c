@@ -357,6 +357,10 @@ static double complex***** read_density_matrix(
   Header part
   */
   fp = fopen(filename, "r");
+  if (fp == NULL) {
+    fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
+    StdFace_exit(-1);
+  }
   ctmp2 = fgets(ctmp, 256, fp);
   ierr = fscanf(fp, "%d", &nWan);
   if (ierr == EOF) printf("%d %s\n", ierr, ctmp2);
