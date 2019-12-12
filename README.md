@@ -1,4 +1,4 @@
-#StdFace
+# StdFace
 
 An input file generator for [HPhi](https://github.com/issp-center-dev/HPhi), [mVMC](https://github.com/issp-center-dev/mVMC) and [UHF](https://github.com/issp-center-dev/UHF-dev).
 
