@@ -926,7 +926,11 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   for (i = 0; i < 3; i++)StdI->phase[i] = NaN_d;
   StdI->pi180 = StdI->pi / 180.0;
 
+#if defined(_HPhi)
   StdI->nelec = StdI->NaN_i;
+#else
+  StdI->ncond = StdI->NaN_i;
+#endif
   StdI->Sz2 = StdI->NaN_i;
   strcpy(StdI->model, "****\0");
   strcpy(StdI->lattice, "****\0");
@@ -1377,7 +1381,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "NDataQtySmp    %d\n", StdI->NDataQtySmp);
   fprintf(fp, "--------------------\n");
   fprintf(fp, "Nsite          %d\n", StdI->nsite);
-  fprintf(fp, "Ncond          %-5d\n", StdI->nelec);
+  fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
   if (StdI->Sz2 != StdI->NaN_i)
     fprintf(fp, "2Sz            %d\n", StdI->Sz2);
   if (StdI->NSPGaussLeg != StdI->NaN_i)
@@ -1851,15 +1855,19 @@ static void CheckModPara(struct StdIntList *StdI)
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
     }
 #else
-    StdFace_RequiredVal_i("nelec", StdI->nelec);
+    StdFace_RequiredVal_i("ncond", StdI->ncond);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }
   else if (strcmp(StdI->model, "spin") == 0) {
+#if defined(_HPhi)
     StdFace_NotUsed_i("nelec", StdI->nelec);
+#else
+    StdFace_NotUsed_i("ncond", StdI->ncond);
+#endif
 #if defined(_mVMC)
-    StdI->nelec = 0;
+    StdI->ncond = 0;
 #endif
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
@@ -1872,7 +1880,7 @@ static void CheckModPara(struct StdIntList *StdI)
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
     }
 #else
-    StdFace_RequiredVal_i("nelec", StdI->nelec);
+    StdFace_RequiredVal_i("ncond", StdI->ncond);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
@@ -2525,7 +2533,7 @@ void StdFace_main(
     else if (strcmp(keyword, "lz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->direct[1][2]);
     else if (strcmp(keyword, "model") == 0) StoreWithCheckDup_sl(keyword, value, StdI->model);
     else if (strcmp(keyword, "mu") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mu);
-    else if (strcmp(keyword, "nelec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nelec);
+//    else if (strcmp(keyword, "nelec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nelec);
     else if (strcmp(keyword, "outputmode") == 0) StoreWithCheckDup_sl(keyword, value, StdI->outputmode);
     else if (strcmp(keyword, "phase0") == 0) StoreWithCheckDup_d(keyword, value, &StdI->phase[0]);
     else if (strcmp(keyword, "phase1") == 0) StoreWithCheckDup_d(keyword, value, &StdI->phase[1]);
@@ -2562,6 +2570,7 @@ void StdFace_main(
     else if (strcmp(keyword, "wz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->direct[0][2]);
     else if (strcmp(keyword, "2sz") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Sz2);
 #if defined(_HPhi)
+    else if (strcmp(keyword, "nelec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nelec);
     else if (strcmp(keyword, "calcspec") == 0) StoreWithCheckDup_sl(keyword, value, StdI->CalcSpec);
     else if (strcmp(keyword, "exct") == 0) StoreWithCheckDup_i(keyword, value, &StdI->exct);
     else if (strcmp(keyword, "eigenvecio") == 0) StoreWithCheckDup_sl(keyword, value, StdI->EigenVecIO);
@@ -2601,6 +2610,7 @@ void StdFace_main(
     else if (strcmp(keyword, "vecpotw") == 0) StoreWithCheckDup_d(keyword, value, &StdI->VecPot[0]);
     else if (strcmp(keyword, "2s") == 0) StoreWithCheckDup_i(keyword, value, &StdI->S2);
 #elif defined(_mVMC)
+   else if (strcmp(keyword, "ncond") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ncond);
     else if (strcmp(keyword, "a0hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][2]);
     else if (strcmp(keyword, "a0lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][1]);
     else if (strcmp(keyword, "a0wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][0]);
@@ -2635,6 +2645,7 @@ void StdFace_main(
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RndSeed);
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
 #elif defined(_UHF)
+   else if (strcmp(keyword, "ncond") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ncond);
     else if (strcmp(keyword, "iteration_max") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Iteration_max);
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RndSeed);
     else if (strcmp(keyword, "nmptrans") == 0) StoreWithCheckDup_i(keyword, value, &StdI->NMPTrans);
