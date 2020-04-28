@@ -1410,7 +1410,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "--------------------\n");
   fprintf(fp, "Nsite          %d\n", StdI->nsite);
   if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %-5d\n", StdI->Sz2);
-  fprintf(fp, "Ncond          %-5d\n", StdI->nelec);
+  fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
   fprintf(fp, "IterationMax   %d\n", StdI->Iteration_max);
   fprintf(fp, "EPS            %d\n", StdI->eps);
   fprintf(fp, "Mix            %.10f\n", StdI->mix);
