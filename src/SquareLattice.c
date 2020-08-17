@@ -261,9 +261,9 @@ void StdFace_Tetragonal(struct StdIntList *StdI)
       StdFace_Coulomb(StdI, StdI->V0pp, isite, jsite);
     }
     /*
-     Nearest neighbor along L
+     Nearest neighbor along 2L
     */
-    StdFace_SetLabel(StdI, fp, iW, iL, 0, 1, 0, 0, &isite, &jsite, 3, &Cphase, dR);
+    StdFace_SetLabel(StdI, fp, iW, iL, 0, 2, 0, 0, &isite, &jsite, 3, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
       StdFace_GeneralJ(StdI, StdI->J1pp, StdI->S2, StdI->S2, isite, jsite);
