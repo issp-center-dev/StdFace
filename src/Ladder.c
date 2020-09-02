@@ -170,8 +170,8 @@ void StdFace_Ladder(
       * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
   }/*if (strcmp(StdI->model, "spin") == 0 )*/
   else {
-    ntransMax = StdI->L*StdI->NsiteUC * (2/*mu+h+Gamma*/ + 2/*t1*/ + 2/*t1'*/)
-      + StdI->L*(StdI->NsiteUC - 1) * (2/*t0*/ + 2/*t2*/ + 2/*t2'*/);
+    ntransMax = StdI->L*StdI->NsiteUC * 2/*spin*/ * (2/*mu+h+Gamma*/ + 2/*t1*/ + 2/*t1'*/)
+      + StdI->L*(StdI->NsiteUC - 1) * 2/*spin*/ * (2/*t0*/ + 2/*t2*/ + 2/*t2'*/);
     nintrMax = StdI->L*StdI->NsiteUC * 1/*U*/
       + StdI->L*StdI->NsiteUC * 4 * (1/*V1*/ + 1/*V1'*/)
       + StdI->L*(StdI->NsiteUC - 1) * 4 * (1/*V0*/ + 1/*V2*/ + 1/*V2'*/);
