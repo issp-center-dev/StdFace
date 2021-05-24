@@ -347,18 +347,18 @@ static void PrintExcitation(struct StdIntList *StdI) {
       if (strcmp(StdI->model, "spin") == 0 && StdI->S2 > 1) {
         NumOp = StdI->S2;
         S = (double)StdI->S2 * 0.5;
-        for (ispin = 0; ispin < StdI->S2; ispin++) {
-          Sz = (double)ispin - (double)StdI->S2 * 0.5;
-          coef[ispin] = sqrt(S*(S + 1.0) - Sz*(Sz + 1.0));
-          spin[ispin][0] = ispin;
-          spin[ispin][1] = ispin + 1;
+        for (ispin = 1; ispin <= StdI->S2; ispin++) {
+          Sz = (double)StdI->S2 * 0.5 - (double)ispin;
+          coef[ispin-1] = sqrt(S*(S + 1.0) - Sz*(Sz + 1.0));
+          spin[ispin-1][0] = ispin;
+          spin[ispin-1][1] = ispin - 1;
         }
       }
       else {
         NumOp = 1;
         coef[0] = 1.0;
-        spin[0][0] = 0;
-        spin[0][1] = 1;
+        spin[0][0] = 1;
+        spin[0][1] = 0;
       }
       StdI->SpectrumBody = 2;
     }
