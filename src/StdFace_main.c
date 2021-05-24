@@ -2133,10 +2133,13 @@ static void PrintInteractions(struct StdIntList *StdI)
   /*
    InterAll
   */
+  //
+  // Merge equivalent terms
+  //
   for (jintr = 0; jintr < StdI->nintr; jintr++) {
     for (kintr = jintr + 1; kintr < StdI->nintr; kintr++) {
       if (
-        (StdI->intrindx[jintr][0] == StdI->intrindx[kintr][0]
+        (    StdI->intrindx[jintr][0] == StdI->intrindx[kintr][0]
           && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][1]
           && StdI->intrindx[jintr][2] == StdI->intrindx[kintr][2]
           && StdI->intrindx[jintr][3] == StdI->intrindx[kintr][3]
@@ -2145,46 +2148,64 @@ static void PrintInteractions(struct StdIntList *StdI)
           && StdI->intrindx[jintr][6] == StdI->intrindx[kintr][6]
           && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][7])
         ||
-        (StdI->intrindx[jintr][0] == StdI->intrindx[kintr][4]
+        (    StdI->intrindx[jintr][0] == StdI->intrindx[kintr][4]
           && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][5]
           && StdI->intrindx[jintr][2] == StdI->intrindx[kintr][6]
           && StdI->intrindx[jintr][3] == StdI->intrindx[kintr][7]
           && StdI->intrindx[jintr][4] == StdI->intrindx[kintr][0]
           && StdI->intrindx[jintr][5] == StdI->intrindx[kintr][1]
           && StdI->intrindx[jintr][6] == StdI->intrindx[kintr][2]
-          && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][3])
+          && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][3]
+          && ! (  StdI->intrindx[jintr][0] == StdI->intrindx[jintr][6]
+               && StdI->intrindx[jintr][1] == StdI->intrindx[jintr][7])
+          && ! (  StdI->intrindx[jintr][2] == StdI->intrindx[jintr][4]
+               && StdI->intrindx[jintr][3] == StdI->intrindx[jintr][5])
+          )
         ) {
         StdI->intr[jintr] = StdI->intr[jintr] + StdI->intr[kintr];
         StdI->intr[kintr] = 0.0;
       }
       else if (
-        (StdI->intrindx[jintr][0] == StdI->intrindx[kintr][4]
+        (    StdI->intrindx[jintr][0] == StdI->intrindx[kintr][4]
           && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][5]
           && StdI->intrindx[jintr][2] == StdI->intrindx[kintr][2]
           && StdI->intrindx[jintr][3] == StdI->intrindx[kintr][3]
           && StdI->intrindx[jintr][4] == StdI->intrindx[kintr][0]
           && StdI->intrindx[jintr][5] == StdI->intrindx[kintr][1]
           && StdI->intrindx[jintr][6] == StdI->intrindx[kintr][6]
-          && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][7])
+          && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][7]
+          && ! (  StdI->intrindx[jintr][2] == StdI->intrindx[jintr][0]
+               && StdI->intrindx[jintr][3] == StdI->intrindx[jintr][1])
+          && ! (  StdI->intrindx[jintr][2] == StdI->intrindx[jintr][4]
+               && StdI->intrindx[jintr][3] == StdI->intrindx[jintr][5])
+          )
         ||
-        (StdI->intrindx[jintr][0] == StdI->intrindx[kintr][0]
+        (    StdI->intrindx[jintr][0] == StdI->intrindx[kintr][0]
           && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][1]
           && StdI->intrindx[jintr][2] == StdI->intrindx[kintr][6]
           && StdI->intrindx[jintr][3] == StdI->intrindx[kintr][7]
           && StdI->intrindx[jintr][4] == StdI->intrindx[kintr][4]
           && StdI->intrindx[jintr][5] == StdI->intrindx[kintr][5]
           && StdI->intrindx[jintr][6] == StdI->intrindx[kintr][2]
-          && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][3])
+          && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][3]
+          && ! (  StdI->intrindx[jintr][4] == StdI->intrindx[jintr][2]
+               && StdI->intrindx[jintr][5] == StdI->intrindx[jintr][3])
+          && ! (  StdI->intrindx[jintr][4] == StdI->intrindx[jintr][6]
+               && StdI->intrindx[jintr][5] == StdI->intrindx[jintr][7])
+          )
         ) {
         StdI->intr[jintr] = StdI->intr[jintr] - StdI->intr[kintr];
         StdI->intr[kintr] = 0.0;
       }
     }/*for (kintr = jintr + 1; kintr < StdI->nintr; kintr++)*/
   }/*for (jintr = 0; jintr < StdI->nintr; jintr++)*/
-
+  //
+  // Force Hermite term as
+  // (c1+ c2 c3+ c4)+ = c4+ c3 c2+ c1
+  //
   for (jintr = 0; jintr < StdI->nintr; jintr++) {
     for (kintr = jintr + 1; kintr < StdI->nintr; kintr++) {
-      if (StdI->intrindx[jintr][6] == StdI->intrindx[kintr][4]
+      if ( StdI->intrindx[jintr][6] == StdI->intrindx[kintr][4]
         && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][5]
         && StdI->intrindx[jintr][4] == StdI->intrindx[kintr][6]
         && StdI->intrindx[jintr][5] == StdI->intrindx[kintr][7]
@@ -2192,6 +2213,10 @@ static void PrintInteractions(struct StdIntList *StdI)
         && StdI->intrindx[jintr][3] == StdI->intrindx[kintr][1]
         && StdI->intrindx[jintr][0] == StdI->intrindx[kintr][2]
         && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][3]
+        && ! (  StdI->intrindx[kintr][0] == StdI->intrindx[kintr][6]
+             && StdI->intrindx[kintr][1] == StdI->intrindx[kintr][7])
+        && ! (  StdI->intrindx[kintr][2] == StdI->intrindx[kintr][4]
+             && StdI->intrindx[kintr][3] == StdI->intrindx[kintr][5])
         ) {
         StdI->intrindx[kintr][0] = StdI->intrindx[jintr][6];
         StdI->intrindx[kintr][1] = StdI->intrindx[jintr][7];
@@ -2203,23 +2228,33 @@ static void PrintInteractions(struct StdIntList *StdI)
         StdI->intrindx[kintr][7] = StdI->intrindx[jintr][1];
       }
       else if (
-        (StdI->intrindx[jintr][6] == StdI->intrindx[kintr][4]
+        (    StdI->intrindx[jintr][6] == StdI->intrindx[kintr][4]
           && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][5]
           && StdI->intrindx[jintr][4] == StdI->intrindx[kintr][2]
           && StdI->intrindx[jintr][5] == StdI->intrindx[kintr][3]
           && StdI->intrindx[jintr][2] == StdI->intrindx[kintr][0]
           && StdI->intrindx[jintr][3] == StdI->intrindx[kintr][1]
           && StdI->intrindx[jintr][0] == StdI->intrindx[kintr][6]
-          && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][7])
+          && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][7]
+          && ! (  StdI->intrindx[kintr][2] == StdI->intrindx[kintr][0]
+               && StdI->intrindx[kintr][3] == StdI->intrindx[kintr][1])
+          && ! (  StdI->intrindx[kintr][2] == StdI->intrindx[kintr][4]
+               && StdI->intrindx[kintr][3] == StdI->intrindx[kintr][5])
+          )
         ||
-        (StdI->intrindx[jintr][6] == StdI->intrindx[kintr][0]
+        (    StdI->intrindx[jintr][6] == StdI->intrindx[kintr][0]
           && StdI->intrindx[jintr][7] == StdI->intrindx[kintr][1]
           && StdI->intrindx[jintr][4] == StdI->intrindx[kintr][6]
           && StdI->intrindx[jintr][5] == StdI->intrindx[kintr][7]
           && StdI->intrindx[jintr][2] == StdI->intrindx[kintr][4]
           && StdI->intrindx[jintr][3] == StdI->intrindx[kintr][5]
           && StdI->intrindx[jintr][0] == StdI->intrindx[kintr][2]
-          && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][3])
+          && StdI->intrindx[jintr][1] == StdI->intrindx[kintr][3]
+          && ! (  StdI->intrindx[kintr][4] == StdI->intrindx[kintr][2]
+               && StdI->intrindx[kintr][5] == StdI->intrindx[kintr][3])
+          && ! (  StdI->intrindx[kintr][4] == StdI->intrindx[kintr][6]
+               && StdI->intrindx[kintr][5] == StdI->intrindx[kintr][7])
+          )
         ) {
         StdI->intrindx[kintr][0] = StdI->intrindx[jintr][6];
         StdI->intrindx[kintr][1] = StdI->intrindx[jintr][7];

@@ -61,6 +61,7 @@ void StdFace_trans(
   int jspin//!<[in] @f$\sigma'@f$ for @f$c_{j \sigma'}@f$
 )
 {
+  if (cabs(trans0) < 1.0e-12) return;
   StdI->trans[StdI->ntrans] = trans0;
   StdI->transindx[StdI->ntrans][0] = isite;
   StdI->transindx[StdI->ntrans][1] = ispin;
@@ -209,6 +210,7 @@ void StdFace_intr(
   int spin4//!<[in] @f$sigma1_2@f$ for @f$c_{i_2 \sigma_2}@f$
 )
 {
+  if (cabs(intr0) < 1.0e-12) return;
   StdI->intr[StdI->nintr] = intr0;
   StdI->intrindx[StdI->nintr][0] = site1; StdI->intrindx[StdI->nintr][1] = spin1;
   StdI->intrindx[StdI->nintr][2] = site2; StdI->intrindx[StdI->nintr][3] = spin2;
