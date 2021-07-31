@@ -1375,7 +1375,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "CParaFileHead  %s\n", StdI->CParaFileHead);
   fprintf(fp, "--------------------\n");
   fprintf(fp, "NVMCCalMode    %d\n", StdI->NVMCCalMode);
-  /*fprintf(fp, "NLanczosMode   %d\n", StdI->NLanczosMode);*/
+  fprintf(fp, "NLanczosMode   %d\n", StdI->NLanczosMode);
   fprintf(fp, "--------------------\n");
   fprintf(fp, "NDataIdxStart  %d\n", StdI->NDataIdxStart);
   fprintf(fp, "NDataQtySmp    %d\n", StdI->NDataQtySmp);
@@ -2570,7 +2570,7 @@ void StdFace_main(
     else if (strcmp(keyword, "lz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->direct[1][2]);
     else if (strcmp(keyword, "model") == 0) StoreWithCheckDup_sl(keyword, value, StdI->model);
     else if (strcmp(keyword, "mu") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mu);
-//    else if (strcmp(keyword, "nelec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nelec);
+    // else if (strcmp(keyword, "nelec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nelec);
     else if (strcmp(keyword, "outputmode") == 0) StoreWithCheckDup_sl(keyword, value, StdI->outputmode);
     else if (strcmp(keyword, "phase0") == 0) StoreWithCheckDup_d(keyword, value, &StdI->phase[0]);
     else if (strcmp(keyword, "phase1") == 0) StoreWithCheckDup_d(keyword, value, &StdI->phase[1]);
