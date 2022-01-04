@@ -1454,7 +1454,7 @@ static void Print1Green(struct StdIntList *StdI)
       if (StdI->ioutputmode == 1) {
         for (isite = 0; isite < StdI->NsiteUC*xkondo; isite++) {
 
-          if (isite >= StdI->NsiteUC) isite2 = isite + StdI->nsite / 2;
+          if (isite >= StdI->NsiteUC) isite2 = isite - StdI->NsiteUC + StdI->nsite / 2;
           else isite2 = isite;
 
           if (StdI->locspinflag[isite2] == 0) SiMax = 1;
@@ -1570,7 +1570,7 @@ static void Print2Green(struct StdIntList *StdI) {
 
       for (site1 = 0; site1 < StdI->NsiteUC*xkondo; site1++) {
 
-        if (site1 >= StdI->NsiteUC) site1k = site1 + StdI->nsite / 2;
+        if (site1 >= StdI->NsiteUC) site1k = site1 - StdI->NsiteUC + StdI->nsite / 2;
         else site1k = site1;
 
         if (StdI->locspinflag[site1k] == 0) S1Max = 1;
