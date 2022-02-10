@@ -230,6 +230,7 @@ struct StdIntList {
   /*
    Calculation conditions
   */
+  int ncond;/**<@brief Number of electrons, input from file.*/
   int lGC;/**<@brief Switch for computing Grandcanonical ensemble(== 1).
           Setted in StdFace_main() after all keywords are read.*/
   int S2;/**<@brief Total spin |S| of a local spin, input from file.*/
@@ -265,7 +266,6 @@ struct StdIntList {
   /*
   HPhi modpara
   */
-  int nelec;/**<@brief Number of electrons, input from file.*/
   char method[256];/**<@brief The name of method, input from file.*/
   char Restart[256];/**<@brief The name of restart mode, input from file.*/
   char InitialVecType[256];/**<@brief The name of initialguess-type, input from file.*/
@@ -326,7 +326,6 @@ struct StdIntList {
   int ExpandCoef;/**<@brief The number of Hamiltonian-vector operation for the time-evolution*/
 #elif defined(_mVMC)
   /*mVMC modpara*/
-  int ncond;/**<@brief Number of electrons, input from file.*/
   char CParaFileHead[256];/**<@brief Header of the optimized wavefunction,
                           input from file*/
   int NVMCCalMode;/**<@brief Optimization(=0) or compute correlation
@@ -371,7 +370,6 @@ struct StdIntList {
   int NSym;/**<@brief Number of translation symmetries, 
            Defined from the number of cells in the sub-lattice.*/
 #elif defined(_UHF)
-  int ncond;/**<@brief Number of electrons, input from file.*/
     int RndSeed;/**<@brief */
     double mix; /**<@brief linear mixing ratio for update*/
     int eps; /**<@brief convergence threshold for Green's functions */
