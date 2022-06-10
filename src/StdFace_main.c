@@ -1362,6 +1362,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "OmegaMax       %-25.15e %-25.15e\n", StdI->OmegaMax, StdI->OmegaIm);
   fprintf(fp, "OmegaMin       %-25.15e %-25.15e\n", StdI->OmegaMin, StdI->OmegaIm);
   fprintf(fp, "OmegaOrg       %-25.15e %-25.15e\n", StdI->OmegaOrg, 0.0);
+  fprintf(fp, "PreCG          %-5d\n", 1);
   if (strcmp(StdI->method, "timeevolution") == 0)
     fprintf(fp, "ExpandCoef     %-5d\n", StdI->ExpandCoef);
 #elif defined(_mVMC)
