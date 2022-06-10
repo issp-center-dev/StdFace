@@ -106,6 +106,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   else if (strcmp(StdI->method, "fulldiag") == 0 ) iCalcType = 2;
   else if (strcmp(StdI->method, "cg") == 0) iCalcType = 3;
   else if (strcmp(StdI->method, "timeevolution") == 0) iCalcType = 4;
+  else if (strcmp(StdI->method, "ctpq") == 0) iCalcType = 5;
   else{
     fprintf(stdout, "\n ERROR ! Unsupported Solver : %s\n", StdI->method);
     StdFace_exit(-1);
@@ -153,7 +154,10 @@ static void PrintCalcMod(struct StdIntList *StdI)
   if (strcmp(StdI->InitialVecType, "****") == 0) {
     strcpy(StdI->InitialVecType, "c\0");
     fprintf(stdout, "   InitialVecType = c           ######  DEFAULT VALUE IS USED  ######\n");
-    iInitialVecTpye = 0;
+    if (strcmp(StdI->method, "tpq") == 0 || strcmp(StdI->method, "ctpq") == 0)
+      iInitialVecTpye = -1;
+    else
+      iInitialVecTpye = 0;
   }/*if (strcmp(StdI->InitialVecType, "****") == 0)*/
   else {
     fprintf(stdout, "   InitialVecType = %s\n", StdI->InitialVecType);
