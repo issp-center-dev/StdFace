@@ -283,6 +283,11 @@ struct StdIntList {
                     value is computed.*/
   double LargeValue;/**<@brief The shift parameter for the TPQ calculation.*/
   /*
+  FullDiag
+  */
+  int NGPU;/**<@brief Number of GPU for FullDiag.*/
+  int Scalapack;/**<@brief Flag for FullDiag w/ Scalapack.*/
+  /*
   Boost
   */
   int ***list_6spin_pair;/**<@brief */
