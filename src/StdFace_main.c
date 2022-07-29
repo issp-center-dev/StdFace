@@ -251,11 +251,35 @@ static void PrintCalcMod(struct StdIntList *StdI)
     }
   }/*if (strcmp(StdI->OutputExVec, "****") != 0)*/
 
+  if(StdI->NGPU != StdI->NaN_i){
+    fprintf(stdout, "         NGPU = %d\n", StdI->NGPU);
+    if(StdI->NGPU < 1){
+      fprintf(stdout, "\n ERROR ! NGPU : %d\n", StdI->NGPU);
+      fprintf(stdout, "         NGPU should be a positive integer.\n");
+      StdFace_exit(-1);
+    }
+  }
+  
+  if(StdI->Scalapack != StdI->NaN_i){
+    fprintf(stdout, "         Scalapack = %d\n", StdI->Scalapack);
+    if(StdI->Scalapack < 0 || StdI->Scalapack > 1){
+      fprintf(stdout, "\n ERROR ! Scalapack : %d\n", StdI->Scalapack);
+      fprintf(stdout, "         Scalapack should be 0 or 1.\n");
+      StdFace_exit(-1);
+    }
+  }
+
   fp = fopen("calcmod.def", "w");
   fprintf(fp, "#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 3:CG, 4:Time-evolution\n");
   fprintf(fp, "#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n");
   fprintf(fp, "#Restart = 0:None, 1:Save, 2:Restart&Save, 3:Restart\n");
   fprintf(fp, "#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save\n");
+  if(StdI->NGPU != StdI->NaN_i){
+    fprintf(fp, "#NGPU (for FullDiag): The number of GPU\n");
+  }
+  if(StdI->Scalapack != StdI->NaN_i){
+    fprintf(fp, "#Scalapack (for FullDiag) = 0:w/o ScaLAPACK, 1:w/ ScaLAPACK\n");
+  }
   fprintf(fp, "CalcType %3d\n", iCalcType);
   fprintf(fp, "CalcModel %3d\n", iCalcModel);
   fprintf(fp, "ReStart %3d\n", iRestart);
@@ -267,6 +291,12 @@ static void PrintCalcMod(struct StdIntList *StdI)
   fprintf(fp, "InputHam %3d\n", iInputHam);
   fprintf(fp, "OutputHam %3d\n", iOutputHam);
   fprintf(fp, "OutputExVec %3d\n", iOutputExVec);
+  if(StdI->NGPU != StdI->NaN_i){
+    fprintf(fp, "NGPU %3d\n", StdI->NGPU);
+  }
+  if(StdI->Scalapack != StdI->NaN_i){
+    fprintf(fp, "Scalapack %3d\n", StdI->Scalapack);
+  }
   fflush(fp);
   fclose(fp);
   fprintf(stdout, "     calcmod.def is written.\n\n");
@@ -991,6 +1021,8 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   for (i = 0; i < 3; i++)StdI->VecPot[i] = NaN_d;;
   strcpy(StdI->PumpType, "****\0");
   StdI->ExpandCoef = StdI->NaN_i;
+  StdI->NGPU = StdI->NaN_i;
+  StdI->Scalapack = StdI->NaN_i;
 #elif defined(_mVMC)
   strcpy(StdI->CParaFileHead, "****\0");
   StdI->NVMCCalMode = StdI->NaN_i;
@@ -2643,6 +2675,8 @@ void StdFace_main(
     else if (strcmp(keyword, "vecpotl") == 0) StoreWithCheckDup_d(keyword, value, &StdI->VecPot[1]);
     else if (strcmp(keyword, "vecpotw") == 0) StoreWithCheckDup_d(keyword, value, &StdI->VecPot[0]);
     else if (strcmp(keyword, "2s") == 0) StoreWithCheckDup_i(keyword, value, &StdI->S2);
+    else if (strcmp(keyword, "ngpu") == 0) StoreWithCheckDup_i(keyword, value, &StdI->NGPU);
+    else if (strcmp(keyword, "scalapack") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Scalapack);
 #elif defined(_mVMC)
     else if (strcmp(keyword, "a0hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][2]);
     else if (strcmp(keyword, "a0lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][1]);
