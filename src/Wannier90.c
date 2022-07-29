@@ -156,9 +156,13 @@ static void read_W90(
   Header part
   */
   fp = fopen(filename, "r");
-  if (fp == NULL){
-    fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
-    StdFace_exit(-1);
+//  if (fp == NULL){
+//    fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
+//    StdFace_exit(-1);
+//  }
+  if(fp == NULL){
+      fprintf(stdout, "\n  Skip to read the file %s. \n\n", filename);
+      return;
   }
   ctmp2 = fgets(ctmp, 256, fp);
   ierr = fscanf(fp, "%d", &nWan);
@@ -563,6 +567,12 @@ void StdFace_Wannier90(
   int ***tUJindx;
   char filename[263];
   char tempwords[263];
+  int i, j;
+
+  for(i = 0; i< 3; i++){
+      NtUJ[i] = 0;
+  }
+
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
   */
@@ -618,7 +628,6 @@ void StdFace_Wannier90(
   if (StdI->L != StdI->NaN_i) StdFace_PrintVal_i("cutoff_tR[1]", &StdI->cutoff_tR[1], (int)((StdI->L-1)/2));
   if (StdI->Height != StdI->NaN_i) StdFace_PrintVal_i("cutoff_tR[2]", &StdI->cutoff_tR[2], (int)((StdI->Height-1)/2));
 
-  int i, j;
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
       if (StdI->box[i][j] != StdI->NaN_i)
@@ -677,9 +686,11 @@ void StdFace_Wannier90(
   /*
   Read Density matrix
   */
-  fprintf(stdout, "\n  @ Wannier90 Density-matrix \n\n");
-  sprintf(filename, "%s_dr.dat", StdI->CDataFileHead);
-  DenMat = read_density_matrix(StdI, filename);
+  if (idcmode != NOTCORRECT) {
+      fprintf(stdout, "\n  @ Wannier90 Density-matrix \n\n");
+      sprintf(filename, "%s_dr.dat", StdI->CDataFileHead);
+      DenMat = read_density_matrix(StdI, filename);
+  }
   /**@brief
   (2) check & store parameters of Hamiltonian
   */
@@ -955,7 +966,7 @@ void StdFace_Wannier90(
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
   fclose(fp);
-  PrintUHFinitial(StdI, NtUJ, tUJ, DenMat, tUJindx);
+  if(idcmode != NOTCORRECT) PrintUHFinitial(StdI, NtUJ, tUJ, DenMat, tUJindx);
   StdFace_PrintXSF(StdI);
   StdFace_PrintGeometry(StdI);
 
