@@ -1,0 +1,7 @@
+model = "Hubbard"
+W=2
+L=2
+method = "CG"
+2Sz = 0
+nelec = 4
+exct = 1
