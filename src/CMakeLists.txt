@@ -14,7 +14,7 @@ set(SOURCES_StdFace
 include_directories(sfmt)
 add_definitions(-DMEXP=19937)
 
-add_library(StdFace STATIC ChainLattice.c HoneycombLattice.c SquareLattice.c StdFace_main.c StdFace_ModelUtil.c TriangularLattice.c Ladder.c Kagome.c Orthorhombic.c Pyrochlore.c Wannier90.c FCOrtho.c setmemory.c)
+add_library(StdFace STATIC ChainLattice.c HoneycombLattice.c SquareLattice.c StdFace_main.c StdFace_ModelUtil.c TriangularLattice.c Ladder.c Kagome.c Orthorhombic.c Pyrochlore.c Wannier90.c FCOrtho.c setmemory.c export_wannier90.c)
 
 if (UHF)
    add_executable(uhf_dry.out dry.c)
