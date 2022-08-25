@@ -1549,7 +1549,7 @@ static void Print1Green(struct StdIntList *StdI)
           }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
         }/*for (isite = 0; isite < StdI->nsite; isite++)*/
       }/*if (StdI->ioutputmode == 2)*/
-    }/*if (StdI->ioutputmode != 0)*/
+    }/*for (store = 0; store < 2; store++))*/
 
     fp = fopen("greenone.def", "w");
     fprintf(fp, "===============================\n");
