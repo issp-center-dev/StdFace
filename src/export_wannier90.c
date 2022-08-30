@@ -185,8 +185,9 @@ void WriteWannier90(int nintr_table, IntrItem *intr_table,
           for (int s = 0; s < nspin; ++s) {
             for (int t = 0; t < nspin; ++t) {
               if (is_export_all || cabs(matrix[_index(rx,ry,rz,a,b,s,t)]) > eps) {
+                /* note: orbit a,b starts 1 */
                 fprintf(fp, "%4d %4d %4d %4d %4d %4d %4d %16.12f %16.12f\n",
-                        rx, ry, rz, a, b, s, t, 
+                        rx, ry, rz, (a+1), (b+1), s, t, 
                         creal(matrix[_index(rx,ry,rz,a,b,s,t)]),
                         cimag(matrix[_index(rx,ry,rz,a,b,s,t)]));
               }
@@ -196,8 +197,9 @@ void WriteWannier90(int nintr_table, IntrItem *intr_table,
           int s = 0;
           int t = 0;
           if (is_export_all || cabs(matrix[_index(rx,ry,rz,a,b,s,t)]) > eps) {
+            /* note: orbit a,b starts 1 */
             fprintf(fp, "%4d %4d %4d %4d %4d %16.12f %16.12f\n",
-                    rx, ry, rz, a, b,
+                    rx, ry, rz, (a+1), (b+1),
                     creal(matrix[_index(rx,ry,rz,a,b,s,t)]),
                     cimag(matrix[_index(rx,ry,rz,a,b,s,t)]));
           }
