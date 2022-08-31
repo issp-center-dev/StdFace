@@ -17,7 +17,7 @@
 
 
 /* control flags */
-int is_export_all = 1;
+int is_export_all = 1;  /* default for exportall parameter */
 
 /* parameters */
 static const double eps = 1.0e-8;
@@ -874,6 +874,8 @@ void ExportGeometry(struct StdIntList *StdI)
 */
 void ExportInteraction(struct StdIntList *StdI)
 {
+  if (StdI->export_all != StdI->NaN_i) is_export_all = StdI->export_all;
+
   ExportCoulombIntra(StdI,
                      StdI->NCintra, StdI->CintraIndx, StdI->Cintra,
                      prefix_(StdI, "coulombintra.dat"), "CoulombIntra");
