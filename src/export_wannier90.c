@@ -223,6 +223,42 @@ void WriteWannier90(int nintr_table, IntrItem *intr_table,
 }
 
 /**
+   @bridf unfold site from [0, N] to [-N/2, N/2]
+*/
+void unfold_site(struct StdIntList *StdI, int v_in[3], int v_out[3])
+{
+  int v[3];
+  for (int i = 0; i < 3; ++i) {
+    v[i] = 0;
+    for (int j = 0; j < 3; ++j) {
+      v[i] += StdI->rbox[i][j] * v_in[j];
+    }
+  }
+
+  for (int i = 0; i < 3; ++i) {
+    double vv = 1.0 * v[i] / StdI->NCell;
+    if (vv > 0.5) {
+      v[i] -= StdI->NCell;
+    }
+  }
+
+  int w[3];
+  for (int i = 0; i < 3; ++i) {
+    w[i] = 0;
+    for (int j = 0; j < 3; ++j) {
+      w[i] += v[j] * StdI->box[j][i];
+    }
+    w[i] /= StdI->NCell;
+  }
+
+  for (int i = 0; i < 3; ++i) {
+    v_out[i] = w[i];
+  }
+
+  return;
+}
+
+/**
    @brief generate key as a pair (i<j) for interaction table
 */
 void generate_key(int keylen, int *index_out, int *index)
@@ -439,6 +475,7 @@ void ExportInter(struct StdIntList *StdI,
       for (int i = 0; i < 3; ++i) {
         rr[i] = StdI->Cell[jcell][i] - StdI->Cell[icell][i];
       }
+      unfold_site(StdI, rr, rr);
 
       /* check consistency */
       int is_found = 0;
@@ -584,6 +621,7 @@ void ExportTransfer(struct StdIntList *StdI,
       for (int i = 0; i < 3; ++i) {
         rr[i] = StdI->Cell[jcell][i] - StdI->Cell[icell][i];
       }
+      unfold_site(StdI, rr, rr);
 
       /* check consistency */
       int is_found = 0;
