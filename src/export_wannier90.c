@@ -778,7 +778,7 @@ void ExportCoulombIntra(struct StdIntList *StdI,
         intr_table[nintr_table].r[1] = 0;
         intr_table[nintr_table].r[2] = 0;
         intr_table[nintr_table].a = isite;
-        intr_table[nintr_table].b = 0;
+        intr_table[nintr_table].b = isite;
         intr_table[nintr_table].s = 0;
         intr_table[nintr_table].t = 0;
         intr_table[nintr_table].v = intr_value[k];
