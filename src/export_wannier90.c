@@ -68,6 +68,7 @@ void WriteGeometry(struct StdIntList *StdI, char *fname)
 void WriteWannier90(int nintr_table, IntrItem *intr_table,
                     int nsiteuc, int nspin,
                     char *fname, char *tagname)
+
 {
   /* find range */
   int rmin[3], rmax[3];
@@ -239,6 +240,8 @@ void unfold_site(struct StdIntList *StdI, int v_in[3], int v_out[3])
     double vv = 1.0 * v[i] / StdI->NCell;
     if (vv > 0.5) {
       v[i] -= StdI->NCell;
+    } else if (vv <= -0.5) {
+      v[i] += StdI->NCell;
     }
   }
 
@@ -259,9 +262,11 @@ void unfold_site(struct StdIntList *StdI, int v_in[3], int v_out[3])
 }
 
 /**
-   @brief generate key as a pair (i<j) for interaction table
+   @brief generate key as a pair for interaction table
+   ordered = 0 -> as-is
+   ordered = 1 -> i < j
 */
-void generate_key(int keylen, int *index_out, int *index)
+void generate_key(int keylen, int *index_out, int *index, int ordered)
 {
   if (keylen == 1) {  /* i */
     index_out[0] = index[0];
@@ -269,7 +274,7 @@ void generate_key(int keylen, int *index_out, int *index)
   } else if (keylen == 2) {  /* i, j */
     int i = index[0];
     int j = index[1];
-    if (i > j) {
+    if (ordered == 1 && i > j) {
       index_out[0] = j;
       index_out[1] = i;
     } else {
@@ -282,7 +287,7 @@ void generate_key(int keylen, int *index_out, int *index)
     int s = index[1];
     int j = index[2];
     int t = index[3];
-    if (i > j) {
+    if (ordered == 1 && i > j) {
       index_out[0] = j;
       index_out[1] = t;
       index_out[2] = i;
@@ -347,14 +352,15 @@ char *to_string_key(int keylen, int *key)
 */
 void accumulate_list(int keylen,
                      int ntbl, int **tbl_index, double complex *tbl_value,
-                     int *ntbl_out, int **tbl_index_out, double complex *tbl_value_out)
+                     int *ntbl_out, int **tbl_index_out, double complex *tbl_value_out,
+                     int ordered)
 {
   *ntbl_out = 0;
 
   for (int k = 0; k < ntbl; ++k) {
 
     int idx[keylen];
-    generate_key(keylen, idx, tbl_index[k]);
+    generate_key(keylen, idx, tbl_index[k], ordered);
     /* i.e. idx = tbl_index[k]; */
     double complex val = tbl_value[k];
 
@@ -451,7 +457,8 @@ void ExportInter(struct StdIntList *StdI,
 
   accumulate_list(2 /* keylen */,
                   ntbl, tbl_index, tbl_value,
-                  &nintr, intr_index, intr_value);
+                  &nintr, intr_index, intr_value,
+                  1); /* i < j pair */
 
   if (nintr > 0) {
 
@@ -570,7 +577,7 @@ void ExportInterReal(struct StdIntList *StdI,
 */
 void ExportTransfer(struct StdIntList *StdI,
                     int ntbl, int **tbl_index, double complex *tbl_value,
-                    char *fname, char *tagname)
+                    char *fname, char *tagname, int spin_dep)
 {
   if (ntbl == 0) {
     printf("%24s is skipped.\n", fname);
@@ -595,7 +602,7 @@ void ExportTransfer(struct StdIntList *StdI,
 
   accumulate_list(4 /* keylen */,
                   ntbl, tbl_index, tbl_value,
-                  &nintr, intr_index, intr_value);
+                  &nintr, intr_index, intr_value, 0);  /* not accumulate to i<j pair */
 
   if (nintr > 0) {
 
@@ -650,6 +657,11 @@ void ExportTransfer(struct StdIntList *StdI,
 
       /* store */
       if (!is_found) {
+
+        if (spin_dep == 0 && !(ispin == 0 && jspin == 0)) {
+          continue;  /* skip */
+        }
+
         for (int i = 0; i < 3; ++i) {
           intr_table[nintr_table].r[i] = rr[i];
         }
@@ -675,7 +687,7 @@ void ExportTransfer(struct StdIntList *StdI,
 #endif
 
     /* write to file */
-    WriteWannier90(nintr_table, intr_table, StdI->NsiteUC, 2, fname, tagname);
+    WriteWannier90(nintr_table, intr_table, StdI->NsiteUC, ((spin_dep == 1) ? 2 : 1), fname, tagname);
   
     /* tidy up */
     free(intr_table);
@@ -687,60 +699,6 @@ void ExportTransfer(struct StdIntList *StdI,
   free(intr_index_buf);
   free(intr_index);
   free(intr_value);
-
-  return;
-}
-
-/**
-   @brief Print coefficient of transfer term: spin dependence omitted
-*/
-void ExportTransferSpinIndep(struct StdIntList *StdI,
-                             int ntbl, int **tbl_index, double complex *tbl_value,
-                             char *fname, char *tagname)
-{
-  if (ntbl == 0) {
-    printf("%24s is skipped.\n", fname);
-    return;
-  }
-
-  int *tbl_index_buf_r = (int *)malloc(sizeof(int) * ntbl * 2);
-  if (!tbl_index_buf_r) fatal("cannot allocate tbl_index_buf_r");
-
-  int **tbl_index_r = (int **)malloc(sizeof(int*) * ntbl);
-  if (!tbl_index_r) fatal("cannot allocate tbl_index_r");
-
-  for (int k = 0; k < ntbl; ++k) {
-    tbl_index_r[k] = tbl_index_buf_r + 2 * k;
-  }
-
-  double complex *tbl_value_r = (double complex *)malloc(sizeof(double complex) * ntbl);
-  if (!tbl_value_r) fatal("cannot allocate tbl_value_r");
-
-  int ntbl_r = 0;
-
-  for (int k = 0; k < ntbl; ++k) {
-    int idx   = tbl_index[k][0];
-    int ispin = tbl_index[k][1];
-    int jdx   = tbl_index[k][2];
-    int jspin = tbl_index[k][3];
-
-    if (ispin == 0 && jspin == 0) {  /* select uu component */
-    /* if (ispin == 1 && jspin == 1) { */  /* select dd component */
-    /* if (ispin == 0 && jspin == 1) { */ /* select ud component */
-      tbl_index_r[ntbl_r][0] = idx;
-      tbl_index_r[ntbl_r][1] = jdx;
-      tbl_value_r[ntbl_r] = tbl_value[k];
-      ++ntbl_r;
-    }
-  }
-
-  /* delegate to ordinary 2-indexed interaction */
-  ExportInter(StdI, ntbl_r, tbl_index_r, tbl_value_r, fname, tagname);
-
-  /* tidy up */
-  free(tbl_value_r);
-  free(tbl_index_r);
-  free(tbl_index_buf_r);
 
   return;
 }
@@ -783,7 +741,7 @@ void ExportCoulombIntra(struct StdIntList *StdI,
 
   accumulate_list(1 /* keylen */,
                   ntbl, tbl_index, tbl_value_c,
-                  &nintr, intr_index, intr_value);
+                  &nintr, intr_index, intr_value, 1);
 
   /* check if uniform */
   if (nintr > 0) {
@@ -876,13 +834,14 @@ void ExportInteraction(struct StdIntList *StdI)
 {
   if (StdI->export_all != StdI->NaN_i) is_export_all = StdI->export_all;
 
+  ExportTransfer(StdI,
+                 StdI->ntrans, StdI->transindx, StdI->trans,
+                 prefix_(StdI, "transfer.dat"), "Transfer",
+                 0);
+
   ExportCoulombIntra(StdI,
                      StdI->NCintra, StdI->CintraIndx, StdI->Cintra,
                      prefix_(StdI, "coulombintra.dat"), "CoulombIntra");
-
-  ExportTransferSpinIndep(StdI,
-                          StdI->ntrans, StdI->transindx, StdI->trans,
-                          prefix_(StdI, "transfer.dat"), "Transfer");
 
   ExportInterReal(StdI,
                   StdI->NCinter, StdI->CinterIndx, StdI->Cinter,
