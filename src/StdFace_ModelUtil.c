@@ -1159,6 +1159,13 @@ void StdFace_InputHopp(
 @brief Print geometry of sites for the pos-process of correlation function
 */
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
+
+#if defined(_UHF)
+  if (strcmp(StdI->calcmode, "uhfk") == 0) {
+    /* suppress output geometry.dat in UHFk mode */
+  } else {
+#endif
+  
   FILE *fp;
   int isite, iCell, ii;
 
@@ -1195,6 +1202,11 @@ void StdFace_PrintGeometry(struct StdIntList *StdI) {
   }
   fflush(fp);
   fclose(fp);
+
+#if defined(_UHF)
+  }
+#endif
+
 }/*void StdFace_PrintGeometry()*/
 /**
 @brief Malloc Arrays for interactions
