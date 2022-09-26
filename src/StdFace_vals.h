@@ -390,6 +390,10 @@ struct StdIntList {
     int NCellsub;/**<@brief Number of cells in a sublattice*/
     int boxsub[3][3];/**<@brief Sublattice*/
     int rboxsub[3][3];/**<@brief Sublattice*/
+
+  char calcmode[256];/**<@brief Calculation Mode: UHF, UHFk */
+  char fileprefix[256];/**<@brief Prefix of output filenames */
+  int export_all;/**<@brief output zero elements in UHFk mode */
 #endif
 
 };
