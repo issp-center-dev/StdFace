@@ -2727,6 +2727,9 @@ void StdFace_main(
     else if (strcmp(keyword, "hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Hsub);
     else if (strcmp(keyword, "lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lsub);
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
+    else if (strcmp(keyword, "eps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps);
+    else if (strcmp(keyword, "epsslater") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps_slater);
+    else if (strcmp(keyword, "mix") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mix);
 #endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
