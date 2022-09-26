@@ -54,13 +54,13 @@ void StdFace_Pyrochlore(
   StdFace_PrintVal_d("Llength", &StdI->length[1], StdI->a);
   StdFace_PrintVal_d("Hlength", &StdI->length[2], StdI->a);
   StdFace_PrintVal_d("Wx", &StdI->direct[0][0], 0.0);
-  StdFace_PrintVal_d("Wy", &StdI->direct[0][1], 0.5 * StdI->length[0]);
-  StdFace_PrintVal_d("Wz", &StdI->direct[0][2], 0.5 * StdI->length[0]);
-  StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.5 * StdI->length[1]);
+  StdFace_PrintVal_d("Wy", &StdI->direct[0][1], 0.5 * StdI->length[1]);
+  StdFace_PrintVal_d("Wz", &StdI->direct[0][2], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.5 * StdI->length[0]);
   StdFace_PrintVal_d("Ly", &StdI->direct[1][1], 0.0);
-  StdFace_PrintVal_d("Lz", &StdI->direct[1][2], 0.5 * StdI->length[1]);
-  StdFace_PrintVal_d("Hx", &StdI->direct[2][0], 0.5 * StdI->length[2]);
-  StdFace_PrintVal_d("Hy", &StdI->direct[2][1], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Lz", &StdI->direct[1][2], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Hx", &StdI->direct[2][0], 0.5 * StdI->length[0]);
+  StdFace_PrintVal_d("Hy", &StdI->direct[2][1], 0.5 * StdI->length[1]);
   StdFace_PrintVal_d("Hz", &StdI->direct[2][2], 0.0);
 
   StdFace_PrintVal_d("phase0", &StdI->phase[0], 0.0);

@@ -61,7 +61,7 @@ void StdFace_Orthorhombic(
   StdFace_PrintVal_d("Lz", &StdI->direct[1][2], 0.0);
   StdFace_PrintVal_d("Hx", &StdI->direct[2][0], 0.0);
   StdFace_PrintVal_d("Hy", &StdI->direct[2][1], 0.0);
-  StdFace_PrintVal_d("Hz", &StdI->direct[2][2], StdI->length[1]);
+  StdFace_PrintVal_d("Hz", &StdI->direct[2][2], StdI->length[2]);
 
   StdFace_PrintVal_d("phase0", &StdI->phase[0], 0.0);
   StdFace_PrintVal_d("phase1", &StdI->phase[1], 0.0);

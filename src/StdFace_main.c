@@ -83,7 +83,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
 {
   FILE *fp;
   int iCalcType, iCalcModel, iRestart, iCalcSpec, 
-    iCalcEigenvec, iInitialVecTpye, InputEigenVec, OutputEigenVec,
+    iCalcEigenvec, iInitialVecType, InputEigenVec, OutputEigenVec,
     iInputHam, iOutputHam, iOutputExVec;
   /*
   First, check all parameters and exit if invalid parameters
@@ -155,14 +155,14 @@ static void PrintCalcMod(struct StdIntList *StdI)
     strcpy(StdI->InitialVecType, "c\0");
     fprintf(stdout, "   InitialVecType = c           ######  DEFAULT VALUE IS USED  ######\n");
     if (strcmp(StdI->method, "tpq") == 0 || strcmp(StdI->method, "ctpq") == 0)
-      iInitialVecTpye = -1;
+      iInitialVecType = -1;
     else
-      iInitialVecTpye = 0;
+      iInitialVecType = 0;
   }/*if (strcmp(StdI->InitialVecType, "****") == 0)*/
   else {
     fprintf(stdout, "   InitialVecType = %s\n", StdI->InitialVecType);
-    if (strcmp(StdI->InitialVecType, "c") == 0) iInitialVecTpye = 0;
-    else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecTpye = 1;
+    if (strcmp(StdI->InitialVecType, "c") == 0) iInitialVecType = 0;
+    else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecType = 1;
     else {
       fprintf(stdout, "\n ERROR ! Restart Mode : %s\n", StdI->Restart);
       StdFace_exit(-1);
@@ -285,7 +285,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   fprintf(fp, "ReStart %3d\n", iRestart);
   fprintf(fp, "CalcSpec %3d\n", iCalcSpec);
   fprintf(fp, "CalcEigenVec %3d\n", iCalcEigenvec);
-  fprintf(fp, "InitialVecType %3d\n", iInitialVecTpye);
+  fprintf(fp, "InitialVecType %3d\n", iInitialVecType);
   fprintf(fp, "InputEigenVec %3d\n", InputEigenVec);
   fprintf(fp, "OutputEigenVec %3d\n", OutputEigenVec);
   fprintf(fp, "InputHam %3d\n", iInputHam);
@@ -1549,7 +1549,7 @@ static void Print1Green(struct StdIntList *StdI)
           }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
         }/*for (isite = 0; isite < StdI->nsite; isite++)*/
       }/*if (StdI->ioutputmode == 2)*/
-    }/*if (StdI->ioutputmode != 0)*/
+    }/*for (store = 0; store < 2; store++))*/
 
     fp = fopen("greenone.def", "w");
     fprintf(fp, "===============================\n");
@@ -1842,7 +1842,7 @@ static void CheckModPara(struct StdIntList *StdI)
     StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
   }
  
-  if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 2)
+  if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1)
     StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, -1);
   else StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, 1);
 
@@ -2727,6 +2727,9 @@ void StdFace_main(
     else if (strcmp(keyword, "hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Hsub);
     else if (strcmp(keyword, "lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lsub);
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
+    else if (strcmp(keyword, "eps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps);
+    else if (strcmp(keyword, "epsslater") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps_slater);
+    else if (strcmp(keyword, "mix") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mix);
 #endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
