@@ -630,6 +630,8 @@ void ExportTransfer(struct StdIntList *StdI,
       }
       unfold_site(StdI, rr, rr);
 
+      intr_value[k] *= -1;  /* by convention */
+
       /* check consistency */
       int is_found = 0;
       int jj = 0;
