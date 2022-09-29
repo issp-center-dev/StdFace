@@ -1355,8 +1355,10 @@ static void PrintNamelist(struct StdIntList *StdI){
   fprintf(                         fp, "      Gutzwiller  gutzwilleridx.def\n");
   fprintf(                         fp, "         Jastrow  jastrowidx.def\n");
   fprintf(                         fp, "         Orbital  orbitalidx.def\n");
-  if (StdI->lGC == 1 || (StdI->Sz2 != 0 && StdI->Sz2 != StdI->NaN_i))
+  if (StdI->lGC == 1 || (StdI->Sz2 != 0 && StdI->Sz2 != StdI->NaN_i)) {
     fprintf(fp, " OrbitalParallel  orbitalidxpara.def\n");
+    fprintf(fp, "# OrbitalParallel  orbitalidxpara.def\n");
+  }
   fprintf(                         fp, "        TransSym  qptransidx.def\n");
 #endif
   
