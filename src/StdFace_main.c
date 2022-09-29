@@ -706,18 +706,21 @@ static void PrintOrb(struct StdIntList *StdI) {
 static void PrintOrbPara(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
-  int **OrbGC, **AntiOrbGC;
+  int **OrbGC, **AntiOrbGC, **reverse;
   /**@brief
   (1) Copy from anti-parallel orbital index
   */
   OrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
   AntiOrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
+  reverse = (int**)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
     OrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
     AntiOrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+    reverse[isite] = (int*)malloc(sizeof(int) * StdI->nsite);
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       OrbGC[isite][jsite] = StdI->Orb[isite][jsite];
       AntiOrbGC[isite][jsite] = StdI->AntiOrb[isite][jsite];
+      reverse[isite][jsite] = 1;
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
   /**@brief
@@ -728,6 +731,7 @@ static void PrintOrbPara(struct StdIntList *StdI) {
       for (jsite = 0; jsite < StdI->nsite; jsite++) {
         if (OrbGC[isite][jsite] == iorb) {
           OrbGC[jsite][isite] = OrbGC[isite][jsite];
+          reverse[jsite][isite] = -1;
         }
       }/*for (jsite = 0; jsite < isite; jsite++)*/
     }/*for (isite = 0; isite < StdI->nsite; isite++)*/
@@ -767,9 +771,9 @@ static void PrintOrbPara(struct StdIntList *StdI) {
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       if (isite >= jsite) continue;
       if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1)
-        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], AntiOrbGC[isite][jsite]);
+        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
       else
-        fprintf(fp, "%5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite]);
+        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite]);
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
@@ -779,6 +783,57 @@ static void PrintOrbPara(struct StdIntList *StdI) {
   fflush(fp);
   fclose(fp);
   fprintf(stdout, "    orbitalidxpara.def is written.\n");
+
+  //orbitalidxgen.def
+  fp = fopen("orbitalidxgen.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NOrbitalIdx %10d\n", StdI->NOrb +2*NOrbGC);
+  fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "=============================================\n");
+  //
+  // anti parallel
+  //
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1) {
+        fprintf(fp, "%5d  0  %5d  1  %5d  %5d\n", isite, jsite, StdI->Orb[isite][jsite], StdI->AntiOrb[isite][jsite]);
+      }
+      else {
+        fprintf(fp, "%5d  0  %5d  1  %5d  1\n", isite, jsite, StdI->Orb[isite][jsite]);
+      }
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  //
+  // parallel
+  //
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      if (isite >= jsite) continue;
+      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1) {
+        fprintf(fp, "%5d  0  %5d  0  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite] + StdI->NOrb,
+          reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
+        fprintf(fp, "%5d  1  %5d  1  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite] + StdI->NOrb + NOrbGC,
+          reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
+      }
+      else {
+        fprintf(fp, "%5d  0  %5d  0  %5d  %5d\n", isite, jsite, 
+          OrbGC[isite][jsite] + StdI->NOrb, reverse[isite][jsite]);
+        fprintf(fp, "%5d  1  %5d  1  %5d  %5d\n", isite, jsite, 
+          OrbGC[isite][jsite] + StdI->NOrb + NOrbGC, reverse[isite][jsite]);
+      }
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+
+  for (iOrbGC = 0; iOrbGC < StdI->NOrb; iOrbGC++)
+    fprintf(fp, "%5d  %5d\n", iOrbGC, 1);
+
+  for (iOrbGC = 0; iOrbGC < NOrbGC*2; iOrbGC++)
+    fprintf(fp, "%5d  %5d\n", iOrbGC + StdI->NOrb, 1);
+
+  fflush(fp);
+  fclose(fp);
+  fprintf(stdout, "    orbitalidxgen.def is written.\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) {
     free(OrbGC[isite]);
@@ -1357,7 +1412,7 @@ static void PrintNamelist(struct StdIntList *StdI){
   fprintf(                         fp, "         Orbital  orbitalidx.def\n");
   if (StdI->lGC == 1 || (StdI->Sz2 != 0 && StdI->Sz2 != StdI->NaN_i)) {
     fprintf(fp, " OrbitalParallel  orbitalidxpara.def\n");
-    fprintf(fp, "# OrbitalParallel  orbitalidxpara.def\n");
+    fprintf(fp, "# OrbitalGeneral  orbitalidxgen.def\n");
   }
   fprintf(                         fp, "        TransSym  qptransidx.def\n");
 #endif
@@ -2806,7 +2861,10 @@ void StdFace_main(
     || strcmp(StdI->lattice, "chainlattice") == 0) StdFace_Chain(StdI);
   else if (strcmp(StdI->lattice, "face-centeredorthorhombic") == 0
     || strcmp(StdI->lattice, "fcorthorhombic") == 0
-    || strcmp(StdI->lattice, "fco") == 0) StdFace_FCOrtho(StdI);
+    || strcmp(StdI->lattice, "fco") == 0
+    || strcmp(StdI->lattice, "face-centeredcubic") == 0
+    || strcmp(StdI->lattice, "fccubic") == 0
+    || strcmp(StdI->lattice, "fcc") == 0) StdFace_FCOrtho(StdI);
   else if (strcmp(StdI->lattice, "honeycomb") == 0
     || strcmp(StdI->lattice, "honeycomblattice") == 0) StdFace_Honeycomb(StdI);
   else if (strcmp(StdI->lattice, "kagome") == 0
@@ -2814,7 +2872,9 @@ void StdFace_main(
   else if (strcmp(StdI->lattice, "ladder") == 0
     || strcmp(StdI->lattice, "ladderlattice") == 0) StdFace_Ladder(StdI);
   else if (strcmp(StdI->lattice, "orthorhombic") == 0
-    || strcmp(StdI->lattice, "simpleorthorhombic") == 0) StdFace_Orthorhombic(StdI);
+    || strcmp(StdI->lattice, "simpleorthorhombic") == 0
+    || strcmp(StdI->lattice, "cubic") == 0
+    || strcmp(StdI->lattice, "simplecubic") == 0) StdFace_Orthorhombic(StdI);
   else if (strcmp(StdI->lattice, "pyrochlore") == 0) StdFace_Pyrochlore(StdI);
   else if (strcmp(StdI->lattice, "tetragonal") == 0
     || strcmp(StdI->lattice, "tetragonallattice") == 0
