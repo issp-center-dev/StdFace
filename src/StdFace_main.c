@@ -731,7 +731,7 @@ static void PrintOrbPara(struct StdIntList *StdI) {
       for (jsite = 0; jsite < StdI->nsite; jsite++) {
         if (OrbGC[isite][jsite] == iorb) {
           OrbGC[jsite][isite] = OrbGC[isite][jsite];
-          reverse[jsite][isite] = -1;
+          reverse[jsite][isite] = -reverse[isite][jsite];
         }
       }/*for (jsite = 0; jsite < isite; jsite++)*/
     }/*for (isite = 0; isite < StdI->nsite; isite++)*/
