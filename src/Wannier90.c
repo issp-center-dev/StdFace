@@ -455,7 +455,6 @@ static double complex***** read_density_matrix(
 static void PrintUHFinitial(
   struct StdIntList *StdI,
   int *NtUJ,
-  double complex **tUJ,
   double complex *****DenMat,
   int ***tUJindx
 ) {
@@ -630,9 +629,10 @@ void StdFace_Wannier90(
 
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
-      if (StdI->box[i][j] != StdI->NaN_i)
+      if (StdI->box[i][j] != StdI->NaN_i) {
         sprintf(tempwords, "cutoff_tVec[%d][%d]", i, j);
         StdFace_PrintVal_d(tempwords, &StdI->cutoff_tVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+      }
     }
   }
 
@@ -966,7 +966,7 @@ void StdFace_Wannier90(
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
   fclose(fp);
-  if(idcmode != NOTCORRECT) PrintUHFinitial(StdI, NtUJ, tUJ, DenMat, tUJindx);
+  if(idcmode != NOTCORRECT) PrintUHFinitial(StdI, NtUJ, DenMat, tUJindx);
   StdFace_PrintXSF(StdI);
   StdFace_PrintGeometry(StdI);
 
