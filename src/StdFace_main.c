@@ -1932,7 +1932,7 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("ExpecInterval", &StdI->ExpecInterval, 20);
   StdFace_PrintVal_i("NOmega", &StdI->Nomega, 200);
   StdFace_PrintVal_d("OmegaMax", &StdI->OmegaMax, StdI->LargeValue*StdI->nsite);
-  StdFace_PrintVal_d("OmegaMin", &StdI->OmegaMin, -StdI->LargeValue*StdI->nsite);
+  StdFace_PrintVal_d("OmegaMin", &StdI->OmegaMin, 0.0);
   StdFace_PrintVal_d("OmegaOrg", &StdI->OmegaOrg, 0.0);
   StdFace_PrintVal_d("OmegaIm", &StdI->OmegaIm, 0.01* (int)StdI->LargeValue);
 #elif defined(_mVMC)
