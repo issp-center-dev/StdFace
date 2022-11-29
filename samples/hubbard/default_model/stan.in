@@ -1,0 +1,10 @@
+model = "Hubbard"
+lattice = square
+W=2
+L=2
+method = "CG"
+2Sz = 0
+nelec = 4
+exct = 1
+t=1
+U=1

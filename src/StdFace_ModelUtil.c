@@ -943,7 +943,17 @@ void StdFace_PrintXSF(struct StdIntList *StdI) {
   FILE *fp;
   int ii, jj, kk, isite, iCell;
   double vec[3];
+  int do_convvec;
 
+  do_convvec = 0;
+  if (strcmp(StdI->lattice, "orthorhombic") == 0
+      || strcmp(StdI->lattice, "face-centeredorthorhombic") == 0
+      || strcmp(StdI->lattice, "fcorthorhombic") == 0
+      || strcmp(StdI->lattice, "fco") == 0
+      || strcmp(StdI->lattice, "pyrochlore") == 0) {
+    do_convvec = 1;
+  }
+  
   fp = fopen("lattice.xsf", "w");
   fprintf(fp, "CRYSTAL\n");
   fprintf(fp, "PRIMVEC\n");
@@ -954,6 +964,19 @@ void StdFace_PrintXSF(struct StdIntList *StdI) {
         vec[jj] += (double)StdI->box[ii][kk] * StdI->direct[kk][jj];
     }
     fprintf(fp, "%15.5f %15.5f %15.5f\n", vec[0], vec[1], vec[2]);
+  }
+  if (do_convvec) {
+    fprintf(fp, "CONVVEC\n");
+    for (ii = 0; ii < 3; ++ii) {
+      for (jj = 0; jj < 3; ++jj) {
+        if (ii == jj) {
+          fprintf(fp, "%15.5f ", StdI->length[ii]);
+        } else {
+          fprintf(fp, "%15.5f ", 0.0);
+        }
+      }
+      fprintf(fp, "\n");
+    }
   }
   fprintf(fp, "PRIMCOORD\n");
   fprintf(fp, "%d 1\n", StdI->NCell * StdI->NsiteUC);
@@ -1159,6 +1182,13 @@ void StdFace_InputHopp(
 @brief Print geometry of sites for the pos-process of correlation function
 */
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
+
+#if defined(_UHF)
+  if (strcmp(StdI->calcmode, "uhfk") == 0) {
+    /* suppress output geometry.dat in UHFk mode */
+  } else {
+#endif
+  
   FILE *fp;
   int isite, iCell, ii;
 
@@ -1195,6 +1225,11 @@ void StdFace_PrintGeometry(struct StdIntList *StdI) {
   }
   fflush(fp);
   fclose(fp);
+
+#if defined(_UHF)
+  }
+#endif
+
 }/*void StdFace_PrintGeometry()*/
 /**
 @brief Malloc Arrays for interactions

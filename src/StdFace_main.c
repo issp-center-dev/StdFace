@@ -40,6 +40,9 @@ The following lattices are supported:
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <complex.h>
+#if defined(_UHF)
+#include "export_wannier90.h"
+#endif
 
 #if defined(_HPhi)
 /**
@@ -83,7 +86,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
 {
   FILE *fp;
   int iCalcType, iCalcModel, iRestart, iCalcSpec, 
-    iCalcEigenvec, iInitialVecTpye, InputEigenVec, OutputEigenVec,
+    iCalcEigenvec, iInitialVecType, InputEigenVec, OutputEigenVec,
     iInputHam, iOutputHam, iOutputExVec;
   /*
   First, check all parameters and exit if invalid parameters
@@ -155,14 +158,14 @@ static void PrintCalcMod(struct StdIntList *StdI)
     strcpy(StdI->InitialVecType, "c\0");
     fprintf(stdout, "   InitialVecType = c           ######  DEFAULT VALUE IS USED  ######\n");
     if (strcmp(StdI->method, "tpq") == 0 || strcmp(StdI->method, "ctpq") == 0)
-      iInitialVecTpye = -1;
+      iInitialVecType = -1;
     else
-      iInitialVecTpye = 0;
+      iInitialVecType = 0;
   }/*if (strcmp(StdI->InitialVecType, "****") == 0)*/
   else {
     fprintf(stdout, "   InitialVecType = %s\n", StdI->InitialVecType);
-    if (strcmp(StdI->InitialVecType, "c") == 0) iInitialVecTpye = 0;
-    else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecTpye = 1;
+    if (strcmp(StdI->InitialVecType, "c") == 0) iInitialVecType = 0;
+    else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecType = 1;
     else {
       fprintf(stdout, "\n ERROR ! Restart Mode : %s\n", StdI->Restart);
       StdFace_exit(-1);
@@ -285,7 +288,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   fprintf(fp, "ReStart %3d\n", iRestart);
   fprintf(fp, "CalcSpec %3d\n", iCalcSpec);
   fprintf(fp, "CalcEigenVec %3d\n", iCalcEigenvec);
-  fprintf(fp, "InitialVecType %3d\n", iInitialVecTpye);
+  fprintf(fp, "InitialVecType %3d\n", iInitialVecType);
   fprintf(fp, "InputEigenVec %3d\n", InputEigenVec);
   fprintf(fp, "OutputEigenVec %3d\n", OutputEigenVec);
   fprintf(fp, "InputHam %3d\n", iInputHam);
@@ -1065,6 +1068,9 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->Hsub = StdI->NaN_i;
   StdI->Lsub = StdI->NaN_i;
   StdI->Wsub = StdI->NaN_i;
+  strcpy(StdI->calcmode, "****\0");
+  strcpy(StdI->fileprefix, "****\0");
+  StdI->export_all = StdI->NaN_i;
 #endif
 }/*static void StdFace_ResetVals*/
 /*
@@ -1549,7 +1555,7 @@ static void Print1Green(struct StdIntList *StdI)
           }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
         }/*for (isite = 0; isite < StdI->nsite; isite++)*/
       }/*if (StdI->ioutputmode == 2)*/
-    }/*if (StdI->ioutputmode != 0)*/
+    }/*for (store = 0; store < 2; store++))*/
 
     fp = fopen("greenone.def", "w");
     fprintf(fp, "===============================\n");
@@ -1842,7 +1848,7 @@ static void CheckModPara(struct StdIntList *StdI)
     StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
   }
  
-  if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 2)
+  if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1)
     StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, -1);
   else StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, 1);
 
@@ -2727,6 +2733,12 @@ void StdFace_main(
     else if (strcmp(keyword, "hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Hsub);
     else if (strcmp(keyword, "lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lsub);
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
+    else if (strcmp(keyword, "eps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps);
+    else if (strcmp(keyword, "epsslater") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps_slater);
+    else if (strcmp(keyword, "mix") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mix);
+    else if (strcmp(keyword, "calcmode") == 0) StoreWithCheckDup_sl(keyword, value, StdI->calcmode);
+    else if (strcmp(keyword, "fileprefix") == 0) StoreWithCheckDup_sl(keyword, value, StdI->fileprefix);
+    else if (strcmp(keyword, "exportall") == 0) StoreWithCheckDup_i(keyword, value, &StdI->export_all);
 #endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
@@ -2844,20 +2856,36 @@ void StdFace_main(
   fprintf(stdout, "\n");
   fprintf(stdout, "######  Print Expert input files  ######\n");
   fprintf(stdout, "\n");
+
+#if defined(_HPhi)
   PrintLocSpin(StdI);
   PrintTrans(StdI);
   PrintInteractions(StdI);
   CheckModPara(StdI);
-  PrintModPara(StdI); 
-#if defined(_HPhi)
+  PrintModPara(StdI);
+
   PrintExcitation(StdI);
   if (strcmp(StdI->method, "timeevolution") == 0) PrintPump(StdI);
   PrintCalcMod(StdI);
-#elif defined(_mVMC)
 
-  if(StdI->lGC == 0 && (StdI->Sz2 == 0 || StdI->Sz2 == StdI->NaN_i)) 
+  CheckOutputMode(StdI);
+  Print1Green(StdI);
+  Print2Green(StdI);
+
+  PrintNamelist(StdI);
+
+#elif defined(_mVMC)
+  PrintLocSpin(StdI);
+  PrintTrans(StdI);
+  PrintInteractions(StdI);
+  CheckModPara(StdI);
+  PrintModPara(StdI);
+
+  if (StdI->lGC == 0 && (StdI->Sz2 == 0 || StdI->Sz2 == StdI->NaN_i)) {
     StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 0);
-  else StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 1);
+  } else {
+    StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 1);
+  }
 
   StdFace_generate_orb(StdI);
   StdFace_Proj(StdI);
@@ -2866,15 +2894,34 @@ void StdFace_main(
     PrintOrbPara(StdI);
   PrintGutzwiller(StdI);
   PrintOrb(StdI);
-#endif
+
   CheckOutputMode(StdI);
   Print1Green(StdI);
-#if defined(_HPhi)
   Print2Green(StdI);
-#elif defined(_mVMC)
-  Print2Green(StdI);
-#endif
+
   PrintNamelist(StdI);
+
+#elif defined(_UHF)
+  if (strcmp(StdI->calcmode, "uhfk") != 0) {  /* UHF */
+
+    PrintLocSpin(StdI);
+    PrintTrans(StdI);
+    PrintInteractions(StdI);
+    CheckModPara(StdI);
+    PrintModPara(StdI);
+
+    CheckOutputMode(StdI);
+    Print1Green(StdI);
+
+    PrintNamelist(StdI);
+
+  } else {  /* UHFk */
+
+    ExportGeometry(StdI);
+    ExportInteraction(StdI);
+
+  }
+#endif
   /*
   Finalize All
   */
