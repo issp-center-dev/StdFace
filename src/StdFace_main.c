@@ -40,7 +40,9 @@ The following lattices are supported:
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <complex.h>
+#if defined(_UHF)
 #include "export_wannier90.h"
+#endif
 
 #if defined(_HPhi)
 /**

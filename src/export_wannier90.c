@@ -6,6 +6,8 @@
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 
+#if defined(_UHF)
+
 // #undef NDEBUG
 
 #define fatal(fmt,...)                                    \
@@ -863,3 +865,5 @@ void ExportInteraction(struct StdIntList *StdI)
 
   return;
 }
+
+#endif /* defined(_UHF) */
