@@ -127,15 +127,19 @@ void StdFace_HubbardLocal(
   struct StdIntList *StdI,//!<[inout]
   double mu0,//!<[in] Chemical potential
   double h0,//!<[in] Longitudinal magnetic feild
-  double Gamma0,//!<[in] Transvers magnetic feild
+  double Gamma0,//!<[in] Transvers magnetic feild (x)
+  double Gamma0_y,//!<[in] Transvers magnetic feild (y)
   double U0,//!<[in] Intra-site Coulomb potential
   int isite//!<[in] i for @f$c_{i \sigma}^\dagger@f$
 )
 {
+  fprintf(stdout, "\n  @ Start HubbardLocal\n");
   StdFace_trans(StdI, mu0 - 0.5 * h0, isite, 0, isite, 0);
   StdFace_trans(StdI, mu0 + 0.5 * h0, isite, 1, isite, 1);
   StdFace_trans(StdI, -0.5 * Gamma0, isite, 1, isite, 0);
   StdFace_trans(StdI, -0.5 * Gamma0, isite, 0, isite, 1);
+  StdFace_trans(StdI, -0.5 * I * Gamma0_y, isite, 1, isite, 0);
+  StdFace_trans(StdI,  0.5 * I * Gamma0_y, isite, 0, isite, 1);
   /**@brief
   Set StdIntList::Cintra and StdIntList::CintraIndx
   with the input argument and increase the number
@@ -154,6 +158,7 @@ void StdFace_MagField(
   int S2,//!<[in] Spin moment in @f$i@f$ site
   double h,//!<[in] Longitudinal magnetic field @f$h@f$
   double Gamma,//!<[in] Transvars magnetic field @f$h@f$
+  double Gamma_y,//!<[in] Transverse y magnetic field @f$h@f$
   int isite//!<[in] @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
 )
 {
@@ -181,12 +186,18 @@ void StdFace_MagField(
     \sqrt{S(S+1) - \sigma(\sigma+1)}
     (\sigma c_{i \sigma+ 1}^\dagger c_{i \sigma} + 
     \sigma c_{i \sigma}^\dagger c_{i \sigma+1})
+
+    -\Hy \frac{S_i^+ - S_i^-}{2i} =
+    \sum_{\sigma = -S}^{S-1} -\frac{i\Hy}{2}
+    \sqrt{S(S+1) - \sigma(\sigma+1)}
+    (-\sigma c_{i \sigma+ 1}^\dagger c_{i \sigma} + 
+    \sigma c_{i \sigma}^\dagger c_{i \sigma+1})
     @f]
     */
     if (ispin > 0) {
-      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
+      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)) - 0.5 * I * Gamma_y * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
         isite, ispin, isite, ispin - 1);
-      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
+      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)) + 0.5 * I * Gamma_y * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
         isite, ispin - 1, isite, ispin);
     }/*if (ispin < S2)*/
   }/*for (ispin = 0; ispin <= S2; ispin++)*/

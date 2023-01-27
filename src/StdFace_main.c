@@ -894,6 +894,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
     for (j = 0; j < 3; j++)
       StdI->box[i][j] = StdI->NaN_i;
   StdI->Gamma = NaN_d;
+  StdI->Gamma_y = NaN_d;
   StdI->h = NaN_d;
   StdI->Height = StdI->NaN_i;
   StdI->JAll = NaN_d;
@@ -2471,6 +2472,7 @@ void StdFace_main(
     else if (strcmp(keyword, "doublecounting") == 0) StoreWithCheckDup_sl(keyword, value, StdI->double_counting_mode);
     else if (strcmp(keyword, "gamma") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma);
     else if (strcmp(keyword, "h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->h);
+    else if (strcmp(keyword, "gamma_y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma_y);
     else if (strcmp(keyword, "height") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Height);
     else if (strcmp(keyword, "hlength") == 0) StoreWithCheckDup_d(keyword, value, &StdI->length[2]);
     else if (strcmp(keyword, "hx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->direct[2][0]);
