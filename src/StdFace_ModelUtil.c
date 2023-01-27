@@ -133,7 +133,6 @@ void StdFace_HubbardLocal(
   int isite//!<[in] i for @f$c_{i \sigma}^\dagger@f$
 )
 {
-  fprintf(stdout, "\n  @ Start HubbardLocal\n");
   StdFace_trans(StdI, mu0 - 0.5 * h0, isite, 0, isite, 0);
   StdFace_trans(StdI, mu0 + 0.5 * h0, isite, 1, isite, 1);
   StdFace_trans(StdI, -0.5 * Gamma0, isite, 1, isite, 0);

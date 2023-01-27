@@ -180,7 +180,6 @@ void StdFace_Tetragonal(struct StdIntList *StdI)
   (5) Set Transfer & Interaction
   */
   for (kCell = 0; kCell < StdI->NCell; kCell++){
-    fprintf(stdout, "\n  kCell=%d\n", kCell);
     /**/
     iW = StdI->Cell[kCell][0];
     iL = StdI->Cell[kCell][1];
@@ -191,7 +190,6 @@ void StdFace_Tetragonal(struct StdIntList *StdI)
     if (strcmp(StdI->model, "kondo") == 0 ) isite += StdI->NCell;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
-      fprintf(stdout, "\n  spin\n");
       StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, isite);
       StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite, isite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/

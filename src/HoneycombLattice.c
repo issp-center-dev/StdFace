@@ -163,13 +163,13 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
   (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
   */
   if (strcmp(StdI->model, "spin") == 0 ) {
-    ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/); 
+    ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 3/*J*/ + 6/*J'*/ + 3/*J''*/)
       * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
   }
   else {
     ntransMax = StdI->NCell * 2/*spin*/ * (
-      2 * StdI->NsiteUC/*mu+h+Gamma*/ + 6/*t*/ + 12/*t'*/ + 6/*t''*/); 
+      2 * StdI->NsiteUC/*mu+h+Gamma*/ + 6/*t*/ + 12/*t'*/ + 6/*t''*/);
     nintrMax = StdI->NCell * (StdI->NsiteUC/*U*/ + 4 * (3/*V*/ + 6/*V'*/ + 3/*V''*/));
 
     if (strcmp(StdI->model, "kondo") == 0) {
