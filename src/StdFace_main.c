@@ -1139,6 +1139,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   strcpy(StdI->calcmode, "****\0");
   strcpy(StdI->fileprefix, "****\0");
   StdI->export_all = StdI->NaN_i;
+  StdI->lattice_gp = StdI->NaN_i;
 #endif
 }/*static void StdFace_ResetVals*/
 /*
@@ -2850,6 +2851,7 @@ void StdFace_main(
     else if (strcmp(keyword, "calcmode") == 0) StoreWithCheckDup_sl(keyword, value, StdI->calcmode);
     else if (strcmp(keyword, "fileprefix") == 0) StoreWithCheckDup_sl(keyword, value, StdI->fileprefix);
     else if (strcmp(keyword, "exportall") == 0) StoreWithCheckDup_i(keyword, value, &StdI->export_all);
+    else if (strcmp(keyword, "lattice_gp") == 0) StoreWithCheckDup_i(keyword, value, &StdI->lattice_gp);
 #endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
@@ -3031,7 +3033,7 @@ void StdFace_main(
 
 #elif defined(_HWAVE)
   if (strcmp(StdI->calcmode, "uhfk") == 0
-      || strcmp(StdI->calcmode, "rpa") == 0
+      || strcmp(StdI->calcmode, "rpa") == 0)
   {
     /* UHFk or RPA mode */
     ExportGeometry(StdI);

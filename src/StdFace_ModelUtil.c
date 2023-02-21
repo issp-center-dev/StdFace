@@ -799,24 +799,26 @@ void StdFace_InitSite(
     xmin -= 2.0;
     xmax += 2.0;
 
-    fprintf(fp, "#set terminal pdf color enhanced \\\n");
-    fprintf(fp, "#dashed dl 1.0 size 20.0cm, 20.0cm \n");
-    fprintf(fp, "#set output \"lattice.pdf\"\n");
-    fprintf(fp, "set xrange [%f: %f]\n", xmin, xmax);
-    fprintf(fp, "set yrange [%f: %f]\n", xmin, xmax);
-    fprintf(fp, "set size square\n");
-    fprintf(fp, "unset key\n");
-    fprintf(fp, "unset tics\n");
-    fprintf(fp, "unset border\n");
+    if (fp) {
+      fprintf(fp, "#set terminal pdf color enhanced \\\n");
+      fprintf(fp, "#dashed dl 1.0 size 20.0cm, 20.0cm \n");
+      fprintf(fp, "#set output \"lattice.pdf\"\n");
+      fprintf(fp, "set xrange [%f: %f]\n", xmin, xmax);
+      fprintf(fp, "set yrange [%f: %f]\n", xmin, xmax);
+      fprintf(fp, "set size square\n");
+      fprintf(fp, "unset key\n");
+      fprintf(fp, "unset tics\n");
+      fprintf(fp, "unset border\n");
 
-    fprintf(fp, "set style line 1 lc 1 lt 1\n");
-    fprintf(fp, "set style line 2 lc 5 lt 1\n");
-    fprintf(fp, "set style line 3 lc 0 lt 1\n");
+      fprintf(fp, "set style line 1 lc 1 lt 1\n");
+      fprintf(fp, "set style line 2 lc 5 lt 1\n");
+      fprintf(fp, "set style line 3 lc 0 lt 1\n");
 
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[0][0], pos[0][1], pos[1][0], pos[1][1]);
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[1][0], pos[1][1], pos[3][0], pos[3][1]);
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[3][0], pos[3][1], pos[2][0], pos[2][1]);
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[2][0], pos[2][1], pos[0][0], pos[0][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[0][0], pos[0][1], pos[1][0], pos[1][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[1][0], pos[1][1], pos[3][0], pos[3][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[3][0], pos[3][1], pos[2][0], pos[2][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[2][0], pos[2][1], pos[0][0], pos[0][1]);
+    }
   }/*if (dim == 2)*/
 }/*void StdFace_InitSite2D*/
 /**
@@ -908,12 +910,21 @@ void StdFace_SetLabel(
   yj = StdI->direct[0][1] * ((double)(iW - diW) + StdI->tau[isiteUC][0])
      + StdI->direct[1][1] * ((double)(iL - diL) + StdI->tau[isiteUC][1]);
 
-  if (*isite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
-  if (*jsite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
-  if (connect < 3)
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+  if (fp) {
+    if (*isite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
+    }
+    if (*jsite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
+    }
+    if (connect < 3) {
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+    }
+  }
   /**@brief
   Then print the normal one, these are different when they cross boundary.
   */
@@ -929,12 +940,21 @@ void StdFace_SetLabel(
   yj = StdI->direct[0][1] * ((double)(iW + diW) + StdI->tau[jsiteUC][0])
      + StdI->direct[1][1] * ((double)(iL + diL) + StdI->tau[jsiteUC][1]);
 
-  if (*isite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
-  if (*jsite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
-  if (connect < 3)
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+  if (fp) {
+    if (*isite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
+    }
+    if (*jsite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
+    }
+    if (connect < 3) {
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+    }
+  }
 }/*void StdFace_SetLabel*/
 /**
 @brief Print lattice.xsf (XCrysDen format) 
@@ -1184,7 +1204,7 @@ void StdFace_InputHopp(
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
 
 #if defined(_HWAVE)
-  if (strcmp(StdI->calcmode, "uhfk") == 0) {
+  if (strcmp(StdI->calcmode, "uhfk") == 0 || strcmp(StdI->calcmode, "rpa") == 0) {
     /* suppress output geometry.dat in UHFk mode */
   } else {
 #endif

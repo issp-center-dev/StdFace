@@ -34,13 +34,16 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
 {
   int isite, jsite, kCell, ntransMax, nintrMax;
   int iL, iW;
-  FILE *fp;
+  FILE *fp = NULL;
   double complex Cphase;
   double dR[3];
 
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
   */
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1)
+#endif
   fp = fopen("lattice.gp", "w");
   /**/
   StdI->NsiteUC = 2;
@@ -355,8 +358,14 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
     }
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1) {
+#endif
   fprintf(fp, "plot \'-\' w d lc 7\n0.0 0.0\nend\npause -1\n");
   fclose(fp);
+#ifdef _HWAVE
+  }
+#endif
   StdFace_PrintGeometry(StdI);
 }/*void StdFace_Honeycomb*/
 

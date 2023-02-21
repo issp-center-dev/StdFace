@@ -34,7 +34,7 @@ void StdFace_Ladder(
   struct StdIntList *StdI//!<[inout]
 )
 {
-  FILE *fp;
+  FILE *fp = NULL;
   int isite, jsite, ntransMax, nintrMax;
   int iL, isiteUC;
   double complex Cphase;
@@ -43,6 +43,9 @@ void StdFace_Ladder(
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
   */
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1)
+#endif
   fp = fopen("lattice.gp", "w");
   /**/
   fprintf(stdout, "  @ Lattice Size & Shape\n\n");
@@ -276,8 +279,14 @@ void StdFace_Ladder(
     }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
   }/*for (iL = 0; iL < StdI->L; iL++)*/
 
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1) {
+#endif
   fprintf(fp, "plot \'-\' w d lc 7\n0.0 0.0\nend\npause -1\n");
   fclose(fp);
+#ifdef _HWAVE
+  }
+#endif
   StdFace_PrintGeometry(StdI);
 }/*void StdFace_Ladder*/
 

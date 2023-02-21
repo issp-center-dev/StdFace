@@ -410,6 +410,7 @@ struct StdIntList {
   char calcmode[256];/**<@brief Calculation Mode: UHF, UHFk */
   char fileprefix[256];/**<@brief Prefix of output filenames */
   int export_all;/**<@brief output zero elements in UHFk mode */
+  int lattice_gp;/**<@brief create lattice.gp */
 #endif
 
 };
