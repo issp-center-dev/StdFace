@@ -1183,7 +1183,7 @@ void StdFace_InputHopp(
 */
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
 
-#if defined(_UHF)
+#if defined(_HWAVE)
   if (strcmp(StdI->calcmode, "uhfk") == 0) {
     /* suppress output geometry.dat in UHFk mode */
   } else {
@@ -1226,7 +1226,7 @@ void StdFace_PrintGeometry(struct StdIntList *StdI) {
   fflush(fp);
   fclose(fp);
 
-#if defined(_UHF)
+#if defined(_HWAVE)
   }
 #endif
 

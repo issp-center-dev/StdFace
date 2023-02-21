@@ -6,7 +6,7 @@
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 
-#if defined(_UHF)
+#if defined(_HWAVE)
 
 // #undef NDEBUG
 
@@ -866,4 +866,4 @@ void ExportInteraction(struct StdIntList *StdI)
   return;
 }
 
-#endif /* defined(_UHF) */
+#endif /* defined(_HWAVE) */
