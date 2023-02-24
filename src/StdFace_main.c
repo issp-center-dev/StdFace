@@ -1905,9 +1905,7 @@ static void CheckModPara(struct StdIntList *StdI)
     StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
   }
  
-  if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1)
-    StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, -1);
-  else StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, 1);
+  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, -1);
 
   StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1000);
   
