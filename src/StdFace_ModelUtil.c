@@ -1451,12 +1451,7 @@ void StdFace_Proj(struct StdIntList *StdI)
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       if (Anti[iSym][jsite] % 2 == 0) Anti[iSym][jsite] = 1;
       else Anti[iSym][jsite] = -1;
-      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1) {
-        fprintf(fp, "%5d  %5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite], Anti[iSym][jsite]);
-      }
-      else {
-        fprintf(fp, "%5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite]);
-      }
+      fprintf(fp, "%5d  %5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite], Anti[iSym][jsite]);
     }
   }
   fflush(fp);
