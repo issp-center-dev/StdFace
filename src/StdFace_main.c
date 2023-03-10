@@ -709,21 +709,18 @@ static void PrintOrb(struct StdIntList *StdI) {
 static void PrintOrbPara(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
-  int **OrbGC, **AntiOrbGC, **reverse;
+  int **OrbGC, **reverse;
   /**@brief
   (1) Copy from anti-parallel orbital index
   */
   OrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
-  AntiOrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
   reverse = (int**)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
     OrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
-    AntiOrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
     reverse[isite] = (int*)malloc(sizeof(int) * StdI->nsite);
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       OrbGC[isite][jsite] = StdI->Orb[isite][jsite];
-      AntiOrbGC[isite][jsite] = StdI->AntiOrb[isite][jsite];
-      reverse[isite][jsite] = 1;
+      reverse[isite][jsite] = StdI->AntiOrb[isite][jsite];
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
   /**@brief
@@ -773,10 +770,7 @@ static void PrintOrbPara(struct StdIntList *StdI) {
   for (isite = 0; isite < StdI->nsite; isite++) {
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       if (isite >= jsite) continue;
-      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1)
-        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
-      else
-        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite]);
+      fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite]);
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
@@ -815,9 +809,9 @@ static void PrintOrbPara(struct StdIntList *StdI) {
       if (isite >= jsite) continue;
       if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1) {
         fprintf(fp, "%5d  0  %5d  0  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite] + StdI->NOrb,
-          reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
+          reverse[isite][jsite]);
         fprintf(fp, "%5d  1  %5d  1  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite] + StdI->NOrb + NOrbGC,
-          reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
+          reverse[isite][jsite]);
       }
       else {
         fprintf(fp, "%5d  0  %5d  0  %5d  %5d\n", isite, jsite, 
@@ -840,10 +834,8 @@ static void PrintOrbPara(struct StdIntList *StdI) {
 
   for (isite = 0; isite < StdI->nsite; isite++) {
     free(OrbGC[isite]);
-    free(AntiOrbGC[isite]);
   }
   free(OrbGC);
-  free(AntiOrbGC);
 }/*static void PrintOrbPara*/
 /**
 @brief Output .def file for Gutzwiller
