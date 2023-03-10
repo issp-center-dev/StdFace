@@ -27,8 +27,8 @@ void StdFace_intr(struct StdIntList *StdI, double complex intr0,
 void StdFace_Hopping(struct StdIntList *StdI, double complex trans0, int isite, int jsite, double *dR);
 void StdFace_trans(struct StdIntList *StdI,double complex trans0,int isite,int ispin,int jsite,int jspin);
 void StdFace_HubbardLocal(struct StdIntList *StdI, double mu0, double h0,
-  double Gamma0, double U0, int isite);
-void StdFace_MagField(struct StdIntList *StdI, int S2, double h, double Gamma, int isite);
+  double Gamma0, double Gamma0_y, double U0, int isite);
+void StdFace_MagField(struct StdIntList *StdI, int S2, double h, double Gamma, double Gamma_y, int isite);
 
 void StdFace_Coulomb(struct StdIntList *StdI, double V, int isite, int jsite);
 void StdFace_GeneralJ(struct StdIntList *StdI, double J[3][3],

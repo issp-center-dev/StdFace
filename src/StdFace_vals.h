@@ -146,6 +146,7 @@ struct StdIntList {
                  input parameter D. Only D[2][2] is used.*/
   double h;/**<@brief Longitudinal magnetic field, input parameter.*/
   double Gamma;/**<@brief Transvars magnetic field, input parameter.*/
+  double Gamma_y;/**<@brief Transverse magnetic field (y), input parameter.*/
   double K;/**<@brief 4-spin term. Not used.*/
   /*
    Phase for the boundary
