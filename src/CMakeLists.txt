@@ -34,3 +34,9 @@ if (HPHI)
    install(TARGETS hphi_dry.out RUNTIME DESTINATION bin)
 endif(HPHI)
 
+if (HWAVE)
+   add_executable(hwave_dry.out dry.c)
+   target_link_libraries(hwave_dry.out StdFace m)
+   install(TARGETS hwave_dry.out RUNTIME DESTINATION bin)
+endif(HWAVE)
+

@@ -34,7 +34,7 @@ void StdFace_Chain(
   struct StdIntList *StdI//!<[inout]
 )
 {
-  FILE *fp;
+  FILE *fp = NULL;
   int isite, jsite, ntransMax, nintrMax;
   int iL;
   double complex Cphase;
@@ -43,6 +43,9 @@ void StdFace_Chain(
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
   */
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1)
+#endif
   fp = fopen("lattice.gp", "w");
   /**/
   StdI->NsiteUC = 1;
@@ -225,8 +228,14 @@ void StdFace_Chain(
     }
   }/*for (iL = 0; iL < StdI->L; iL++)*/
 
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1) {
+#endif
   fprintf(fp, "plot \'-\' w d lc 7\n0.0 0.0\nend\npause -1\n");
   fclose(fp);
+#ifdef _HWAVE
+  }
+#endif
   StdFace_PrintGeometry(StdI);
 }/*void StdFace_Chain*/
 

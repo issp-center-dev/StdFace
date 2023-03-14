@@ -40,7 +40,7 @@ The following lattices are supported:
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <complex.h>
-#if defined(_UHF)
+#if defined(_HWAVE)
 #include "export_wannier90.h"
 #endif
 
@@ -1116,9 +1116,23 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->Hsub = StdI->NaN_i;
   StdI->Lsub = StdI->NaN_i;
   StdI->Wsub = StdI->NaN_i;
+#elif defined(_HWAVE)
+  StdI->NMPTrans = StdI->NaN_i;
+  StdI->RndSeed = StdI->NaN_i;
+  StdI->mix = NaN_d;
+  StdI->eps = StdI->NaN_i;
+  StdI->eps_slater = StdI->NaN_i;
+  StdI->Iteration_max = StdI->NaN_i;
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++)
+      StdI->boxsub[i][j] = StdI->NaN_i;
+  StdI->Hsub = StdI->NaN_i;
+  StdI->Lsub = StdI->NaN_i;
+  StdI->Wsub = StdI->NaN_i;
   strcpy(StdI->calcmode, "****\0");
   strcpy(StdI->fileprefix, "****\0");
   StdI->export_all = StdI->NaN_i;
+  StdI->lattice_gp = StdI->NaN_i;
 #endif
 }/*static void StdFace_ResetVals*/
 /*
@@ -1493,6 +1507,21 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "NSRCG          %d\n", StdI->NSRCG);
 #elif defined(_UHF)
   fprintf(fp, "UHF_Cal_Parameters\n");
+  fprintf(fp, "--------------------\n");
+  fprintf(fp, "CDataFileHead  %s\n", StdI->CDataFileHead);
+  fprintf(fp, "CParaFileHead  zqp\n");
+  fprintf(fp, "--------------------\n");
+  fprintf(fp, "Nsite          %d\n", StdI->nsite);
+  if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %-5d\n", StdI->Sz2);
+  fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
+  fprintf(fp, "IterationMax   %d\n", StdI->Iteration_max);
+  fprintf(fp, "EPS            %d\n", StdI->eps);
+  fprintf(fp, "Mix            %.10f\n", StdI->mix);
+  fprintf(fp, "RndSeed        %d\n", StdI->RndSeed);
+  fprintf(fp, "EpsSlater      %d\n", StdI->eps_slater);
+  fprintf(fp, "NMPTrans       %d\n", StdI->NMPTrans);
+#elif defined(_HWAVE)
+  fprintf(fp, "HWAVE_Cal_Parameters\n");
   fprintf(fp, "--------------------\n");
   fprintf(fp, "CDataFileHead  %s\n", StdI->CDataFileHead);
   fprintf(fp, "CParaFileHead  zqp\n");
@@ -1926,6 +1955,13 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_d("DSROptStaDel", &StdI->DSROptStaDel, 0.02);
   StdFace_PrintVal_d("DSROptStepDt", &StdI->DSROptStepDt, 0.02);
 #elif defined(_UHF)
+  StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
+  StdFace_PrintVal_i("Iteration_max", &StdI->Iteration_max, 1000);
+  StdFace_PrintVal_d("Mix", &StdI->mix, 0.5);
+  StdFace_PrintVal_i("eps", &StdI->eps, 8);
+  StdFace_PrintVal_i("EpsSlater", &StdI->eps_slater, 6);
+  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, 0);
+#elif defined(_HWAVE)
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
   StdFace_PrintVal_i("Iteration_max", &StdI->Iteration_max, 1000);
   StdFace_PrintVal_d("Mix", &StdI->mix, 0.5);
@@ -2785,9 +2821,29 @@ void StdFace_main(
     else if (strcmp(keyword, "eps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps);
     else if (strcmp(keyword, "epsslater") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps_slater);
     else if (strcmp(keyword, "mix") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mix);
+#elif defined(_HWAVE)
+    else if (strcmp(keyword, "iteration_max") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Iteration_max);
+    else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RndSeed);
+    else if (strcmp(keyword, "nmptrans") == 0) StoreWithCheckDup_i(keyword, value, &StdI->NMPTrans);
+    else if (strcmp(keyword, "a0hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][2]);
+    else if (strcmp(keyword, "a0lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][1]);
+    else if (strcmp(keyword, "a0wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][0]);
+    else if (strcmp(keyword, "a1hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[1][2]);
+    else if (strcmp(keyword, "a1lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[1][1]);
+    else if (strcmp(keyword, "a1wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[1][0]);
+    else if (strcmp(keyword, "a2hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][2]);
+    else if (strcmp(keyword, "a2lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][1]);
+    else if (strcmp(keyword, "a2wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][0]);
+    else if (strcmp(keyword, "hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Hsub);
+    else if (strcmp(keyword, "lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lsub);
+    else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
+    else if (strcmp(keyword, "eps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps);
+    else if (strcmp(keyword, "epsslater") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps_slater);
+    else if (strcmp(keyword, "mix") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mix);
     else if (strcmp(keyword, "calcmode") == 0) StoreWithCheckDup_sl(keyword, value, StdI->calcmode);
     else if (strcmp(keyword, "fileprefix") == 0) StoreWithCheckDup_sl(keyword, value, StdI->fileprefix);
     else if (strcmp(keyword, "exportall") == 0) StoreWithCheckDup_i(keyword, value, &StdI->export_all);
+    else if (strcmp(keyword, "lattice_gp") == 0) StoreWithCheckDup_i(keyword, value, &StdI->lattice_gp);
 #endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
@@ -2956,25 +3012,40 @@ void StdFace_main(
   PrintNamelist(StdI);
 
 #elif defined(_UHF)
-  if (strcmp(StdI->calcmode, "uhfk") != 0) {  /* UHF */
+  PrintLocSpin(StdI);
+  PrintTrans(StdI);
+  PrintInteractions(StdI);
+  CheckModPara(StdI);
+  PrintModPara(StdI);
 
-    PrintLocSpin(StdI);
+  CheckOutputMode(StdI);
+  Print1Green(StdI);
+
+  PrintNamelist(StdI);
+
+#elif defined(_HWAVE)
+  if (strcmp(StdI->calcmode, "uhfr") == 0)
+  {
+    /* UHFr mode */
+
+    /* PrintLocSpin(StdI); */
     PrintTrans(StdI);
     PrintInteractions(StdI);
     CheckModPara(StdI);
-    PrintModPara(StdI);
+    /* PrintModPara(StdI); */
 
     CheckOutputMode(StdI);
     Print1Green(StdI);
 
-    PrintNamelist(StdI);
+    /* PrintNamelist(StdI); */
 
-  } else {  /* UHFk */
-
+  } else {
+    /* UHFk or RPA mode */
     ExportGeometry(StdI);
     ExportInteraction(StdI);
 
   }
+
 #endif
   /*
   Finalize All
