@@ -3032,15 +3032,9 @@ void StdFace_main(
   PrintNamelist(StdI);
 
 #elif defined(_HWAVE)
-  if (strcmp(StdI->calcmode, "uhfk") == 0
-      || strcmp(StdI->calcmode, "rpa") == 0)
+  if (strcmp(StdI->calcmode, "uhfr") == 0)
   {
-    /* UHFk or RPA mode */
-    ExportGeometry(StdI);
-    ExportInteraction(StdI);
-
-  } else {
-    /* otherwise (UHFr) */
+    /* UHFr mode */
 
     /* PrintLocSpin(StdI); */
     PrintTrans(StdI);
@@ -3053,7 +3047,13 @@ void StdFace_main(
 
     /* PrintNamelist(StdI); */
 
+  } else {
+    /* UHFk or RPA mode */
+    ExportGeometry(StdI);
+    ExportInteraction(StdI);
+
   }
+
 #endif
   /*
   Finalize All
