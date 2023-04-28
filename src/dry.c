@@ -33,16 +33,15 @@ void usage(const char *prog)
 
 int main(int argc, char *argv[])
 {
+  int status = 0;
   if (argc < 2) {
     printVersion();
     usage(argv[0]);
-    exit(0);
+    status = 1;
   } else if (strcmp(argv[1], "-v") == 0) {
     printVersion();
-    exit(0);
   } else {
     StdFace_main(argv[1]);
   }
-
-  return 0;
+  return status;
 }
