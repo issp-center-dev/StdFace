@@ -3,7 +3,7 @@
 
 //#include "StdFace_vals.h"
 
-#if defined(_UHF)
+#if defined(_HWAVE)
 
 void ExportGeometry(struct StdIntList *StdI);
 void ExportInteraction(struct StdIntList *StdI);

@@ -146,6 +146,7 @@ struct StdIntList {
                  input parameter D. Only D[2][2] is used.*/
   double h;/**<@brief Longitudinal magnetic field, input parameter.*/
   double Gamma;/**<@brief Transvars magnetic field, input parameter.*/
+  double Gamma_y;/**<@brief Transverse magnetic field (y), input parameter.*/
   double K;/**<@brief 4-spin term. Not used.*/
   /*
    Phase for the boundary
@@ -390,10 +391,27 @@ struct StdIntList {
     int NCellsub;/**<@brief Number of cells in a sublattice*/
     int boxsub[3][3];/**<@brief Sublattice*/
     int rboxsub[3][3];/**<@brief Sublattice*/
+#elif defined(_HWAVE)
+    int RndSeed;/**<@brief */
+    double mix; /**<@brief linear mixing ratio for update*/
+    int eps; /**<@brief convergence threshold for Green's functions */
+    int eps_slater;/**<@brief convergence threshold for Slater's functions */
+    int Iteration_max;/**<@brief max number for iterations*/
+    int NMPTrans;/**<@brief Number of translation symmetry*/
+    /*
+     Sub-lattice
+    */
+    int Lsub;/**<@brief Sublattice*/
+    int Wsub;/**<@brief Sublattice*/
+    int Hsub;/**<@brief Sublattice*/
+    int NCellsub;/**<@brief Number of cells in a sublattice*/
+    int boxsub[3][3];/**<@brief Sublattice*/
+    int rboxsub[3][3];/**<@brief Sublattice*/
 
   char calcmode[256];/**<@brief Calculation Mode: UHF, UHFk */
   char fileprefix[256];/**<@brief Prefix of output filenames */
   int export_all;/**<@brief output zero elements in UHFk mode */
+  int lattice_gp;/**<@brief create lattice.gp */
 #endif
 
 };

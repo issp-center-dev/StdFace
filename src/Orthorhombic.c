@@ -76,6 +76,7 @@ void StdFace_Orthorhombic(
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
   StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
+  StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
   /**/
   if (strcmp(StdI->model, "spin") == 0 ) {
     StdFace_PrintVal_i("2S", &StdI->S2, 1);
@@ -195,15 +196,15 @@ void StdFace_Orthorhombic(
     if (strcmp(StdI->model, "kondo") == 0 ) isite += StdI->NCell;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
-      StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite);
+      StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, isite);
       StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite, isite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite);
+      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, StdI->U, isite);
       if (strcmp(StdI->model, "kondo") == 0 ) {
         jsite = kCell;
         StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite, jsite);
-        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, jsite);
+        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, jsite);
       }/*if (strcmp(StdI->model, "kondo") == 0 )*/
     }
     /*

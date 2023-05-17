@@ -127,7 +127,8 @@ void StdFace_HubbardLocal(
   struct StdIntList *StdI,//!<[inout]
   double mu0,//!<[in] Chemical potential
   double h0,//!<[in] Longitudinal magnetic feild
-  double Gamma0,//!<[in] Transvers magnetic feild
+  double Gamma0,//!<[in] Transvers magnetic feild (x)
+  double Gamma0_y,//!<[in] Transvers magnetic feild (y)
   double U0,//!<[in] Intra-site Coulomb potential
   int isite//!<[in] i for @f$c_{i \sigma}^\dagger@f$
 )
@@ -136,6 +137,8 @@ void StdFace_HubbardLocal(
   StdFace_trans(StdI, mu0 + 0.5 * h0, isite, 1, isite, 1);
   StdFace_trans(StdI, -0.5 * Gamma0, isite, 1, isite, 0);
   StdFace_trans(StdI, -0.5 * Gamma0, isite, 0, isite, 1);
+  StdFace_trans(StdI, -0.5 * I * Gamma0_y, isite, 1, isite, 0);
+  StdFace_trans(StdI,  0.5 * I * Gamma0_y, isite, 0, isite, 1);
   /**@brief
   Set StdIntList::Cintra and StdIntList::CintraIndx
   with the input argument and increase the number
@@ -154,6 +157,7 @@ void StdFace_MagField(
   int S2,//!<[in] Spin moment in @f$i@f$ site
   double h,//!<[in] Longitudinal magnetic field @f$h@f$
   double Gamma,//!<[in] Transvars magnetic field @f$h@f$
+  double Gamma_y,//!<[in] Transverse y magnetic field @f$h@f$
   int isite//!<[in] @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
 )
 {
@@ -181,12 +185,18 @@ void StdFace_MagField(
     \sqrt{S(S+1) - \sigma(\sigma+1)}
     (\sigma c_{i \sigma+ 1}^\dagger c_{i \sigma} + 
     \sigma c_{i \sigma}^\dagger c_{i \sigma+1})
+
+    -\Hy \frac{S_i^+ - S_i^-}{2i} =
+    \sum_{\sigma = -S}^{S-1} -\frac{i\Hy}{2}
+    \sqrt{S(S+1) - \sigma(\sigma+1)}
+    (-\sigma c_{i \sigma+ 1}^\dagger c_{i \sigma} + 
+    \sigma c_{i \sigma}^\dagger c_{i \sigma+1})
     @f]
     */
     if (ispin > 0) {
-      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
+      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)) - 0.5 * I * Gamma_y * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
         isite, ispin, isite, ispin - 1);
-      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
+      StdFace_trans(StdI, -0.5 * Gamma * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)) + 0.5 * I * Gamma_y * sqrt(S*(S + 1.0) - Sz*(Sz + 1.0)),
         isite, ispin - 1, isite, ispin);
     }/*if (ispin < S2)*/
   }/*for (ispin = 0; ispin <= S2; ispin++)*/
@@ -799,24 +809,26 @@ void StdFace_InitSite(
     xmin -= 2.0;
     xmax += 2.0;
 
-    fprintf(fp, "#set terminal pdf color enhanced \\\n");
-    fprintf(fp, "#dashed dl 1.0 size 20.0cm, 20.0cm \n");
-    fprintf(fp, "#set output \"lattice.pdf\"\n");
-    fprintf(fp, "set xrange [%f: %f]\n", xmin, xmax);
-    fprintf(fp, "set yrange [%f: %f]\n", xmin, xmax);
-    fprintf(fp, "set size square\n");
-    fprintf(fp, "unset key\n");
-    fprintf(fp, "unset tics\n");
-    fprintf(fp, "unset border\n");
+    if (fp) {
+      fprintf(fp, "#set terminal pdf color enhanced \\\n");
+      fprintf(fp, "#dashed dl 1.0 size 20.0cm, 20.0cm \n");
+      fprintf(fp, "#set output \"lattice.pdf\"\n");
+      fprintf(fp, "set xrange [%f: %f]\n", xmin, xmax);
+      fprintf(fp, "set yrange [%f: %f]\n", xmin, xmax);
+      fprintf(fp, "set size square\n");
+      fprintf(fp, "unset key\n");
+      fprintf(fp, "unset tics\n");
+      fprintf(fp, "unset border\n");
 
-    fprintf(fp, "set style line 1 lc 1 lt 1\n");
-    fprintf(fp, "set style line 2 lc 5 lt 1\n");
-    fprintf(fp, "set style line 3 lc 0 lt 1\n");
+      fprintf(fp, "set style line 1 lc 1 lt 1\n");
+      fprintf(fp, "set style line 2 lc 5 lt 1\n");
+      fprintf(fp, "set style line 3 lc 0 lt 1\n");
 
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[0][0], pos[0][1], pos[1][0], pos[1][1]);
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[1][0], pos[1][1], pos[3][0], pos[3][1]);
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[3][0], pos[3][1], pos[2][0], pos[2][1]);
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[2][0], pos[2][1], pos[0][0], pos[0][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[0][0], pos[0][1], pos[1][0], pos[1][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[1][0], pos[1][1], pos[3][0], pos[3][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[3][0], pos[3][1], pos[2][0], pos[2][1]);
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[2][0], pos[2][1], pos[0][0], pos[0][1]);
+    }
   }/*if (dim == 2)*/
 }/*void StdFace_InitSite2D*/
 /**
@@ -908,12 +920,21 @@ void StdFace_SetLabel(
   yj = StdI->direct[0][1] * ((double)(iW - diW) + StdI->tau[isiteUC][0])
      + StdI->direct[1][1] * ((double)(iL - diL) + StdI->tau[isiteUC][1]);
 
-  if (*isite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
-  if (*jsite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
-  if (connect < 3)
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+  if (fp) {
+    if (*isite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
+    }
+    if (*jsite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
+    }
+    if (connect < 3) {
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+    }
+  }
   /**@brief
   Then print the normal one, these are different when they cross boundary.
   */
@@ -929,12 +950,21 @@ void StdFace_SetLabel(
   yj = StdI->direct[0][1] * ((double)(iW + diW) + StdI->tau[jsiteUC][0])
      + StdI->direct[1][1] * ((double)(iL + diL) + StdI->tau[jsiteUC][1]);
 
-  if (*isite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
-  if (*jsite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
-  else            fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
-  if (connect < 3)
-    fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+  if (fp) {
+    if (*isite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *isite, xi, yi);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *isite, xi, yi);
+    }
+    if (*jsite < 10) {
+      fprintf(fp, "set label \"%1d\" at %f, %f center front\n", *jsite, xj, yj);
+    } else {
+      fprintf(fp, "set label \"%2d\" at %f, %f center front\n", *jsite, xj, yj);
+    }
+    if (connect < 3) {
+      fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
+    }
+  }
 }/*void StdFace_SetLabel*/
 /**
 @brief Print lattice.xsf (XCrysDen format) 
@@ -1183,8 +1213,8 @@ void StdFace_InputHopp(
 */
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
 
-#if defined(_UHF)
-  if (strcmp(StdI->calcmode, "uhfk") == 0) {
+#if defined(_HWAVE)
+  if (strcmp(StdI->calcmode, "uhfk") == 0 || strcmp(StdI->calcmode, "rpa") == 0) {
     /* suppress output geometry.dat in UHFk mode */
   } else {
 #endif
@@ -1226,7 +1256,7 @@ void StdFace_PrintGeometry(struct StdIntList *StdI) {
   fflush(fp);
   fclose(fp);
 
-#if defined(_UHF)
+#if defined(_HWAVE)
   }
 #endif
 
@@ -1451,12 +1481,7 @@ void StdFace_Proj(struct StdIntList *StdI)
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       if (Anti[iSym][jsite] % 2 == 0) Anti[iSym][jsite] = 1;
       else Anti[iSym][jsite] = -1;
-      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1) {
-        fprintf(fp, "%5d  %5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite], Anti[iSym][jsite]);
-      }
-      else {
-        fprintf(fp, "%5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite]);
-      }
+      fprintf(fp, "%5d  %5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite], Anti[iSym][jsite]);
     }
   }
   fflush(fp);

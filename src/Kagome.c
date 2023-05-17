@@ -36,13 +36,16 @@ void StdFace_Kagome(
 {
   int isite, jsite, isiteUC, kCell, ntransMax, nintrMax;
   int iL, iW;
-  FILE *fp;
+  FILE *fp = NULL;
   double complex Cphase;
   double dR[3];
 
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
   */
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1)
+#endif
   fp = fopen("lattice.gp", "w");
   /**/
   StdI->NsiteUC = 3;
@@ -72,6 +75,7 @@ void StdFace_Kagome(
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
   StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
+  StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
   /**/
   if (strcmp(StdI->model, "spin") == 0 ) {
     StdFace_PrintVal_i("2S", &StdI->S2, 1);
@@ -190,19 +194,19 @@ void StdFace_Kagome(
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
       for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
-        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite + isiteUC);
+        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, isite + isiteUC);
         StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite + isiteUC, isite + isiteUC);
       }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
       for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)
-        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite + isiteUC);
+        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, StdI->U, isite + isiteUC);
       /**/
       if (strcmp(StdI->model, "kondo") == 0 ) {
         jsite = StdI->NsiteUC * kCell;
         for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
           StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite + isiteUC, jsite + isiteUC);
-          StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, jsite + isiteUC);
+          StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, jsite + isiteUC);
         }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
       }/*if (strcmp(StdI->model, "kondo") == 0 )*/
     }/*if (strcmp(StdI->model, "spin") != 0 )<<*/
@@ -352,8 +356,14 @@ void StdFace_Kagome(
     }
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
+#ifdef _HWAVE
+  if (StdI->lattice_gp == 1) {
+#endif
   fprintf(fp, "plot \'-\' w d lc 7\n0.0 0.0\nend\npause -1\n");
   fclose(fp);
+#ifdef _HWAVE
+  }
+#endif
   StdFace_PrintGeometry(StdI);
 }/*void StdFace_Kagome*/
 
@@ -388,7 +398,7 @@ void StdFace_Kagome_Boost(struct StdIntList *StdI)
   fp = fopen("boost.def", "w");
   fprintf(fp, "# Magnetic field\n");
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
-    -0.5 * StdI->Gamma, 0.0, -0.5 * StdI->h);
+    -0.5 * StdI->Gamma, -0.5 * StdI->Gamma_y, -0.5 * StdI->h);
   /*
   Interaction
   */
