@@ -14,7 +14,7 @@ set(SOURCES_StdFace
 include_directories(sfmt)
 add_definitions(-DMEXP=19937)
 
-add_library(StdFace STATIC ChainLattice.c HoneycombLattice.c SquareLattice.c StdFace_main.c StdFace_ModelUtil.c TriangularLattice.c Ladder.c Kagome.c Orthorhombic.c Pyrochlore.c Wannier90.c FCOrtho.c setmemory.c)
+add_library(StdFace STATIC ChainLattice.c HoneycombLattice.c SquareLattice.c StdFace_main.c StdFace_ModelUtil.c TriangularLattice.c Ladder.c Kagome.c Orthorhombic.c Pyrochlore.c Wannier90.c FCOrtho.c setmemory.c export_wannier90.c)
 
 if (UHF)
    add_executable(uhf_dry.out dry.c)
@@ -33,4 +33,10 @@ if (HPHI)
    target_link_libraries(hphi_dry.out StdFace m)
    install(TARGETS hphi_dry.out RUNTIME DESTINATION bin)
 endif(HPHI)
+
+if (HWAVE)
+   add_executable(hwave_dry.out dry.c)
+   target_link_libraries(hwave_dry.out StdFace m)
+   install(TARGETS hwave_dry.out RUNTIME DESTINATION bin)
+endif(HWAVE)
 

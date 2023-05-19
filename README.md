@@ -1,6 +1,10 @@
 # StdFace
 
-An input files generator for [HPhi](https://github.com/issp-center-dev/HPhi), [mVMC](https://github.com/issp-center-dev/mVMC) and [UHF](https://github.com/issp-center-dev/UHF-dev).
+An input files generator for
+[HPhi](https://github.com/issp-center-dev/HPhi),
+[mVMC](https://github.com/issp-center-dev/mVMC),
+[UHF](https://github.com/issp-center-dev/UHF-dev), and
+[H-wave](https://github.com/issp-center-dev/H-wave).
 
 ## Requirement
 C compiler (intel, Fujitsu, GNU, etc. )  
@@ -31,6 +35,7 @@ $ make install
 If you define xxx as HPHI, hphi_dry.out is made.
 If you define xxx as MVMC, mvmc_dry.out is made.
 If you define xxx as UHF, uhf_dry.out is made.
+If you define xxx as HWAVE, hwave_dry.out is made.
 
 ## Licence
 

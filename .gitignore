@@ -50,3 +50,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Machine-specific Configuration File
+make.sys
+
+# Build Output
+build/

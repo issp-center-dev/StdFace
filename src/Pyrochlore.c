@@ -54,13 +54,13 @@ void StdFace_Pyrochlore(
   StdFace_PrintVal_d("Llength", &StdI->length[1], StdI->a);
   StdFace_PrintVal_d("Hlength", &StdI->length[2], StdI->a);
   StdFace_PrintVal_d("Wx", &StdI->direct[0][0], 0.0);
-  StdFace_PrintVal_d("Wy", &StdI->direct[0][1], 0.5 * StdI->length[0]);
-  StdFace_PrintVal_d("Wz", &StdI->direct[0][2], 0.5 * StdI->length[0]);
-  StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.5 * StdI->length[1]);
+  StdFace_PrintVal_d("Wy", &StdI->direct[0][1], 0.5 * StdI->length[1]);
+  StdFace_PrintVal_d("Wz", &StdI->direct[0][2], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.5 * StdI->length[0]);
   StdFace_PrintVal_d("Ly", &StdI->direct[1][1], 0.0);
-  StdFace_PrintVal_d("Lz", &StdI->direct[1][2], 0.5 * StdI->length[1]);
-  StdFace_PrintVal_d("Hx", &StdI->direct[2][0], 0.5 * StdI->length[2]);
-  StdFace_PrintVal_d("Hy", &StdI->direct[2][1], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Lz", &StdI->direct[1][2], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Hx", &StdI->direct[2][0], 0.5 * StdI->length[0]);
+  StdFace_PrintVal_d("Hy", &StdI->direct[2][1], 0.5 * StdI->length[1]);
   StdFace_PrintVal_d("Hz", &StdI->direct[2][2], 0.0);
 
   StdFace_PrintVal_d("phase0", &StdI->phase[0], 0.0);
@@ -79,6 +79,7 @@ void StdFace_Pyrochlore(
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
   StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
+  StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
   /**/
   if (strcmp(StdI->model, "spin") == 0 ) {
     StdFace_PrintVal_i("2S", &StdI->S2, 1);
@@ -194,20 +195,20 @@ void StdFace_Pyrochlore(
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
       for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
-        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite + isiteUC);
+        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, isite + isiteUC);
         StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite + isiteUC, isite + isiteUC);
       }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
       for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
-        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite + isiteUC);
+        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, StdI->U, isite + isiteUC);
       }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
       /**/
       if (strcmp(StdI->model, "kondo") == 0) {
         jsite = StdI->NsiteUC * kCell;
         for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
           StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite + 3, jsite + isiteUC);
-          StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, jsite + isiteUC);
+          StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, jsite + isiteUC);
         }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
       }/*if (strcmp(StdI->model, "kondo") == 0 )*/
     }/*if (strcmp(StdI->model, "spin") != 0 )*/

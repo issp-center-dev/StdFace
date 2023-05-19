@@ -17,6 +17,10 @@ if(HPHI)
 add_definitions(-D_HPhi)
 endif(HPHI)
 
+if(HWAVE)
+add_definitions(-D_HWAVE)
+endif(HWAVE)
+
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 

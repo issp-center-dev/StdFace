@@ -54,13 +54,13 @@ void StdFace_FCOrtho(
   StdFace_PrintVal_d("Llength", &StdI->length[1], StdI->a);
   StdFace_PrintVal_d("Hlength", &StdI->length[2], StdI->a);
   StdFace_PrintVal_d("Wx", &StdI->direct[0][0], 0.0);
-  StdFace_PrintVal_d("Wy", &StdI->direct[0][1], 0.5 * StdI->length[0]);
-  StdFace_PrintVal_d("Wz", &StdI->direct[0][2], 0.5 * StdI->length[0]);
-  StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.5 * StdI->length[1]);
+  StdFace_PrintVal_d("Wy", &StdI->direct[0][1], 0.5 * StdI->length[1]);
+  StdFace_PrintVal_d("Wz", &StdI->direct[0][2], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.5 * StdI->length[0]);
   StdFace_PrintVal_d("Ly", &StdI->direct[1][1], 0.0);
-  StdFace_PrintVal_d("Lz", &StdI->direct[1][2], 0.5 * StdI->length[1]);
-  StdFace_PrintVal_d("Hx", &StdI->direct[2][0], 0.5 * StdI->length[2]);
-  StdFace_PrintVal_d("Hy", &StdI->direct[2][1], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Lz", &StdI->direct[1][2], 0.5 * StdI->length[2]);
+  StdFace_PrintVal_d("Hx", &StdI->direct[2][0], 0.5 * StdI->length[0]);
+  StdFace_PrintVal_d("Hy", &StdI->direct[2][1], 0.5 * StdI->length[1]);
   StdFace_PrintVal_d("Hz", &StdI->direct[2][2], 0.0);
 
   StdFace_PrintVal_d("phase0", &StdI->phase[0], 0.0);
@@ -76,6 +76,7 @@ void StdFace_FCOrtho(
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
   StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
+  StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
   /**/
   if (strcmp(StdI->model, "spin") == 0 ) {
     StdFace_PrintVal_i("2S", &StdI->S2, 1);
@@ -193,11 +194,11 @@ void StdFace_FCOrtho(
     if (strcmp(StdI->model, "kondo") == 0 ) isite += StdI->NCell;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
-      StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite);
+      StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, isite);
       StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite, isite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite);
+      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, StdI->U, isite);
       /**/
       if (strcmp(StdI->model, "kondo") == 0 ) {
         jsite = kCell;
