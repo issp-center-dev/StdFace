@@ -511,7 +511,7 @@ static void PrintExcitation(struct StdIntList *StdI) {
     fp = fopen("pair.def", "w");
     fprintf(fp, "=============================================\n");
     if (lR == 0) fprintf(fp, "NPair %d\n", 2);
-    else fprintf(fp, "NSingle %d\n", 1 + StdI->nsite);
+    else fprintf(fp, "NPair %d\n", 1 + StdI->nsite);
     fprintf(fp, "=============================================\n");
     fprintf(fp, "=============== Pair Excitation =============\n");
     fprintf(fp, "=============================================\n");
