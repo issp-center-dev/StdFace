@@ -698,6 +698,7 @@ void StdFace_Wannier90(
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
   StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
+  StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
   StdFace_NotUsed_d("U", StdI->U);
   /**/
   if (strcmp(StdI->model, "spin") == 0 ) {
@@ -760,12 +761,12 @@ void StdFace_Wannier90(
     */
     if (strcmp(StdI->model, "spin") == 0) {
       for (isite = StdI->NsiteUC*kCell; isite < StdI->NsiteUC*(kCell + 1); isite++) {
-        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite);
+        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, isite);
       }
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
       for (isite = StdI->NsiteUC*kCell; isite < StdI->NsiteUC*(kCell + 1); isite++) {
-        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, 0.0, isite);
+        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, 0.0, isite);
       }
     }/*if (strcmp(StdI->model, "spin") != 0 )*/
     /*

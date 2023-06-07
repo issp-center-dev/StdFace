@@ -26,13 +26,22 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 void StdFace_main(char *fname);
 
+void usage(const char *prog)
+{
+  printf("usage: %s stan.in\n", prog);
+}
+
 int main(int argc, char *argv[])
 {
-  if (strcmp(argv[1], "-v") == 0) {
+  int status = 0;
+  if (argc < 2) {
     printVersion();
-    exit(0);
-  }
-  else {
+    usage(argv[0]);
+    status = 1;
+  } else if (strcmp(argv[1], "-v") == 0) {
+    printVersion();
+  } else {
     StdFace_main(argv[1]);
   }
+  return status;
 }

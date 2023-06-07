@@ -40,6 +40,9 @@ The following lattices are supported:
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <complex.h>
+#if defined(_HWAVE)
+#include "export_wannier90.h"
+#endif
 
 #if defined(_HPhi)
 /**
@@ -83,7 +86,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
 {
   FILE *fp;
   int iCalcType, iCalcModel, iRestart, iCalcSpec, 
-    iCalcEigenvec, iInitialVecTpye, InputEigenVec, OutputEigenVec,
+    iCalcEigenvec, iInitialVecType, InputEigenVec, OutputEigenVec,
     iInputHam, iOutputHam, iOutputExVec;
   /*
   First, check all parameters and exit if invalid parameters
@@ -155,14 +158,14 @@ static void PrintCalcMod(struct StdIntList *StdI)
     strcpy(StdI->InitialVecType, "c\0");
     fprintf(stdout, "   InitialVecType = c           ######  DEFAULT VALUE IS USED  ######\n");
     if (strcmp(StdI->method, "tpq") == 0 || strcmp(StdI->method, "ctpq") == 0)
-      iInitialVecTpye = -1;
+      iInitialVecType = -1;
     else
-      iInitialVecTpye = 0;
+      iInitialVecType = 0;
   }/*if (strcmp(StdI->InitialVecType, "****") == 0)*/
   else {
     fprintf(stdout, "   InitialVecType = %s\n", StdI->InitialVecType);
-    if (strcmp(StdI->InitialVecType, "c") == 0) iInitialVecTpye = 0;
-    else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecTpye = 1;
+    if (strcmp(StdI->InitialVecType, "c") == 0) iInitialVecType = 0;
+    else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecType = 1;
     else {
       fprintf(stdout, "\n ERROR ! Restart Mode : %s\n", StdI->Restart);
       StdFace_exit(-1);
@@ -286,7 +289,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   fprintf(fp, "ReStart %3d\n", iRestart);
   fprintf(fp, "CalcSpec %3d\n", iCalcSpec);
   fprintf(fp, "CalcEigenVec %3d\n", iCalcEigenvec);
-  fprintf(fp, "InitialVecType %3d\n", iInitialVecTpye);
+  fprintf(fp, "InitialVecType %3d\n", iInitialVecType);
   fprintf(fp, "InputEigenVec %3d\n", InputEigenVec);
   fprintf(fp, "OutputEigenVec %3d\n", OutputEigenVec);
   fprintf(fp, "InputHam %3d\n", iInputHam);
@@ -765,21 +768,18 @@ static void PrintOrb(struct StdIntList *StdI) {
 static void PrintOrbPara(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
-  int **OrbGC, **AntiOrbGC, **reverse;
+  int **OrbGC, **reverse;
   /**@brief
   (1) Copy from anti-parallel orbital index
   */
   OrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
-  AntiOrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
   reverse = (int**)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
     OrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
-    AntiOrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
     reverse[isite] = (int*)malloc(sizeof(int) * StdI->nsite);
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       OrbGC[isite][jsite] = StdI->Orb[isite][jsite];
-      AntiOrbGC[isite][jsite] = StdI->AntiOrb[isite][jsite];
-      reverse[isite][jsite] = 1;
+      reverse[isite][jsite] = StdI->AntiOrb[isite][jsite];
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
   /**@brief
@@ -829,10 +829,7 @@ static void PrintOrbPara(struct StdIntList *StdI) {
   for (isite = 0; isite < StdI->nsite; isite++) {
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       if (isite >= jsite) continue;
-      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1)
-        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
-      else
-        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite]);
+      fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], reverse[isite][jsite]);
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
@@ -871,9 +868,9 @@ static void PrintOrbPara(struct StdIntList *StdI) {
       if (isite >= jsite) continue;
       if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1) {
         fprintf(fp, "%5d  0  %5d  0  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite] + StdI->NOrb,
-          reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
+          reverse[isite][jsite]);
         fprintf(fp, "%5d  1  %5d  1  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite] + StdI->NOrb + NOrbGC,
-          reverse[isite][jsite] * AntiOrbGC[isite][jsite]);
+          reverse[isite][jsite]);
       }
       else {
         fprintf(fp, "%5d  0  %5d  0  %5d  %5d\n", isite, jsite, 
@@ -896,10 +893,8 @@ static void PrintOrbPara(struct StdIntList *StdI) {
 
   for (isite = 0; isite < StdI->nsite; isite++) {
     free(OrbGC[isite]);
-    free(AntiOrbGC[isite]);
   }
   free(OrbGC);
-  free(AntiOrbGC);
 }/*static void PrintOrbPara*/
 /**
 @brief Output .def file for Gutzwiller
@@ -1005,6 +1000,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
     for (j = 0; j < 3; j++)
       StdI->box[i][j] = StdI->NaN_i;
   StdI->Gamma = NaN_d;
+  StdI->Gamma_y = NaN_d;
   StdI->h = NaN_d;
   StdI->Height = StdI->NaN_i;
   StdI->JAll = NaN_d;
@@ -1179,6 +1175,23 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->Hsub = StdI->NaN_i;
   StdI->Lsub = StdI->NaN_i;
   StdI->Wsub = StdI->NaN_i;
+#elif defined(_HWAVE)
+  StdI->NMPTrans = StdI->NaN_i;
+  StdI->RndSeed = StdI->NaN_i;
+  StdI->mix = NaN_d;
+  StdI->eps = StdI->NaN_i;
+  StdI->eps_slater = StdI->NaN_i;
+  StdI->Iteration_max = StdI->NaN_i;
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++)
+      StdI->boxsub[i][j] = StdI->NaN_i;
+  StdI->Hsub = StdI->NaN_i;
+  StdI->Lsub = StdI->NaN_i;
+  StdI->Wsub = StdI->NaN_i;
+  strcpy(StdI->calcmode, "****\0");
+  strcpy(StdI->fileprefix, "****\0");
+  StdI->export_all = StdI->NaN_i;
+  StdI->lattice_gp = StdI->NaN_i;
 #endif
 }/*static void StdFace_ResetVals*/
 /*
@@ -1566,6 +1579,21 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "RndSeed        %d\n", StdI->RndSeed);
   fprintf(fp, "EpsSlater      %d\n", StdI->eps_slater);
   fprintf(fp, "NMPTrans       %d\n", StdI->NMPTrans);
+#elif defined(_HWAVE)
+  fprintf(fp, "HWAVE_Cal_Parameters\n");
+  fprintf(fp, "--------------------\n");
+  fprintf(fp, "CDataFileHead  %s\n", StdI->CDataFileHead);
+  fprintf(fp, "CParaFileHead  zqp\n");
+  fprintf(fp, "--------------------\n");
+  fprintf(fp, "Nsite          %d\n", StdI->nsite);
+  if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %-5d\n", StdI->Sz2);
+  fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
+  fprintf(fp, "IterationMax   %d\n", StdI->Iteration_max);
+  fprintf(fp, "EPS            %d\n", StdI->eps);
+  fprintf(fp, "Mix            %.10f\n", StdI->mix);
+  fprintf(fp, "RndSeed        %d\n", StdI->RndSeed);
+  fprintf(fp, "EpsSlater      %d\n", StdI->eps_slater);
+  fprintf(fp, "NMPTrans       %d\n", StdI->NMPTrans);
 #endif
 
   fflush(fp);
@@ -1665,7 +1693,7 @@ static void Print1Green(struct StdIntList *StdI)
           }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
         }/*for (isite = 0; isite < StdI->nsite; isite++)*/
       }/*if (StdI->ioutputmode == 2)*/
-    }/*if (StdI->ioutputmode != 0)*/
+    }/*for (store = 0; store < 2; store++))*/
 
     fp = fopen("greenone.def", "w");
     fprintf(fp, "===============================\n");
@@ -1958,9 +1986,7 @@ static void CheckModPara(struct StdIntList *StdI)
     StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
   }
  
-  if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 2)
-    StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, -1);
-  else StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, 1);
+  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, -1);
 
   StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1000);
   
@@ -1988,6 +2014,13 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_d("DSROptStaDel", &StdI->DSROptStaDel, 0.02);
   StdFace_PrintVal_d("DSROptStepDt", &StdI->DSROptStepDt, 0.02);
 #elif defined(_UHF)
+  StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
+  StdFace_PrintVal_i("Iteration_max", &StdI->Iteration_max, 1000);
+  StdFace_PrintVal_d("Mix", &StdI->mix, 0.5);
+  StdFace_PrintVal_i("eps", &StdI->eps, 8);
+  StdFace_PrintVal_i("EpsSlater", &StdI->eps_slater, 6);
+  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, 0);
+#elif defined(_HWAVE)
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
   StdFace_PrintVal_i("Iteration_max", &StdI->Iteration_max, 1000);
   StdFace_PrintVal_d("Mix", &StdI->mix, 0.5);
@@ -2581,6 +2614,7 @@ void StdFace_main(
     else if (strcmp(keyword, "doublecounting") == 0) StoreWithCheckDup_sl(keyword, value, StdI->double_counting_mode);
     else if (strcmp(keyword, "gamma") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma);
     else if (strcmp(keyword, "h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->h);
+    else if (strcmp(keyword, "gamma_y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma_y);
     else if (strcmp(keyword, "height") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Height);
     else if (strcmp(keyword, "hlength") == 0) StoreWithCheckDup_d(keyword, value, &StdI->length[2]);
     else if (strcmp(keyword, "hx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->direct[2][0]);
@@ -2843,6 +2877,32 @@ void StdFace_main(
     else if (strcmp(keyword, "hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Hsub);
     else if (strcmp(keyword, "lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lsub);
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
+    else if (strcmp(keyword, "eps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps);
+    else if (strcmp(keyword, "epsslater") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps_slater);
+    else if (strcmp(keyword, "mix") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mix);
+#elif defined(_HWAVE)
+    else if (strcmp(keyword, "iteration_max") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Iteration_max);
+    else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RndSeed);
+    else if (strcmp(keyword, "nmptrans") == 0) StoreWithCheckDup_i(keyword, value, &StdI->NMPTrans);
+    else if (strcmp(keyword, "a0hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][2]);
+    else if (strcmp(keyword, "a0lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][1]);
+    else if (strcmp(keyword, "a0wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[0][0]);
+    else if (strcmp(keyword, "a1hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[1][2]);
+    else if (strcmp(keyword, "a1lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[1][1]);
+    else if (strcmp(keyword, "a1wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[1][0]);
+    else if (strcmp(keyword, "a2hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][2]);
+    else if (strcmp(keyword, "a2lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][1]);
+    else if (strcmp(keyword, "a2wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][0]);
+    else if (strcmp(keyword, "hsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Hsub);
+    else if (strcmp(keyword, "lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lsub);
+    else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
+    else if (strcmp(keyword, "eps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps);
+    else if (strcmp(keyword, "epsslater") == 0) StoreWithCheckDup_i(keyword, value, &StdI->eps_slater);
+    else if (strcmp(keyword, "mix") == 0) StoreWithCheckDup_d(keyword, value, &StdI->mix);
+    else if (strcmp(keyword, "calcmode") == 0) StoreWithCheckDup_sl(keyword, value, StdI->calcmode);
+    else if (strcmp(keyword, "fileprefix") == 0) StoreWithCheckDup_sl(keyword, value, StdI->fileprefix);
+    else if (strcmp(keyword, "exportall") == 0) StoreWithCheckDup_i(keyword, value, &StdI->export_all);
+    else if (strcmp(keyword, "lattice_gp") == 0) StoreWithCheckDup_i(keyword, value, &StdI->lattice_gp);
 #endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
@@ -2965,20 +3025,36 @@ void StdFace_main(
   fprintf(stdout, "\n");
   fprintf(stdout, "######  Print Expert input files  ######\n");
   fprintf(stdout, "\n");
+
+#if defined(_HPhi)
   PrintLocSpin(StdI);
   PrintTrans(StdI);
   PrintInteractions(StdI);
   CheckModPara(StdI);
-  PrintModPara(StdI); 
-#if defined(_HPhi)
+  PrintModPara(StdI);
+
   PrintExcitation(StdI);
   if (strcmp(StdI->method, "timeevolution") == 0) PrintPump(StdI);
   PrintCalcMod(StdI);
-#elif defined(_mVMC)
 
-  if(StdI->lGC == 0 && (StdI->Sz2 == 0 || StdI->Sz2 == StdI->NaN_i)) 
+  CheckOutputMode(StdI);
+  Print1Green(StdI);
+  Print2Green(StdI);
+
+  PrintNamelist(StdI);
+
+#elif defined(_mVMC)
+  PrintLocSpin(StdI);
+  PrintTrans(StdI);
+  PrintInteractions(StdI);
+  CheckModPara(StdI);
+  PrintModPara(StdI);
+
+  if (StdI->lGC == 0 && (StdI->Sz2 == 0 || StdI->Sz2 == StdI->NaN_i)) {
     StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 0);
-  else StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 1);
+  } else {
+    StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 1);
+  }
 
   StdFace_generate_orb(StdI);
   StdFace_Proj(StdI);
@@ -2987,15 +3063,49 @@ void StdFace_main(
     PrintOrbPara(StdI);
   PrintGutzwiller(StdI);
   PrintOrb(StdI);
-#endif
+
   CheckOutputMode(StdI);
   Print1Green(StdI);
-#if defined(_HPhi)
   Print2Green(StdI);
-#elif defined(_mVMC)
-  Print2Green(StdI);
-#endif
+
   PrintNamelist(StdI);
+
+#elif defined(_UHF)
+  PrintLocSpin(StdI);
+  PrintTrans(StdI);
+  PrintInteractions(StdI);
+  CheckModPara(StdI);
+  PrintModPara(StdI);
+
+  CheckOutputMode(StdI);
+  Print1Green(StdI);
+
+  PrintNamelist(StdI);
+
+#elif defined(_HWAVE)
+  if (strcmp(StdI->calcmode, "uhfr") == 0)
+  {
+    /* UHFr mode */
+
+    /* PrintLocSpin(StdI); */
+    PrintTrans(StdI);
+    PrintInteractions(StdI);
+    CheckModPara(StdI);
+    /* PrintModPara(StdI); */
+
+    CheckOutputMode(StdI);
+    Print1Green(StdI);
+
+    /* PrintNamelist(StdI); */
+
+  } else {
+    /* UHFk or RPA mode */
+    ExportGeometry(StdI);
+    ExportInteraction(StdI);
+
+  }
+
+#endif
   /*
   Finalize All
   */
