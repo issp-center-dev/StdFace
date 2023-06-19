@@ -515,7 +515,7 @@ static void VectorPotential(struct StdIntList *StdI) {
   StdFace_PrintVal_d("VecPotL", &StdI->VecPot[1], 0.0);
   StdFace_PrintVal_d("VecPotH", &StdI->VecPot[2], 0.0);
   StdFace_PrintVal_i("Lanczos_max", &StdI->Lanczos_max, 1000);
-  StdFace_PrintVal_d("dt", &StdI->dt, 0.1);
+  StdFace_PrintVal_d("dt", &StdI->dt, 0.01);
   StdFace_PrintVal_d("freq", &StdI->freq, 0.1);
   StdFace_PrintVal_d("tshift", &StdI->tshift, 0.0);
   StdFace_PrintVal_d("tdump", &StdI->tdump, 0.1);
