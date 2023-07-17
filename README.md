@@ -26,16 +26,15 @@ You can download StdFace from a [release note](https://github.com/issp-center-de
 ## Install StdFace
 
 ``` bash
-$ mkdir build && cd build
-$ cmake ../ -Dxxx="ON"
-$ make
-$ make install
+$ cmake -B build [options]
+$ cmake --build build
+$ cmake --install install
 ```
 
-If you define xxx as HPHI, hphi_dry.out is made.
-If you define xxx as MVMC, mvmc_dry.out is made.
-If you define xxx as UHF, uhf_dry.out is made.
-If you define xxx as HWAVE, hwave_dry.out is made.
+If you define -DUHF=OFF as [options], uhf_dry.out will not be made.
+If you define -DMVMC=OFF as [options], mvmc_dry.out will not be made.
+If you define -DHPHI=OFF as [options], hphi_dry.out will not be made.
+If you define -DHWAVE=OFF as [options], hawave_dry.out will not be made.
 
 ## Licence
 
