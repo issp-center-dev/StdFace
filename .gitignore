@@ -53,3 +53,6 @@ dkms.conf
 
 # Machine-specific Configuration File
 make.sys
+
+# Build Output
+build/
