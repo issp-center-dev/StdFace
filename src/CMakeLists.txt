@@ -14,7 +14,7 @@ set(SOURCES_StdFace
   ChainLattice.c HoneycombLattice.c SquareLattice.c StdFace_main.c StdFace_ModelUtil.c TriangularLattice.c Ladder.c Kagome.c Orthorhombic.c Pyrochlore.c Wannier90.c FCOrtho.c setmemory.c export_wannier90.c
 )
 
-if(URF)
+if(UHF)
    add_executable(uhf_dry.out dry.c ${SOURCES_StdFace})
    target_compile_definitions(uhf_dry.out PUBLIC _UHF)
    target_link_libraries(uhf_dry.out PUBLIC m)
