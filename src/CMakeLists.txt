@@ -41,3 +41,5 @@ if (HWAVE)
    target_link_libraries(hwave_dry.out PUBLIC m)
    install(TARGETS hwave_dry.out RUNTIME DESTINATION bin)
 endif()
+
+add_library(StdFace STATIC ${SOURCES_StdFace})
