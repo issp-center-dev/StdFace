@@ -1,0 +1,9 @@
+a0w = 1
+a0l = 1
+a1w = -1
+a1l = 2
+model = "HubbardGC"
+method = "FullDiag"
+lattice = "Triangular"
+t = 1.0
+U = 4.0

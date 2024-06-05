@@ -1,0 +1,14 @@
+L = 3
+W = 2
+model = "Spin"
+method = "CG"
+lattice = "ladder"
+J0 = 1.0
+J1 = 1.0
+2Sz = 0
+2S = 3
+EigenVecIO = out
+SpectrumQW = 0.5
+SpectrumQL = 0.3333333333333333333333
+NOmega = 5
+OmegaIm = 1.0

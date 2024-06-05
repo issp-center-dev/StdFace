@@ -1,0 +1,9 @@
+L = 4
+model = "Fermion Hubbard"
+method = "Lanczos"
+lattice = "chain"
+t = 1
+U = 4
+nelec = 4
+EigenVecIO = "Out"
+2Sz = 0

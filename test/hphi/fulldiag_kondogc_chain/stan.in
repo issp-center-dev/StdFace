@@ -1,0 +1,6 @@
+L = 2
+model = "KondoGC"
+method = "FullDiag"
+lattice = "chain"
+t = 1.0
+J = 4.0

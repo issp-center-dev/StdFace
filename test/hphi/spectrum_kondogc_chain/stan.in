@@ -1,0 +1,13 @@
+L = 4
+model = "KondoGC"
+method = "CG"
+lattice = "chain"
+t = 1.0
+J = 4.0
+mu = 0.6
+h = 0.2
+EigenVecIO = out
+SpectrumQW = 0.5
+SpectrumQL = 0.5
+NOmega = 5
+OmegaIm = 1.0
