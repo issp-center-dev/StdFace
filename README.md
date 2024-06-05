@@ -31,19 +31,19 @@ $ cmake --install install
 
 Options need to be specified which programs are to be built:
 
-  ``-DHPHI=ON``
+- ``-DHPHI=ON``
 
     HPhi mode is enabled. hphi_dry.out and libStdFace_hphi.a will be generated.
 
-  ``-DMVMC=ON``
+- ``-DMVMC=ON``
 
     mVMC mode is enabled. mvmc_dry.out and libStdFace_mvmc.a will be generated.
 
-  ``-DUHF=ON``
+- ``-DUHF=ON``
 
     UHF mode is enabled. uhf_dry.out and libStdFace_uhf.a will be generated.
 
-  ``-DHWAVE=ON``
+- ``-DHWAVE=ON``
 
     H-wave mode is enabled. hwave_dry.out and libStdFace_hwave.a will be generated.
 
