@@ -1,0 +1,10 @@
+L = 3
+W = 2
+model = "Spin"
+method = "Lanczos"
+lattice = "ladder"
+J0 = 1.0
+J1 = 1.0
+2Sz = 0
+2S = 3
+outputmode = "all"

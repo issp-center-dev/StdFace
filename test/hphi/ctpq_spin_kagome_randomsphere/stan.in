@@ -1,0 +1,10 @@
+W = 2
+L = 2
+model = "Spin"
+method = "TPQ"
+lattice = "kagome"
+J = 1.0
+2Sz = 0
+lanczos_max = 500
+LargeValue  = 5
+NumAve      = 10

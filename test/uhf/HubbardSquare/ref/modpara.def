@@ -1,0 +1,17 @@
+--------------------
+Model_Parameters   0
+--------------------
+UHF_Cal_Parameters
+--------------------
+CDataFileHead  zvo
+CParaFileHead  zqp
+--------------------
+Nsite          8
+2Sz            0    
+Ncond          8    
+IterationMax   1000
+EPS            8
+Mix            0.5000000000
+RndSeed        123456789
+EpsSlater      6
+NMPTrans       0

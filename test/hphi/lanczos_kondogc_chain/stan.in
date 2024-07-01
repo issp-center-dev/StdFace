@@ -1,0 +1,7 @@
+L = 4
+model = "KondoGC"
+method = "Lanczos"
+lattice = "chain"
+t = 1.0
+J = 4.0
+outputmode = "all"

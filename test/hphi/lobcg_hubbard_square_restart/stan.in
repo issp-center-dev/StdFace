@@ -1,0 +1,13 @@
+W = 4
+L = 2
+model = "FermionHubbard"
+method = "CG"
+lattice = "Tetragonal"
+Lanczos_max = 10
+t = 1.0
+U = 4.0
+nelec = 8
+2Sz = 0
+exct = 3
+outputmode = "None"
+Restart = "Restart_out"

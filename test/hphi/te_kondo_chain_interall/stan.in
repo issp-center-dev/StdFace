@@ -1,0 +1,10 @@
+L = 4
+model = "Kondo"
+method = "Lanczos"
+lattice = "chain"
+t = 1
+U = 4
+J = 1
+nelec = 2.0
+EigenVecIO = "Out"
+2Sz = 0

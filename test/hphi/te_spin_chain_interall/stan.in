@@ -1,0 +1,7 @@
+L = 8
+model = "Spin"
+method = "Lanczos"
+lattice = "chain"
+J = 1
+EigenVecIO = "Out"
+2Sz = 0
