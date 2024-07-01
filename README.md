@@ -50,14 +50,26 @@ Options need to be specified which programs are to be built:
 One or more options may be set simultaneously. Defaults are OFF.
 
 
+## Usage
+
+xxx_dry.out (xxx = hphi, mvmc, uhf, hwave) can be done with the following command with input.in as input file.
+
+``` bash
+$ xxx_dry.out input.in
+```
+
+After execution, input files for executing each tool will be generated in the executed directory.
+Descriptions of StdFace input files can be found in the manuals for each tool:
+
+[HPhi](https://github.com/issp-center-dev/HPhi),
+[mVMC](https://github.com/issp-center-dev/mVMC),
+[UHF](https://github.com/issp-center-dev/UHF-dev), and
+[H-wave](https://github.com/issp-center-dev/H-wave).
+
 ## Licence
 
 The distribution of the program package and the source codes for StdFace follow GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3.0.en.html)). 
 
 
 ## Author
-Kazuyoshi Yoshimi, Mitsuaki Kawamura.
-
-## Manual
-
-under construction
+Kazuyoshi Yoshimi, Mitsuaki Kawamura, Kota Ido, Yuichi Motoyama, and Tatsumu Aoyama.
