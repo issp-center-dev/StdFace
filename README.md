@@ -72,4 +72,4 @@ The distribution of the program package and the source codes for StdFace follow 
 
 
 ## Author
-Kazuyoshi Yoshimi, Mitsuaki Kawamura, Kota Ido, Yuichi Motoyama, and Tatsumu Aoyama.
+Kazuyoshi Yoshimi, Mitsuaki Kawamura, Kota Ido, Yuichi Motoyama, and Tatsumi Aoyama.
