@@ -1,0 +1,12 @@
+L = 4
+model = "Kondo"
+method = "CG"
+lattice = "chain"
+t = 1.0
+J = 4.0
+nelec = 4
+2Sz = 0
+exct = 2
+Lanczos_max = 10
+outputmode = "None"
+Restart = "Restart_out"

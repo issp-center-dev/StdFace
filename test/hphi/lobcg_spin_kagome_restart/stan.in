@@ -1,0 +1,16 @@
+a0w = 1
+a0l = 1
+a1w = -1
+a1l = 2
+model = "Spin"
+method = "CG"
+lattice = "kagome"
+J0 = 1.0
+J1 = 0.5
+J2 = 0.7
+J'=0.2
+2Sz = 1
+exct = 2
+Lanczos_max = 10
+outputmode = "None"
+Restart = "Restart_out"

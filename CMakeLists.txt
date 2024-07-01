@@ -15,3 +15,6 @@ MESSAGE(STATUS "Build hwave_dry.out - ${HWAVE}")
 
 add_subdirectory(src)
 install(DIRECTORY samples DESTINATION share/stdface)
+
+enable_testing()
+add_subdirectory(test)

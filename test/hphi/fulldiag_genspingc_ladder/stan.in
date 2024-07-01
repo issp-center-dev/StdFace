@@ -1,0 +1,8 @@
+L = 1
+W = 2
+model = "SpinGC"
+method = "FullDiag"
+lattice = "ladder"
+J0 = 1.0
+J1 = 1.0
+2S = 3

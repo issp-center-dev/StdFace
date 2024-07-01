@@ -1,0 +1,13 @@
+model = SpinGC
+method = CG
+lattice = Honeycomb
+W = 2
+L = 2
+J0y = -3
+J0xy = 3
+J1xz = 1
+J2yz = 2
+h = 0.2
+Gamma =  0.5
+exct = 1
+LanczosEps = 16

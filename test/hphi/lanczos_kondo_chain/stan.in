@@ -1,0 +1,9 @@
+L = 4
+model = "Kondo"
+method = "Lanczos"
+lattice = "chain"
+t = 1.0
+J = 4.0
+nelec = 4
+2Sz = 0
+outputmode = "all"

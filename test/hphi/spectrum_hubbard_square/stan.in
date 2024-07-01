@@ -1,0 +1,14 @@
+W = 4
+L = 2
+model = "FermionHubbard"
+method = "CG"
+lattice = "Tetragonal"
+t = 1.0
+U = 4.0
+nelec = 8
+2Sz = 0
+EigenVecIO = out
+SpectrumQW = 0.5
+SpectrumQL = 0.5
+NOmega = 5
+OmegaIm = 1.0
