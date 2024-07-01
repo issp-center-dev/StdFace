@@ -1,0 +1,33 @@
+name: CI
+
+on: [push]
+
+jobs:
+  ctest:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-20.04, macos-13]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: make workspace
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: cmake
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+
+      - name: build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build ./ -j4
+
+      - name: ctest
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ctest -V
