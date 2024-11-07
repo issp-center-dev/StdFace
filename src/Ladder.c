@@ -1,23 +1,27 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
+/*! \file Ladder.c
+ * \brief Standard mode for the Ladder lattice
+ * \author Mitsuaki Kawamura (The University of Tokyo)
+ * 
+ * This file contains functions to set up Hamiltonians for ladder lattice models.
+ * It supports Heisenberg, Hubbard and Kondo models with various interactions.
+ *
+ * \copyright 
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Standard mode for the Ladder lattice
-*/
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -26,12 +30,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <complex.h>
 #include <string.h>
 
-/**
-@brief Setup a Hamiltonian for the generalized Heisenberg model on a square lattice
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+/*! \brief Setup a Hamiltonian for the generalized Heisenberg model on a ladder lattice
+ *
+ * This function sets up the Hamiltonian parameters for a ladder lattice model.
+ * It supports:
+ * - Heisenberg model with spin interactions
+ * - Hubbard model with electron hopping and interactions  
+ * - Kondo model combining localized spins and itinerant electrons
+ *
+ * The ladder geometry consists of:
+ * - Vertical rungs between the two chains
+ * - Nearest and next-nearest neighbor interactions along the chains
+ * - Diagonal interactions between the chains
+ *
+ * \param[in,out] StdI Pointer to the structure containing model parameters
+ *
+ * The function:
+ * 1. Sets up the lattice geometry and parameters
+ * 2. Validates input parameters
+ * 3. Allocates arrays for interactions
+ * 4. Sets up all the interaction terms in the Hamiltonian
+ */
 void StdFace_Ladder(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI
 )
 {
   FILE *fp = NULL;
@@ -40,14 +61,15 @@ void StdFace_Ladder(
   double complex Cphase;
   double dR[3];
 
-  /**@brief
-  (1) Compute the shape of the super-cell and sites in the super-cell
-  */
+  /* Open file for lattice plot if enabled */
 #ifdef _HWAVE
   if (StdI->lattice_gp == 1)
 #endif
   fp = fopen("lattice.gp", "w");
-  /**/
+
+  /*
+   * 1. Set lattice size and shape parameters
+   */
   fprintf(stdout, "  @ Lattice Size & Shape\n\n");
   
   StdFace_PrintVal_d("a", &StdI->a, 1.0);
@@ -58,30 +80,41 @@ void StdFace_Ladder(
   StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.0);
   StdFace_PrintVal_d("Ly", &StdI->direct[1][1], StdI->length[1]);
 
+  /* Required parameters */
   StdFace_RequiredVal_i("L", StdI->L);
   StdFace_RequiredVal_i("W", StdI->W);
+  
+  /* Unused parameters */
   StdFace_NotUsed_i("a0W", StdI->box[0][0]);
   StdFace_NotUsed_i("a0L", StdI->box[0][1]);
   StdFace_NotUsed_i("a1W", StdI->box[1][0]);
   StdFace_NotUsed_i("a1L", StdI->box[1][1]);
-  /**/
+
+  /* Phase factors */
   StdFace_PrintVal_d("phase0", &StdI->phase[0], 0.0);
   StdFace_NotUsed_d("phase1", StdI->phase[1]);
   StdI->phase[1] = StdI->phase[0];
   StdI->phase[0] = 0.0;
-  /**/
+
+  /* Set unit cell */
   StdI->NsiteUC = StdI->W;
   StdI->W = 1;
   StdI->direct[0][0] = (double)StdI->NsiteUC;
   StdFace_InitSite(StdI, fp, 2);
+  
+  /* Initialize site positions */
   for (isite = 0; isite < StdI->NsiteUC; isite++){
     StdI->tau[isite][0] = (double)isite / (double)StdI->NsiteUC;
-    StdI->tau[isite][1] = 0.0; StdI->tau[isite][2] = 0.0;
+    StdI->tau[isite][1] = 0.0; 
+    StdI->tau[isite][2] = 0.0;
   }
-  /**@brief
-  (2) check & store parameters of Hamiltonian
-  */
+
+  /*
+   * 2. Set Hamiltonian parameters
+   */
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
+
+  /* Unused coupling parameters */
   StdFace_NotUsed_J("J", StdI->JAll, StdI->J);
   StdFace_NotUsed_J("J'", StdI->JpAll, StdI->Jp);
   StdFace_NotUsed_c("t", StdI->t);
@@ -89,11 +122,15 @@ void StdFace_Ladder(
   StdFace_NotUsed_d("V", StdI->V);
   StdFace_NotUsed_d("V'", StdI->Vp);
   StdFace_NotUsed_d("K", StdI->K);
+
+  /* Magnetic field parameters */
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
   StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
   StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
-  /**/
+
+  /* Model specific parameters */
   if (strcmp(StdI->model, "spin") == 0 ) {
+    /* Heisenberg model parameters */
     StdFace_PrintVal_i("2S", &StdI->S2, 1);
     StdFace_PrintVal_d("D", &StdI->D[2][2], 0.0);
     StdFace_InputSpin(StdI->J0, StdI->J0All, "J0");
@@ -101,7 +138,8 @@ void StdFace_Ladder(
     StdFace_InputSpin(StdI->J2, StdI->J2All, "J2");
     StdFace_InputSpin(StdI->J1p, StdI->J1pAll, "J1'");
     StdFace_InputSpin(StdI->J2p, StdI->J2pAll, "J2'");
-    /**/
+
+    /* Unused electronic parameters */
     StdFace_NotUsed_d("mu", StdI->mu);
     StdFace_NotUsed_d("U", StdI->U);
     StdFace_NotUsed_c("t0", StdI->t0);
@@ -114,8 +152,9 @@ void StdFace_Ladder(
     StdFace_NotUsed_d("V2", StdI->V2);
     StdFace_NotUsed_d("V1'", StdI->V1p);
     StdFace_NotUsed_d("V2'", StdI->V2p);
-  }/*if (strcmp(StdI->model, "spin") == 0 )*/
-  else {
+
+  } else {
+    /* Electronic model parameters */
     StdFace_PrintVal_d("mu", &StdI->mu, 0.0);
     StdFace_PrintVal_d("U", &StdI->U, 0.0);
     StdFace_InputHopp(StdI->t, &StdI->t0, "t0");
@@ -128,7 +167,8 @@ void StdFace_Ladder(
     StdFace_InputCoulombV(StdI->V, &StdI->V2, "V2");
     StdFace_InputCoulombV(StdI->V, &StdI->V1p, "V1'");
     StdFace_InputCoulombV(StdI->V, &StdI->V2p, "V2'");
-    /**/
+
+    /* Unused spin parameters */
     StdFace_NotUsed_J("J0", StdI->J0All, StdI->J0);
     StdFace_NotUsed_J("J1", StdI->J1All, StdI->J1);
     StdFace_NotUsed_J("J2", StdI->J2All, StdI->J2);
@@ -144,16 +184,18 @@ void StdFace_Ladder(
       StdFace_PrintVal_i("2S", &StdI->S2, 1);
       StdFace_InputSpin(StdI->J, StdI->JAll, "J");
     }
-  }/*if (model != "spin")*/
+  }
+
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /**@brief
-  (3) Set local spin flag (StdIntList::locspinflag) and
-  the number of sites (StdIntList::nsite)
-  */
+
+  /*
+   * 3. Set local spin flags and number of sites
+   */
   StdI->nsite = StdI->L * StdI->NsiteUC;
   if (strcmp(StdI->model, "kondo") == 0 ) StdI->nsite *= 2;
   StdI->locspinflag = (int *)malloc(sizeof(int) * StdI->nsite);
-  /**/
+  
+  /* Set local spin flags based on model type */
   if (strcmp(StdI->model, "spin") == 0 )
     for (isite = 0; isite < StdI->nsite; isite++)StdI->locspinflag[isite] = StdI->S2;
   else if (strcmp(StdI->model, "hubbard") == 0 )
@@ -163,17 +205,19 @@ void StdFace_Ladder(
       StdI->locspinflag[isite] = StdI->S2;
       StdI->locspinflag[isite + StdI->nsite / 2] = 0;
     }
-  /**@brief
-  (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
-  */
+
+  /*
+   * 4. Calculate maximum number of interactions and allocate arrays
+   */
   if (strcmp(StdI->model, "spin") == 0 ) {
+    /* For spin model */
     ntransMax = StdI->L * StdI->NsiteUC * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->L * StdI->NsiteUC * (1/*D*/ + 1/*J1*/ + 1/*J1'*/)
       * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1)
       + StdI->L * (StdI->NsiteUC - 1) * (1/*J0*/ + 1/*J2*/ + 1/*J2'*/)
       * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
-  }/*if (strcmp(StdI->model, "spin") == 0 )*/
-  else {
+  } else {
+    /* For electronic models */
     ntransMax = StdI->L*StdI->NsiteUC * 2/*spin*/ * (2/*mu+h+Gamma*/ + 2/*t1*/ + 2/*t1'*/)
       + StdI->L*(StdI->NsiteUC - 1) * 2/*spin*/ * (2/*t0*/ + 2/*t2*/ + 2/*t2'*/);
     nintrMax = StdI->L*StdI->NsiteUC * 1/*U*/
@@ -183,103 +227,91 @@ void StdFace_Ladder(
     if (strcmp(StdI->model, "kondo") == 0) {
       ntransMax += StdI->L * StdI->NsiteUC * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
       nintrMax += StdI->nsite / 2 * (3 * 1 + 1) * (3 * StdI->S2 + 1);
-    }/*if (strcmp(StdI->model, "kondo") == 0)*/
+    }
   }
-  /**/
+
+  /* Allocate arrays */
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
-  /**@brief
-  (5) Set Transfer & Interaction
-  */
+
+  /*
+   * 5. Set all interactions
+   */
   for (iL = 0; iL < StdI->L; iL++) {
     for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
 
       isite = isiteUC + iL * StdI->NsiteUC;
       if (strcmp(StdI->model, "kondo") == 0 ) isite += StdI->L * StdI->NsiteUC;
-      /*
-       Local term
-      */
+
+      /* Local terms */
       if (strcmp(StdI->model, "spin") == 0 ) {
         StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, isite);
         StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite, isite);
-      }/*if (strcmp(StdI->model, "spin") == 0 )*/
-      else {
+      } else {
         StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, StdI->U, isite);
         if (strcmp(StdI->model, "kondo") == 0 ) {
           jsite = isiteUC + iL * StdI->NsiteUC;
           StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite, jsite);
           StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, jsite);
-        }/*if (strcmp(StdI->model, "kondo") == 0 )*/
-      }/*if (model != "spin")*/
-      /*
-       Nearest neighbor along the ladder
-      */
+        }
+      }
+
+      /* Nearest neighbor along the ladder */
       StdFace_SetLabel(StdI, fp, 0, iL, 0, 1, isiteUC, isiteUC, &isite, &jsite, 1, &Cphase, dR);
-      /**/
+      
       if (strcmp(StdI->model, "spin") == 0 ) {
         StdFace_GeneralJ(StdI, StdI->J1, StdI->S2, StdI->S2, isite, jsite);
-      }/*if (strcmp(StdI->model, "spin") == 0 )*/
-      else {
+      } else {
         StdFace_Hopping(StdI, Cphase * StdI->t1, isite, jsite, dR);
         StdFace_Coulomb(StdI, StdI->V1, isite, jsite);
-      }/*if (model != "spin")*/
-      /*
-       Second nearest neighbor along the ladder
-      */
+      }
+
+      /* Second nearest neighbor along the ladder */
       StdFace_SetLabel(StdI, fp, 0, iL, 0, 2, isiteUC, isiteUC, &isite, &jsite, 2, &Cphase, dR);
-      /**/
+      
       if (strcmp(StdI->model, "spin") == 0 ) {
         StdFace_GeneralJ(StdI, StdI->J1p, StdI->S2, StdI->S2, isite, jsite);
-      }/*if (strcmp(StdI->model, "spin") == 0 )*/
-      else {
+      } else {
         StdFace_Hopping(StdI, Cphase * StdI->t1p, isite, jsite, dR);
         StdFace_Coulomb(StdI, StdI->V1p, isite, jsite);
-      }/*if (model != "spin")*/
-      /*
-      Across rung
-      */
+      }
+
+      /* Interactions across rungs */
       if (isiteUC < StdI->NsiteUC - 1) {
-        /*
-         Vertical
-        */
+        /* Vertical */
         StdFace_SetLabel(StdI, fp, 0, iL, 0, 0, isiteUC, isiteUC + 1, &isite, &jsite, 1, &Cphase, dR);
-        /**/
+        
         if (strcmp(StdI->model, "spin") == 0 ) {
           StdFace_GeneralJ(StdI, StdI->J0, StdI->S2, StdI->S2, isite, jsite);
-        }/*if (strcmp(StdI->model, "spin") == 0 )*/
-        else {
+        } else {
           StdFace_Hopping(StdI, Cphase * StdI->t0, isite, jsite, dR);
           StdFace_Coulomb(StdI, StdI->V0, isite, jsite);
-        }/*if (model != "spin")*/
-        /*
-         Diagonal 1
-        */
+        }
+
+        /* Diagonal 1 */
         StdFace_SetLabel(StdI, fp, 0, iL, 0, 1, isiteUC, isiteUC + 1, &isite, &jsite, 1, &Cphase, dR);
-        /**/
+        
         if (strcmp(StdI->model, "spin") == 0 ) {
           StdFace_GeneralJ(StdI, StdI->J2, StdI->S2, StdI->S2, isite, jsite);
-        }/*if (strcmp(StdI->model, "spin") == 0 )*/
-        else {
+        } else {
           StdFace_Hopping(StdI, Cphase * StdI->t2, isite, jsite, dR);
           StdFace_Coulomb(StdI, StdI->V2, isite, jsite);
-        }/*if (model != "spin")*/
-        /*
-         Diagonal 2
-        */
+        }
+
+        /* Diagonal 2 */
         StdFace_SetLabel(StdI, fp, 0, iL, 0, -1, isiteUC, isiteUC + 1, &isite, &jsite, 1, &Cphase, dR);
-        /**/
+        
         if (strcmp(StdI->model, "spin") == 0 ) {
           StdFace_GeneralJ(StdI, StdI->J2p, StdI->S2, StdI->S2, isite, jsite);
-        }/*if (strcmp(StdI->model, "spin") == 0 )*/
-        else {
+        } else {
           StdFace_Hopping(StdI, Cphase * StdI->t2p, isite, jsite, dR);
           StdFace_Coulomb(StdI, StdI->V2p, isite, jsite);
-        }/*if (model != "spin")*/
+        }
 
-      }/*if (isiteUC < StdI->NsiteUC - 1)*/
+      }
+    }
+  }
 
-    }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
-  }/*for (iL = 0; iL < StdI->L; iL++)*/
-
+  /* Close lattice plot file */
 #ifdef _HWAVE
   if (StdI->lattice_gp == 1) {
 #endif
@@ -288,49 +320,59 @@ void StdFace_Ladder(
 #ifdef _HWAVE
   }
 #endif
+
+  /* Print final geometry information */
   StdFace_PrintGeometry(StdI);
-}/*void StdFace_Ladder*/
+}
 
 #if defined(_HPhi)
-/**
-*
-* Setup a Hamiltonian for the generalized Heisenberg model on a square lattice
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
-*/
+/*! \brief Setup a Hamiltonian for the generalized Heisenberg model on a ladder lattice with boost
+ *
+ * This function sets up a boosted version of the ladder Hamiltonian for HPhi.
+ * It is specialized for S=1/2 Heisenberg models.
+ *
+ * \param[in,out] StdI Pointer to the structure containing model parameters
+ */
 void StdFace_Ladder_Boost(struct StdIntList *StdI)
 {
   int isite, ipivot;
   int kintr;
   FILE *fp;
 
+  /* Validate and set parameters */
   StdI->W = StdI->NsiteUC;
   StdI->NsiteUC = 1;
-  /*
-  Magnetic field
-  */
+
+  /* Open boost definition file */
   fp = fopen("boost.def", "w");
+
+  /* Write magnetic field parameters */
   fprintf(fp, "# Magnetic field\n");
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     -0.5 * StdI->Gamma, -0.5 * StdI->Gamma_y, -0.5 * StdI->h);
-  /*
-  Interaction
-  */
+
+  /* Write interaction parameters */
   fprintf(fp, "%d  # Number of type of J\n", 5);
+
+  /* J1 - Vertical interactions */
   fprintf(fp, "# J 1 (inter chain, vertical)\n");
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J0[0][0], 0.25 * StdI->J0[0][1], 0.25 * StdI->J0[0][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+  fprintf(fp, "%25.15e %25.15e %25.15e\n", 
     0.25 * StdI->J0[0][1], 0.25 * StdI->J0[1][1], 0.25 * StdI->J0[1][2]);
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J0[0][2], 0.25 * StdI->J0[1][2], 0.25 * StdI->J0[2][2]);
+
+  /* J2 - Nearest neighbor along chain */
   fprintf(fp, "# J 2 (Nearest neighbor, along chain)\n");
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J1[0][0], 0.25 * StdI->J1[0][1], 0.25 * StdI->J1[0][2]);
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J1[0][1], 0.25 * StdI->J1[1][1], 0.25 * StdI->J1[1][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+  fprintf(fp, "%25.15e %25.15e %25.15e\n", 
     0.25 * StdI->J1[0][2], 0.25 * StdI->J1[1][2], 0.25 * StdI->J1[2][2]);
+
+  /* J3 - Second nearest neighbor along chain */
   fprintf(fp, "# J 3 (Second nearest neighbor, along chain)\n");
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J1p[0][0], 0.25 * StdI->J1p[0][1], 0.25 * StdI->J1p[0][2]);
@@ -338,6 +380,8 @@ void StdFace_Ladder_Boost(struct StdIntList *StdI)
     0.25 * StdI->J1p[0][1], 0.25 * StdI->J1p[1][1], 0.25 * StdI->J1p[1][2]);
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J1p[0][2], 0.25 * StdI->J1p[1][2], 0.25 * StdI->J1p[2][2]);
+
+  /* J4 - Diagonal 1 interactions */
   fprintf(fp, "# J 4 (inter chain, diagonal1)\n");
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J2[0][0], 0.25 * StdI->J2[0][1], 0.25 * StdI->J2[0][2]);
@@ -345,6 +389,8 @@ void StdFace_Ladder_Boost(struct StdIntList *StdI)
     0.25 * StdI->J2[0][1], 0.25 * StdI->J2[1][1], 0.25 * StdI->J2[1][2]);
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J2[0][2], 0.25 * StdI->J2[1][2], 0.25 * StdI->J2[2][2]);
+
+  /* J5 - Diagonal 2 interactions */
   fprintf(fp, "# J 5 (inter chain, diagonal2)\n");
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J2p[0][0], 0.25 * StdI->J2p[0][1], 0.25 * StdI->J2p[0][2]);
@@ -352,9 +398,8 @@ void StdFace_Ladder_Boost(struct StdIntList *StdI)
     0.25 * StdI->J2p[0][1], 0.25 * StdI->J2p[1][1], 0.25 * StdI->J2p[1][2]);
   fprintf(fp, "%25.15e %25.15e %25.15e\n",
     0.25 * StdI->J2p[0][2], 0.25 * StdI->J2p[1][2], 0.25 * StdI->J2p[2][2]);
-  /*
-  Topology
-  */
+
+  /* Validate parameters */
   if (StdI->S2 != 1) {
     fprintf(stdout, "\n ERROR! S2 must be 1 in Boost. \n\n");
     StdFace_exit(-1);
@@ -372,13 +417,17 @@ void StdFace_Ladder_Boost(struct StdIntList *StdI)
     fprintf(stdout, "\n ERROR! L < 4 \n\n");
     StdFace_exit(-1);
   }
+
+  /* Set dimensions */
   StdI->W = StdI->L;
   StdI->L = 2;
   StdI->num_pivot = StdI->W / 2;
-  /**/
+
+  /* Write topology information */
   fprintf(fp, "# W0  R0  StdI->num_pivot  StdI->ishift_nspin\n");
   fprintf(fp, "%d %d %d %d\n", StdI->W, StdI->L, StdI->num_pivot, StdI->ishift_nspin);
 
+  /* Allocate and initialize 6-spin star list */
   StdI->list_6spin_star = (int **)malloc(sizeof(int*) * StdI->num_pivot);
   for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
     StdI->list_6spin_star[ipivot] = (int *)malloc(sizeof(int) * 7);

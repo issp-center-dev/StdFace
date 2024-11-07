@@ -27,9 +27,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-@brief Setup a Hamiltonian for the Face-Centered Orthorhombic lattice
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the Face-Centered Orthorhombic lattice
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ * 
+ * This function sets up the Hamiltonian for a face-centered orthorhombic lattice.
+ * The lattice has three primitive vectors:
+ * - W vector: (0, L/2, H/2)
+ * - L vector: (W/2, 0, H/2) 
+ * - H vector: (W/2, L/2, 0)
+ * where W, L, H are the lengths in each direction.
+ *
+ * The function handles three models:
+ * - Spin model: Heisenberg interactions between localized spins
+ * - Hubbard model: Hopping and Coulomb interactions between itinerant electrons
+ * - Kondo model: Coupling between localized spins and itinerant electrons
+ *
+ * @param StdI [inout] Structure containing model parameters and lattice information
+ *                     Modified to store the complete Hamiltonian definition
+ */
 void StdFace_FCOrtho(
   struct StdIntList *StdI//!<[inout]
 )
@@ -40,9 +55,14 @@ void StdFace_FCOrtho(
   double complex Cphase;
   double dR[3];
 
-  /**@brief
-  (1) Compute the shape of the super-cell and sites in the super-cell
-  */
+  /**
+   * @brief Step 1: Compute the shape of the super-cell and sites in the super-cell
+   *
+   * - Opens XSF file for visualization
+   * - Sets number of sites per unit cell (1 for FCO)
+   * - Defines lattice parameters and primitive vectors
+   * - Initializes site positions
+   */
   fp = fopen("lattice.xsf", "w");
   /**/
   StdI->NsiteUC = 1;
@@ -69,9 +89,14 @@ void StdFace_FCOrtho(
   /**/
   StdFace_InitSite(StdI, fp, 3);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; ; StdI->tau[0][2] = 0.0;
-  /**@brief
-  (2) check & store parameters of Hamiltonian
-  */
+  /**
+   * @brief Step 2: Check and store Hamiltonian parameters
+   *
+   * Handles different parameters depending on model type:
+   * - Spin model: J (exchange), D (anisotropy), magnetic field
+   * - Hubbard model: t (hopping), U (on-site), V (inter-site)
+   * - Kondo model: Combination of spin and Hubbard parameters
+   */
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
@@ -143,10 +168,13 @@ void StdFace_FCOrtho(
  
   }/*if (model != "spin")*/
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /**@brief
-  (3) Set local spin flag (StdIntList::locspinflag) and
-  the number of sites (StdIntList::nsite)
-  */
+  /**
+   * @brief Step 3: Set local spin flags and number of sites
+   *
+   * - Calculates total number of sites
+   * - Allocates and initializes local spin flags array
+   * - Handles different site counts for Kondo model
+   */
   StdI->nsite = StdI->NsiteUC * StdI->NCell;
   if (strcmp(StdI->model, "kondo") == 0 ) StdI->nsite *= 2;
   StdI->locspinflag = (int *)malloc(sizeof(int) * StdI->nsite);
@@ -160,9 +188,14 @@ void StdFace_FCOrtho(
       StdI->locspinflag[iL] = StdI->S2;
       StdI->locspinflag[iL + StdI->nsite / 2] = 0;
     }
-  /**@brief
-  (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
-  */
+  /**
+   * @brief Step 4: Calculate memory requirements and allocate arrays
+   *
+   * Computes upper bounds for:
+   * - Number of transfer terms (hopping/field terms)
+   * - Number of interaction terms (exchange/Coulomb terms)
+   * Different calculations done for each model type
+   */
   if (strcmp(StdI->model, "spin") == 0 ) {
     ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 6/*J*/ + 3/*J'*/ + 0/*J''*/)
@@ -179,9 +212,15 @@ void StdFace_FCOrtho(
   }
   /**/
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
-  /**@brief
-  (5) Set Transfer & Interaction
-  */
+  /**
+   * @brief Step 5: Set up all interactions in the Hamiltonian
+   *
+   * Loops over all unit cells and sets up:
+   * - Local terms (on-site U, magnetic field)
+   * - Nearest neighbor terms along W, L, H directions
+   * - Second nearest neighbor terms
+   * Different terms added depending on model type
+   */
   for (kCell = 0; kCell < StdI->NCell; kCell++){
     /**/
     iW = StdI->Cell[kCell][0];

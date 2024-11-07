@@ -27,9 +27,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-@brief Setup a Hamiltonian for the square lattice
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the square lattice
+ * @details Initializes and configures a Hamiltonian for a square/tetragonal lattice system.
+ *          Sets up the lattice geometry, boundary conditions, and interaction parameters.
+ * @param[in,out] StdI Pointer to structure containing model parameters and lattice information
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Tetragonal(struct StdIntList *StdI)
 {
   int isite, jsite, ntransMax, nintrMax;
