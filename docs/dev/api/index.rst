@@ -6,4 +6,4 @@ API Reference
 
 .. note::
 
-   API pages will be generated per public header (include/*.h).
+   API pages will be generated per public header (``src/*.h``).

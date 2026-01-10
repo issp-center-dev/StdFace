@@ -88,4 +88,14 @@ All claims in the architecture documents include source references in the format
 ## Notes
 
 - Large file `src/StdFace_main.c` (3066 lines) required partial reads and Serena symbol extraction
-- No issues discovered during Phase 2 that require tracking
+
+## Post-Review Fixes
+
+After initial draft completion, Sphinx build revealed issues:
+
+1. **macOS resource fork files (`._*`)**: Deleted and added to `exclude_patterns` in conf.py
+2. **RST table alignment**: Widened columns in overview.rst and execution_flow.rst
+3. **Incorrect path reference**: Changed `include/*.h` to `src/*.h` in api/index.rst
+4. **Title underline**: Fixed `docs/index.rst` underline length (20 → 21 chars)
+
+Final Sphinx build: **0 warnings, 0 errors**

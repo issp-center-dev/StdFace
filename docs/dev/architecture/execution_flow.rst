@@ -108,23 +108,23 @@ The input file is parsed line by line:
 
 **Key parsing functions**:
 
-+-----------------------+------------------------------------------+
-| Function              | Purpose                                  |
-+=======================+==========================================+
-| ``TrimSpaceQuote()``  | Remove whitespace and quotes from line   |
-+-----------------------+------------------------------------------+
-| ``Text2Lower()``      | Convert keyword to lowercase             |
-+-----------------------+------------------------------------------+
-| ``StoreWithCheckDup_i``| Store integer with duplicate check      |
-+-----------------------+------------------------------------------+
-| ``StoreWithCheckDup_d``| Store double with duplicate check       |
-+-----------------------+------------------------------------------+
-| ``StoreWithCheckDup_c``| Store complex with duplicate check      |
-+-----------------------+------------------------------------------+
-| ``StoreWithCheckDup_s``| Store string with duplicate check       |
-+-----------------------+------------------------------------------+
-| ``StoreWithCheckDup_sl``| Store string (lowercase) with check    |
-+-----------------------+------------------------------------------+
++--------------------------+------------------------------------------+
+| Function                 | Purpose                                  |
++==========================+==========================================+
+| ``TrimSpaceQuote()``     | Remove whitespace and quotes from line   |
++--------------------------+------------------------------------------+
+| ``Text2Lower()``         | Convert keyword to lowercase             |
++--------------------------+------------------------------------------+
+| ``StoreWithCheckDup_i``  | Store integer with duplicate check       |
++--------------------------+------------------------------------------+
+| ``StoreWithCheckDup_d``  | Store double with duplicate check        |
++--------------------------+------------------------------------------+
+| ``StoreWithCheckDup_c``  | Store complex with duplicate check       |
++--------------------------+------------------------------------------+
+| ``StoreWithCheckDup_s``  | Store string with duplicate check        |
++--------------------------+------------------------------------------+
+| ``StoreWithCheckDup_sl`` | Store string (lowercase) with check      |
++--------------------------+------------------------------------------+
 
 **Source reference**: ``src/StdFace_main.c:2482-2776`` (parsing loop)
 
