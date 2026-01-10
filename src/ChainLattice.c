@@ -29,9 +29,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
 @brief Setup a Hamiltonian for the Hubbard model on a Chain lattice
 @author Mitsuaki Kawamura (The University of Tokyo)
+
+@details This function sets up the Hamiltonian for a 1D chain lattice model.
+It handles three different model types:
+- Spin model
+- Hubbard model 
+- Kondo model
+
+The function performs the following steps:
+1. Computes super-cell shape and sites
+2. Validates and stores Hamiltonian parameters
+3. Sets local spin flags and number of sites
+4. Allocates memory for interactions
+5. Sets up transfers and interactions between sites
+
+@param[in,out] StdI Pointer to structure containing model parameters and lattice information
+
+@note The function supports:
+- Nearest neighbor interactions (J0, t0, V0)
+- Second nearest neighbor interactions (J0', t0', V0')  
+- Third nearest neighbor interactions (J0'', t0'', V0'')
+- Local terms (magnetic field h, anisotropy Gamma)
+- On-site Coulomb interaction U (for Hubbard model)
+- Kondo coupling J (for Kondo model)
+
+@note The lattice geometry is written to lattice.gp file for visualization
+
+@warning For Kondo model, the number of sites is doubled to account for localized spins
 */
 void StdFace_Chain(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI //!<[inout] Structure containing model parameters and lattice information
 )
 {
   FILE *fp = NULL;
@@ -238,11 +265,29 @@ void StdFace_Chain(
 #endif
   StdFace_PrintGeometry(StdI);
 }/*void StdFace_Chain*/
-
 #if defined(_HPhi)
 /**
 @brief Setup a Hamiltonian for the generalized Heisenberg model on a Chain lattice
 @author Mitsuaki Kawamura (The University of Tokyo)
+
+@details This function sets up a specialized Hamiltonian for the Heisenberg model on a chain lattice
+using the HPhi boost mode. It handles:
+- Magnetic field terms
+- Nearest and next-nearest neighbor interactions
+- Specialized 6-spin interactions
+
+The function performs:
+1. Sets up unit cell and lattice parameters
+2. Writes magnetic field configuration
+3. Writes interaction parameters
+4. Sets up topology and pivot sites
+5. Configures 6-spin interaction lists
+
+@param[in,out] StdI Pointer to structure containing model parameters
+
+@warning 
+- S2 must be 1 in Boost mode
+- L must be divisible by 8
 */
 void StdFace_Chain_Boost(struct StdIntList *StdI)
 {
@@ -327,6 +372,17 @@ void StdFace_Chain_Boost(struct StdIntList *StdI)
     }
   }
 
+  /*
+   * Initialize the list_6spin_pair array which defines the spin interactions
+   * For each pivot point:
+   * - First 6 rows (indices 0-5) specify which spins are involved in each interaction
+   * - Last row (index 6) specifies the type of interaction (1 or 2)
+   * - Each column represents one interaction, with 8 total interactions per pivot
+   * 
+   * The interactions are arranged in groups:
+   * - Interactions 0-3: Type 1 interactions between adjacent spins
+   * - Interactions 4-7: Type 2 interactions between next-nearest neighbors
+   */
   for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
     StdI->list_6spin_pair[ipivot][0][0] = 0;
     StdI->list_6spin_pair[ipivot][1][0] = 1;

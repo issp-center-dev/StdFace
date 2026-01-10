@@ -1,3 +1,13 @@
+/**
+ * @file export_wannier90.c
+ * @brief Functions for exporting model data in Wannier90 format
+ * 
+ * This file contains functions to export lattice geometry and interaction parameters
+ * in a format compatible with Wannier90. The main functions are:
+ * - ExportGeometry() - Exports lattice vectors and orbital positions
+ * - ExportInteraction() - Exports hopping and interaction parameters
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -10,6 +20,12 @@
 
 // #undef NDEBUG
 
+/**
+ * @brief Macro for fatal error handling
+ * 
+ * Prints error message with function name, file and line number,
+ * then exits program with error status.
+ */
 #define fatal(fmt,...)                                    \
   do {                                                    \
     fprintf(stderr, "ERROR: %s: " fmt " in %s:%d\n",      \
@@ -22,20 +38,30 @@
 int is_export_all = 1;  /* default for exportall parameter */
 
 /* parameters */
-static const double eps = 1.0e-8;
+static const double eps = 1.0e-8;  /**< Small number for floating point comparisons */
   
-/* type declarations */
+/**
+ * @brief Structure to store interaction parameters between orbitals
+ */
 typedef struct {
-  int r[3];   /* relative coordinate */
-  int a, b;   /* orbit index */
-  int s, t;   /* extension: spin dependence */
-  double complex v;   /* value */
+  int r[3];   /**< Relative coordinate between orbitals */
+  int a, b;   /**< Orbital indices */
+  int s, t;   /**< Spin indices */
+  double complex v;   /**< Interaction strength */
 } IntrItem;
 
 
 /**
-   @brief Print geometry data in Wannier90 geom format
-*/
+ * @brief Write geometry data to file in Wannier90 format
+ *
+ * @param StdI Standard input parameters containing geometry info
+ * @param fname Output filename
+ *
+ * Writes:
+ * - Primitive lattice vectors
+ * - Number of orbitals per unit cell
+ * - Orbital positions in fractional coordinates
+ */
 void WriteGeometry(struct StdIntList *StdI, char *fname)
 {
   FILE *fp = fopen(fname, "w");
@@ -65,8 +91,18 @@ void WriteGeometry(struct StdIntList *StdI, char *fname)
 }
 
 /**
-   @brief Print interaction coefficient data in Wannier90 (-like) format
-*/
+ * @brief Write interaction parameters to file in Wannier90 format
+ *
+ * @param nintr_table Number of interaction terms
+ * @param intr_table Array of interaction parameters
+ * @param nsiteuc Number of sites per unit cell
+ * @param nspin Number of spin states
+ * @param fname Output filename
+ * @param tagname Tag identifying interaction type
+ *
+ * Writes interaction parameters between orbitals in Wannier90 format.
+ * Handles both spin-dependent and spin-independent cases.
+ */
 void WriteWannier90(int nintr_table, IntrItem *intr_table,
                     int nsiteuc, int nspin,
                     char *fname, char *tagname)
@@ -226,8 +262,15 @@ void WriteWannier90(int nintr_table, IntrItem *intr_table,
 }
 
 /**
-   @bridf unfold site from [0, N] to [-N/2, N/2]
-*/
+ * @brief Convert site coordinates from [0,N] to [-N/2,N/2] range
+ *
+ * @param StdI Standard input parameters
+ * @param v_in Input coordinates
+ * @param v_out Output coordinates
+ *
+ * Unfolds coordinates from positive range to centered around zero.
+ * Used to get relative distances between sites.
+ */
 void unfold_site(struct StdIntList *StdI, int v_in[3], int v_out[3])
 {
   int v[3];
@@ -264,10 +307,18 @@ void unfold_site(struct StdIntList *StdI, int v_in[3], int v_out[3])
 }
 
 /**
-   @brief generate key as a pair for interaction table
-   ordered = 0 -> as-is
-   ordered = 1 -> i < j
-*/
+ * @brief Generate key for interaction table entry
+ *
+ * @param keylen Length of key (1, 2 or 4)
+ * @param index_out Output key array
+ * @param index Input indices
+ * @param ordered Whether to order indices
+ *
+ * Creates key from indices based on keylen:
+ * - keylen=1: i
+ * - keylen=2: (i,j)
+ * - keylen=4: (i,s,j,t) for spin-dependent case
+ */
 void generate_key(int keylen, int *index_out, int *index, int ordered)
 {
   if (keylen == 1) {  /* i */
@@ -308,8 +359,12 @@ void generate_key(int keylen, int *index_out, int *index, int ordered)
 }
 
 /**
-   @brief copy key data
-*/
+ * @brief Copy key data between arrays
+ *
+ * @param keylen Length of key
+ * @param dst_key Destination array
+ * @param src_key Source array
+ */
 void store_key(int keylen, int *dst_key, int *src_key)
 {
   for (int k = 0; k < keylen; ++k) {
@@ -319,8 +374,13 @@ void store_key(int keylen, int *dst_key, int *src_key)
 }
 
 /**
-   @brief test whether two keys are same
-*/
+ * @brief Compare two keys for equality
+ *
+ * @param keylen Length of keys
+ * @param key_a First key
+ * @param key_b Second key
+ * @return 1 if keys are equal, 0 otherwise
+ */
 int is_equal_key(int keylen, int *key_a, int *key_b)
 {
   for (int k = 0; k < keylen; ++k) {
@@ -330,8 +390,12 @@ int is_equal_key(int keylen, int *key_a, int *key_b)
 }
 
 /**
-   @brief make string representation of a key
-*/
+ * @brief Convert key to string representation
+ *
+ * @param keylen Length of key
+ * @param key Key array
+ * @return String representation of key
+ */
 char *to_string_key(int keylen, int *key)
 {
   static char buf[1024];
@@ -350,8 +414,20 @@ char *to_string_key(int keylen, int *key)
 }
 
 /**
-   @brief make table compact by accumulating entries of the same key
-*/
+ * @brief Accumulate interaction table entries with same key
+ *
+ * @param keylen Length of key
+ * @param ntbl Number of input entries
+ * @param tbl_index Input indices
+ * @param tbl_value Input values
+ * @param ntbl_out Number of output entries
+ * @param tbl_index_out Output indices
+ * @param tbl_value_out Output values
+ * @param ordered Whether to order indices
+ *
+ * Combines entries with same key by adding their values.
+ * Eliminates entries with zero value.
+ */
 void accumulate_list(int keylen,
                      int ntbl, int **tbl_index, double complex *tbl_value,
                      int *ntbl_out, int **tbl_index_out, double complex *tbl_value_out,
@@ -430,8 +506,15 @@ void accumulate_list(int keylen,
 }
 
 /**
-   @brief Print interaction coefficient of StdFace internal data structure (complex array)
-*/
+ * @brief Export interaction coefficients from complex array
+ *
+ * @param StdI Standard input parameters
+ * @param ntbl Number of interaction terms
+ * @param tbl_index Interaction indices
+ * @param tbl_value Interaction values
+ * @param fname Output filename
+ * @param tagname Tag identifying interaction type
+ */
 void ExportInter(struct StdIntList *StdI,
                  int ntbl, int **tbl_index, double complex *tbl_value,
                  char *fname, char *tagname)
@@ -553,8 +636,17 @@ void ExportInter(struct StdIntList *StdI,
 }
 
 /**
-   @brief Print interaction coefficient of StdFace internal data structure (real array)
-*/
+ * @brief Export interaction coefficients from real array
+ *
+ * @param StdI Standard input parameters
+ * @param ntbl Number of interaction terms
+ * @param tbl_index Interaction indices
+ * @param tbl_value Interaction values
+ * @param fname Output filename
+ * @param tagname Tag identifying interaction type
+ *
+ * Converts real array to complex and calls ExportInter()
+ */
 void ExportInterReal(struct StdIntList *StdI,
                      int ntbl, int **tbl_index, double *tbl_value,
                      char *fname, char *tagname)
@@ -575,8 +667,16 @@ void ExportInterReal(struct StdIntList *StdI,
 }
 
 /**
-   @brief Print coefficient of transfer term
-*/
+ * @brief Export transfer (hopping) coefficients
+ *
+ * @param StdI Standard input parameters
+ * @param ntbl Number of transfer terms
+ * @param tbl_index Transfer indices
+ * @param tbl_value Transfer values
+ * @param fname Output filename
+ * @param tagname Tag identifying transfer type
+ * @param spin_dep Whether transfer is spin-dependent
+ */
 void ExportTransfer(struct StdIntList *StdI,
                     int ntbl, int **tbl_index, double complex *tbl_value,
                     char *fname, char *tagname, int spin_dep)

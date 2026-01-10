@@ -33,15 +33,23 @@ void usage(const char *prog)
 
 int main(int argc, char *argv[])
 {
+  /** 
+   * @brief Return status code indicating success/failure
+   */
   int status = 0;
+
   if (argc < 2) {
+    /* Print version and usage if no arguments provided */
     printVersion();
-    usage(argv[0]);
+    usage(argv[0]); 
     status = 1;
   } else if (strcmp(argv[1], "-v") == 0) {
+    /* Print version if -v flag specified */
     printVersion();
   } else {
+    /* Process input file */
     StdFace_main(argv[1]);
   }
+
   return status;
 }
