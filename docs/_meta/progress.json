@@ -33,8 +33,13 @@
       ]
     },
     "phase2_architecture": {
-      "status": "todo",
-      "artifacts": []
+      "status": "done",
+      "artifacts": [
+        "docs/dev/architecture/overview.rst",
+        "docs/dev/architecture/directory_structure.rst",
+        "docs/dev/architecture/execution_flow.rst",
+        "docs/dev/architecture/dependency_graph.rst"
+      ]
     },
     "phase3_api": {
       "status": "todo",
@@ -54,6 +59,6 @@
     "public_functions": 64,
     "public_types": 1,
     "api_pages_done": 0,
-    "architecture_pages_done": 0
+    "architecture_pages_done": 4
   }
 }
