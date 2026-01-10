@@ -61,12 +61,12 @@
       ]
     },
     "phase5_user": {
-      "status": "doing",
+      "status": "done",
       "artifacts": [
         "docs/user/quickstart.rst",
-        "docs/user/examples.rst"
-      ],
-      "notes": "Part A complete (quickstart, examples). Part B (input_output) pending."
+        "docs/user/examples.rst",
+        "docs/user/input_output.rst"
+      ]
     }
   },
   "key_metrics": {
@@ -76,6 +76,6 @@
     "api_pages_done": 5,
     "architecture_pages_done": 4,
     "internals_pages_done": 3,
-    "user_pages_done": 2
+    "user_pages_done": 3
   }
 }
