@@ -1,6 +1,199 @@
 Quickstart
 ==========
 
-.. note::
+This guide walks you through building StdFace and running your first input file
+generation.
 
-   This file is a placeholder. It will be generated and refined by the Claude Code multi-role workflow defined in ``claude.md``.
+Prerequisites
+-------------
+
+- CMake 2.8.12 or later
+- C99-compatible compiler (GCC, Clang, etc.)
+- Standard math library (libm)
+
+Building StdFace
+----------------
+
+StdFace uses CMake to build variant executables for different target solvers.
+You must enable at least one solver mode during configuration.
+
+1. Clone or download the StdFace source code.
+
+2. Create a build directory and configure:
+
+   .. code-block:: bash
+
+      mkdir build && cd build
+      cmake .. -DHPHI=ON
+
+   This builds ``hphi_dry.out`` for the HPhi solver.
+
+3. Compile:
+
+   .. code-block:: bash
+
+      make
+
+4. The executable is created in the build directory.
+
+Available Build Options
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Select which solver(s) to build by enabling CMake options:
+
+==============  ===================  =================================
+Option          Executable           Target Solver
+==============  ===================  =================================
+``-DUHF=ON``    ``uhf_dry.out``      UHF (Unrestricted Hartree-Fock)
+``-DMVMC=ON``   ``mvmc_dry.out``     mVMC (Variational Monte Carlo)
+``-DHPHI=ON``   ``hphi_dry.out``     HPhi (Exact Diagonalization)
+``-DHWAVE=ON``  ``hwave_dry.out``    H-wave
+==============  ===================  =================================
+
+You can enable multiple solvers in one build:
+
+.. code-block:: bash
+
+   cmake .. -DHPHI=ON -DMVMC=ON -DUHF=ON -DHWAVE=ON
+   make
+
+Running StdFace
+---------------
+
+Command Pattern
+^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   ./<solver>_dry.out <input_file>
+
+For example, with HPhi:
+
+.. code-block:: bash
+
+   ./hphi_dry.out stan.in
+
+To display version information:
+
+.. code-block:: bash
+
+   ./hphi_dry.out -v
+
+Input File
+^^^^^^^^^^
+
+StdFace reads a single input file containing model and lattice parameters in
+``key = value`` format. The file name is arbitrary (commonly ``stan.in``).
+
+Sample input file (from ``samples/hubbard/default_model/stan.in``):
+
+.. code-block:: text
+
+   model = "Hubbard"
+   lattice = square
+   W=2
+   L=2
+   method = "CG"
+   2Sz = 0
+   nelec = 4
+   exct = 1
+   t=1
+   U=1
+
+Keys used in the sample:
+
+- ``model``: Physical model type
+- ``lattice``: Lattice geometry
+- ``W``, ``L``: Lattice dimensions
+- ``method``: Solver method (solver-specific)
+- ``2Sz``: Total spin (2 * Sz)
+- ``nelec``: Number of electrons
+- ``exct``: Number of excited states (solver-specific)
+- ``t``: Hopping parameter
+- ``U``: On-site Coulomb interaction
+
+Output Files
+^^^^^^^^^^^^
+
+StdFace generates input files for the target solver in the current working
+directory. The specific output file names and formats depend on the solver mode
+and are unspecified in the current code documentation. Consult the generated
+files after running StdFace.
+
+Your First Run
+--------------
+
+1. Create an input file named ``stan.in`` with the following content
+   (from ``samples/hubbard/default_model/stan.in``):
+
+   .. code-block:: text
+
+      model = "Hubbard"
+      lattice = square
+      W=2
+      L=2
+      method = "CG"
+      2Sz = 0
+      nelec = 4
+      exct = 1
+      t=1
+      U=1
+
+2. Run StdFace:
+
+   .. code-block:: bash
+
+      ./hphi_dry.out stan.in
+
+3. Check the generated output files in the current directory.
+
+Troubleshooting
+---------------
+
+Build Errors
+^^^^^^^^^^^^
+
+**No solver enabled**
+
+If you run ``cmake ..`` without enabling any solver option, no executable will
+be built. Make sure to specify at least one solver:
+
+.. code-block:: bash
+
+   cmake .. -DHPHI=ON
+
+**CMake version too old**
+
+StdFace requires CMake 2.8.12 or later. Check your version:
+
+.. code-block:: bash
+
+   cmake --version
+
+Runtime Errors
+^^^^^^^^^^^^^^
+
+**ERROR ! <parameter> is NOT specified !**
+
+A parameter expected by StdFace is missing from your input file. Add the
+parameter indicated in the error message to your input file.
+
+**Check ! <parameter> is SPECIFIED but will NOT be USED.**
+
+A parameter was specified that does not apply to the current model/lattice
+combination. Remove or comment out the unused parameter.
+
+**File not found**
+
+Ensure the input file path is correct and the file exists:
+
+.. code-block:: bash
+
+   ls -la stan.in
+   ./hphi_dry.out stan.in
+
+Next Steps
+----------
+
+- See :doc:`examples` for complete working examples
+- See :doc:`input_output` for detailed parameter reference
