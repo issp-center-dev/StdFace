@@ -42,8 +42,15 @@
       ]
     },
     "phase3_api": {
-      "status": "todo",
-      "artifacts": []
+      "status": "done",
+      "artifacts": [
+        "docs/dev/api/index.rst",
+        "docs/dev/api/StdFace_ModelUtil.rst",
+        "docs/dev/api/StdFace_vals.rst",
+        "docs/dev/api/setmemory.rst",
+        "docs/dev/api/export_wannier90.rst",
+        "docs/dev/api/version.rst"
+      ]
     },
     "phase4_internals": {
       "status": "todo",
@@ -58,7 +65,7 @@
     "public_headers": 5,
     "public_functions": 64,
     "public_types": 1,
-    "api_pages_done": 0,
+    "api_pages_done": 5,
     "architecture_pages_done": 4
   }
 }
