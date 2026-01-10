@@ -56,3 +56,10 @@ make.sys
 
 # Build Output
 build/
+
+# Claude/AI assistant metadata
+.claude/
+.serena/
+.mcp.json
+claude.md
+docs/_meta/
