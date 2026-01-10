@@ -1,0 +1,81 @@
+{
+  "repo": "StdFace",
+  "last_updated": "2026-01-10",
+  "phases": {
+    "phase0_bootstrap": {
+      "status": "done",
+      "artifacts": [
+        "docs/conf.py",
+        "docs/index.rst",
+        "docs/dev/index.rst",
+        "docs/user/index.rst",
+        "docs/dev/architecture/overview.rst",
+        "docs/dev/architecture/directory_structure.rst",
+        "docs/dev/architecture/execution_flow.rst",
+        "docs/dev/architecture/dependency_graph.rst",
+        "docs/dev/api/index.rst",
+        "docs/dev/internals/error_handling.rst",
+        "docs/dev/internals/memory_management.rst",
+        "docs/dev/internals/build_and_options.rst",
+        "docs/user/quickstart.rst",
+        "docs/user/input_output.rst",
+        "docs/user/examples.rst",
+        "docs/_meta/decisions.md",
+        "docs/_meta/progress.json"
+      ]
+    },
+    "phase1_cartography": {
+      "status": "done",
+      "artifacts": [
+        "docs/_meta/header_map.yaml",
+        "docs/_meta/entry_points.yaml",
+        "docs/_meta/terminology.yaml"
+      ]
+    },
+    "phase2_architecture": {
+      "status": "done",
+      "artifacts": [
+        "docs/dev/architecture/overview.rst",
+        "docs/dev/architecture/directory_structure.rst",
+        "docs/dev/architecture/execution_flow.rst",
+        "docs/dev/architecture/dependency_graph.rst"
+      ]
+    },
+    "phase3_api": {
+      "status": "done",
+      "artifacts": [
+        "docs/dev/api/index.rst",
+        "docs/dev/api/StdFace_ModelUtil.rst",
+        "docs/dev/api/StdFace_vals.rst",
+        "docs/dev/api/setmemory.rst",
+        "docs/dev/api/export_wannier90.rst",
+        "docs/dev/api/version.rst"
+      ]
+    },
+    "phase4_internals": {
+      "status": "done",
+      "artifacts": [
+        "docs/dev/internals/error_handling.rst",
+        "docs/dev/internals/memory_management.rst",
+        "docs/dev/internals/build_and_options.rst"
+      ]
+    },
+    "phase5_user": {
+      "status": "done",
+      "artifacts": [
+        "docs/user/quickstart.rst",
+        "docs/user/examples.rst",
+        "docs/user/input_output.rst"
+      ]
+    }
+  },
+  "key_metrics": {
+    "public_headers": 5,
+    "public_functions": 64,
+    "public_types": 1,
+    "api_pages_done": 5,
+    "architecture_pages_done": 4,
+    "internals_pages_done": 3,
+    "user_pages_done": 3
+  }
+}
