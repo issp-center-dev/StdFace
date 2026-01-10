@@ -1,0 +1,101 @@
+# entry_points.yaml - CLI entry points and binaries
+# Generated: 2026-01-10 (Phase 1 Repo Cartography)
+
+entry_points:
+  main:
+    file: src/dry.c
+    function: main
+    signature: "int main(int argc, char *argv[])"
+    description: >
+      CLI entry point. Parses command line arguments and dispatches to StdFace_main.
+      Usage: xxx_dry.out <input_file> or xxx_dry.out -v (for version)
+    calls:
+      - printVersion  # from version.h
+      - StdFace_main  # from StdFace_main.c
+
+  StdFace_main:
+    file: src/StdFace_main.c
+    function: StdFace_main
+    signature: "void StdFace_main(char *fname)"
+    description: >
+      Core processing function. Reads input file, constructs lattice model,
+      and generates output files for the target solver (HPhi/mVMC/UHF/HWAVE).
+    internal_functions:
+      - StdFace_ResetVals
+      - Text2Lower
+      - TrimSpaceQuote
+      - StoreWithCheckDup_s
+      - StoreWithCheckDup_sl
+      - StoreWithCheckDup_i
+      - StoreWithCheckDup_d
+      - StoreWithCheckDup_c
+      - PrintLocSpin
+      - PrintTrans
+      - PrintNamelist
+      - PrintModPara
+      - Print1Green
+      - Print2Green
+      - UnsupportedSystem
+      - CheckOutputMode
+      - CheckModPara
+      - PrintInteractions
+
+binaries:
+  uhf_dry.out:
+    cmake_option: UHF
+    compile_define: _UHF
+    library: libStdFace_uhf.a
+    description: "Input file generator for UHF (Unrestricted Hartree-Fock)"
+
+  mvmc_dry.out:
+    cmake_option: MVMC
+    compile_define: _mVMC
+    library: libStdFace_mvmc.a
+    description: "Input file generator for mVMC (many-variable Variational Monte Carlo)"
+
+  hphi_dry.out:
+    cmake_option: HPHI
+    compile_define: _HPhi
+    library: libStdFace_hphi.a
+    description: "Input file generator for HPhi (exact diagonalization)"
+
+  hwave_dry.out:
+    cmake_option: HWAVE
+    compile_define: _HWAVE
+    library: libStdFace_hwave.a
+    description: "Input file generator for H-wave"
+
+cmake_options:
+  UHF:
+    default: OFF
+    description: "Build uhf_dry.out"
+  MVMC:
+    default: OFF
+    description: "Build mvmc_dry.out"
+  HPHI:
+    default: OFF
+    description: "Build hphi_dry.out"
+  HWAVE:
+    default: OFF
+    description: "Build hwave_dry.out"
+  TestStdFace:
+    default: ON
+    description: "Enable testing"
+
+source_files:
+  # Core sources compiled into all variants
+  common:
+    - src/ChainLattice.c
+    - src/FCOrtho.c
+    - src/HoneycombLattice.c
+    - src/Kagome.c
+    - src/Ladder.c
+    - src/Orthorhombic.c
+    - src/Pyrochlore.c
+    - src/SquareLattice.c
+    - src/StdFace_ModelUtil.c
+    - src/StdFace_main.c
+    - src/TriangularLattice.c
+    - src/Wannier90.c
+    - src/setmemory.c
+    - src/export_wannier90.c

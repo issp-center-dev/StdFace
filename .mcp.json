@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${PWD}"]
+    },
+  "git": {
+      "command": "npx",
+      "args": ["-y", "@mseep/git-mcp-server", "--repo", "${PWD}"]
+  },
+  "serena": {
+      "command": "uvx",
+      "args": [
+	  "--from",
+	  "git+https://github.com/oraios/serena",
+	  "serena",
+	  "start-mcp-server",
+	  "--transport",
+	  "stdio",
+	  "--project",
+	  "${PWD}"
+      ]
+  },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}

@@ -1,0 +1,153 @@
+# terminology.yaml - Seed glossary from README/CMake/samples
+# Generated: 2026-01-10 (Phase 1 Repo Cartography)
+# Update during subsequent phases as needed.
+
+terms:
+  # Project and Tools
+  StdFace:
+    definition: "Input file generator for quantum lattice model solvers"
+    source: README.md
+    related: [HPhi, mVMC, UHF, H-wave]
+
+  HPhi:
+    definition: "Exact diagonalization solver for quantum lattice models"
+    source: README.md
+    external_url: "https://github.com/issp-center-dev/HPhi"
+    cmake_option: HPHI
+    compile_define: _HPhi
+
+  mVMC:
+    definition: "Many-variable Variational Monte Carlo solver"
+    source: README.md
+    external_url: "https://github.com/issp-center-dev/mVMC"
+    cmake_option: MVMC
+    compile_define: _mVMC
+
+  UHF:
+    definition: "Unrestricted Hartree-Fock solver"
+    source: README.md
+    external_url: "https://github.com/issp-center-dev/UHF-dev"
+    cmake_option: UHF
+    compile_define: _UHF
+
+  H-wave:
+    definition: "H-wave quantum lattice solver"
+    source: README.md
+    external_url: "https://github.com/issp-center-dev/H-wave"
+    cmake_option: HWAVE
+    compile_define: _HWAVE
+
+  # Execution concepts
+  dry_run:
+    definition: "Mode where StdFace generates input files without executing the solver"
+    source: src/dry.c
+    usage: "xxx_dry.out input.in"
+
+  stan.in:
+    definition: "Standard input file format for StdFace"
+    source: samples/hubbard/default_model/stan.in
+    aliases: [input.in]
+
+  # Models
+  Hubbard:
+    definition: "Hubbard model for interacting electrons on a lattice"
+    source: samples/hubbard/default_model/stan.in
+    input_key: model
+
+  # Lattice types (from StdFace_ModelUtil.h functions)
+  Chain:
+    definition: "1D chain lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Chain
+
+  Ladder:
+    definition: "Ladder (two-leg or multi-leg) lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Ladder
+
+  Square:
+    definition: "2D square lattice"
+    source: src/SquareLattice.c
+    input_value: square
+
+  Triangular:
+    definition: "Triangular lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Triangular
+
+  Honeycomb:
+    definition: "Honeycomb (hexagonal) lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Honeycomb
+
+  Kagome:
+    definition: "Kagome lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Kagome
+
+  Tetragonal:
+    definition: "Tetragonal 3D lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Tetragonal
+
+  Orthorhombic:
+    definition: "Orthorhombic lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Orthorhombic
+
+  FCOrtho:
+    definition: "Face-centered orthorhombic lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_FCOrtho
+
+  Pyrochlore:
+    definition: "Pyrochlore lattice"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Pyrochlore
+
+  Wannier90:
+    definition: "Wannier90 interface for importing tight-binding models"
+    source: src/StdFace_ModelUtil.h
+    function: StdFace_Wannier90
+
+  # Key parameters (from StdFace_vals.h)
+  W:
+    definition: "Width of the lattice"
+    source: src/StdFace_vals.h
+    type: int
+
+  L:
+    definition: "Length of the lattice"
+    source: src/StdFace_vals.h
+    type: int
+
+  t:
+    definition: "Hopping parameter"
+    source: src/StdFace_vals.h
+    type: double
+
+  U:
+    definition: "On-site Coulomb interaction (Hubbard U)"
+    source: src/StdFace_vals.h
+    type: double
+
+  V:
+    definition: "Inter-site Coulomb interaction"
+    source: src/StdFace_vals.h
+    type: double
+
+  J:
+    definition: "Exchange interaction parameter"
+    source: src/StdFace_vals.h
+    type: "double[3][3]"
+
+  mu:
+    definition: "Chemical potential"
+    source: src/StdFace_vals.h
+    type: double
+
+  # Data structures
+  StdIntList:
+    definition: "Main configuration structure holding all model and lattice parameters"
+    source: src/StdFace_vals.h
+    type: struct
