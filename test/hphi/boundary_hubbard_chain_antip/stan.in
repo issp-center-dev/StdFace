@@ -1,0 +1,10 @@
+L = 4
+model = "FermionHubbard"
+method = "FullDiag"
+lattice = "chain"
+t = 1.0
+U = 4.0
+nelec = 4
+2Sz = 0
+phase0 = 180.0
+outputmode = "all"

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+test_item=$1
+base_dir=$2
+
+DRY_BIN=${DRY_BIN:-../../../src/hphi_dry.out}
+
+if [ -d ${test_item} ]; then
+    mv ${test_item} ${test_item}.bak
+fi
+
+cp -rp ${base_dir}/${test_item} .
+cd ${test_item}
+
+${DRY_BIN} stan.in > run.log 2>&1
+status=$?
+
+if [ $status -eq 0 ]; then
+    echo "expected failure but exit code was 0"
+    exit 1
+fi
+
+exit 0
