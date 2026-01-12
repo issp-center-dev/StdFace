@@ -1,7 +1,8 @@
 import sys
 
+# Allow small platform-dependent floating-point drift (Linux vs macOS/Clang).
 #EPS = 0.0
-EPS = 1.0e-12
+EPS = 1.0e-8
 
 if len(sys.argv) < 3:
     print("usage: {} file1 file2".format(sys.argv[0]))
