@@ -1,23 +1,22 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
+/**
+ * @file Kagome.c
+ * @brief Standard mode implementation for the kagome lattice model
+ * @copyright Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Standard mode for the kagome lattice
-*/
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -27,11 +26,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-@brief Setup a Hamiltonian for the Kagome lattice
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the Kagome lattice
+ *
+ * This function sets up the Hamiltonian for the Kagome lattice model.
+ * The Kagome lattice is a 2D lattice consisting of corner-sharing triangles.
+ * 
+ * The function handles:
+ * - Lattice geometry and unit cell definition
+ * - Nearest and next-nearest neighbor interactions
+ * - Magnetic field terms
+ * - Different model types (spin, Hubbard, Kondo)
+ * - Hopping and interaction parameters
+ *
+ * @param[in,out] StdI Pointer to the StdIntList structure containing model parameters
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Kagome(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI
 )
 {
   int isite, jsite, isiteUC, kCell, ntransMax, nintrMax;
@@ -40,9 +52,14 @@ void StdFace_Kagome(
   double complex Cphase;
   double dR[3];
 
-  /**@brief
-  (1) Compute the shape of the super-cell and sites in the super-cell
-  */
+  /**
+   * @brief Compute the shape of the super-cell and sites in the super-cell
+   *
+   * This section:
+   * - Opens lattice visualization file if needed
+   * - Sets number of sites in unit cell (3 for Kagome)
+   * - Defines lattice parameters and geometry
+   */
 #ifdef _HWAVE
   if (StdI->lattice_gp == 1)
 #endif
@@ -67,9 +84,15 @@ void StdFace_Kagome(
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; StdI->tau[0][2] = 0.0;
   StdI->tau[1][0] = 0.5; StdI->tau[1][1] = 0.0; StdI->tau[1][2] = 0.0;
   StdI->tau[2][0] = 0.0; StdI->tau[2][1] = 0.5; StdI->tau[2][2] = 0.0;
-  /**@brief
-  (2) check & store parameters of Hamiltonian
-  */
+
+  /**
+   * @brief Check and store Hamiltonian parameters
+   *
+   * This section:
+   * - Validates and stores model-specific parameters
+   * - Handles different model types (spin/Hubbard/Kondo)
+   * - Sets up interaction parameters
+   */
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   /**/
   StdFace_NotUsed_d("K", StdI->K);
@@ -143,10 +166,15 @@ void StdFace_Kagome(
 
   }/*if (model != "spin")@@*/
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /**@brief
-  (3) Set local spin flag (StdIntList::locspinflag) and
-  the number of sites (StdIntList::nsite)
-  */
+
+  /**
+   * @brief Set local spin flags and number of sites
+   *
+   * This section:
+   * - Calculates total number of sites
+   * - Allocates and initializes local spin flags
+   * - Handles different model types
+   */
   StdI->nsite = StdI->NsiteUC * StdI->NCell;
   if (strcmp(StdI->model, "kondo") == 0 ) StdI->nsite *= 2;
   StdI->locspinflag = (int *)malloc(sizeof(int) * StdI->nsite);
@@ -160,9 +188,14 @@ void StdFace_Kagome(
       StdI->locspinflag[iL] = StdI->S2;
       StdI->locspinflag[iL + StdI->nsite / 2] = 0;
     }
-  /**@brief
-  (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
-  */
+
+  /**
+   * @brief Compute interaction limits and allocate memory
+   *
+   * This section:
+   * - Calculates maximum number of transfer and interaction terms
+   * - Allocates memory for interactions based on model type
+   */
   if (strcmp(StdI->model, "spin") == 0 ) {//>>
     ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 6/*J*/ + 6/*J'*/)
@@ -179,9 +212,16 @@ void StdFace_Kagome(
   }//<<
   /**/
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
-  /**@brief
-  (5) Set Transfer & Interaction
-  */
+
+  /**
+   * @brief Set transfer and interaction terms
+   *
+   * This section:
+   * - Loops over all cells in the lattice
+   * - Sets up nearest and next-nearest neighbor interactions
+   * - Handles boundary conditions and phases
+   * - Sets up hopping terms and Coulomb interactions
+   */
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     /**/
     iW = StdI->Cell[kCell][0];
@@ -369,11 +409,19 @@ void StdFace_Kagome(
 
 #if defined(_HPhi)
 /**
-*
-* Setup a Hamiltonian for the generalized Heisenberg model on a Heisenberg lattice
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup Hamiltonian for generalized Heisenberg model on Kagome lattice with boost
+ *
+ * This function sets up the Hamiltonian for the generalized Heisenberg model 
+ * on a Kagome lattice with boost optimization. It handles:
+ * - Validation of input parameters
+ * - Setup of magnetic field terms
+ * - Definition of interaction matrices
+ * - Setup of topology and connectivity
+ *
+ * @param[in,out] StdI Pointer to StdIntList structure containing model parameters
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Kagome_Boost(struct StdIntList *StdI)
 {
   int isite, ipivot, i1, i2;

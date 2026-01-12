@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1,15 * *' # JST 9:00 on 1st and 15th every month
+
+jobs:
+  ctest:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: make workspace
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: cmake
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake -DHPHI=ON -DMVMC=ON -DHWAVE=ON -DUHF=ON -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+
+      - name: build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build ./ -j4
+
+      - name: ctest
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ctest -V

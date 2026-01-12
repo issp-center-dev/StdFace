@@ -54,5 +54,17 @@ dkms.conf
 # Machine-specific Configuration File
 make.sys
 
+.idea/
+.vscode/
+cmake-build-debug/
+.DS_Store
+
 # Build Output
 build/
+
+# Claude/AI assistant metadata
+.claude/
+.serena/
+.mcp.json
+claude.md
+docs/_meta/

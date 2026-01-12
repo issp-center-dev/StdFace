@@ -1,75 +1,124 @@
 # StdFace
 
-An input file generator for
-[HPhi](https://github.com/issp-center-dev/HPhi),
-[mVMC](https://github.com/issp-center-dev/mVMC),
-[UHF](https://github.com/issp-center-dev/UHF-dev), and
-[H-wave](https://github.com/issp-center-dev/H-wave).
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://issp-center-dev.github.io/StdFace/)
+[![Build Documentation](https://github.com/issp-center-dev/StdFace/actions/workflows/docs.yml/badge.svg)](https://github.com/issp-center-dev/StdFace/actions/workflows/docs.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-## Requirement
-C compiler (intel, Fujitsu, GNU, etc. )  
+An input file generator for quantum lattice model solvers developed at ISSP, University of Tokyo.
 
-## Get StdFace
+## Overview
 
-### With Git 
+StdFace reads a simple configuration file specifying the physical model and lattice geometry, then generates solver-specific input files for:
 
-``` bash
-$ git clone https://github.com/issp-center-dev/StdFace
+- [HPhi](https://github.com/issp-center-dev/HPhi) - Exact Diagonalization
+- [mVMC](https://github.com/issp-center-dev/mVMC) - Variational Monte Carlo
+- [UHF](https://github.com/issp-center-dev/UHF-dev) - Unrestricted Hartree-Fock
+- [H-wave](https://github.com/issp-center-dev/H-wave) - Mean-field solver
+
+## Features
+
+- Simple `key = value` input format
+- Support for various lattice geometries and physical models
+- Wannier90 format support for ab-initio calculations
+- Single codebase for multiple solver backends
+
+## Supported Lattices
+
+| Lattice Type | Description |
+|--------------|-------------|
+| `chain` | 1D chain |
+| `ladder` | 2-leg ladder |
+| `square` | 2D square lattice |
+| `triangular` | 2D triangular lattice |
+| `honeycomb` | 2D honeycomb lattice |
+| `kagome` | 2D kagome lattice |
+| `tetragonal` | 3D tetragonal lattice |
+| `orthorhombic` | 3D orthorhombic lattice |
+| `fcortho` | Face-centered orthorhombic |
+| `pyrochlore` | 3D pyrochlore lattice |
+| `wannier90` | Import from Wannier90 files |
+
+## Supported Models
+
+- Hubbard model
+- Spin models
+- Kondo lattice model
+
+## Requirements
+
+- CMake 2.8.12 or later
+- C99-compatible compiler (GCC, Clang, Intel, Fujitsu, etc.)
+
+## Installation
+
+```bash
+git clone https://github.com/issp-center-dev/StdFace
+cd StdFace
+cmake -B build -DHPHI=ON   # Enable HPhi mode
+cmake --build build
+cmake --install build --prefix /path/to/install
 ```
 
-### Without Git (supported from ver.1.0)
+### Build Options
 
-You can download StdFace from [release page](https://github.com/issp-center-dev/StdFace/releases).
+Enable one or more solver modes:
 
-## Install StdFace
+| Option | Executable | Target Solver |
+|--------|------------|---------------|
+| `-DHPHI=ON` | `hphi_dry.out` | HPhi (Exact Diagonalization) |
+| `-DMVMC=ON` | `mvmc_dry.out` | mVMC (Variational Monte Carlo) |
+| `-DUHF=ON` | `uhf_dry.out` | UHF (Unrestricted Hartree-Fock) |
+| `-DHWAVE=ON` | `hwave_dry.out` | H-wave |
 
-``` bash
-$ cmake -B build [options]
-$ cmake --build build
-$ cmake --install install
+Build all solvers:
+
+```bash
+cmake -B build -DHPHI=ON -DMVMC=ON -DUHF=ON -DHWAVE=ON
+cmake --build build
 ```
 
-Options need to be specified which programs are to be built:
+## Quick Start
 
-- ``-DHPHI=ON``
+1. Create an input file `stan.in`:
 
-    HPhi mode is enabled. hphi_dry.out and libStdFace_hphi.a will be generated.
-
-- ``-DMVMC=ON``
-
-    mVMC mode is enabled. mvmc_dry.out and libStdFace_mvmc.a will be generated.
-
-- ``-DUHF=ON``
-
-    UHF mode is enabled. uhf_dry.out and libStdFace_uhf.a will be generated.
-
-- ``-DHWAVE=ON``
-
-    H-wave mode is enabled. hwave_dry.out and libStdFace_hwave.a will be generated.
-
-One or more options may be set simultaneously. Defaults are OFF.
-
-
-## Usage
-
-xxx_dry.out (xxx = hphi, mvmc, uhf, hwave) can be done with the following command with input.in as input file.
-
-``` bash
-$ xxx_dry.out input.in
+```text
+model = "Hubbard"
+lattice = square
+W = 2
+L = 2
+t = 1.0
+U = 4.0
+nelec = 4
+2Sz = 0
 ```
 
-After execution, input files for executing each tool will be generated in the executed directory.
-Descriptions of StdFace input files can be found in the manuals for each tool:
+2. Run StdFace:
 
-[HPhi](https://github.com/issp-center-dev/HPhi),
-[mVMC](https://github.com/issp-center-dev/mVMC),
-[UHF](https://github.com/issp-center-dev/UHF-dev), and
-[H-wave](https://github.com/issp-center-dev/H-wave).
+```bash
+./hphi_dry.out stan.in
+```
 
-## Licence
+3. Input files for the target solver are generated in the current directory.
 
-The distribution of the program package and the source codes for StdFace follow GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3.0.en.html)). 
+## Documentation
 
+Full documentation is available at: https://issp-center-dev.github.io/StdFace/
 
-## Author
+- [Quickstart Guide](https://issp-center-dev.github.io/StdFace/user/quickstart.html)
+- [Input/Output Reference](https://issp-center-dev.github.io/StdFace/user/input_output.html)
+- [Examples](https://issp-center-dev.github.io/StdFace/user/examples.html)
+
+## License
+
+StdFace is distributed under the [GNU General Public License version 3 (GPL v3)](http://www.gnu.org/licenses/gpl-3.0.en.html).
+
+## Authors
+
 Kazuyoshi Yoshimi, Mitsuaki Kawamura, Kota Ido, Yuichi Motoyama, and Tatsumi Aoyama.
+
+## Related Projects
+
+- [HPhi](https://github.com/issp-center-dev/HPhi) - Exact Diagonalization package
+- [mVMC](https://github.com/issp-center-dev/mVMC) - Variational Monte Carlo package
+- [UHF](https://github.com/issp-center-dev/UHF-dev) - Unrestricted Hartree-Fock package
+- [H-wave](https://github.com/issp-center-dev/H-wave) - Mean-field solver

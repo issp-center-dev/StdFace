@@ -1,3 +1,17 @@
+/**
+ * @file Wannier90.c
+ * @brief Functions for handling Wannier90 input files and generating Hamiltonians
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ * 
+ * This file contains functions for reading and processing Wannier90 input files
+ * to generate Hamiltonians for the HPhi/mVMC codes. The main functions are:
+ * - geometry_W90(): Reads Wannier90 geometry file
+ * - read_W90(): Reads Wannier90 hopping/interaction files
+ * - read_density_matrix(): Reads density matrix file
+ * - PrintUHFinitial(): Prints initial UHF guess
+ * - StdFace_Wannier90(): Main function to setup Wannier90 Hamiltonian
+ */
+
 /*
 HPhi-mVMC-StdFace - Common input generator
 Copyright (C) 2015 The University of Tokyo
@@ -15,9 +29,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/**@file
-@brief Standard mode for wannier90
-*/
+
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -27,6 +39,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "setmemory.h"
 
+/**
+ * @brief Calculate inverse of 3x3 matrix
+ * @param cutoff_Rvec Input 3x3 matrix
+ * @param inverse_matrix Output inverse matrix
+ */
 void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
   double NMatrix[3][3] = {{},
                           {}};
@@ -63,6 +80,12 @@ void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
   }
 }
 
+/**
+ * @brief Check if point is inside unit cell box
+ * @param rvec Vector to check
+ * @param inverse_matrix Inverse of lattice vectors
+ * @return 1 if inside box, 0 if outside
+ */
 int _check_in_box(int *rvec, double inverse_matrix[][3])
 {
   double judge_vec[3]={};
@@ -77,11 +100,14 @@ int _check_in_box(int *rvec, double inverse_matrix[][3])
 }
 
 /**
-@brief Read Geometry file for wannier90
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Read Wannier90 geometry file
+ * @param StdI [in,out] Structure containing model parameters
+ * 
+ * Reads lattice vectors and Wannier center positions from geometry file.
+ * Sets StdI->direct (lattice vectors) and StdI->tau (Wannier centers).
+ */
 static void geometry_W90(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI
 )
 {
   int isite, ii, ierr;
@@ -123,23 +149,37 @@ static void geometry_W90(
   printf("    Wannier centres:\n");
   for (isite = 0; isite < StdI->NsiteUC; isite++) printf("      %10.5f %10.5f %10.5f\n",
     StdI->tau[isite][0], StdI->tau[isite][1], StdI->tau[isite][2]);
-}/*static void geometry_W90(struct StdIntList *StdI) */
+}
+
 /**
- @brief Read Wannier90 hamiltonian file (*_hr)
- @author Mitsuaki Kawamura (The University of Tokyo)
+ * @brief Read Wannier90 hopping/interaction file
+ * @param StdI [in,out] Structure containing model parameters
+ * @param filename Input filename
+ * @param cutoff Threshold for matrix elements
+ * @param cutoff_R Cutoff for R vectors
+ * @param cutoff_Rvec Cutoff vectors for unit cell
+ * @param cutoff_length Real space cutoff length
+ * @param itUJ Type of interaction (0:t, 1:U, 2:J)
+ * @param NtUJ [out] Number of terms
+ * @param tUJindx [out] Indices for terms
+ * @param lambda Scaling factor
+ * @param tUJ [out] Matrix elements
+ *
+ * Reads hopping or interaction matrix elements from Wannier90 file.
+ * Applies cutoffs and stores non-zero terms.
  */
 static void read_W90(
-  struct StdIntList *StdI,//!<[inout]
-  char *filename,//!<[in] Input file name
-  double cutoff,//!<[in] Threshold for the Hamiltonian 
+  struct StdIntList *StdI,
+  char *filename,
+  double cutoff,
   int *cutoff_R,
   double cutoff_Rvec[][3],
   double cutoff_length,
   int itUJ,
   int *NtUJ,
-  int ***tUJindx,//!<[out] R, band index of matrix element
+  int ***tUJindx,
   double lambda,
-  double complex **tUJ//!<[out] Matrix element
+  double complex **tUJ
 )
 {
   FILE *fp;
@@ -339,16 +379,21 @@ static void read_W90(
   free_d_1d_allocate(Weight_tot);
   free_i_1d_allocate(Model_lattice);
   free_i_1d_allocate(Band_lattice);
-}/*static int read_W90(struct StdIntList *StdI, char *model)*/
-
+}
 
 /**
- @brief Read RESPACK Density-matrix file (*_dr.dat)
- @author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Read RESPACK density matrix file
+ * @param StdI [in,out] Structure containing model parameters
+ * @param filename Input filename
+ * @return 5D array containing density matrix elements
+ *
+ * Reads density matrix elements from RESPACK file.
+ * Returns array indexed by [R1][R2][R3][i][j] where R are lattice vectors
+ * and i,j are orbital indices.
+ */
 static double complex***** read_density_matrix(
-  struct StdIntList *StdI,//!<[inout]
-  char *filename//!<[in] Input file name
+  struct StdIntList *StdI,
+  char *filename
 )
 {
   FILE *fp;
@@ -447,11 +492,19 @@ static double complex***** read_density_matrix(
   free(indx_tot);
 
   return DenMat;
-}/*static int read_W90(struct StdIntList *StdI, char *model)*/
+}
+
 /**
-@brief Print the initial guess of UHF
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print initial UHF guess to file
+ * @param StdI Structure containing model parameters
+ * @param NtUJ Number of terms for each interaction type
+ * @param tUJ Matrix elements
+ * @param DenMat Density matrix elements
+ * @param tUJindx Indices for interaction terms
+ *
+ * Writes initial UHF guess to initial.def file.
+ * Uses density matrix elements to construct initial guess.
+ */
 static void PrintUHFinitial(
   struct StdIntList *StdI,
   int *NtUJ,
