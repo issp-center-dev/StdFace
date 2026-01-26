@@ -1,3 +1,4 @@
+import math
 import sys
 
 # Allow small platform-dependent floating-point drift (Linux vs macOS/Clang).
@@ -39,6 +40,9 @@ for idx, (ta, tb) in enumerate(zip(lines_a, lines_b)):
         try:
             fva = float(va)
             fvb = float(vb)
+            # NaN on both sides is acceptable (nan vs -nan across platforms)
+            if math.isnan(fva) and math.isnan(fvb):
+                continue
             if abs(fva) < EPS and abs(fvb) < EPS:
                 r = abs(fva - fvb)
             else:
