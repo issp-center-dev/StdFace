@@ -237,7 +237,7 @@ struct StdIntList {
   double *PairHopp;/**<@brief [StdIntList::NPairLift] Coefficient of
                    pair-hopping term, malloc in StdFace_MallocInteractions()
                    and set in StdFace_intr().*/
-  int lBoost;
+  int lBoost;/**<@brief Flag for Boost mode (1 = enabled), set in StdFace_main().*/
   /*
    Calculation conditions
   */
@@ -260,12 +260,12 @@ struct StdIntList {
   double cutoff_length_t; /**<@brief Cutoof for R in wannier90, input from file.*/
   double cutoff_length_U; /**<@brief Cutoof for R in wannier90, input from file.*/
   double cutoff_length_J; /**<@brief Cutoof for R in wannier90, input from file.*/
-  int cutoff_tR[3];
-  int cutoff_UR[3];
-  int cutoff_JR[3];
-  double cutoff_tVec[3][3];
-  double cutoff_UVec[3][3];
-  double cutoff_JVec[3][3];
+  int cutoff_tR[3];/**<@brief Cutoff for hopping R-vector (W, L, H) in wannier90, input from file.*/
+  int cutoff_UR[3];/**<@brief Cutoff for Coulomb R-vector (W, L, H) in wannier90, input from file.*/
+  int cutoff_JR[3];/**<@brief Cutoff for Hund R-vector (W, L, H) in wannier90, input from file.*/
+  double cutoff_tVec[3][3];/**<@brief Cutoff vector for hopping in wannier90, input from file.*/
+  double cutoff_UVec[3][3];/**<@brief Cutoff vector for Coulomb in wannier90, input from file.*/
+  double cutoff_JVec[3][3];/**<@brief Cutoff vector for Hund in wannier90, input from file.*/
 
   double lambda; /**<@brief Tuning parameter of U and J in wannier90, input from file.*/
   double lambda_U; /**<@brief Tuning parameter of U in wannier90, input from file.*/
@@ -282,10 +282,10 @@ struct StdIntList {
   char InitialVecType[256];/**<@brief The name of initialguess-type, input from file.*/
   char EigenVecIO[256];/**<@brief The name of I/O mode for eigenvector, input from file*/
   char HamIO[256];/**<@brief The name of I/O mode for Hamiltonian, input from file*/
-  int FlgTemp;/**<@brief */
+  int FlgTemp;/**<@brief Flag for temperature parameter, input from file.*/
   int Lanczos_max;/**<@brief The maxixmum number of iterations, input from file*/
   int initial_iv; /**<@brief the number for generating random number, input from file.*/
-  int nvec;/**<@brief */
+  int nvec;/**<@brief Number of eigenvectors for Lanczos method, input from file.*/
   int exct;/**<@brief The number of eigenvectors to be computed. input from file*/
   int LanczosEps;/**<@brief Convergence threshold for the Lanczos method.*/
   int LanczosTarget;/**<@brief Which eigenvector is used for the convergence check.*/
@@ -301,10 +301,12 @@ struct StdIntList {
   /*
   Boost
   */
-  int ***list_6spin_pair;/**<@brief */
-  int **list_6spin_star;/**<@brief */
-  int num_pivot;/**<@brief */
-  int ishift_nspin;/**<@brief */
+  int ***list_6spin_pair;/**<@brief [num_pivot][7][7] Spin-pair indices for Boost,
+                        malloc and set in each lattice file.*/
+  int **list_6spin_star;/**<@brief [num_pivot][7] Star indices for Boost,
+                        malloc and set in each lattice file.*/
+  int num_pivot;/**<@brief Number of pivot sites for Boost, set in each lattice file.*/
+  int ishift_nspin;/**<@brief Number of spin sites shifted for Boost, set in each lattice file.*/
   /*
   Spectrum
   */
@@ -354,20 +356,20 @@ struct StdIntList {
   int NMPTrans;/**<@brief Number of translation symmetry*/
   int NSROptItrStep;/**<@brief Number of iterations for stocastic reconfiguration*/
   int NSROptItrSmp;/**<@brief Number of steps for sampling*/
-  int NSROptFixSmp;/**<@brief */
+  int NSROptFixSmp;/**<@brief Number of fixed samples in stochastic reconfiguration, input from file.*/
   double DSROptRedCut;/**<@brief Stocastic reconfiguration parameter, input from file.*/
   double DSROptStaDel;/**<@brief Stocastic reconfiguration parameter, input from file.*/
   double DSROptStepDt;/**<@brief Stocastic reconfiguration parameter, input from file.*/
-  int NVMCWarmUp;/**<@brief */
-  int NVMCInterval;/**<@brief */
-  int NVMCSample;/**<@brief */
-  int NExUpdatePath;/**<@brief */
-  int RndSeed;/**<@brief */
-  int NSplitSize;/**<@brief */
-  int NSPStot;/**<@brief */
-  int NStore;/**<@brief */
-  int NSRCG;/**<@brief */
-  int ComplexType;/**<@brief */
+  int NVMCWarmUp;/**<@brief Number of warm-up steps for VMC, input from file.*/
+  int NVMCInterval;/**<@brief Interval between VMC samples, input from file.*/
+  int NVMCSample;/**<@brief Number of VMC samples, input from file.*/
+  int NExUpdatePath;/**<@brief Exchange update path for VMC, determined from model type.*/
+  int RndSeed;/**<@brief Seed for random number generator, input from file.*/
+  int NSplitSize;/**<@brief Split size for parallel computation, input from file.*/
+  int NSPStot;/**<@brief Total spin quantum number for spin projection, input from file.*/
+  int NStore;/**<@brief Flag for storing intermediate data, input from file.*/
+  int NSRCG;/**<@brief Flag for conjugate-gradient in stochastic reconfiguration, input from file.*/
+  int ComplexType;/**<@brief Switch for complex variational parameters (0: real, 1: complex), input from file.*/
   /*
    Sub-lattice
   */
@@ -386,7 +388,7 @@ struct StdIntList {
   int NSym;/**<@brief Number of translation symmetries, 
            Defined from the number of cells in the sub-lattice.*/
 #elif defined(_UHF)
-    int RndSeed;/**<@brief */
+    int RndSeed;/**<@brief Seed for random number generator, input from file.*/
     double mix; /**<@brief linear mixing ratio for update*/
     int eps; /**<@brief convergence threshold for Green's functions */
     int eps_slater;/**<@brief convergence threshold for Slater's functions */
@@ -402,7 +404,7 @@ struct StdIntList {
     int boxsub[3][3];/**<@brief Sublattice*/
     int rboxsub[3][3];/**<@brief Sublattice*/
 #elif defined(_HWAVE)
-    int RndSeed;/**<@brief */
+    int RndSeed;/**<@brief Seed for random number generator, input from file.*/
     double mix; /**<@brief linear mixing ratio for update*/
     int eps; /**<@brief convergence threshold for Green's functions */
     int eps_slater;/**<@brief convergence threshold for Slater's functions */

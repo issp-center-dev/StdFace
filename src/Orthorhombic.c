@@ -1,7 +1,17 @@
 /**
  * @file Orthorhombic.c
  * @brief Standard mode for the orthorhombic lattice
- * @copyright Copyright (C) 2015 The University of Tokyo
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * This file implements the standard interface for constructing Hamiltonians
+ * on a simple orthorhombic lattice. It supports spin, Hubbard, and Kondo
+ * models with nearest-neighbor, next-nearest-neighbor, and third-nearest-neighbor
+ * interactions along the three orthogonal lattice directions (W, L, H).
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

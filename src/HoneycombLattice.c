@@ -1,35 +1,34 @@
 /**
  * @file HoneycombLattice.c
- * @brief Implementation of the honeycomb lattice model
- * @copyright Copyright (C) 2015 The University of Tokyo
+ * @brief Implementation of the honeycomb lattice model for Hubbard, Heisenberg, and Kondo systems
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * This file implements the honeycomb lattice model with various interactions:
+ * - Hubbard model
+ * - Heisenberg model
+ * - Kondo lattice model
+ *
+ * The lattice has 2 sites per unit cell and supports:
+ * - Nearest neighbor hopping/exchange (J0, J1, J2 / t0, t1, t2)
+ * - Next nearest neighbor hopping/exchange (J0', J1', J2' / t0', t1', t2')
+ * - Third nearest neighbor hopping/exchange (J0'', J1'', J2'' / t0'', t1'', t2'')
+ * - On-site Coulomb interaction (U)
+ * - Inter-site Coulomb interaction (V, V', V'')
+ * - Magnetic field (h, Gamma, Gamma_y)
+ *
+ * Also provides a Boost method for the generalized Heisenberg model (HPhi only).
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * @brief Standard mode for the honeycomb lattice
- * @details This file implements the honeycomb lattice model with various interactions:
- * - Hubbard model
- * - Heisenberg model
- * - Kondo lattice model
- * The lattice has 2 sites per unit cell and supports:
- * - Nearest neighbor hopping/exchange
- * - Next nearest neighbor hopping/exchange
- * - Third nearest neighbor hopping/exchange
- * - On-site Coulomb interaction
- * - Magnetic field
- */
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -417,11 +416,25 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
 
 #if defined(_HPhi)
 /**
-*
-* Setup a Hamiltonian for the generalized Heisenberg model on a Heisenberg lattice
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the generalized Heisenberg model on a honeycomb lattice using the Boost method
+ *
+ * @details This function sets up the SpinGCBoost representation for the honeycomb lattice.
+ * It writes the "boost.def" file containing:
+ * - Magnetic field parameters
+ * - Exchange coupling matrices (J0, J1, J2)
+ * - Topology information (pivot sites and 6-spin pair lists)
+ *
+ * Constraints:
+ * - Only supports @f$ S = 1/2 @f$ (S2 = 1)
+ * - Requires @f$ L \geq 2 @f$
+ * - Requires @f$ W = 3 @f$ (internally doubled to 6)
+ * - Does not support tilted lattices (a0W, a0L, a1W, a1L)
+ * - Does not support next-nearest neighbor couplings (J')
+ *
+ * @param[in,out] StdI Pointer to the standard interface structure containing model parameters
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Honeycomb_Boost(struct StdIntList *StdI)
 {
   int isite, ipivot, i1, i2;

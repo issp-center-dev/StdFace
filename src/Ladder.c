@@ -1,11 +1,14 @@
-/*! \file Ladder.c
- * \brief Standard mode for the Ladder lattice
- * \author Mitsuaki Kawamura (The University of Tokyo)
- * 
+/**
+ * @file Ladder.c
+ * @brief Standard mode for the Ladder lattice
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
  * This file contains functions to set up Hamiltonians for ladder lattice models.
  * It supports Heisenberg, Hubbard and Kondo models with various interactions.
  *
- * \copyright 
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
  * Copyright (C) 2015 The University of Tokyo
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,12 +33,14 @@
 #include <complex.h>
 #include <string.h>
 
-/*! \brief Setup a Hamiltonian for the generalized Heisenberg model on a ladder lattice
+/**
+ * @brief Setup a Hamiltonian for the generalized Heisenberg model on a ladder lattice
  *
+ * @details
  * This function sets up the Hamiltonian parameters for a ladder lattice model.
  * It supports:
  * - Heisenberg model with spin interactions
- * - Hubbard model with electron hopping and interactions  
+ * - Hubbard model with electron hopping and interactions
  * - Kondo model combining localized spins and itinerant electrons
  *
  * The ladder geometry consists of:
@@ -43,13 +48,13 @@
  * - Nearest and next-nearest neighbor interactions along the chains
  * - Diagonal interactions between the chains
  *
- * \param[in,out] StdI Pointer to the structure containing model parameters
- *
  * The function:
  * 1. Sets up the lattice geometry and parameters
  * 2. Validates input parameters
  * 3. Allocates arrays for interactions
  * 4. Sets up all the interaction terms in the Hamiltonian
+ *
+ * @param[in,out] StdI Pointer to the structure containing model parameters
  */
 void StdFace_Ladder(
   struct StdIntList *StdI
@@ -326,12 +331,16 @@ void StdFace_Ladder(
 }
 
 #if defined(_HPhi)
-/*! \brief Setup a Hamiltonian for the generalized Heisenberg model on a ladder lattice with boost
+/**
+ * @brief Setup a Hamiltonian for the generalized Heisenberg model on a ladder lattice with boost
  *
+ * @details
  * This function sets up a boosted version of the ladder Hamiltonian for HPhi.
- * It is specialized for S=1/2 Heisenberg models.
+ * It is specialized for S=1/2 Heisenberg models and requires W=2, even L>=4.
+ * The boost method writes interaction parameters and 6-spin pair lists to
+ * a "boost.def" file used by the HPhi solver.
  *
- * \param[in,out] StdI Pointer to the structure containing model parameters
+ * @param[in,out] StdI Pointer to the structure containing model parameters
  */
 void StdFace_Ladder_Boost(struct StdIntList *StdI)
 {

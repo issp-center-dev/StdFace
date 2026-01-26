@@ -1,23 +1,30 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Standard mode for the face centered orthorhombic lattice
-*/
+/**
+ * @file FCOrtho.c
+ * @brief Standard mode for the face-centered orthorhombic lattice
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * This file implements the Hamiltonian setup for the face-centered
+ * orthorhombic (FCO) lattice. It supports spin, Hubbard, and Kondo
+ * models with nearest-neighbor and second-nearest-neighbor interactions.
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -27,14 +34,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
- * @brief Setup a Hamiltonian for the Face-Centered Orthorhombic lattice
+ * @brief Setup a Hamiltonian for the face-centered orthorhombic lattice
  * @author Mitsuaki Kawamura (The University of Tokyo)
- * 
+ *
+ * @details
  * This function sets up the Hamiltonian for a face-centered orthorhombic lattice.
  * The lattice has three primitive vectors:
  * - W vector: (0, L/2, H/2)
- * - L vector: (W/2, 0, H/2) 
+ * - L vector: (W/2, 0, H/2)
  * - H vector: (W/2, L/2, 0)
+ *
  * where W, L, H are the lengths in each direction.
  *
  * The function handles three models:
@@ -42,11 +51,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * - Hubbard model: Hopping and Coulomb interactions between itinerant electrons
  * - Kondo model: Coupling between localized spins and itinerant electrons
  *
- * @param StdI [inout] Structure containing model parameters and lattice information
- *                     Modified to store the complete Hamiltonian definition
+ * @param[in,out] StdI Structure containing model parameters and lattice information.
+ *                     Modified to store the complete Hamiltonian definition.
  */
 void StdFace_FCOrtho(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI
 )
 {
   int isite, jsite, ntransMax, nintrMax;
@@ -55,8 +64,8 @@ void StdFace_FCOrtho(
   double complex Cphase;
   double dR[3];
 
-  /**
-   * @brief Step 1: Compute the shape of the super-cell and sites in the super-cell
+  /*
+   * Step 1: Compute the shape of the super-cell and sites in the super-cell
    *
    * - Opens XSF file for visualization
    * - Sets number of sites per unit cell (1 for FCO)
@@ -89,8 +98,8 @@ void StdFace_FCOrtho(
   /**/
   StdFace_InitSite(StdI, fp, 3);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; ; StdI->tau[0][2] = 0.0;
-  /**
-   * @brief Step 2: Check and store Hamiltonian parameters
+  /*
+   * Step 2: Check and store Hamiltonian parameters
    *
    * Handles different parameters depending on model type:
    * - Spin model: J (exchange), D (anisotropy), magnetic field
@@ -168,8 +177,8 @@ void StdFace_FCOrtho(
  
   }/*if (model != "spin")*/
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /**
-   * @brief Step 3: Set local spin flags and number of sites
+  /*
+   * Step 3: Set local spin flags and number of sites
    *
    * - Calculates total number of sites
    * - Allocates and initializes local spin flags array
@@ -188,8 +197,8 @@ void StdFace_FCOrtho(
       StdI->locspinflag[iL] = StdI->S2;
       StdI->locspinflag[iL + StdI->nsite / 2] = 0;
     }
-  /**
-   * @brief Step 4: Calculate memory requirements and allocate arrays
+  /*
+   * Step 4: Calculate memory requirements and allocate arrays
    *
    * Computes upper bounds for:
    * - Number of transfer terms (hopping/field terms)
@@ -212,8 +221,8 @@ void StdFace_FCOrtho(
   }
   /**/
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
-  /**
-   * @brief Step 5: Set up all interactions in the Hamiltonian
+  /*
+   * Step 5: Set up all interactions in the Hamiltonian
    *
    * Loops over all unit cells and sets up:
    * - Local terms (on-site U, magnetic field)

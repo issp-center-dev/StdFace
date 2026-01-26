@@ -1,11 +1,21 @@
 /**
  * @file export_wannier90.c
  * @brief Functions for exporting model data in Wannier90 format
- * 
+ *
+ * @details
  * This file contains functions to export lattice geometry and interaction parameters
  * in a format compatible with Wannier90. The main functions are:
  * - ExportGeometry() - Exports lattice vectors and orbital positions
  * - ExportInteraction() - Exports hopping and interaction parameters
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  */
 
 #include <stdio.h>
@@ -34,8 +44,8 @@
   } while(0)
 
 
-/* control flags */
-int is_export_all = 1;  /* default for exportall parameter */
+/** @brief Control flag for exporting all matrix elements (default: 1 = export all) */
+int is_export_all = 1;
 
 /* parameters */
 static const double eps = 1.0e-8;  /**< Small number for floating point comparisons */
@@ -54,9 +64,10 @@ typedef struct {
 /**
  * @brief Write geometry data to file in Wannier90 format
  *
- * @param StdI Standard input parameters containing geometry info
- * @param fname Output filename
+ * @param[in] StdI  Standard input parameters containing geometry info
+ * @param[in] fname Output filename
  *
+ * @details
  * Writes:
  * - Primitive lattice vectors
  * - Number of orbitals per unit cell
@@ -93,13 +104,14 @@ void WriteGeometry(struct StdIntList *StdI, char *fname)
 /**
  * @brief Write interaction parameters to file in Wannier90 format
  *
- * @param nintr_table Number of interaction terms
- * @param intr_table Array of interaction parameters
- * @param nsiteuc Number of sites per unit cell
- * @param nspin Number of spin states
- * @param fname Output filename
- * @param tagname Tag identifying interaction type
+ * @param[in] nintr_table Number of interaction terms
+ * @param[in] intr_table  Array of interaction parameters
+ * @param[in] nsiteuc     Number of sites per unit cell
+ * @param[in] nspin       Number of spin states
+ * @param[in] fname       Output filename
+ * @param[in] tagname     Tag identifying interaction type
  *
+ * @details
  * Writes interaction parameters between orbitals in Wannier90 format.
  * Handles both spin-dependent and spin-independent cases.
  */
@@ -264,10 +276,11 @@ void WriteWannier90(int nintr_table, IntrItem *intr_table,
 /**
  * @brief Convert site coordinates from [0,N] to [-N/2,N/2] range
  *
- * @param StdI Standard input parameters
- * @param v_in Input coordinates
- * @param v_out Output coordinates
+ * @param[in]  StdI  Standard input parameters
+ * @param[in]  v_in  Input coordinates
+ * @param[out] v_out Output coordinates
  *
+ * @details
  * Unfolds coordinates from positive range to centered around zero.
  * Used to get relative distances between sites.
  */
@@ -309,11 +322,12 @@ void unfold_site(struct StdIntList *StdI, int v_in[3], int v_out[3])
 /**
  * @brief Generate key for interaction table entry
  *
- * @param keylen Length of key (1, 2 or 4)
- * @param index_out Output key array
- * @param index Input indices
- * @param ordered Whether to order indices
+ * @param[in]  keylen    Length of key (1, 2, or 4)
+ * @param[out] index_out Output key array
+ * @param[in]  index     Input indices
+ * @param[in]  ordered   Whether to order indices
  *
+ * @details
  * Creates key from indices based on keylen:
  * - keylen=1: i
  * - keylen=2: (i,j)
@@ -361,9 +375,9 @@ void generate_key(int keylen, int *index_out, int *index, int ordered)
 /**
  * @brief Copy key data between arrays
  *
- * @param keylen Length of key
- * @param dst_key Destination array
- * @param src_key Source array
+ * @param[in]  keylen  Length of key
+ * @param[out] dst_key Destination array
+ * @param[in]  src_key Source array
  */
 void store_key(int keylen, int *dst_key, int *src_key)
 {
@@ -376,9 +390,9 @@ void store_key(int keylen, int *dst_key, int *src_key)
 /**
  * @brief Compare two keys for equality
  *
- * @param keylen Length of keys
- * @param key_a First key
- * @param key_b Second key
+ * @param[in] keylen Length of keys
+ * @param[in] key_a  First key
+ * @param[in] key_b  Second key
  * @return 1 if keys are equal, 0 otherwise
  */
 int is_equal_key(int keylen, int *key_a, int *key_b)
@@ -392,9 +406,11 @@ int is_equal_key(int keylen, int *key_a, int *key_b)
 /**
  * @brief Convert key to string representation
  *
- * @param keylen Length of key
- * @param key Key array
- * @return String representation of key
+ * @param[in] keylen Length of key
+ * @param[in] key    Key array
+ * @return Pointer to static buffer containing string representation of key
+ *
+ * @warning Uses a static buffer; not thread-safe and result is overwritten on subsequent calls.
  */
 char *to_string_key(int keylen, int *key)
 {
@@ -416,15 +432,16 @@ char *to_string_key(int keylen, int *key)
 /**
  * @brief Accumulate interaction table entries with same key
  *
- * @param keylen Length of key
- * @param ntbl Number of input entries
- * @param tbl_index Input indices
- * @param tbl_value Input values
- * @param ntbl_out Number of output entries
- * @param tbl_index_out Output indices
- * @param tbl_value_out Output values
- * @param ordered Whether to order indices
+ * @param[in]     keylen        Length of key
+ * @param[in]     ntbl          Number of input entries
+ * @param[in]     tbl_index     Input indices
+ * @param[in]     tbl_value     Input values
+ * @param[out]    ntbl_out      Number of output entries
+ * @param[out]    tbl_index_out Output indices
+ * @param[out]    tbl_value_out Output values
+ * @param[in]     ordered       Whether to order indices
  *
+ * @details
  * Combines entries with same key by adding their values.
  * Eliminates entries with zero value.
  */
@@ -508,12 +525,12 @@ void accumulate_list(int keylen,
 /**
  * @brief Export interaction coefficients from complex array
  *
- * @param StdI Standard input parameters
- * @param ntbl Number of interaction terms
- * @param tbl_index Interaction indices
- * @param tbl_value Interaction values
- * @param fname Output filename
- * @param tagname Tag identifying interaction type
+ * @param[in] StdI      Standard input parameters
+ * @param[in] ntbl      Number of interaction terms
+ * @param[in] tbl_index Interaction indices
+ * @param[in] tbl_value Interaction values (complex)
+ * @param[in] fname     Output filename
+ * @param[in] tagname   Tag identifying interaction type
  */
 void ExportInter(struct StdIntList *StdI,
                  int ntbl, int **tbl_index, double complex *tbl_value,
@@ -638,14 +655,15 @@ void ExportInter(struct StdIntList *StdI,
 /**
  * @brief Export interaction coefficients from real array
  *
- * @param StdI Standard input parameters
- * @param ntbl Number of interaction terms
- * @param tbl_index Interaction indices
- * @param tbl_value Interaction values
- * @param fname Output filename
- * @param tagname Tag identifying interaction type
+ * @param[in] StdI      Standard input parameters
+ * @param[in] ntbl      Number of interaction terms
+ * @param[in] tbl_index Interaction indices
+ * @param[in] tbl_value Interaction values (real)
+ * @param[in] fname     Output filename
+ * @param[in] tagname   Tag identifying interaction type
  *
- * Converts real array to complex and calls ExportInter()
+ * @details
+ * Converts real array to complex and calls ExportInter().
  */
 void ExportInterReal(struct StdIntList *StdI,
                      int ntbl, int **tbl_index, double *tbl_value,
@@ -669,13 +687,13 @@ void ExportInterReal(struct StdIntList *StdI,
 /**
  * @brief Export transfer (hopping) coefficients
  *
- * @param StdI Standard input parameters
- * @param ntbl Number of transfer terms
- * @param tbl_index Transfer indices
- * @param tbl_value Transfer values
- * @param fname Output filename
- * @param tagname Tag identifying transfer type
- * @param spin_dep Whether transfer is spin-dependent
+ * @param[in] StdI      Standard input parameters
+ * @param[in] ntbl      Number of transfer terms
+ * @param[in] tbl_index Transfer indices
+ * @param[in] tbl_value Transfer values (complex)
+ * @param[in] fname     Output filename
+ * @param[in] tagname   Tag identifying transfer type
+ * @param[in] spin_dep  Whether transfer is spin-dependent (1) or not (0)
  */
 void ExportTransfer(struct StdIntList *StdI,
                     int ntbl, int **tbl_index, double complex *tbl_value,
@@ -808,8 +826,20 @@ void ExportTransfer(struct StdIntList *StdI,
 }
 
 /**
-   @brief Print coefficient of on-site Coulomb term
-*/
+ * @brief Export on-site Coulomb interaction coefficients
+ *
+ * @param[in] StdI      Standard input parameters
+ * @param[in] ntbl      Number of on-site Coulomb terms
+ * @param[in] tbl_index On-site Coulomb indices
+ * @param[in] tbl_value On-site Coulomb values (real)
+ * @param[in] fname     Output filename
+ * @param[in] tagname   Tag identifying interaction type
+ *
+ * @details
+ * Accumulates on-site Coulomb entries with the same site index,
+ * checks uniformity across equivalent sites, and writes the
+ * result in Wannier90 format.
+ */
 void ExportCoulombIntra(struct StdIntList *StdI,
                         int ntbl, int **tbl_index, double *tbl_value,
                         char *fname, char *tagname)
@@ -909,8 +939,14 @@ void ExportCoulombIntra(struct StdIntList *StdI,
 }
 
 /**
-   @brief add prefix to filename if parameter fileprefix is set.
-*/
+ * @brief Add prefix to filename if parameter fileprefix is set
+ *
+ * @param[in] StdI  Standard input parameters containing fileprefix
+ * @param[in] fname Base filename
+ * @return Pointer to static buffer containing the prefixed filename
+ *
+ * @warning Uses a static buffer; not thread-safe and result is overwritten on subsequent calls.
+ */
 char *prefix_(struct StdIntList *StdI, char *fname)
 {
   static char buf[4096];
@@ -924,16 +960,30 @@ char *prefix_(struct StdIntList *StdI, char *fname)
 }
 
 /**
-   @brief Print geometry information
-*/
+ * @brief Export geometry information to file
+ *
+ * @param[in] StdI Standard input parameters containing lattice geometry
+ */
 void ExportGeometry(struct StdIntList *StdI)
 {
   return WriteGeometry(StdI, prefix_(StdI, "geom.dat"));
 }
 
 /**
-   @brief Print interaction term coefficients
-*/
+ * @brief Export all interaction term coefficients to files
+ *
+ * @param[in] StdI Standard input parameters containing interaction data
+ *
+ * @details
+ * Exports the following interaction types:
+ * - Transfer (hopping) parameters
+ * - On-site Coulomb (CoulombIntra)
+ * - Inter-site Coulomb (CoulombInter)
+ * - Hund coupling
+ * - Exchange interaction
+ * - Pair lift
+ * - Pair hopping
+ */
 void ExportInteraction(struct StdIntList *StdI)
 {
   if (StdI->export_all != StdI->NaN_i) is_export_all = StdI->export_all;
