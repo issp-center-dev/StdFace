@@ -23,7 +23,7 @@
 
 /**
  * @brief Allocate 1D array of unsigned integers
- * @param N Size of array to allocate
+ * @param[in] N Size of array to allocate
  * @return Pointer to allocated array, initialized to zero
  */
 unsigned int *ui_1d_allocate(const long unsigned int N){
@@ -34,7 +34,7 @@ unsigned int *ui_1d_allocate(const long unsigned int N){
 
 /**
  * @brief Free 1D array of unsigned integers
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_ui_1d_allocate(unsigned int *A){
     free(A);
@@ -42,7 +42,7 @@ void free_ui_1d_allocate(unsigned int *A){
 
 /**
  * @brief Allocate 1D array of long unsigned integers
- * @param N Size of array to allocate
+ * @param[in] N Size of array to allocate
  * @return Pointer to allocated array, initialized to zero
  */
 long unsigned int *lui_1d_allocate(const long unsigned int N){
@@ -53,7 +53,7 @@ long unsigned int *lui_1d_allocate(const long unsigned int N){
 
 /**
  * @brief Free 1D array of long unsigned integers
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_lui_1d_allocate(long unsigned int *A){
     free(A);
@@ -61,7 +61,7 @@ void free_lui_1d_allocate(long unsigned int *A){
 
 /**
  * @brief Allocate 1D array of long integers
- * @param N Size of array to allocate
+ * @param[in] N Size of array to allocate
  * @return Pointer to allocated array, initialized to zero
  */
 long int *li_1d_allocate(const long unsigned int N){
@@ -72,7 +72,7 @@ long int *li_1d_allocate(const long unsigned int N){
 
 /**
  * @brief Free 1D array of long integers
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_li_1d_allocate(long int *A){
     free(A);
@@ -80,8 +80,8 @@ void free_li_1d_allocate(long int *A){
 
 /**
  * @brief Allocate 2D array of long integers
- * @param N Number of rows
- * @param M Number of columns
+ * @param[in] N Number of rows
+ * @param[in] M Number of columns
  * @return Pointer to allocated array, initialized to zero
  */
 long int **li_2d_allocate(const long unsigned int N, const long unsigned int M) {
@@ -97,7 +97,7 @@ long int **li_2d_allocate(const long unsigned int N, const long unsigned int M) 
 
 /**
  * @brief Free 2D array of long integers
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_li_2d_allocate(long int **A){
     free(A[0]);
@@ -106,7 +106,7 @@ void free_li_2d_allocate(long int **A){
 
 /**
  * @brief Allocate 1D array of integers
- * @param N Size of array to allocate
+ * @param[in] N Size of array to allocate
  * @return Pointer to allocated array, initialized to zero
  */
 int *i_1d_allocate(const long unsigned int N){
@@ -117,7 +117,7 @@ int *i_1d_allocate(const long unsigned int N){
 
 /**
  * @brief Free 1D array of integers
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_i_1d_allocate(int *A){
     free(A);
@@ -125,8 +125,8 @@ void free_i_1d_allocate(int *A){
 
 /**
  * @brief Allocate 2D array of integers
- * @param N Number of rows
- * @param M Number of columns
+ * @param[in] N Number of rows
+ * @param[in] M Number of columns
  * @return Pointer to allocated array, initialized to zero
  */
 int **i_2d_allocate(const long unsigned int N, const long unsigned int M) {
@@ -142,7 +142,7 @@ int **i_2d_allocate(const long unsigned int N, const long unsigned int M) {
 
 /**
  * @brief Free 2D array of integers
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_i_2d_allocate(int **A){
     free(A[0]);
@@ -151,9 +151,9 @@ void free_i_2d_allocate(int **A){
 
 /**
  * @brief Allocate 3D array of integers
- * @param N First dimension size
- * @param M Second dimension size
- * @param L Third dimension size
+ * @param[in] N First dimension size
+ * @param[in] M Second dimension size
+ * @param[in] L Third dimension size
  * @return Pointer to allocated array, initialized to zero
  */
 int***i_3d_allocate(const long unsigned int N, const long unsigned int M, const long unsigned int L){
@@ -173,7 +173,7 @@ int***i_3d_allocate(const long unsigned int N, const long unsigned int M, const 
 
 /**
  * @brief Free 3D array of integers
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_i_3d_allocate(int ***A){
     free(A[0][0]);
@@ -183,7 +183,7 @@ void free_i_3d_allocate(int ***A){
 
 /**
  * @brief Allocate 1D array of doubles
- * @param N Size of array to allocate
+ * @param[in] N Size of array to allocate
  * @return Pointer to allocated array, initialized to zero
  */
 double *d_1d_allocate(const long unsigned int N){
@@ -194,7 +194,7 @@ double *d_1d_allocate(const long unsigned int N){
 
 /**
  * @brief Free 1D array of doubles
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_d_1d_allocate(double *A){
     free(A);
@@ -202,8 +202,8 @@ void free_d_1d_allocate(double *A){
 
 /**
  * @brief Allocate 2D array of doubles
- * @param N Number of rows
- * @param M Number of columns
+ * @param[in] N Number of rows
+ * @param[in] M Number of columns
  * @return Pointer to allocated array, initialized to zero
  */
 double **d_2d_allocate(const long unsigned int N, const long unsigned int M){
@@ -219,7 +219,7 @@ double **d_2d_allocate(const long unsigned int N, const long unsigned int M){
 
 /**
  * @brief Free 2D array of doubles
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_d_2d_allocate(double **A){
     free(A[0]);
@@ -228,7 +228,7 @@ void free_d_2d_allocate(double **A){
 
 /**
  * @brief Allocate 1D array of complex doubles
- * @param N Size of array to allocate
+ * @param[in] N Size of array to allocate
  * @return Pointer to allocated array, initialized to zero
  */
 double complex *cd_1d_allocate(const long unsigned int N){
@@ -239,7 +239,7 @@ double complex *cd_1d_allocate(const long unsigned int N){
 
 /**
  * @brief Free 1D array of complex doubles
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_cd_1d_allocate(double complex *A){
     free(A);
@@ -247,8 +247,8 @@ void free_cd_1d_allocate(double complex *A){
 
 /**
  * @brief Allocate 2D array of complex doubles
- * @param N Number of rows
- * @param M Number of columns
+ * @param[in] N Number of rows
+ * @param[in] M Number of columns
  * @return Pointer to allocated array, initialized to zero
  */
 complex double **cd_2d_allocate(const long unsigned int N, const long unsigned int M){
@@ -264,7 +264,7 @@ complex double **cd_2d_allocate(const long unsigned int N, const long unsigned i
 
 /**
  * @brief Free 2D array of complex doubles
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_cd_2d_allocate(double complex**A){
     free(A[0]);
@@ -273,9 +273,9 @@ void free_cd_2d_allocate(double complex**A){
 
 /**
  * @brief Allocate 3D array of complex doubles
- * @param N First dimension size
- * @param M Second dimension size
- * @param L Third dimension size
+ * @param[in] N First dimension size
+ * @param[in] M Second dimension size
+ * @param[in] L Third dimension size
  * @return Pointer to allocated array, initialized to zero
  */
 double complex***cd_3d_allocate(const long unsigned int N, const long unsigned int M, const long unsigned int L){
@@ -295,7 +295,7 @@ double complex***cd_3d_allocate(const long unsigned int N, const long unsigned i
 
 /**
  * @brief Free 3D array of complex doubles
- * @param A Pointer to array to free
+ * @param[in] A Pointer to array to free
  */
 void free_cd_3d_allocate(double complex***A){
     free(A[0][0]);

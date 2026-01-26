@@ -1,23 +1,22 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Various utility for constructing models
-*/
+/**
+ * @file StdFace_ModelUtil.c
+ * @brief Various utility functions for constructing lattice models
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * Provides utility functions for building transfer integrals, interactions,
+ * site initialization, lattice folding, input parsing, and output generation
+ * used across all lattice model definitions.
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -29,11 +28,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 
 /**
-@brief MPI Abortation wrapper
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
-void StdFace_exit(int errorcode//!< [in]
-)
+ * @brief MPI abort wrapper
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] errorcode Exit code passed to MPI_Abort and exit
+ */
+void StdFace_exit(int errorcode)
 {
   int ierr = 0;
   fflush(stdout);
@@ -47,18 +47,26 @@ void StdFace_exit(int errorcode//!< [in]
   exit(errorcode);
 }
 /**
-@brief Add transfer to the list
-set StdIntList::trans and StdIntList::transindx and
-increment StdIntList::ntrans
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Add transfer to the list
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details Set StdIntList::trans and StdIntList::transindx and
+ * increment StdIntList::ntrans.
+ *
+ * @param[in,out] StdI   Standard interface list
+ * @param[in]     trans0 Hopping integral @f$t, \mu@f$, etc.
+ * @param[in]     isite  @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
+ * @param[in]     ispin  @f$\sigma@f$ for @f$c_{i \sigma}^\dagger@f$
+ * @param[in]     jsite  @f$j@f$ for @f$c_{j \sigma'}@f$
+ * @param[in]     jspin  @f$\sigma'@f$ for @f$c_{j \sigma'}@f$
+ */
 void StdFace_trans(
-  struct StdIntList *StdI,//!<[inout]
-  double complex trans0,//!<[in] Hopping integral @f$t, mu@f$, etc.
-  int isite,//!<[in] @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
-  int ispin,//!<[in] @f$\sigma@f$ for @f$c_{i \sigma}^\dagger@f$
-  int jsite,//!<[in] @f$j@f$ for @f$c_{j \sigma'}@f$
-  int jspin//!<[in] @f$\sigma'@f$ for @f$c_{j \sigma'}@f$
+  struct StdIntList *StdI,
+  double complex trans0,
+  int isite,
+  int ispin,
+  int jsite,
+  int jspin
 )
 {
   if (cabs(trans0) < 1.0e-12) return;
@@ -70,15 +78,21 @@ void StdFace_trans(
   StdI->ntrans = StdI->ntrans + 1;
 }/*void StdFace_trans*/
 /**
-@brief Add Hopping for the both spin
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Add hopping for both spin channels
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI   Standard interface list
+ * @param[in]     trans0 Hopping integral @f$t@f$
+ * @param[in]     isite  @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
+ * @param[in]     jsite  @f$j@f$ for @f$c_{j \sigma}@f$
+ * @param[in]     dR     @f$R_i - R_j@f$ in the fractional coordinate
+ */
 void StdFace_Hopping(
-struct StdIntList *StdI,//!<[inout]
-  double complex trans0,//!<[in] Hopping integral @f$t@f$
-  int isite,//!<[in] @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
-  int jsite,//!<[in] @f$j@f$ for @f$c_{j \sigma}@f$
-  double *dR//!<[in] R_i - R_j
+  struct StdIntList *StdI,
+  double complex trans0,
+  int isite,
+  int jsite,
+  double *dR
 )
 {
   int ispin, it, ii;
@@ -119,18 +133,25 @@ struct StdIntList *StdI,//!<[inout]
     }/*for (ispin = 0; ispin < 2; ispin++)*/
 }/*void StdFace_Hopping*/
 /**
-@brief Add intra-Coulomb, magnetic field, chemical potential for the
-itenerant electron
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Add intra-Coulomb, magnetic field, and chemical potential for the itinerant electron
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI     Standard interface list
+ * @param[in]     mu0      Chemical potential
+ * @param[in]     h0       Longitudinal magnetic field
+ * @param[in]     Gamma0   Transverse magnetic field (x)
+ * @param[in]     Gamma0_y Transverse magnetic field (y)
+ * @param[in]     U0       Intra-site Coulomb potential
+ * @param[in]     isite    @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
+ */
 void StdFace_HubbardLocal(
-  struct StdIntList *StdI,//!<[inout]
-  double mu0,//!<[in] Chemical potential
-  double h0,//!<[in] Longitudinal magnetic feild
-  double Gamma0,//!<[in] Transvers magnetic feild (x)
-  double Gamma0_y,//!<[in] Transvers magnetic feild (y)
-  double U0,//!<[in] Intra-site Coulomb potential
-  int isite//!<[in] i for @f$c_{i \sigma}^\dagger@f$
+  struct StdIntList *StdI,
+  double mu0,
+  double h0,
+  double Gamma0,
+  double Gamma0_y,
+  double U0,
+  int isite
 )
 {
   StdFace_trans(StdI, mu0 - 0.5 * h0, isite, 0, isite, 0);
@@ -149,16 +170,23 @@ void StdFace_HubbardLocal(
   StdI->NCintra += 1;
 }/*void StdFace_HubbardLocal*/
 /**
-@brief Add longitudinal and transvars magnetic field to the list
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Add longitudinal and transverse magnetic field to the list
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI    Standard interface list
+ * @param[in]     S2      Twice the spin moment @f$2S@f$ at site @f$i@f$
+ * @param[in]     h       Longitudinal magnetic field @f$h@f$
+ * @param[in]     Gamma   Transverse magnetic field (x-component) @f$\Gamma@f$
+ * @param[in]     Gamma_y Transverse magnetic field (y-component) @f$\Gamma_y@f$
+ * @param[in]     isite   @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
+ */
 void StdFace_MagField(
-  struct StdIntList *StdI,//!<[inout]
-  int S2,//!<[in] Spin moment in @f$i@f$ site
-  double h,//!<[in] Longitudinal magnetic field @f$h@f$
-  double Gamma,//!<[in] Transvars magnetic field @f$h@f$
-  double Gamma_y,//!<[in] Transverse y magnetic field @f$h@f$
-  int isite//!<[in] @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
+  struct StdIntList *StdI,
+  int S2,
+  double h,
+  double Gamma,
+  double Gamma_y,
+  int isite
 )
 {
   int ispin;
@@ -202,22 +230,34 @@ void StdFace_MagField(
   }/*for (ispin = 0; ispin <= S2; ispin++)*/
 }/*void StdFace_MagField*/
 /**
-@brief Add interaction (InterAll) to the list
-Set StdIntList::intr and StdIntList::intrindx and
-increase the number of that (StdIntList::nintr).
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Add interaction (InterAll) to the list
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details Set StdIntList::intr and StdIntList::intrindx and
+ * increase the number of interactions (StdIntList::nintr).
+ *
+ * @param[in,out] StdI  Standard interface list
+ * @param[in]     intr0 Interaction @f$U, V, J@f$, etc.
+ * @param[in]     site1 @f$i_1@f$ for @f$c_{i_1 \sigma_1}^\dagger@f$
+ * @param[in]     spin1 @f$\sigma_1@f$ for @f$c_{i_1 \sigma_1}^\dagger@f$
+ * @param[in]     site2 @f$i_2@f$ for @f$c_{i_2 \sigma_2}@f$
+ * @param[in]     spin2 @f$\sigma_2@f$ for @f$c_{i_2 \sigma_2}@f$
+ * @param[in]     site3 @f$i_3@f$ for @f$c_{i_3 \sigma_3}^\dagger@f$
+ * @param[in]     spin3 @f$\sigma_3@f$ for @f$c_{i_3 \sigma_3}^\dagger@f$
+ * @param[in]     site4 @f$i_4@f$ for @f$c_{i_4 \sigma_4}@f$
+ * @param[in]     spin4 @f$\sigma_4@f$ for @f$c_{i_4 \sigma_4}@f$
+ */
 void StdFace_intr(
-  struct StdIntList *StdI,//!<[inout]
-  double complex intr0,//!<[in] Interaction @f$U, V, J@f$, etc.
-  int site1,//!<[in] @f$i_1@f$ for @f$c_{i_1 \sigma_1}^\dagger@f$
-  int spin1,//!<[in] @f$sigma1_1@f$ for @f$c_{i_1 \sigma_1}^\dagger@f$
-  int site2,//!<[in] @f$i_2@f$ for @f$c_{i_2 \sigma_2}@f$
-  int spin2,//!<[in] @f$sigma1_2@f$ for @f$c_{i_2 \sigma_2}@f$
-  int site3,//!<[in] @f$i_3@f$ for @f$c_{i_3 \sigma_3}^\dagger@f$
-  int spin3,//!<[in] @f$sigma1_3@f$ for @f$c_{i_3 \sigma_3}^\dagger@f$
-  int site4,//!<[in] @f$i_2@f$ for @f$c_{i_2 \sigma_2}@f$
-  int spin4//!<[in] @f$sigma1_2@f$ for @f$c_{i_2 \sigma_2}@f$
+  struct StdIntList *StdI,
+  double complex intr0,
+  int site1,
+  int spin1,
+  int site2,
+  int spin2,
+  int site3,
+  int spin3,
+  int site4,
+  int spin4
 )
 {
   if (cabs(intr0) < 1.0e-12) return;
@@ -229,16 +269,23 @@ void StdFace_intr(
   StdI->nintr = StdI->nintr + 1;
 }/*void StdFace_intr*/
 /**
-@brief Treat J as a 3*3 matrix [(6S + 1)*(6S' + 1) interactions]
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Treat J as a 3x3 matrix [(6S + 1)*(6S' + 1) interactions]
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI  Standard interface list
+ * @param[in]     J     The spin interaction matrix @f$J_x, J_{xy}, \ldots@f$
+ * @param[in]     Si2   Twice the spin moment @f$2S_i@f$ at site @f$i@f$
+ * @param[in]     Sj2   Twice the spin moment @f$2S_j@f$ at site @f$j@f$
+ * @param[in]     isite @f$i@f$ of @f$S_i@f$
+ * @param[in]     jsite @f$j@f$ of @f$S_j@f$
+ */
 void StdFace_GeneralJ(
-struct StdIntList *StdI,//!<[inout]
-  double J[3][3],//!<[in] The Spin interaction @f$J_x, J_{xy}@f$, ...
-  int Si2,//!<[in] Spin moment in @f$i@f$ site
-  int Sj2,//!<[in] Spin moment in @f$j@f$ site
-  int isite,//!<[in] @f$i@f$ of @f$S_i@f$
-  int jsite//!<[in] @f$j@f$ of @f$S_j@f$
+  struct StdIntList *StdI,
+  double J[3][3],
+  int Si2,
+  int Sj2,
+  int isite,
+  int jsite
 )
 {
   int ispin, jspin, ZGeneral, ExGeneral;
@@ -400,16 +447,22 @@ struct StdIntList *StdI,//!<[inout]
   }/*for (ispin = 0; ispin <= Si2; ispin++)*/
 }/*StdFace_GeneralJ*/
 /**
-@brief Add onsite/offsite Coulomb term to the list
-StdIntList::Cinter and StdIntList::CinterIndx,
-and increase the number of them (StdIntList::NCinter).
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Add onsite/offsite Coulomb term to the list
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details Set StdIntList::Cinter and StdIntList::CinterIndx,
+ * and increase the number of them (StdIntList::NCinter).
+ *
+ * @param[in,out] StdI  Standard interface list
+ * @param[in]     V     Coulomb integral @f$U@f$, @f$V@f$, etc.
+ * @param[in]     isite @f$i@f$ of @f$n_i@f$
+ * @param[in]     jsite @f$j@f$ of @f$n_j@f$
+ */
 void StdFace_Coulomb(
-struct StdIntList *StdI,//!<[inout]
-  double V,//!<[in] Coulomb integral U, V, etc.
-  int isite,//!<[in] i of n_i
-  int jsite//!<[in] j of n_j
+  struct StdIntList *StdI,
+  double V,
+  int isite,
+  int jsite
 )
 {
   StdI->Cinter[StdI->NCinter] = V;
@@ -418,15 +471,17 @@ struct StdIntList *StdI,//!<[inout]
   StdI->NCinter += 1;
 }/*void StdFace_Coulomb*/
 /**
-@brief Print a valiable (real) read from the input file
-if it is not specified in the input file (=NaN), 
-set the default value.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print a variable (real) read from the input file; set the default value if unspecified (NaN)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]     valname Name of the variable
+ * @param[in,out] val     Variable to be set
+ * @param[in]     val0    The default value
+ */
 void StdFace_PrintVal_d(
-  char* valname,//!<[in] Name of the valiable
-  double *val,//!<[inout] Valiable to be set 
-  double val0//!<[in] The default value
+  char* valname,
+  double *val,
+  double val0
 )
 {
   if (isnan(*val) == 1) {
@@ -436,16 +491,19 @@ void StdFace_PrintVal_d(
   else fprintf(stdout, "  %15s = %-10.5f\n", valname, *val);
 }/*void StdFace_PrintVal_d*/
 /**
-@brief Print a valiable (real) read from the input file
-if it is not specified in the input file (=NaN),
-set the default value.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print a variable (real) with two-level default; set primary or secondary default if unspecified
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]     valname Name of the variable
+ * @param[in,out] val     Variable to be set
+ * @param[in]     val0    The primary default value (may itself be NaN / unspecified)
+ * @param[in]     val1    The secondary default value
+ */
 void StdFace_PrintVal_dd(
-  char* valname,//!<[in] Name of the valiable
-  double *val,//!<[inout] Valiable to be set
-  double val0,//!<[in] The primary default value, possible not to be specified
-  double val1//!<[in] The secondary default value
+  char* valname,
+  double *val,
+  double val0,
+  double val1
 )
 {
   if (isnan(*val) == 1) {
@@ -459,15 +517,17 @@ void StdFace_PrintVal_dd(
   else fprintf(stdout, "  %15s = %-10.5f\n", valname, *val);
 }/*void StdFace_PrintVal_dd*/
 /**
-@brief Print a valiable (complex) read from the input file
-if it is not specified in the input file (=NaN),
-set the default value.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print a variable (complex) read from the input file; set the default value if unspecified (NaN)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]     valname Name of the variable
+ * @param[in,out] val     Variable to be set
+ * @param[in]     val0    The default value
+ */
 void StdFace_PrintVal_c(
-  char* valname,//!<[in] Name of the valiable
-  double complex *val,//!<[inout] Valiable to be set
-  double complex val0//!<[in] The default value
+  char* valname,
+  double complex *val,
+  double complex val0
 )
 {
   if (isnan(creal(*val)) == 1) {
@@ -477,15 +537,17 @@ void StdFace_PrintVal_c(
   else fprintf(stdout, "  %15s = %-10.5f %-10.5f\n", valname, creal(*val), cimag(*val));
 }/*void StdFace_PrintVal_c*/
 /**
-@brief Print a valiable (integer) read from the input file
-if it is not specified in the input file (=2147483647, the upper limt of Int)
-set the default value.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print a variable (integer) read from the input file; set the default value if unspecified (2147483647)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]     valname Name of the variable
+ * @param[in,out] val     Variable to be set
+ * @param[in]     val0    The default value
+ */
 void StdFace_PrintVal_i(
-  char* valname,//!<[in] Name of the valiable
-  int *val,//!<[inout] Valiable to be set
-  int val0//!<[in] The default value
+  char* valname,
+  int *val,
+  int val0
 )
 {
   int NaN_i = 2147483647;/*The upper limt of Int*/
@@ -497,13 +559,15 @@ void StdFace_PrintVal_i(
   else fprintf(stdout, "  %15s = %-10d\n", valname, *val);
 }/*void StdFace_PrintVal_i*/
 /**
-@brief Stop HPhi if a variable (real) not used is specified
-in the input file (!=NaN).
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Stop HPhi if a variable (real) not used is specified in the input file (!=NaN)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] valname Name of the variable
+ * @param[in] val     Value to check
+ */
 void StdFace_NotUsed_d(
-  char* valname,//!<[in] Name of the valiable
-  double val//!<[in]
+  char* valname,
+  double val
 )
 {
   if (isnan(val) == 0) {
@@ -514,13 +578,15 @@ void StdFace_NotUsed_d(
   }
 }/*void StdFace_NotUsed_d*/
 /**
-@brief Stop HPhi if a variable (complex) not used is specified
-in the input file (!=NaN).
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Stop HPhi if a variable (complex) not used is specified in the input file (!=NaN)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] valname Name of the variable
+ * @param[in] val     Value to check
+ */
 void StdFace_NotUsed_c(
-  char* valname,//!<[in] Name of the valiable
-  double complex val//!<[in]
+  char* valname,
+  double complex val
 )
 {
   if (isnan(creal(val)) == 0) {
@@ -531,14 +597,17 @@ void StdFace_NotUsed_c(
   }
 }/*void StdFace_NotUsed_c*/
 /**
-@brief Stop HPhi if variables (real) not used is specified
-in the input file (!=NaN).
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Stop HPhi if spin-interaction variables (real) not used are specified in the input file (!=NaN)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] valname Name of the variable
+ * @param[in] JAll    Isotropic spin interaction value
+ * @param[in] J       Anisotropic 3x3 spin interaction matrix
+ */
 void StdFace_NotUsed_J(
-  char* valname,//!<[in] Name of the valiable*/,
-  double JAll,//!<[in]*/,
-  double J[3][3]//!<[in]
+  char* valname,
+  double JAll,
+  double J[3][3]
 )
 {
   int i1, i2;
@@ -563,13 +632,15 @@ void StdFace_NotUsed_J(
   }/*for (i = 0; i < 3; i++)*/
 }/*void StdFace_NotUsed_J*/
 /**
-@brief Stop HPhi if a variable (integer) not used is specified
-in the input file (!=2147483647, the upper limt of Int).
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Stop HPhi if a variable (integer) not used is specified in the input file (!=2147483647)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] valname Name of the variable
+ * @param[in] val     Value to check
+ */
 void StdFace_NotUsed_i(
-  char* valname,//!<[in] Name of the valiable
-  int val//!<[in]
+  char* valname,
+  int val
 )
 {
   int NaN_i = 2147483647;
@@ -582,13 +653,15 @@ void StdFace_NotUsed_i(
   }
 }/*void StdFace_NotUsed_i*/
 /**
-@brief Stop HPhi if a variable (integer) which must be specified
-is absent in the input file (=2147483647, the upper limt of Int).
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Stop HPhi if a required variable (integer) is absent in the input file (=2147483647)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] valname Name of the variable
+ * @param[in] val     Value to check
+ */
 void StdFace_RequiredVal_i(
-  char* valname,//!<[in] Name of the valiable
-  int val//!<[in]
+  char* valname,
+  int val
 )
 {
   int NaN_i = 2147483647;
@@ -600,16 +673,19 @@ void StdFace_RequiredVal_i(
   else fprintf(stdout, "  %15s = %-3d\n", valname, val);
 }/*void StdFace_RequiredVal_i*/
 /**
-@brief Move a site into the original supercell if it is outside the 
-original supercell.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Move a site into the original supercell if it is outside the original supercell
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI        Standard interface list
+ * @param[in]     iCellV      The fractional coordinate of a site
+ * @param[out]    nBox        The index of the supercell containing the site
+ * @param[out]    iCellV_fold The fractional coordinate of the site folded into the original cell
+ */
 static void StdFace_FoldSite(
-  struct StdIntList *StdI,//!<[inout]
-  int iCellV[3],//!<[in] The fractional coordinate of a site
-  int nBox[3], //!<[out] the index of supercell
-  int iCellV_fold[3]/**<[out] The fractional coordinate of a site 
-                    which is moved into the original cell*/
+  struct StdIntList *StdI,
+  int iCellV[3],
+  int nBox[3],
+  int iCellV_fold[3]
 )
 {
   int ii, jj, iCellV_frac[3];
@@ -638,13 +714,17 @@ static void StdFace_FoldSite(
   }/*for (ii = 0; ii < 3; ii++)*/
 }/*static void StdFace_FoldSite*/
 /**
-@brief Initialize the super-cell where simulation is performed.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Initialize the super-cell where simulation is performed
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list
+ * @param[in]     fp   File pointer to lattice.gp
+ * @param[in]     dim  Dimension of the system; if 2, print lattice.gp
+ */
 void StdFace_InitSite(
-  struct StdIntList *StdI,//!<[inout]
-  FILE *fp,//!<[in] File pointer to lattice.gp
-  int dim//!<[in] dimension of system, if = 2, print lattice.gp
+  struct StdIntList *StdI,
+  FILE *fp,
+  int dim
 )
 {
   int bound[3][2], edge, ii, jj;
@@ -832,22 +912,36 @@ void StdFace_InitSite(
   }/*if (dim == 2)*/
 }/*void StdFace_InitSite2D*/
 /**
-@brief Find the index of transfer and interaction
-*/
+ * @brief Find the index of transfer and interaction
+ *
+ * @param[in,out] StdI    Standard interface list
+ * @param[in]     iW      W-position of initial site
+ * @param[in]     iL      L-position of initial site
+ * @param[in]     iH      H-position of initial site
+ * @param[in]     diW     W-translation from the initial site
+ * @param[in]     diL     L-translation from the initial site
+ * @param[in]     diH     H-translation from the initial site
+ * @param[in]     isiteUC Intrinsic site index of initial site in the unit cell
+ * @param[in]     jsiteUC Intrinsic site index of final site in the unit cell
+ * @param[out]    isite   Initial site index in the supercell
+ * @param[out]    jsite   Final site index in the supercell
+ * @param[out]    Cphase  Boundary phase factor when crossing the boundary
+ * @param[out]    dR      @f$R_i - R_j@f$ in the fractional coordinate
+ */
 void StdFace_FindSite(
-  struct StdIntList *StdI,//!<[inout]
-  int iW,//!<[in] position of initial site
-  int iL,//!<[in] position of initial site
-  int iH,//!<[in] position of initial site
-  int diW,//!<[in] Translation from the initial site
-  int diL,//!<[in] Translation from the initial site
-  int diH,//!<[in] Translation from the initial site
-  int isiteUC,//!<[in] Intrinsic site index of initial site
-  int jsiteUC,//!<[in] Intrinsic site index of final site
-  int *isite,//!<[out] initial site
-  int *jsite,//!<[out] final site
-  double complex *Cphase,//!<[out] Boundary phase, if it across boundary
-  double *dR//!<[out] R_i - R_j in the fractional coordinate
+  struct StdIntList *StdI,
+  int iW,
+  int iL,
+  int iH,
+  int diW,
+  int diL,
+  int diH,
+  int isiteUC,
+  int jsiteUC,
+  int *isite,
+  int *jsite,
+  double complex *Cphase,
+  double *dR
 )
 {
   int iCell, jCell, kCell, ii;
@@ -886,22 +980,36 @@ void StdFace_FindSite(
   }
 }/*void StdFace_FindSite*/
 /**
-@brief Set Label in the gnuplot display (Only used in 2D system)
-*/
+ * @brief Set label in the gnuplot display (only used in 2D systems)
+ *
+ * @param[in,out] StdI    Standard interface list
+ * @param[in]     fp      File pointer to lattice.gp
+ * @param[in]     iW      W-position of initial site
+ * @param[in]     iL      L-position of initial site
+ * @param[in]     diW     W-translation from the initial site
+ * @param[in]     diL     L-translation from the initial site
+ * @param[in]     isiteUC Intrinsic site index of initial site in the unit cell
+ * @param[in]     jsiteUC Intrinsic site index of final site in the unit cell
+ * @param[out]    isite   Initial site index in the supercell
+ * @param[out]    jsite   Final site index in the supercell
+ * @param[in]     connect Connection type: 1 for nearest neighbor, 2 for 2nd nearest
+ * @param[out]    Cphase  Boundary phase factor when crossing the boundary
+ * @param[out]    dR      @f$R_i - R_j@f$
+ */
 void StdFace_SetLabel(
-  struct StdIntList *StdI,//!<[inout]
-  FILE *fp,//!<[in] File pointer to lattice.gp
-  int iW,//!<[in] position of initial site
-  int iL,//!<[in] position of initial site
-  int diW,//!<[in] Translation from the initial site
-  int diL,//!<[in] Translation from the initial site
-  int isiteUC,//!<[in] Intrinsic site index of initial site
-  int jsiteUC,//!<[in] Intrinsic site index of final site 
-  int *isite,//!<[out] initial site 
-  int *jsite,//!<[out] final site 
-  int connect,//!<[in] 1 for nearest neighbor, 2 for 2nd nearest
-  double complex *Cphase,//!<[out] Boundary phase, if it across boundary
-  double *dR//!<[out] R_i - R_j
+  struct StdIntList *StdI,
+  FILE *fp,
+  int iW,
+  int iL,
+  int diW,
+  int diL,
+  int isiteUC,
+  int jsiteUC,
+  int *isite,
+  int *jsite,
+  int connect,
+  double complex *Cphase,
+  double *dR
 )
 {
   double xi, yi, xj, yj;
@@ -967,8 +1075,10 @@ void StdFace_SetLabel(
   }
 }/*void StdFace_SetLabel*/
 /**
-@brief Print lattice.xsf (XCrysDen format) 
-*/
+ * @brief Print lattice.xsf (XCrysDen format)
+ *
+ * @param[in] StdI Standard interface list
+ */
 void StdFace_PrintXSF(struct StdIntList *StdI) {
   FILE *fp;
   int ii, jj, kk, isite, iCell;
@@ -1025,14 +1135,20 @@ void StdFace_PrintXSF(struct StdIntList *StdI) {
   fclose(fp);
 }/*void StdFace_PrintXSF*/
 /**
-@brief Input nearest-neighbor spin-spin interaction
-*/
+ * @brief Input nearest-neighbor spin-spin interaction
+ *
+ * @param[in]     J      The anisotropic spin interaction 3x3 matrix (generic J)
+ * @param[in]     JAll   The isotropic interaction (generic J)
+ * @param[in,out] J0     The anisotropic spin interaction 3x3 matrix (specific, e.g. J1)
+ * @param[in]     J0All  The isotropic interaction (specific, e.g. J1)
+ * @param[in]     J0name The name of this spin interaction (e.g. "J1")
+ */
 void StdFace_InputSpinNN(
-  double J[3][3],//!<[in] The anisotropic spin interaction
-  double JAll,//!<[in] The isotropic interaction
-  double J0[3][3],//!<[in] The anisotropic spin interaction
-  double J0All,//!<[in] The isotropic interaction
-  char *J0name//!<[in] The name of this spin interaction (e.g. J1)
+  double J[3][3],
+  double JAll,
+  double J0[3][3],
+  double J0All,
+  char *J0name
 ) 
 {
   int i1, i2, i3, i4;
@@ -1113,12 +1229,16 @@ void StdFace_InputSpinNN(
   }/*for (i = 0; i < 3; i++)*/
 }/*void StdFace_InputSpinNN*/
 /**
-@brief Input spin-spin interaction other than nearest-neighbor
-*/
+ * @brief Input spin-spin interaction other than nearest-neighbor
+ *
+ * @param[in,out] Jp     Fully anisotropic spin interaction 3x3 matrix
+ * @param[in]     JpAll  The isotropic interaction value
+ * @param[in]     Jpname The name of this spin interaction (e.g. "J'")
+ */
 void StdFace_InputSpin(
-  double Jp[3][3],//!<[in] Fully anisotropic spin interaction
-  double JpAll,//!<[in] The isotropic interaction
-  char *Jpname//!<The name of this spin interaction(e.g.J')
+  double Jp[3][3],
+  double JpAll,
+  char *Jpname
 )
 {
   int i1, i2;
@@ -1159,14 +1279,19 @@ void StdFace_InputSpin(
   }/*for (i = 0; i < 3; i++)*/
 }/*void StdFace_InputSpin*/
 /**
-@brief Input off-site Coulomb interaction from the 
-input file, if it is not specified, use the default value (0
-or the isotropic Coulomb interaction StdIntList::V).
-*/
+ * @brief Input off-site Coulomb interaction from the input file
+ *
+ * @details If it is not specified, use the default value (0 or the
+ * isotropic Coulomb interaction StdIntList::V).
+ *
+ * @param[in]     V      Isotropic Coulomb interaction (fallback value)
+ * @param[in,out] V0     Specific Coulomb interaction to be set
+ * @param[in]     V0name Name of the Coulomb interaction (e.g. "V1")
+ */
 void StdFace_InputCoulombV(
-  double V,//!<[in]
-  double *V0,//!<[in]
-  char *V0name//!<[in] E.g. V1
+  double V,
+  double *V0,
+  char *V0name
 )
 {
   if (isnan(V) == 0 && isnan(*V0) == 0) {
@@ -1184,14 +1309,19 @@ void StdFace_InputCoulombV(
   }
 }/*void StdFace_InputCoulombV*/
 /**
-@brief Input hopping integral from the
-input file, if it is not specified, use the default value(0
-or the isotropic hopping StdIntList::V).
-*/
+ * @brief Input hopping integral from the input file
+ *
+ * @details If it is not specified, use the default value (0
+ * or the isotropic hopping StdIntList::t).
+ *
+ * @param[in]     t      Isotropic hopping integral (fallback value)
+ * @param[in,out] t0     Specific hopping integral to be set
+ * @param[in]     t0name Name of the hopping integral (e.g. "t1")
+ */
 void StdFace_InputHopp(
-  double complex t,//!<[in]
-  double complex *t0,//!<[in]
-  char *t0name//!<[in] E.g. t1
+  double complex t,
+  double complex *t0,
+  char *t0name
 )
 {
   if (isnan(creal(t)) == 0 && isnan(creal(*t0)) == 0) {
@@ -1209,8 +1339,10 @@ void StdFace_InputHopp(
   }
 }/*void StdFace_InputHopp*/
 /**
-@brief Print geometry of sites for the pos-process of correlation function
-*/
+ * @brief Print geometry of sites for the post-processing of correlation functions
+ *
+ * @param[in] StdI Standard interface list
+ */
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
 
 #if defined(_HWAVE)
@@ -1262,12 +1394,16 @@ void StdFace_PrintGeometry(struct StdIntList *StdI) {
 
 }/*void StdFace_PrintGeometry()*/
 /**
-@brief Malloc Arrays for interactions
-*/
+ * @brief Allocate arrays for interactions
+ *
+ * @param[in,out] StdI      Standard interface list
+ * @param[in]     ntransMax Upper limit of the number of transfers
+ * @param[in]     nintrMax  Upper limit of the number of interactions
+ */
 void StdFace_MallocInteractions(
-  struct StdIntList *StdI,//!<[inout]
-  int ntransMax,//!<[in] upper limit of the number of transfer
-  int nintrMax//!<[in] upper limit of the number of interaction
+  struct StdIntList *StdI,
+  int ntransMax,
+  int nintrMax
 ) {
   int ii;
 #if defined(_HPhi)
@@ -1363,14 +1499,19 @@ void StdFace_MallocInteractions(
 }/*void StdFace_MallocInteractions*/
 #if defined(_mVMC)
 /**
-@brief Define whether the specified site is in the unit cell or not.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Define whether the specified site is in the sub-unit cell or not
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI        Standard interface list
+ * @param[in]     iCellV      The fractional coordinate of a site
+ * @param[out]    nBox        The index of the sub-supercell containing the site
+ * @param[out]    iCellV_fold The fractional coordinate of the site folded into the sub-cell
+ */
 static void StdFace_FoldSiteSub(
-  struct StdIntList *StdI,//!<[inout]
-  int iCellV[3],//!<[in]
-  int nBox[3], //!<[out]
-  int iCellV_fold[3]//!<[out]
+  struct StdIntList *StdI,
+  int iCellV[3],
+  int nBox[3],
+  int iCellV_fold[3]
 )
 {
   int ii, jj, iCellV_frac[3];
@@ -1399,9 +1540,11 @@ static void StdFace_FoldSiteSub(
   }
 }/*static void StdFace_FoldSiteSub*/
 /**
-@brief Print Quantum number projection
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print quantum number projection to qptransidx.def
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list
+ */
 void StdFace_Proj(struct StdIntList *StdI)
 {
   FILE *fp;
@@ -1496,9 +1639,11 @@ void StdFace_Proj(struct StdIntList *StdI)
   free(Anti);
 }/*void StdFace_Proj(struct StdIntList *StdI)*/
 /**
-@brief Initialize sub Cell
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Initialize sub-cell for the sublattice used in quantum number projection
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list
+ */
 static void StdFace_InitSiteSub(struct StdIntList *StdI)
 {
   int ii, jj, kk, prod;
@@ -1578,8 +1723,10 @@ static void StdFace_InitSiteSub(struct StdIntList *StdI)
   }
 }/*void StdFace_InitSiteSub*/
 /**
-@brief Generate orbitalindex
-*/
+ * @brief Generate orbital index for variational Monte Carlo
+ *
+ * @param[in,out] StdI Standard interface list
+ */
 void StdFace_generate_orb(struct StdIntList *StdI) {
   int iCell, jCell, kCell, iCell2, jCell2, iOrb, isite, jsite, Anti;
   int nBox[3], iCellV[3], jCellV[3], dCellV[3], ii;
@@ -1705,9 +1852,11 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
   free(CellDone);
 }/*void StdFace_generate_orb*/
 /**
-@brief Output Jastrow
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Output Jastrow factor index to jastrowidx.def
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list
+ */
 void PrintJastrow(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, isiteUC, jsiteUC, revarsal, isite1, jsite1, iorb;

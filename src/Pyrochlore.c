@@ -1,7 +1,14 @@
 /**
  * @file Pyrochlore.c
  * @brief Standard mode for the pyrochlore lattice
- * @copyright 
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * Provides the Hamiltonian setup for a pyrochlore lattice, which consists
+ * of corner-sharing tetrahedra in a 3D structure with 4 sites per unit cell.
+ * Supports spin, Hubbard, and Kondo models with nearest-neighbor interactions.
+ *
+ * @copyright
  * HPhi-mVMC-StdFace - Common input generator
  * Copyright (C) 2015 The University of Tokyo
  *

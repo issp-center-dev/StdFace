@@ -2,7 +2,8 @@
  * @file Wannier90.c
  * @brief Functions for handling Wannier90 input files and generating Hamiltonians
  * @author Mitsuaki Kawamura (The University of Tokyo)
- * 
+ *
+ * @details
  * This file contains functions for reading and processing Wannier90 input files
  * to generate Hamiltonians for the HPhi/mVMC codes. The main functions are:
  * - geometry_W90(): Reads Wannier90 geometry file
@@ -10,25 +11,24 @@
  * - read_density_matrix(): Reads density matrix file
  * - PrintUHFinitial(): Prints initial UHF guess
  * - StdFace_Wannier90(): Main function to setup Wannier90 Hamiltonian
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
 
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
@@ -40,9 +40,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "setmemory.h"
 
 /**
- * @brief Calculate inverse of 3x3 matrix
- * @param cutoff_Rvec Input 3x3 matrix
- * @param inverse_matrix Output inverse matrix
+ * @brief Calculate inverse of a 3x3 matrix
+ *
+ * @param[in]  cutoff_Rvec    Input 3x3 matrix to invert
+ * @param[out] inverse_matrix Computed inverse of cutoff_Rvec
  */
 void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
   double NMatrix[3][3] = {{},
@@ -81,10 +82,11 @@ void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
 }
 
 /**
- * @brief Check if point is inside unit cell box
- * @param rvec Vector to check
- * @param inverse_matrix Inverse of lattice vectors
- * @return 1 if inside box, 0 if outside
+ * @brief Check if a lattice vector point is inside the unit cell box
+ *
+ * @param[in] rvec           Integer lattice vector to check (3 components)
+ * @param[in] inverse_matrix Inverse of the cutoff lattice vectors (3x3)
+ * @return 1 if the point is inside the box, 0 if outside
  */
 int _check_in_box(int *rvec, double inverse_matrix[][3])
 {
@@ -101,10 +103,12 @@ int _check_in_box(int *rvec, double inverse_matrix[][3])
 
 /**
  * @brief Read Wannier90 geometry file
- * @param StdI [in,out] Structure containing model parameters
- * 
+ *
+ * @details
  * Reads lattice vectors and Wannier center positions from geometry file.
  * Sets StdI->direct (lattice vectors) and StdI->tau (Wannier centers).
+ *
+ * @param[in,out] StdI Structure containing model parameters
  */
 static void geometry_W90(
   struct StdIntList *StdI
@@ -153,20 +157,23 @@ static void geometry_W90(
 
 /**
  * @brief Read Wannier90 hopping/interaction file
- * @param StdI [in,out] Structure containing model parameters
- * @param filename Input filename
- * @param cutoff Threshold for matrix elements
- * @param cutoff_R Cutoff for R vectors
- * @param cutoff_Rvec Cutoff vectors for unit cell
- * @param cutoff_length Real space cutoff length
- * @param itUJ Type of interaction (0:t, 1:U, 2:J)
- * @param NtUJ [out] Number of terms
- * @param tUJindx [out] Indices for terms
- * @param lambda Scaling factor
- * @param tUJ [out] Matrix elements
  *
- * Reads hopping or interaction matrix elements from Wannier90 file.
- * Applies cutoffs and stores non-zero terms.
+ * @details
+ * Reads hopping or interaction matrix elements from a Wannier90 format file.
+ * Applies cutoffs (by value, by R-vector range, by real-space distance) and
+ * stores the non-zero terms. Inversion symmetry is applied to remove duplicates.
+ *
+ * @param[in]     StdI          Structure containing model parameters
+ * @param[in]     filename      Input filename (Wannier90 _hr/_ur/_jr.dat)
+ * @param[in]     cutoff        Threshold for matrix element magnitude
+ * @param[in]     cutoff_R      Cutoff for R-vector components (3 elements)
+ * @param[in]     cutoff_Rvec   Cutoff vectors defining the unit cell box (3x3)
+ * @param[in]     cutoff_length Real-space cutoff length (negative disables)
+ * @param[in]     itUJ          Type of interaction (0: hopping t, 1: Coulomb U, 2: Hund J)
+ * @param[in,out] NtUJ          Number of effective terms for each interaction type
+ * @param[out]    tUJindx       Indices (R0, R1, R2, band_i, band_f) for each term
+ * @param[in]     lambda        Scaling factor for matrix elements
+ * @param[out]    tUJ           Complex matrix elements for each term
  */
 static void read_W90(
   struct StdIntList *StdI,
@@ -383,13 +390,16 @@ static void read_W90(
 
 /**
  * @brief Read RESPACK density matrix file
- * @param StdI [in,out] Structure containing model parameters
- * @param filename Input filename
- * @return 5D array containing density matrix elements
  *
- * Reads density matrix elements from RESPACK file.
- * Returns array indexed by [R1][R2][R3][i][j] where R are lattice vectors
- * and i,j are orbital indices.
+ * @details
+ * Reads density matrix elements from a RESPACK format file.
+ * Returns a 5D array indexed by [R0][R1][R2][i][j] where R0, R1, R2 are
+ * lattice translation vector indices and i, j are orbital indices.
+ * The returned array uses base-shifted pointers to allow negative R indices.
+ *
+ * @param[in,out] StdI     Structure containing model parameters
+ * @param[in]     filename Input filename (RESPACK _dr.dat)
+ * @return 5D complex array of density matrix elements indexed by [R0][R1][R2][i][j]
  */
 static double complex***** read_density_matrix(
   struct StdIntList *StdI,
@@ -496,14 +506,17 @@ static double complex***** read_density_matrix(
 
 /**
  * @brief Print initial UHF guess to file
- * @param StdI Structure containing model parameters
- * @param NtUJ Number of terms for each interaction type
- * @param tUJ Matrix elements
- * @param DenMat Density matrix elements
- * @param tUJindx Indices for interaction terms
  *
- * Writes initial UHF guess to initial.def file.
- * Uses density matrix elements to construct initial guess.
+ * @details
+ * Writes the initial unrestricted Hartree-Fock (UHF) guess to initial.def file.
+ * Uses Coulomb (U) and exchange (J) interaction terms together with density
+ * matrix elements to construct the initial guess for all sites and spins.
+ *
+ * @param[in] StdI    Structure containing model parameters
+ * @param[in] NtUJ    Number of terms for each interaction type (array of 3)
+ * @param[in] tUJ     Complex matrix elements for each interaction type
+ * @param[in] DenMat  5D density matrix elements indexed by [R0][R1][R2][i][j]
+ * @param[in] tUJindx Indices (R0, R1, R2, band_i, band_f) for each interaction term
  */
 static void PrintUHFinitial(
   struct StdIntList *StdI,
@@ -594,19 +607,32 @@ static void PrintUHFinitial(
   free(IniGuess);
 }/*static void PrintTrans*/
 
+/**
+ * @enum dcmode
+ * @brief Double-counting correction mode for Wannier90 Hamiltonian
+ */
 enum dcmode {
-    NOTCORRECT,
-    HARTREE,
-    HARTREE_U,
-    FULL
+    NOTCORRECT, /**< @brief No double-counting correction */
+    HARTREE,    /**< @brief Hartree-level double-counting correction */
+    HARTREE_U,  /**< @brief Hartree correction for Coulomb U only */
+    FULL        /**< @brief Full Hartree-Fock double-counting correction */
 };
 
 /**
-@brief Setup a Hamiltonian for the Wannier90 *_hr.dat
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the Wannier90 *_hr.dat
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * Main entry point for constructing a Hamiltonian from Wannier90 output files.
+ * Reads geometry, hopping (_hr.dat), Coulomb (_ur.dat), Hund (_jr.dat), and
+ * optionally density matrix (_dr.dat) files. Constructs transfer integrals,
+ * Coulomb interactions, Hund coupling, exchange, and pair-hopping terms.
+ * Supports both Hubbard and spin models with optional double-counting corrections.
+ *
+ * @param[in,out] StdI Structure containing all model parameters and output arrays
+ */
 void StdFace_Wannier90(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI
 )
 {
   int isite, jsite, ispin, ntransMax, nintrMax;

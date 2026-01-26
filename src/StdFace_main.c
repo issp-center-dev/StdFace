@@ -1,37 +1,32 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Read Input file and write files for Expert mode.
-       Initialize variables.
-       Check parameters.
-
-The following lattices are supported:
-- 1D Chain : StdFace_Chain()
-- 1D Ladder : StdFace_Ladder()
-- 2D Tetragonal : StdFace_Tetragonal()
-- 2D Triangular : StdFace_Triangular()
-- 2D Honeycomb : StdFace_Honeycomb()
-- 2D Kagome : StdFace_Kagome()
-- 3D Simple Orthorhombic : StdFace_Orthorhombic()
-- 3D Face Centered Orthorhombic : StdFace_FCOrtho()
-- 3D Pyrochlore : StdFace_Pyrochlore()
-
-*/
+/**
+ * @file StdFace_main.c
+ * @brief Read input file and write files for Expert mode
+ *
+ * @details
+ * This file contains the main routine for the standard mode.
+ * It reads the input file, initializes variables, checks parameters,
+ * and generates the definition files for Expert mode.
+ *
+ * The following lattices are supported:
+ * - 1D Chain : StdFace_Chain()
+ * - 1D Ladder : StdFace_Ladder()
+ * - 2D Tetragonal : StdFace_Tetragonal()
+ * - 2D Triangular : StdFace_Triangular()
+ * - 2D Honeycomb : StdFace_Honeycomb()
+ * - 2D Kagome : StdFace_Kagome()
+ * - 3D Simple Orthorhombic : StdFace_Orthorhombic()
+ * - 3D Face Centered Orthorhombic : StdFace_FCOrtho()
+ * - 3D Pyrochlore : StdFace_Pyrochlore()
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -46,9 +41,12 @@ The following lattices are supported:
 
 #if defined(_HPhi)
 /**
-@brief Set Largevalue (StdIntList::LargeValue) for TPQ.
-       Sum absolute-value of all one- and two- body terms.
-*/
+ * @brief Set Largevalue (StdIntList::LargeValue) for TPQ
+ *
+ * @details Sum absolute-value of all one- and two-body terms.
+ *
+ * @param[in,out] StdI Standard interface list containing interaction parameters
+ */
 static void StdFace_LargeValue(struct StdIntList *StdI) {
   int ktrans, kintr;
   double LargeValue0;
@@ -79,9 +77,11 @@ static void StdFace_LargeValue(struct StdIntList *StdI) {
   StdFace_PrintVal_d("LargeValue", &StdI->LargeValue, LargeValue0);
 }/*static void StdFace_LargeValue*/
 /**
-@brief Print calcmod.def
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print calcmod.def
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing calculation mode parameters
+ */
 static void PrintCalcMod(struct StdIntList *StdI)
 {
   FILE *fp;
@@ -305,9 +305,11 @@ static void PrintCalcMod(struct StdIntList *StdI)
   fprintf(stdout, "     calcmod.def is written.\n\n");
 }/*static void PrintCalcMod*/
 /**
-@brief Print single.def or pair.def
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print single.def or pair.def for spectrum excitation
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list containing spectrum parameters
+ */
 static void PrintExcitation(struct StdIntList *StdI) {
   FILE *fp;
   int NumOp, **spin, isite, ispin, icell, itau;
@@ -500,9 +502,11 @@ static void PrintExcitation(struct StdIntList *StdI) {
   free(coef);
 
 }/*static void PrintExcitation()*/
-/*
-@brief Compute vectorpotential
-*/
+/**
+ * @brief Compute vector potential for time evolution
+ *
+ * @param[in,out] StdI Standard interface list containing time-evolution parameters
+ */
 static void VectorPotential(struct StdIntList *StdI) {
   FILE *fp;
   int it, ii;
@@ -596,9 +600,11 @@ static void VectorPotential(struct StdIntList *StdI) {
   free(Et);
 }/*static void VectorPotential(struct StdIntList *StdI)*/
 /**
-@brief Print single.def or pair.def
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print teone.def or tetwo.def for time-evolution pump
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing pump parameters
+ */
 static void PrintPump(struct StdIntList *StdI) {
   FILE *fp;
   int it, isite, ipump, jpump, npump0;
@@ -667,9 +673,10 @@ static void PrintPump(struct StdIntList *StdI) {
 }/*tatic void PrintPump*/
 #elif defined(_mVMC)
 /**
-@brief Output Anti-parallel orbital index
-Free StdIntList::Orb
-*/
+ * @brief Output anti-parallel orbital index and free StdIntList::Orb
+ *
+ * @param[in,out] StdI Standard interface list containing orbital parameters
+ */
 static void PrintOrb(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, iOrb;
@@ -703,9 +710,11 @@ static void PrintOrb(struct StdIntList *StdI) {
   free(StdI->Orb);
 }/*void PrintOrb*/
 /**
-@brief Output parallel orbitalIdx
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Output parallel orbital index
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing orbital parameters
+ */
 static void PrintOrbPara(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
@@ -838,8 +847,10 @@ static void PrintOrbPara(struct StdIntList *StdI) {
   free(OrbGC);
 }/*static void PrintOrbPara*/
 /**
-@brief Output .def file for Gutzwiller
-*/
+ * @brief Output .def file for Gutzwiller variational parameters
+ *
+ * @param[in] StdI Standard interface list containing model and orbital parameters
+ */
 static void PrintGutzwiller(struct StdIntList *StdI)
 {
   FILE *fp;
@@ -921,10 +932,15 @@ static void PrintGutzwiller(struct StdIntList *StdI)
 }/*static void PrintGutzwiller*/
 #endif
 /**
-@brief Clear global variables in the standard mode
-All variables refered in this function is modified.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Clear global variables in the standard mode
+ *
+ * @details All variables referred to in this function are modified
+ *          to their initial (NaN or sentinel) values.
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[out] StdI Standard interface list to be initialized
+ */
 static void StdFace_ResetVals(struct StdIntList *StdI) {
   int i, j;
   double NaN_d;
@@ -1135,12 +1151,13 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->lattice_gp = StdI->NaN_i;
 #endif
 }/*static void StdFace_ResetVals*/
-/*
-@brief Make all characters lower
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
-static void Text2Lower(char *value //!<[inout] @brief Keyword or value
-){
+/**
+ * @brief Make all characters lower case
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] value Keyword or value string to convert to lower case
+ */
+static void Text2Lower(char *value){
   char value2;
   int valuelen, ii;
 
@@ -1151,11 +1168,12 @@ static void Text2Lower(char *value //!<[inout] @brief Keyword or value
   }
 }/*static void Text2Lower*/
 /**
-@brief Remove : space etc. from keyword and value in an iput file
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
-static void TrimSpaceQuote(char *value //!<[inout] @brief Keyword or value
-){
+ * @brief Remove colon, space, etc. from keyword and value in an input file
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] value Keyword or value string to be trimmed
+ */
+static void TrimSpaceQuote(char *value){
   char value2[256];
   int valuelen, valuelen2, ii;
 
@@ -1181,14 +1199,20 @@ static void TrimSpaceQuote(char *value //!<[inout] @brief Keyword or value
 
 }/*static void TrimSpaceQuote*/
 /**
-@brief Store an input value into the valiable (string)
- If duplicated, HPhi will stop.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Store an input value into the variable (string)
+ *
+ * @details If duplicated, the program will stop with an error.
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]  keyword     Keyword read from the input file
+ * @param[in]  valuestring Value read from the input file
+ * @param[out] value       Destination string to store the value
+ */
 static void StoreWithCheckDup_s(
-  char *keyword,//!<[in] keyword read from the input file
-  char *valuestring,//!<[in] value read from the input file
-  char *value//!<[out]
+  char *keyword,
+  char *valuestring,
+  char *value
 )
 {
   if (strcmp(value, "****") != 0){
@@ -1200,14 +1224,20 @@ static void StoreWithCheckDup_s(
   }
 }/*static void StoreWithCheckDup_s*/
 /**
-@brief Store an input value into the valiable (string) 
-Force string lower. If duplicated, HPhi will stop.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Store an input value into the variable (string) with forced lower case
+ *
+ * @details If duplicated, the program will stop with an error.
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]  keyword     Keyword read from the input file
+ * @param[in]  valuestring Value read from the input file
+ * @param[out] value       Destination string to store the lower-cased value
+ */
 static void StoreWithCheckDup_sl(
-  char *keyword,//!<[in] keyword read from the input file
-  char *valuestring,//!<[in] value read from the input file
-  char *value//!<[out]
+  char *keyword,
+  char *valuestring,
+  char *value
 )
 {
   if (strcmp(value, "****") != 0) {
@@ -1220,14 +1250,20 @@ static void StoreWithCheckDup_sl(
   }
 }/*static void StoreWithCheckDup_sl*/
 /**
-@brief Store an input value into the valiable (integer)
-If duplicated, HPhi will stop.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Store an input value into the variable (integer)
+ *
+ * @details If duplicated, the program will stop with an error.
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]  keyword     Keyword read from the input file
+ * @param[in]  valuestring Value read from the input file
+ * @param[out] value       Pointer to integer destination for the parsed value
+ */
 static void StoreWithCheckDup_i(
-  char *keyword,//!<[in] keyword read from the input file
-  char *valuestring,//!<[in] value read from the input file
-  int *value//!<[out]
+  char *keyword,
+  char *valuestring,
+  int *value
 )
 {
   int NaN_i = 2147483647;
@@ -1241,14 +1277,20 @@ static void StoreWithCheckDup_i(
   }
 }/*static void StoreWithCheckDup_i*/
 /**
-@brief Store an input value into the valiable (double)
-If duplicated, HPhi will stop.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Store an input value into the variable (double)
+ *
+ * @details If duplicated, the program will stop with an error.
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]  keyword     Keyword read from the input file
+ * @param[in]  valuestring Value read from the input file
+ * @param[out] value       Pointer to double destination for the parsed value
+ */
 static void StoreWithCheckDup_d(
-  char *keyword,//!<[in] keyword read from the input file
-  char *valuestring,//!<[in] value read from the input file
-  double *value//!<[out]
+  char *keyword,
+  char *valuestring,
+  double *value
 )
 {
   if (isnan(*value) == 0){
@@ -1260,14 +1302,21 @@ static void StoreWithCheckDup_d(
   }
 }/*static void StoreWithCheckDup_d*/
 /**
-@brief Store an input value into the valiable (Double complex)
-      If duplicated, HPhi will stop.
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Store an input value into the variable (double complex)
+ *
+ * @details If duplicated, the program will stop with an error.
+ *          The value string is parsed as "real,imag" format.
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in]  keyword     Keyword read from the input file
+ * @param[in]  valuestring Value read from the input file (comma-separated real,imag)
+ * @param[out] value       Pointer to double complex destination for the parsed value
+ */
 static void StoreWithCheckDup_c(
-  char *keyword,//!<[in] keyword read from the input file
-  char *valuestring,//!<[in] value read from the input file
-  double complex *value//!<[out]
+  char *keyword,
+  char *valuestring,
+  double complex *value
 )
 {
   int num;
@@ -1309,9 +1358,11 @@ static void StoreWithCheckDup_c(
   }
 }/*static void StoreWithCheckDup_c*/
 /**
-@brief Print the locspin file
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print the locspn.def file
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing local spin flags
+ */
 static void PrintLocSpin(struct StdIntList *StdI) {
   FILE *fp;
   int isite, nlocspin;
@@ -1335,9 +1386,11 @@ static void PrintLocSpin(struct StdIntList *StdI) {
   fprintf(stdout, "    locspn.def is written.\n");
 }/*static void PrintLocSpin*/
 /**
-@brief Print the transfer file
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print the trans.def file
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing transfer integrals
+ */
 static void PrintTrans(struct StdIntList *StdI){
   FILE *fp;
   int jtrans, ktrans, ntrans0;
@@ -1380,9 +1433,11 @@ static void PrintTrans(struct StdIntList *StdI){
   fprintf(stdout, "      trans.def is written.\n");
 }/*static void PrintTrans*/
 /**
-@brief Print namelist.def  
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print namelist.def
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing file output flags
+ */
 static void PrintNamelist(struct StdIntList *StdI){
   FILE *fp;
 
@@ -1435,9 +1490,11 @@ static void PrintNamelist(struct StdIntList *StdI){
   fprintf(stdout, "    namelist.def is written.\n");
 }/*static void PrintNamelist*/
 /**
-@brief Print modpara.def
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print modpara.def
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing model parameters
+ */
 static void PrintModPara(struct StdIntList *StdI)
 {
   FILE *fp;
@@ -1542,9 +1599,11 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(stdout, "     modpara.def is written.\n");
 }/*static void PrintModPara*/
 /**
-@brief Print greenone.def
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print greenone.def for one-body Green's functions
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing output mode and site information
+ */
 static void Print1Green(struct StdIntList *StdI)
 {
   FILE *fp;
@@ -1659,9 +1718,11 @@ static void Print1Green(struct StdIntList *StdI)
   }/*if (StdI->ioutputmode != 0) */
 }/*static void Print1Green*/
 /**
-@brief Print greentwo.def
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Print greentwo.def for two-body Green's functions
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] StdI Standard interface list containing output mode and site information
+ */
 static void Print2Green(struct StdIntList *StdI) {
   FILE *fp;
   int ngreen, store, igreen, xkondo;
@@ -1829,12 +1890,15 @@ static void Print2Green(struct StdIntList *StdI) {
   }/*if (StdI->ioutputmode != 0)*/
 }/*static void Print2Green(struct StdIntList *StdI)*/
 /**
-@brief Stop HPhi if unsupported model is read 
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Stop the program if an unsupported model/lattice combination is read
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in] model   Model name string
+ * @param[in] lattice Lattice name string
+ */
 static void UnsupportedSystem(
-  char *model,//!<[in]
-  char *lattice//!<[in]
+  char *model,
+  char *lattice
 )
 {
   fprintf(stdout, "\nSorry, specified combination, \n");
@@ -1845,9 +1909,11 @@ static void UnsupportedSystem(
   StdFace_exit(-1);
 }/*static void UnsupportedSystem*/
 /**
-@brief Verify outputmode
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Verify and set output mode for correlation functions
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list containing output mode settings
+ */
 static void CheckOutputMode(struct StdIntList *StdI)
 {
   /*
@@ -1881,10 +1947,11 @@ static void CheckOutputMode(struct StdIntList *StdI)
   }
 }/*static void CheckOutputMode*/
 /**
-@brief Summary numerical parameter check the combination of
- the number of sites, total spin, the number of electrons
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Check numerical parameters for site count, total spin, and electron number
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list containing model parameters to validate
+ */
 static void CheckModPara(struct StdIntList *StdI)
 {
 
@@ -2008,9 +2075,11 @@ static void CheckModPara(struct StdIntList *StdI)
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
 }/*static void CheckModPara*/
 /**
-@brief Output .def file for Specific interaction
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Output .def files for specific interactions (Coulomb, Hund, Exchange, etc.)
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list containing interaction parameters
+ */
 static void PrintInteractions(struct StdIntList *StdI)
 {
   FILE *fp;
@@ -2449,11 +2518,16 @@ static void PrintInteractions(struct StdIntList *StdI)
   }
 }/*static void PrintInteractions*/
 /**
-@brief Main routine for the standard mode
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Main routine for the standard mode
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details Reads the standard-mode input file, constructs the model,
+ *          and generates all Expert-mode definition files.
+ *
+ * @param[in] fname Input file name for the standard mode
+ */
 void StdFace_main(
-  char *fname//!<[in] Input file name for the standard mode
+  char *fname
 )
 {
   struct StdIntList *StdI;
