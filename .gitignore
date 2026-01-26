@@ -59,6 +59,10 @@ make.sys
 cmake-build-debug/
 .DS_Store
 
+# Python bytecode
+__pycache__/
+*.pyc
+
 # Build Output
 build/
 
