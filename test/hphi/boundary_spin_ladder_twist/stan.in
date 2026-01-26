@@ -1,0 +1,17 @@
+W = 2
+L = 3
+model = "Spin"
+method = "FullDiag"
+lattice = "ladder"
+J0 = 1.0
+J1 = 0.6
+J2 = 0.3
+J1' = 0.2
+J2' = 0.1
+D = 0.05
+h = 0.02
+Gamma = 0.0
+Gamma_y = 0.0
+phase0 = 90.0
+2Sz = 0
+outputmode = "all"
