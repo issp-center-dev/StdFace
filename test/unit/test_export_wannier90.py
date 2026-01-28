@@ -4,6 +4,7 @@ Tests for the Python translation of export_wannier90.c.
 """
 from __future__ import annotations
 
+import io
 import math
 import os
 import tempfile
@@ -12,7 +13,7 @@ import numpy as np
 import pytest
 
 from stdface_vals import StdIntList
-import export_wannier90 as ew
+from writer import export_wannier90 as ew
 
 
 # ---------------------------------------------------------------------------
@@ -436,6 +437,100 @@ class TestWriteWannier90:
 
 
 # ===========================================================================
+#  Tests: _build_wannier_matrix
+# ===========================================================================
+
+class TestBuildWannierMatrix:
+    """Tests for _build_wannier_matrix."""
+
+    def test_single_item_rr(self):
+        """Single item at r=[0,0,0] gives rr=[0,0,0]."""
+        item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=0, t=0, v=1.0 + 0j)
+        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        assert rr == [0, 0, 0]
+        assert nvol == 1
+        assert len(matrix) == 1
+
+    def test_nonzero_r_expands_range(self):
+        """Item at r=[1,0,0] gives rr=[1,0,0] and nvol=3."""
+        item = ew._IntrItem(r=[1, 0, 0], a=0, b=0, s=0, t=0, v=2.0 + 0j)
+        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        assert rr == [1, 0, 0]
+        assert nvol == 3
+
+    def test_matrix_value_placed(self):
+        """Check that the item value ends up at the correct matrix index."""
+        item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=0, t=0, v=3.5 + 1.0j)
+        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        idx = ew._compute_index(0, 0, 0, 0, 0, 0, 0, rr, 1, 1)
+        assert matrix[idx] == pytest.approx(3.5 + 1.0j)
+
+    def test_hermitian_conjugate_filled(self):
+        """Reverse-direction entry is set to conjugate when empty."""
+        item = ew._IntrItem(r=[1, 0, 0], a=0, b=0, s=0, t=0, v=1.0 + 2.0j)
+        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        ridx = ew._compute_index(-1, 0, 0, 0, 0, 0, 0, rr, 1, 1)
+        assert matrix[ridx] == pytest.approx(1.0 - 2.0j)
+
+    def test_spin_matrix_size(self):
+        """With nspin=2, matrix size is nvol * nsiteuc^2 * nspin^2."""
+        item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=1, t=0, v=0.5 + 0j)
+        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 2)
+        assert len(matrix) == nvol * 1 * 1 * 2 * 2
+
+
+# ===========================================================================
+#  Tests: _write_wannier_body
+# ===========================================================================
+
+class TestWriteWannierBody:
+    """Tests for _write_wannier_body."""
+
+    def test_nspin1_compact_format(self):
+        """nspin=1 writes compact format (7 columns: rx ry rz a b re im)."""
+        matrix = np.array([1.0 + 0.5j])
+        fp = io.StringIO()
+        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 1, matrix)
+        lines = fp.getvalue().strip().splitlines()
+        assert len(lines) == 1
+        parts = lines[0].split()
+        assert len(parts) == 7  # rx ry rz a+1 b+1 re im
+
+    def test_nspin2_extended_format(self):
+        """nspin=2 writes extended format (9 columns: rx ry rz a b s t re im)."""
+        matrix = np.zeros(4, dtype=complex)
+        matrix[0] = 1.0 + 0j
+        fp = io.StringIO()
+        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 2, matrix)
+        lines = fp.getvalue().strip().splitlines()
+        # With export_all=1, all 4 spin combinations are written
+        assert len(lines) == 4
+        parts = lines[0].split()
+        assert len(parts) == 9  # rx ry rz a+1 b+1 s t re im
+
+    def test_correct_values_written(self):
+        """Values from the matrix appear in the output."""
+        matrix = np.array([2.5 + 0.3j])
+        fp = io.StringIO()
+        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 1, matrix)
+        content = fp.getvalue()
+        assert "2.500000000000" in content
+        assert "0.300000000000" in content
+
+    def test_multi_volume_iterations(self):
+        """Multiple volumes produce entries for all r-vectors."""
+        # rr=[1,0,0] → nvol=3, nsiteuc=1, nspin=1 → 3 entries
+        matrix = np.ones(3, dtype=complex)
+        fp = io.StringIO()
+        ew._write_wannier_body(fp, [1, 0, 0], 3, 1, 1, matrix)
+        lines = fp.getvalue().strip().splitlines()
+        assert len(lines) == 3
+        # Check rx values: -1, 0, 1
+        rx_vals = [int(l.split()[0]) for l in lines]
+        assert sorted(rx_vals) == [-1, 0, 1]
+
+
+# ===========================================================================
 #  Tests: Export inter (complex)
 # ===========================================================================
 
@@ -710,3 +805,306 @@ class TestExportAllFlag:
         assert ew._is_export_all == 0
         # Reset
         ew._is_export_all = 1
+
+
+# ===================================================================
+#  _build_transfer_table
+# ===================================================================
+
+
+class TestBuildTransferTable:
+    """Tests for _build_transfer_table."""
+
+    @staticmethod
+    def _make_stdi(ncell: int = 2, nsiteUC: int = 1) -> StdIntList:
+        """Create a minimal StdIntList for transfer-table tests."""
+        s = StdIntList()
+        s.NsiteUC = nsiteUC
+        s.NCell = ncell
+        s.box = np.array([
+            [ncell, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+        ], dtype=int)
+        s.rbox = np.array([
+            [1, 0, 0],
+            [0, ncell, 0],
+            [0, 0, ncell],
+        ], dtype=int)
+        s.Cell = np.zeros((ncell, 3), dtype=int)
+        for i in range(ncell):
+            s.Cell[i, 0] = i
+        return s
+
+    def test_empty_input(self):
+        """Zero entries returns empty table."""
+        s = self._make_stdi()
+        result = ew._build_transfer_table(s, 0, [], np.array([], dtype=complex), 1)
+        assert result == []
+
+    def test_single_entry(self):
+        """Single transfer entry produces one table item."""
+        s = self._make_stdi(ncell=2)
+        # site 0 (cell 0) → site 1 (cell 1), spin 0→0
+        intr_index = [[0, 0, 1, 0]]
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 1)
+        assert len(result) == 1
+        assert result[0].a == 0
+        assert result[0].b == 0  # site 1 % NsiteUC(1) = 0
+        assert result[0].s == 0
+        assert result[0].t == 0
+        # Value is sign-flipped
+        assert result[0].v == pytest.approx(-1.0 + 0j)
+
+    def test_sign_flip(self):
+        """Transfer values are negated by convention."""
+        s = self._make_stdi(ncell=2)
+        intr_index = [[0, 0, 0, 0]]
+        intr_value = np.array([3.5 + 2j])
+        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 1)
+        assert result[0].v == pytest.approx(-3.5 - 2j)
+
+    def test_deduplication(self):
+        """Duplicate entries (same key) are not repeated."""
+        s = self._make_stdi(ncell=4)
+        # Two entries that map to the same relative coordinate
+        # site 0→1 (cells 0→1) and site 2→3 (cells 2→3) → both rr=[1,0,0]
+        intr_index = [[0, 0, 1, 0], [2, 0, 3, 0]]
+        intr_value = np.array([1.0 + 0j, 1.0 + 0j])
+        result = ew._build_transfer_table(s, 2, intr_index, intr_value, 1)
+        # Both map to (rr=[1,0,0], a=0, b=0, s=0, t=0) with value -1.0
+        assert len(result) == 1
+
+    def test_spin_dep_zero_filters(self):
+        """spin_dep=0 skips entries where (ispin, jspin) != (0, 0)."""
+        s = self._make_stdi(ncell=2)
+        # Entry with spin (0,1) — should be skipped when spin_dep=0
+        intr_index = [[0, 0, 0, 1]]
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 0)
+        assert len(result) == 0
+
+    def test_spin_dep_zero_keeps_00(self):
+        """spin_dep=0 keeps entries where (ispin, jspin) == (0, 0)."""
+        s = self._make_stdi(ncell=2)
+        intr_index = [[0, 0, 0, 0]]
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 0)
+        assert len(result) == 1
+
+    def test_spin_dep_one_keeps_all(self):
+        """spin_dep=1 keeps entries with any spin indices."""
+        s = self._make_stdi(ncell=2)
+        intr_index = [[0, 0, 0, 0], [0, 1, 0, 1]]
+        intr_value = np.array([1.0 + 0j, 2.0 + 0j])
+        result = ew._build_transfer_table(s, 2, intr_index, intr_value, 1)
+        assert len(result) == 2
+
+    def test_relative_coordinates(self):
+        """Check that rr is computed from cell differences."""
+        s = self._make_stdi(ncell=4)
+        # site 0 (cell 0) → site 2 (cell 2): rr should be [2,0,0]
+        # but _unfold_site may fold: 4 cells, rr_frac = 2/4 = 0.5 → not folded
+        intr_index = [[0, 0, 2, 0]]
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 1)
+        assert len(result) == 1
+        # The exact rr depends on _unfold_site; just verify it's set
+        assert len(result[0].r) == 3
+
+    def test_inconsistent_values_warns(self, capsys):
+        """Duplicate entries with different values print a warning."""
+        s = self._make_stdi(ncell=4)
+        # Two entries mapping to same key but different values
+        intr_index = [[0, 0, 1, 0], [4, 0, 5, 0]]  # both → rr=[1,0,0]
+        # NsiteUC=1, so site 4 is cell 4 site 0 — but we only have 4 cells
+        # Use cells that map to same rr: cell 0→1 and cell 2→3
+        intr_index = [[0, 0, 1, 0], [2, 0, 3, 0]]
+        intr_value = np.array([1.0 + 0j, 2.0 + 0j])  # different values!
+        result = ew._build_transfer_table(s, 2, intr_index, intr_value, 1)
+        captured = capsys.readouterr()
+        assert "WARNING" in captured.out
+
+
+# ===================================================================
+#  _build_inter_table
+# ===================================================================
+
+
+class TestBuildInterTable:
+    """Tests for _build_inter_table."""
+
+    @staticmethod
+    def _make_stdi(ncell: int = 2, nsiteUC: int = 1) -> StdIntList:
+        """Create a minimal StdIntList for inter-table tests."""
+        s = StdIntList()
+        s.NsiteUC = nsiteUC
+        s.NCell = ncell
+        s.box = np.array([
+            [ncell, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+        ], dtype=int)
+        s.rbox = np.array([
+            [1, 0, 0],
+            [0, ncell, 0],
+            [0, 0, ncell],
+        ], dtype=int)
+        s.Cell = np.zeros((ncell, 3), dtype=int)
+        for i in range(ncell):
+            s.Cell[i, 0] = i
+        return s
+
+    def test_empty_input(self):
+        """Zero entries returns empty table."""
+        s = self._make_stdi()
+        result = ew._build_inter_table(s, 0, [], np.array([], dtype=complex))
+        assert result == []
+
+    def test_single_entry(self):
+        """Single interaction entry produces one table item."""
+        s = self._make_stdi(ncell=2)
+        intr_index = [[0, 1]]
+        intr_value = np.array([2.5 + 0j])
+        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        assert len(result) == 1
+        assert result[0].a == 0
+        assert result[0].b == 0  # site 1 % NsiteUC(1) = 0
+        assert result[0].s == 0
+        assert result[0].t == 0
+        assert result[0].v == pytest.approx(2.5 + 0j)
+
+    def test_no_sign_flip(self):
+        """Inter-site values are NOT sign-flipped (unlike transfer)."""
+        s = self._make_stdi(ncell=2)
+        intr_index = [[0, 1]]
+        intr_value = np.array([3.0 + 1j])
+        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        assert result[0].v == pytest.approx(3.0 + 1j)
+
+    def test_deduplication(self):
+        """Duplicate entries (same rr, a, b) are not repeated."""
+        s = self._make_stdi(ncell=4)
+        # cell 0→1 and cell 2→3 both have rr=[1,0,0], a=0, b=0
+        intr_index = [[0, 1], [2, 3]]
+        intr_value = np.array([1.0 + 0j, 1.0 + 0j])
+        result = ew._build_inter_table(s, 2, intr_index, intr_value)
+        assert len(result) == 1
+
+    def test_different_sites_kept(self):
+        """Entries with different (a, b) pairs are kept separately."""
+        s = self._make_stdi(ncell=2, nsiteUC=2)
+        # site 0 (cell 0, uc 0) → site 1 (cell 0, uc 1)
+        # site 0 (cell 0, uc 0) → site 2 (cell 1, uc 0)
+        intr_index = [[0, 1], [0, 2]]
+        intr_value = np.array([1.0 + 0j, 2.0 + 0j])
+        result = ew._build_inter_table(s, 2, intr_index, intr_value)
+        assert len(result) == 2
+
+    def test_spin_indices_always_zero(self):
+        """All entries have spin indices (s, t) = (0, 0)."""
+        s = self._make_stdi(ncell=2)
+        intr_index = [[0, 1]]
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        assert result[0].s == 0
+        assert result[0].t == 0
+
+    def test_relative_coordinate_length(self):
+        """Relative coordinate vector has length 3."""
+        s = self._make_stdi(ncell=4)
+        intr_index = [[0, 2]]
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        assert len(result[0].r) == 3
+
+    def test_inconsistent_values_warns(self, capsys):
+        """Duplicate entries with different values print a warning."""
+        s = self._make_stdi(ncell=4)
+        intr_index = [[0, 1], [2, 3]]
+        intr_value = np.array([1.0 + 0j, 5.0 + 0j])
+        ew._build_inter_table(s, 2, intr_index, intr_value)
+        captured = capsys.readouterr()
+        assert "WARNING" in captured.out
+
+
+# ===================================================================
+#  _build_coulomb_intra_table
+# ===================================================================
+
+
+class TestBuildCoulombIntraTable:
+    """Tests for _build_coulomb_intra_table."""
+
+    @staticmethod
+    def _make_stdi(nsiteUC: int = 2) -> StdIntList:
+        """Create a minimal StdIntList for Coulomb-intra tests."""
+        s = StdIntList()
+        s.NsiteUC = nsiteUC
+        return s
+
+    def test_empty_input(self):
+        """Zero entries returns empty table."""
+        s = self._make_stdi()
+        result = ew._build_coulomb_intra_table(
+            s, 0, [], np.array([], dtype=complex))
+        assert result == []
+
+    def test_single_entry(self):
+        """Single entry produces one item with rr=[0,0,0] and a==b."""
+        s = self._make_stdi(nsiteUC=2)
+        intr_index = [[0]]
+        intr_value = np.array([4.0 + 0j])
+        result = ew._build_coulomb_intra_table(s, 1, intr_index, intr_value)
+        assert len(result) == 1
+        assert result[0].r == [0, 0, 0]
+        assert result[0].a == 0
+        assert result[0].b == 0  # a == b for on-site
+        assert result[0].v == pytest.approx(4.0 + 0j)
+
+    def test_deduplication_by_site(self):
+        """Multiple entries for the same unit-cell site are deduplicated."""
+        s = self._make_stdi(nsiteUC=1)
+        # sites 0 and 2 both map to uc site 0 (% 1 = 0)
+        intr_index = [[0], [2]]
+        intr_value = np.array([3.0 + 0j, 3.0 + 0j])
+        result = ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
+        assert len(result) == 1
+
+    def test_different_uc_sites_kept(self):
+        """Entries for different unit-cell sites are kept separately."""
+        s = self._make_stdi(nsiteUC=2)
+        # site 0 → uc 0, site 1 → uc 1
+        intr_index = [[0], [1]]
+        intr_value = np.array([1.0 + 0j, 2.0 + 0j])
+        result = ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
+        assert len(result) == 2
+        assert result[0].a == 0
+        assert result[1].a == 1
+
+    def test_spin_indices_zero(self):
+        """All entries have (s, t) = (0, 0)."""
+        s = self._make_stdi()
+        intr_index = [[0]]
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_coulomb_intra_table(s, 1, intr_index, intr_value)
+        assert result[0].s == 0
+        assert result[0].t == 0
+
+    def test_a_equals_b(self):
+        """On-site term always has a == b."""
+        s = self._make_stdi(nsiteUC=3)
+        intr_index = [[2]]  # uc site 2
+        intr_value = np.array([1.0 + 0j])
+        result = ew._build_coulomb_intra_table(s, 1, intr_index, intr_value)
+        assert result[0].a == result[0].b == 2
+
+    def test_inconsistent_values_warns(self, capsys):
+        """Duplicate entries with different values print a warning."""
+        s = self._make_stdi(nsiteUC=1)
+        intr_index = [[0], [1]]  # both map to uc site 0
+        intr_value = np.array([1.0 + 0j, 9.0 + 0j])
+        ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
+        captured = capsys.readouterr()
+        assert "WARNING" in captured.out

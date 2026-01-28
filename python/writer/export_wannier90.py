@@ -26,8 +26,8 @@ from typing import List
 
 import numpy as np
 
-from stdface_vals import StdIntList
-from stdface_model_util import exit_program
+from stdface_vals import StdIntList, NaN_i, UNSET_STRING
+from param_check import exit_program
 
 # -----------------------------------------------------------------------
 #  Module-level constants
@@ -115,27 +115,26 @@ def _write_geometry(StdI: StdIntList, fname: str) -> None:
     - Orbital positions in fractional coordinates
     """
     try:
-        fp = open(fname, "w")
+        fp_out = open(fname, "w")
     except OSError:
         _fatal(f"cannot open file for output: {fname}")
         return  # unreachable, but keeps type checker happy
 
-    # Print primitive vectors
-    for ii in range(3):
-        fp.write(f"{StdI.direct[ii, 0]:16.12f} "
-                 f"{StdI.direct[ii, 1]:16.12f} "
-                 f"{StdI.direct[ii, 2]:16.12f}\n")
+    with fp_out:
+        # Print primitive vectors
+        for ii in range(3):
+            fp_out.write(f"{StdI.direct[ii, 0]:16.12f} "
+                         f"{StdI.direct[ii, 1]:16.12f} "
+                         f"{StdI.direct[ii, 2]:16.12f}\n")
 
-    # Print number of orbits
-    fp.write(f"{StdI.NsiteUC}\n")
+        # Print number of orbits
+        fp_out.write(f"{StdI.NsiteUC}\n")
 
-    # Print centre of orbits
-    for k in range(StdI.NsiteUC):
-        fp.write(f"{StdI.tau[k, 0]:25.15e} "
-                 f"{StdI.tau[k, 1]:25.15e} "
-                 f"{StdI.tau[k, 2]:25.15e}\n")
-
-    fp.close()
+        # Print centre of orbits
+        for k in range(StdI.NsiteUC):
+            fp_out.write(f"{StdI.tau[k, 0]:25.15e} "
+                         f"{StdI.tau[k, 1]:25.15e} "
+                         f"{StdI.tau[k, 2]:25.15e}\n")
     print(f"{fname:>24s} is written.")
 
 
@@ -182,10 +181,17 @@ def _compute_index(rx: int, ry: int, rz: int,
 #  Write Wannier90-format interaction file
 # -----------------------------------------------------------------------
 
-def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
-                     nsiteuc: int, nspin: int,
-                     fname: str, tagname: str) -> None:
-    """Write interaction parameters to file in Wannier90 format.
+def _build_wannier_matrix(
+    nintr_table: int,
+    intr_table: List[_IntrItem],
+    nsiteuc: int,
+    nspin: int,
+) -> tuple[list[int], int, np.ndarray]:
+    """Build the flat interaction matrix from a list of interaction items.
+
+    Scans the items to determine the coordinate half-ranges, allocates
+    a flat complex matrix, and populates it — including Hermitian-conjugate
+    entries for any reverse-direction slot that is still empty.
 
     Parameters
     ----------
@@ -197,12 +203,16 @@ def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
         Number of sites per unit cell.
     nspin : int
         Number of spin states.
-    fname : str
-        Output filename.
-    tagname : str
-        Tag identifying interaction type.
+
+    Returns
+    -------
+    rr : list of int
+        Half-ranges ``[rr0, rr1, rr2]`` for each lattice direction.
+    nvol : int
+        Total number of real-space unit cells in the range.
+    matrix : numpy.ndarray
+        Flat complex array of length ``nvol * nsiteuc**2 * nspin**2``.
     """
-    # Find range
     rmin = [intr_table[0].r[i] for i in range(3)]
     rmax = [intr_table[0].r[i] for i in range(3)]
 
@@ -218,7 +228,6 @@ def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
 
     nvol = (rr[0] * 2 + 1) * (rr[1] * 2 + 1) * (rr[2] * 2 + 1)
     matrix_size = nvol * nsiteuc * nsiteuc * nspin * nspin
-
     matrix = np.zeros(matrix_size, dtype=complex)
 
     for k in range(nintr_table):
@@ -238,22 +247,39 @@ def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
         if abs(matrix[ridx]) < _EPS:
             matrix[ridx] = np.conj(intr_table[k].v)
 
-    try:
-        fp = open(fname, "w")
-    except OSError:
-        _fatal(f"cannot open file: {fname}")
-        return
+    return rr, nvol, matrix
 
-    # Write header
-    fp.write(f"{tagname} in wannier90-like format for uhfk\n")
-    fp.write(f"{nsiteuc}\n{nvol}\n")
-    for i in range(nvol):
-        if i > 0 and i % 15 == 0:
-            fp.write("\n")
-        fp.write(f" {1}")
-    fp.write("\n")
 
-    # Write matrix body
+def _write_wannier_body(
+    fp: 'TextIO',
+    rr: list[int],
+    nvol: int,
+    nsiteuc: int,
+    nspin: int,
+    matrix: np.ndarray,
+) -> None:
+    """Write the matrix body of a Wannier90-format interaction file.
+
+    Iterates over all real-space cells and orbital/spin pairs, writing
+    one line per entry.  When ``nspin > 1`` the extended format with
+    explicit spin columns ``s`` and ``t`` is used; otherwise the compact
+    format without spin columns is written.
+
+    Parameters
+    ----------
+    fp : file object
+        Open file to write matrix entries to.
+    rr : list of int
+        Half-ranges for each lattice direction.
+    nvol : int
+        Total number of real-space unit cells.
+    nsiteuc : int
+        Number of sites per unit cell.
+    nspin : int
+        Number of spin states.
+    matrix : numpy.ndarray
+        Flat complex interaction matrix.
+    """
     for r in range(nvol):
         rz = r % (rr[2] * 2 + 1) - rr[2]
         ry = (r // (rr[2] * 2 + 1)) % (rr[1] * 2 + 1) - rr[1]
@@ -287,7 +313,50 @@ def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
                             f"{matrix[idx].real:16.12f} "
                             f"{matrix[idx].imag:16.12f}\n")
 
-    fp.close()
+
+def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
+                     nsiteuc: int, nspin: int,
+                     fname: str, tagname: str) -> None:
+    """Write interaction parameters to file in Wannier90 format.
+
+    Builds the interaction matrix from the item list, then writes the
+    Wannier90-format file with header and body.
+
+    Parameters
+    ----------
+    nintr_table : int
+        Number of interaction terms.
+    intr_table : list of _IntrItem
+        Array of interaction parameters.
+    nsiteuc : int
+        Number of sites per unit cell.
+    nspin : int
+        Number of spin states.
+    fname : str
+        Output filename.
+    tagname : str
+        Tag identifying interaction type.
+    """
+    rr, nvol, matrix = _build_wannier_matrix(
+        nintr_table, intr_table, nsiteuc, nspin)
+
+    try:
+        fp_out = open(fname, "w")
+    except OSError:
+        _fatal(f"cannot open file: {fname}")
+        return
+
+    with fp_out:
+        # Write header
+        fp_out.write(f"{tagname} in wannier90-like format for uhfk\n")
+        fp_out.write(f"{nsiteuc}\n{nvol}\n")
+        for i in range(nvol):
+            if i > 0 and i % 15 == 0:
+                fp_out.write("\n")
+            fp_out.write(f" {1}")
+        fp_out.write("\n")
+
+        _write_wannier_body(fp_out, rr, nvol, nsiteuc, nspin, matrix)
     print(f"{fname:>24s} is written.")
 
 
@@ -478,6 +547,73 @@ def _accumulate_list(keylen: int,
 #  Export: inter-site interaction (complex)
 # -----------------------------------------------------------------------
 
+def _build_inter_table(
+    StdI: StdIntList,
+    nintr: int,
+    intr_index: List[List[int]],
+    intr_value: np.ndarray,
+) -> List[_IntrItem]:
+    """Build a deduplicated interaction table in relative coordinates.
+
+    Converts accumulated inter-site interaction entries from absolute
+    site indices to relative-coordinate ``_IntrItem`` entries,
+    deduplicating by the key ``(rr, isite, jsite)``.  Spin indices
+    are fixed to ``(0, 0)``.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Standard input parameters (reads ``NsiteUC``, ``Cell``).
+    nintr : int
+        Number of accumulated entries.
+    intr_index : list of list of int
+        Accumulated indices, each row is ``[idx_i, idx_j]``.
+    intr_value : np.ndarray
+        Accumulated complex values, shape ``(nintr,)``.
+
+    Returns
+    -------
+    list of _IntrItem
+        Deduplicated interaction entries in relative coordinates.
+    """
+    intr_table: List[_IntrItem] = []
+
+    for k in range(nintr):
+        idx_i = intr_index[k][0]
+        idx_j = intr_index[k][1]
+
+        icell = idx_i // StdI.NsiteUC
+        isite = idx_i % StdI.NsiteUC
+        jcell = idx_j // StdI.NsiteUC
+        jsite = idx_j % StdI.NsiteUC
+
+        rr = [int(StdI.Cell[jcell, i] - StdI.Cell[icell, i])
+              for i in range(3)]
+        rr = _unfold_site(StdI, rr)
+
+        # Check consistency
+        is_found = False
+        for j in range(len(intr_table)):
+            if (intr_table[j].r == rr
+                    and intr_table[j].a == isite
+                    and intr_table[j].b == jsite):
+                is_found = True
+                if abs(intr_table[j].v - intr_value[k]) > _EPS:
+                    print(f"WARNING: not uniform. "
+                          f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
+                          f"found=({intr_value[k].real},{intr_value[k].imag}) "
+                          f"for index {idx_i},{idx_j}")
+                break
+
+        if not is_found:
+            item = _IntrItem(
+                r=list(rr), a=isite, b=jsite,
+                s=0, t=0, v=intr_value[k])
+            intr_table.append(item)
+
+    return intr_table
+
+
 def _export_inter(StdI: StdIntList,
                   ntbl: int,
                   tbl_index: np.ndarray,
@@ -504,52 +640,17 @@ def _export_inter(StdI: StdIntList,
         print(f"{fname:>24s} is skipped.")
         return
 
-    # Accumulate entries of the same index pair
     nintr, intr_index, intr_value = _accumulate_list(
         2, ntbl, tbl_index, tbl_value, 1)
 
     if nintr > 0:
-        # Elements in relative coordinate
-        intr_table: List[_IntrItem] = []
-        nintr_table = 0
+        intr_table = _build_inter_table(StdI, nintr, intr_index, intr_value)
 
-        for k in range(nintr):
-            idx_i = intr_index[k][0]
-            idx_j = intr_index[k][1]
-
-            icell = idx_i // StdI.NsiteUC
-            isite = idx_i % StdI.NsiteUC
-            jcell = idx_j // StdI.NsiteUC
-            jsite = idx_j % StdI.NsiteUC
-
-            rr = [int(StdI.Cell[jcell, i] - StdI.Cell[icell, i])
-                  for i in range(3)]
-            rr = _unfold_site(StdI, rr)
-
-            # Check consistency
-            is_found = False
-            for j in range(nintr_table):
-                if (intr_table[j].r == rr
-                        and intr_table[j].a == isite
-                        and intr_table[j].b == jsite):
-                    is_found = True
-                    if abs(intr_table[j].v - intr_value[k]) > _EPS:
-                        print(f"WARNING: not uniform. "
-                              f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
-                              f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                              f"for index {idx_i},{idx_j}")
-                    break
-
-            if not is_found:
-                item = _IntrItem(
-                    r=list(rr), a=isite, b=jsite,
-                    s=0, t=0, v=intr_value[k])
-                intr_table.append(item)
-                nintr_table += 1
-
-        # Write to file
-        _write_wannier90(nintr_table, intr_table, StdI.NsiteUC, 1,
-                         fname, tagname)
+        if len(intr_table) > 0:
+            _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC, 1,
+                             fname, tagname)
+        else:
+            print(f"{fname:>24s} is skipped.")
     else:
         print(f"{fname:>24s} is skipped.")
 
@@ -595,6 +696,87 @@ def _export_inter_real(StdI: StdIntList,
 #  Export: transfer (hopping) coefficients
 # -----------------------------------------------------------------------
 
+def _build_transfer_table(
+    StdI: StdIntList,
+    nintr: int,
+    intr_index: List[List[int]],
+    intr_value: np.ndarray,
+    spin_dep: int,
+) -> List[_IntrItem]:
+    """Build a deduplicated transfer table in relative coordinates.
+
+    Converts accumulated transfer entries from absolute site indices
+    to relative-coordinate ``_IntrItem`` entries, deduplicating by
+    the key ``(rr, isite, jsite, ispin, jspin)``.  Values are
+    sign-flipped (multiplied by −1) per the Wannier90 convention.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Standard input parameters (reads ``NsiteUC``, ``Cell``).
+    nintr : int
+        Number of accumulated entries.
+    intr_index : list of list of int
+        Accumulated indices, each row is ``[idx_i, ispin, idx_j, jspin]``.
+    intr_value : np.ndarray
+        Accumulated complex values, shape ``(nintr,)``.
+        **Modified in-place** (sign-flipped).
+    spin_dep : int
+        Whether transfer is spin-dependent (1 = yes, 0 = no).
+        When 0, entries where ``(ispin, jspin) != (0, 0)`` are skipped.
+
+    Returns
+    -------
+    list of _IntrItem
+        Deduplicated transfer entries in relative coordinates.
+    """
+    intr_table: List[_IntrItem] = []
+
+    for k in range(nintr):
+        idx_i = intr_index[k][0]
+        ispin = intr_index[k][1]
+        idx_j = intr_index[k][2]
+        jspin = intr_index[k][3]
+
+        icell = idx_i // StdI.NsiteUC
+        isite = idx_i % StdI.NsiteUC
+        jcell = idx_j // StdI.NsiteUC
+        jsite = idx_j % StdI.NsiteUC
+
+        rr = [int(StdI.Cell[jcell, i] - StdI.Cell[icell, i])
+              for i in range(3)]
+        rr = _unfold_site(StdI, rr)
+
+        intr_value[k] *= -1  # by convention
+
+        # Check consistency
+        is_found = False
+        for j in range(len(intr_table)):
+            if (intr_table[j].r == rr
+                    and intr_table[j].a == isite
+                    and intr_table[j].b == jsite
+                    and intr_table[j].s == ispin
+                    and intr_table[j].t == jspin):
+                is_found = True
+                if abs(intr_table[j].v - intr_value[k]) > _EPS:
+                    print(f"WARNING: not uniform. "
+                          f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
+                          f"found=({intr_value[k].real},{intr_value[k].imag}) "
+                          f"for index {idx_i},{idx_j}")
+                break
+
+        if not is_found:
+            if spin_dep == 0 and not (ispin == 0 and jspin == 0):
+                continue  # skip
+
+            item = _IntrItem(
+                r=list(rr), a=isite, b=jsite,
+                s=ispin, t=jspin, v=intr_value[k])
+            intr_table.append(item)
+
+    return intr_table
+
+
 def _export_transfer(StdI: StdIntList,
                      ntbl: int,
                      tbl_index: np.ndarray,
@@ -629,55 +811,11 @@ def _export_transfer(StdI: StdIntList,
         4, ntbl, tbl_index, tbl_value, 0)
 
     if nintr > 0:
-        intr_table: List[_IntrItem] = []
-        nintr_table = 0
+        intr_table = _build_transfer_table(
+            StdI, nintr, intr_index, intr_value, spin_dep)
 
-        for k in range(nintr):
-            idx_i = intr_index[k][0]
-            ispin = intr_index[k][1]
-            idx_j = intr_index[k][2]
-            jspin = intr_index[k][3]
-
-            icell = idx_i // StdI.NsiteUC
-            isite = idx_i % StdI.NsiteUC
-            jcell = idx_j // StdI.NsiteUC
-            jsite = idx_j % StdI.NsiteUC
-
-            rr = [int(StdI.Cell[jcell, i] - StdI.Cell[icell, i])
-                  for i in range(3)]
-            rr = _unfold_site(StdI, rr)
-
-            intr_value[k] *= -1  # by convention
-
-            # Check consistency
-            is_found = False
-            for j in range(nintr_table):
-                if (intr_table[j].r == rr
-                        and intr_table[j].a == isite
-                        and intr_table[j].b == jsite
-                        and intr_table[j].s == ispin
-                        and intr_table[j].t == jspin):
-                    is_found = True
-                    if abs(intr_table[j].v - intr_value[k]) > _EPS:
-                        print(f"WARNING: not uniform. "
-                              f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
-                              f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                              f"for index {idx_i},{idx_j}")
-                    break
-
-            if not is_found:
-                if spin_dep == 0 and not (ispin == 0 and jspin == 0):
-                    continue  # skip
-
-                item = _IntrItem(
-                    r=list(rr), a=isite, b=jsite,
-                    s=ispin, t=jspin, v=intr_value[k])
-                intr_table.append(item)
-                nintr_table += 1
-
-        # Write to file
-        if nintr_table > 0:
-            _write_wannier90(nintr_table, intr_table, StdI.NsiteUC,
+        if len(intr_table) > 0:
+            _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC,
                              2 if spin_dep == 1 else 1,
                              fname, tagname)
         else:
@@ -689,6 +827,61 @@ def _export_transfer(StdI: StdIntList,
 # -----------------------------------------------------------------------
 #  Export: on-site Coulomb
 # -----------------------------------------------------------------------
+
+def _build_coulomb_intra_table(
+    StdI: StdIntList,
+    nintr: int,
+    intr_index: List[List[int]],
+    intr_value: np.ndarray,
+) -> List[_IntrItem]:
+    """Build a deduplicated on-site Coulomb table.
+
+    Converts accumulated on-site Coulomb entries from absolute site
+    indices to ``_IntrItem`` entries, deduplicating by the unit-cell
+    site index ``isite``.  Each entry has ``rr = [0,0,0]`` and
+    ``a == b == isite``.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Standard input parameters (reads ``NsiteUC``).
+    nintr : int
+        Number of accumulated entries.
+    intr_index : list of list of int
+        Accumulated indices, each row is ``[idx_i]``.
+    intr_value : np.ndarray
+        Accumulated complex values, shape ``(nintr,)``.
+
+    Returns
+    -------
+    list of _IntrItem
+        Deduplicated on-site Coulomb entries.
+    """
+    intr_table: List[_IntrItem] = []
+
+    for k in range(nintr):
+        idx_i = intr_index[k][0]
+        isite = idx_i % StdI.NsiteUC
+
+        is_found = False
+        for j in range(len(intr_table)):
+            if intr_table[j].a == isite:
+                is_found = True
+                if abs(intr_table[j].v - intr_value[k]) > _EPS:
+                    print(f"WARNING: not uniform. "
+                          f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
+                          f"found=({intr_value[k].real},{intr_value[k].imag}) "
+                          f"for index {idx_i}")
+                break
+
+        if not is_found:
+            item = _IntrItem(
+                r=[0, 0, 0], a=isite, b=isite,
+                s=0, t=0, v=intr_value[k])
+            intr_table.append(item)
+
+    return intr_table
+
 
 def _export_coulomb_intra(StdI: StdIntList,
                           ntbl: int,
@@ -716,41 +909,20 @@ def _export_coulomb_intra(StdI: StdIntList,
         print(f"{fname:>24s} is skipped.")
         return
 
-    # Convert to complex
     tbl_value_c = tbl_value.astype(complex)
 
-    # Accumulate entries of the same index
     nintr, intr_index, intr_value = _accumulate_list(
         1, ntbl, tbl_index, tbl_value_c, 1)
 
     if nintr > 0:
-        intr_table: List[_IntrItem] = []
-        nintr_table = 0
+        intr_table = _build_coulomb_intra_table(
+            StdI, nintr, intr_index, intr_value)
 
-        for k in range(nintr):
-            idx_i = intr_index[k][0]
-            isite = idx_i % StdI.NsiteUC
-
-            is_found = False
-            for j in range(nintr_table):
-                if intr_table[j].a == isite:
-                    is_found = True
-                    if abs(intr_table[j].v - intr_value[k]) > _EPS:
-                        print(f"WARNING: not uniform. "
-                              f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
-                              f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                              f"for index {idx_i}")
-                    break
-
-            if not is_found:
-                item = _IntrItem(
-                    r=[0, 0, 0], a=isite, b=isite,
-                    s=0, t=0, v=intr_value[k])
-                intr_table.append(item)
-                nintr_table += 1
-
-        _write_wannier90(nintr_table, intr_table, StdI.NsiteUC, 1,
-                         fname, tagname)
+        if len(intr_table) > 0:
+            _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC, 1,
+                             fname, tagname)
+        else:
+            print(f"{fname:>24s} is skipped.")
     else:
         print(f"{fname:>24s} is skipped.")
 
@@ -779,7 +951,7 @@ def _prefix(StdI: StdIntList, fname: str) -> str:
     In the C code, the sentinel for "no prefix" is ``"****"``.
     In Python, the sentinel is the empty string ``""``.
     """
-    if StdI.fileprefix == "" or StdI.fileprefix == "****":
+    if StdI.fileprefix == "" or StdI.fileprefix == UNSET_STRING:
         return fname
     else:
         return f"{StdI.fileprefix}_{fname}"
@@ -828,7 +1000,7 @@ def export_interaction(StdI: StdIntList) -> None:
     """
     global _is_export_all
 
-    if StdI.export_all != StdI.NaN_i:
+    if StdI.export_all != NaN_i:
         _is_export_all = StdI.export_all
 
     _export_transfer(
