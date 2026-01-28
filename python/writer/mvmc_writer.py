@@ -44,9 +44,7 @@ def _has_anti_period(StdI: StdIntList) -> bool:
     bool
         ``True`` if any of the three ``AntiPeriod`` flags equals 1.
     """
-    return (StdI.AntiPeriod[0] == 1
-            or StdI.AntiPeriod[1] == 1
-            or StdI.AntiPeriod[2] == 1)
+    return any(ap == 1 for ap in StdI.AntiPeriod)
 
 
 def print_orb(StdI: StdIntList) -> None:

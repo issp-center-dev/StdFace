@@ -39,6 +39,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import itertools
 import math
 import sys
 
@@ -210,6 +211,16 @@ def not_used_d(valname: str, val: float | complex) -> None:
         exit_program(-1)
 
 
+# Spin-interaction suffix matrix for 3x3 J-coupling tensors.
+# Shared by not_used_j and input_params module.
+SPIN_SUFFIXES: list[list[str]] = [
+    ["x", "xy", "xz"],
+    ["yx", "y", "yz"],
+    ["zx", "zy", "z"],
+]
+"""3x3 suffix matrix for spin-interaction tensor components (Jx, Jxy, etc.)."""
+
+
 def not_used_j(valname: str, JAll: float, J: np.ndarray) -> None:
     """Abort if any component of a J-type interaction is specified but unused.
 
@@ -222,13 +233,9 @@ def not_used_j(valname: str, JAll: float, J: np.ndarray) -> None:
     J : numpy.ndarray
         3x3 matrix of anisotropic components.
     """
-    suffixes = [["x", "xy", "xz"],
-                ["yx", "y", "yz"],
-                ["zx", "zy", "z"]]
     not_used_d(valname, JAll)
-    for i1 in range(3):
-        for i2 in range(3):
-            not_used_d(f"{valname}{suffixes[i1][i2]}", J[i1, i2])
+    for i1, i2 in itertools.product(range(3), repeat=2):
+        not_used_d(f"{valname}{SPIN_SUFFIXES[i1][i2]}", J[i1, i2])
 
 
 def not_used_i(valname: str, val: int) -> None:

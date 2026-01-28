@@ -114,20 +114,17 @@ def _merge_duplicate_terms(indx, vals, n: int) -> int:
     int
         Count of entries with ``abs(val) > AMPLITUDE_EPS`` after merging.
     """
-    for j in range(n):
-        for k in range(j + 1, n):
-            if (indx[j][0] == indx[k][0]
-                    and indx[j][1] == indx[k][1]
-                    and indx[j][2] == indx[k][2]
-                    and indx[j][3] == indx[k][3]):
-                vals[j] = vals[j] + vals[k]
-                vals[k] = 0.0
-
-    count = 0
+    # Merge duplicates: first occurrence absorbs all later ones with same key
+    seen: dict[tuple, int] = {}
     for k in range(n):
-        if abs(vals[k]) > AMPLITUDE_EPS:
-            count += 1
-    return count
+        key = (indx[k][0], indx[k][1], indx[k][2], indx[k][3])
+        if key in seen:
+            vals[seen[key]] += vals[k]
+            vals[k] = 0.0
+        else:
+            seen[key] = k
+
+    return sum(1 for k in range(n) if abs(vals[k]) > AMPLITUDE_EPS)
 
 
 def print_loc_spin(StdI: StdIntList) -> None:
@@ -1047,6 +1044,20 @@ _CONSERVED_QTY_RULES: dict[tuple, tuple[str, str | None, str | None]] = {
 }
 """Rules for validating ``ncond`` and ``2Sz`` by (model, is_hphi, lGC)."""
 
+# Dispatch tables for ncond and Sz2 validation actions
+_NCOND_ACTION_DISPATCH: dict[str, callable] = {
+    "required": required_val_i,
+    "not_used": not_used_i,
+}
+"""Maps ncond action strings to validation functions (label, value) -> None."""
+
+_SZ2_ACTION_DISPATCH: dict[str, callable] = {
+    "required": lambda StdI: required_val_i("2Sz", StdI.Sz2),
+    "not_used": lambda StdI: not_used_i("2Sz", StdI.Sz2),
+    "default_0": lambda StdI: setattr(StdI, 'Sz2', print_val_i("2Sz", StdI.Sz2, 0)),
+}
+"""Maps Sz2 action strings to validation functions (StdI) -> None."""
+
 
 def _check_conserved_quantities(StdI: StdIntList) -> None:
     """Validate conserved quantities (``ncond`` and ``2Sz``) for the current model.
@@ -1077,23 +1088,17 @@ def _check_conserved_quantities(StdI: StdIntList) -> None:
         return
     ncond_label, ncond_action, sz2_action = rule
 
-    # Apply ncond validation
-    if ncond_action == "required":
-        required_val_i(ncond_label, StdI.ncond)
-    elif ncond_action == "not_used":
-        not_used_i(ncond_label, StdI.ncond)
+    # Apply ncond validation via dispatch
+    if ncond_action is not None:
+        _NCOND_ACTION_DISPATCH[ncond_action](ncond_label, StdI.ncond)
 
     # Spin + mVMC: set ncond = 0 (after not_used check, matching C order)
     if StdI.model == ModelType.SPIN and StdI.solver == SolverType.mVMC:
         StdI.ncond = 0
 
-    # Apply Sz2 validation
-    if sz2_action == "required":
-        required_val_i("2Sz", StdI.Sz2)
-    elif sz2_action == "not_used":
-        not_used_i("2Sz", StdI.Sz2)
-    elif sz2_action == "default_0":
-        StdI.Sz2 = print_val_i("2Sz", StdI.Sz2, 0)
+    # Apply Sz2 validation via dispatch
+    if sz2_action is not None:
+        _SZ2_ACTION_DISPATCH[sz2_action](StdI)
 
 
 def check_mod_para(StdI: StdIntList) -> None:

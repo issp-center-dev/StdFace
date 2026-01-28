@@ -33,7 +33,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
-import math
+import itertools
 from contextlib import contextmanager
 from typing import Iterator, TextIO
 
@@ -122,27 +122,19 @@ def _fold_to_cell(
         Fractional coordinate folded into the cell.
     """
     # (1) Transform to fractional coordinate (times ncell)
-    iCellV_frac = [0, 0, 0]
-    for ii in range(3):
-        for jj in range(3):
-            iCellV_frac[ii] += rbox[ii, jj] * iCellV[jj]
+    iCellV_arr = np.asarray(iCellV)
+    iCellV_frac = rbox @ iCellV_arr
 
     # (2) Search which periodic image contains this cell
-    nBox = [0, 0, 0]
-    for ii in range(3):
-        nBox[ii] = (iCellV_frac[ii] + ncell * 1000) // ncell - 1000
+    nBox = (iCellV_frac + ncell * 1000) // ncell - 1000
 
     # (3) Fractional coordinate in the original cell
-    for ii in range(3):
-        iCellV_frac[ii] -= ncell * nBox[ii]
+    iCellV_frac = iCellV_frac - ncell * nBox
 
-    iCellV_fold = [0, 0, 0]
-    for ii in range(3):
-        for jj in range(3):
-            iCellV_fold[ii] += box[jj, ii] * iCellV_frac[jj]
-        iCellV_fold[ii] = (iCellV_fold[ii] + ncell * 1000) // ncell - 1000
+    # (4) Transform back to lattice coordinates and fold
+    iCellV_fold = (box.T @ iCellV_frac + ncell * 1000) // ncell - 1000
 
-    return nBox, iCellV_fold
+    return nBox.astype(int).tolist(), iCellV_fold.astype(int).tolist()
 
 
 def _fold_site(
@@ -186,10 +178,8 @@ def _write_gnuplot_header(fp: TextIO, StdI: StdIntList) -> None:
         Model parameter structure.  Reads ``direct`` and ``box``.
     """
     pos = np.zeros((4, 2))
-    pos[1, 0] = StdI.direct[0, 0] * StdI.box[0, 0] + StdI.direct[1, 0] * StdI.box[0, 1]
-    pos[1, 1] = StdI.direct[0, 1] * StdI.box[0, 0] + StdI.direct[1, 1] * StdI.box[0, 1]
-    pos[2, 0] = StdI.direct[0, 0] * StdI.box[1, 0] + StdI.direct[1, 0] * StdI.box[1, 1]
-    pos[2, 1] = StdI.direct[0, 1] * StdI.box[1, 0] + StdI.direct[1, 1] * StdI.box[1, 1]
+    # pos[1:3] = supercell corner positions: box[:2,:2] @ direct[:2,:2]
+    pos[1:3, :] = StdI.box[:2, :2] @ StdI.direct[:2, :2]
     pos[3, :] = pos[1, :] + pos[2, :]
 
     xmin = min(pos[:, 0].min(), pos[:, 1].min()) - 2.0
@@ -357,25 +347,20 @@ def _det_and_cofactor(box: np.ndarray) -> tuple[int, np.ndarray]:
     cofactor : np.ndarray
         3x3 cofactor matrix, sign-adjusted so that ``det >= 0``.
     """
-    det = 0
-    for ii in range(3):
-        det += (int(box[0, ii])
-                * int(box[1, (ii + 1) % 3])
-                * int(box[2, (ii + 2) % 3])
-                - int(box[0, ii])
-                * int(box[1, (ii + 2) % 3])
-                * int(box[2, (ii + 1) % 3]))
+    # Compute determinant using Sarrus rule (equivalent to np.linalg.det for 3x3)
+    det = int(round(np.linalg.det(box.astype(float))))
 
-    cofactor = np.zeros((3, 3), dtype=float)
-    for ii in range(3):
-        for jj in range(3):
-            cofactor[ii, jj] = (int(box[(ii + 1) % 3, (jj + 1) % 3])
-                                * int(box[(ii + 2) % 3, (jj + 2) % 3])
-                                - int(box[(ii + 1) % 3, (jj + 2) % 3])
-                                * int(box[(ii + 2) % 3, (jj + 1) % 3]))
+    # Compute cofactor matrix using vectorized indexing
+    # cofactor[i,j] = box[(i+1)%3, (j+1)%3] * box[(i+2)%3, (j+2)%3]
+    #               - box[(i+1)%3, (j+2)%3] * box[(i+2)%3, (j+1)%3]
+    idx = np.array([1, 2, 0])  # (i+1) % 3 for i=0,1,2
+    idx2 = np.array([2, 0, 1])  # (i+2) % 3 for i=0,1,2
+    cofactor = (box[idx][:, idx] * box[idx2][:, idx2]
+                - box[idx][:, idx2] * box[idx2][:, idx])
+
     if det < 0:
-        cofactor *= -1
-        det *= -1
+        cofactor = -cofactor
+        det = -det
 
     return det, cofactor
 
@@ -419,30 +404,29 @@ def _enumerate_cells(StdI: StdIntList) -> None:
         Model parameter structure (modified in-place).
         Reads ``NCell`` and ``box``; sets ``Cell``.
     """
-    # Find bounding box
-    bound = [[0, 0], [0, 0], [0, 0]]
-    for ii in range(3):
-        for n2 in range(2):
-            for n1 in range(2):
-                for n0 in range(2):
-                    nBox = [n0, n1, n2]
-                    edge = sum(nBox[jj] * int(StdI.box[jj, ii]) for jj in range(3))
-                    if edge < bound[ii][0]:
-                        bound[ii][0] = edge
-                    if edge > bound[ii][1]:
-                        bound[ii][1] = edge
+    # Find bounding box by checking all 8 cube corners
+    box_int = StdI.box.astype(int)
+    # All 8 corners of the unit cube: shape (8, 3)
+    corners = np.array(list(itertools.product(range(2), repeat=3)))
+    # edges[corner, dim] = corner @ box_int[:, dim] => corners @ box_int
+    edges = corners @ box_int
+    # bound[dim] = [min_edge, max_edge]
+    bound = list(zip(edges.min(axis=0).tolist(), edges.max(axis=0).tolist()))
 
     # Enumerate cells within the bounding box
+    # Note: iteration order must be ic2 outermost, ic0 innermost (matching C code)
     StdI.Cell = np.zeros((StdI.NCell, 3), dtype=int)
     jj_idx = 0
-    for ic2 in range(bound[2][0], bound[2][1] + 1):
-        for ic1 in range(bound[1][0], bound[1][1] + 1):
-            for ic0 in range(bound[0][0], bound[0][1] + 1):
-                iCellV = [ic0, ic1, ic2]
-                nBox, iCellV_fold = _fold_site(StdI, iCellV)
-                if nBox[0] == 0 and nBox[1] == 0 and nBox[2] == 0:
-                    StdI.Cell[jj_idx, :] = iCellV
-                    jj_idx += 1
+    for ic2, ic1, ic0 in itertools.product(
+        range(bound[2][0], bound[2][1] + 1),
+        range(bound[1][0], bound[1][1] + 1),
+        range(bound[0][0], bound[0][1] + 1),
+    ):
+        iCellV = [ic0, ic1, ic2]
+        nBox, iCellV_fold = _fold_site(StdI, iCellV)
+        if nBox == [0, 0, 0]:
+            StdI.Cell[jj_idx, :] = iCellV
+            jj_idx += 1
 
 
 def init_site(StdI: StdIntList, fp: TextIO | None, dim: int) -> None:
@@ -465,22 +449,14 @@ def init_site(StdI: StdIntList, fp: TextIO | None, dim: int) -> None:
         StdI.L, StdI.W, StdI.Height, StdI.box)
 
     if dim == 2:
-        StdI.direct[0, 2] = 0.0
-        StdI.direct[1, 2] = 0.0
-        StdI.direct[2, 0] = 0.0
-        StdI.direct[2, 1] = 0.0
-        StdI.direct[2, 2] = 1.0
+        StdI.direct[:2, 2] = 0.0   # zero z-component of first two vectors
+        StdI.direct[2, :] = [0.0, 0.0, 1.0]  # third vector = unit z
 
     # (2) Define the phase factor at each boundary
     if dim == 2:
         StdI.phase[2] = 0.0
-    for ii in range(3):
-        StdI.ExpPhase[ii] = (math.cos(StdI.pi180 * StdI.phase[ii])
-                             + 1j * math.sin(StdI.pi180 * StdI.phase[ii]))
-        if abs(StdI.ExpPhase[ii] + 1.0) < AMPLITUDE_EPS:
-            StdI.AntiPeriod[ii] = 1
-        else:
-            StdI.AntiPeriod[ii] = 0
+    StdI.ExpPhase = np.exp(1j * StdI.pi180 * StdI.phase)
+    StdI.AntiPeriod = np.where(np.abs(StdI.ExpPhase + 1.0) < AMPLITUDE_EPS, 1, 0)
 
     # (3) Allocate tau (intrinsic structure of unit-cell)
     StdI.tau = np.zeros((StdI.NsiteUC, 3))
@@ -528,16 +504,12 @@ def find_site(
     dR : numpy.ndarray
         Distance vector R_i - R_j in fractional coordinates (shape ``(3,)``).
     """
-    dR = np.zeros(3)
-    dR[0] = -float(diW) + StdI.tau[isiteUC, 0] - StdI.tau[jsiteUC, 0]
-    dR[1] = -float(diL) + StdI.tau[isiteUC, 1] - StdI.tau[jsiteUC, 1]
-    dR[2] = -float(diH) + StdI.tau[isiteUC, 2] - StdI.tau[jsiteUC, 2]
+    di = np.array([diW, diL, diH], dtype=float)
+    dR = -di + StdI.tau[isiteUC, :] - StdI.tau[jsiteUC, :]
 
     jCellV = [iW + diW, iL + diL, iH + diH]
     nBox, jCellV = _fold_site(StdI, jCellV)
-    Cphase = 1.0 + 0j
-    for ii in range(3):
-        Cphase *= StdI.ExpPhase[ii] ** nBox[ii]
+    Cphase = np.prod(StdI.ExpPhase ** np.array(nBox))
 
     jCell = _find_cell_index(StdI, jCellV)
     iCell = _find_cell_index(StdI, [iW, iL, iH])
@@ -631,14 +603,12 @@ def set_label(
     isite, jsite, Cphase, dR = find_site(
         StdI, iW, iL, 0, -diW, -diL, 0, jsiteUC, isiteUC)
 
-    xi = (StdI.direct[0, 0] * (iW + StdI.tau[jsiteUC, 0])
-          + StdI.direct[1, 0] * (iL + StdI.tau[jsiteUC, 1]))
-    yi = (StdI.direct[0, 1] * (iW + StdI.tau[jsiteUC, 0])
-          + StdI.direct[1, 1] * (iL + StdI.tau[jsiteUC, 1]))
-    xj = (StdI.direct[0, 0] * (iW - diW + StdI.tau[isiteUC, 0])
-          + StdI.direct[1, 0] * (iL - diL + StdI.tau[isiteUC, 1]))
-    yj = (StdI.direct[0, 1] * (iW - diW + StdI.tau[isiteUC, 0])
-          + StdI.direct[1, 1] * (iL - diL + StdI.tau[isiteUC, 1]))
+    # Compute 2D positions via direct[:2,:2].T @ fractional_coords
+    D = StdI.direct[:2, :2]
+    frac_i = np.array([iW + StdI.tau[jsiteUC, 0], iL + StdI.tau[jsiteUC, 1]])
+    frac_j = np.array([iW - diW + StdI.tau[isiteUC, 0], iL - diL + StdI.tau[isiteUC, 1]])
+    xi, yi = frac_i @ D
+    xj, yj = frac_j @ D
 
     if fp is not None:
         _write_gnuplot_bond(fp, isite, jsite, xi, yi, xj, yj, connect)
@@ -647,14 +617,10 @@ def set_label(
     isite, jsite, Cphase, dR = find_site(
         StdI, iW, iL, 0, diW, diL, 0, isiteUC, jsiteUC)
 
-    xi = (StdI.direct[1, 0] * (iL + StdI.tau[isiteUC, 1])
-          + StdI.direct[0, 0] * (iW + StdI.tau[isiteUC, 0]))
-    yi = (StdI.direct[1, 1] * (iL + StdI.tau[isiteUC, 1])
-          + StdI.direct[0, 1] * (iW + StdI.tau[isiteUC, 0]))
-    xj = (StdI.direct[0, 0] * (iW + diW + StdI.tau[jsiteUC, 0])
-          + StdI.direct[1, 0] * (iL + diL + StdI.tau[jsiteUC, 1]))
-    yj = (StdI.direct[0, 1] * (iW + diW + StdI.tau[jsiteUC, 0])
-          + StdI.direct[1, 1] * (iL + diL + StdI.tau[jsiteUC, 1]))
+    frac_i = np.array([iW + StdI.tau[isiteUC, 0], iL + StdI.tau[isiteUC, 1]])
+    frac_j = np.array([iW + diW + StdI.tau[jsiteUC, 0], iL + diL + StdI.tau[jsiteUC, 1]])
+    xi, yi = frac_i @ D
+    xj, yj = frac_j @ D
 
     if fp is not None:
         _write_gnuplot_bond(fp, isite, jsite, xi, yi, xj, yj, connect)

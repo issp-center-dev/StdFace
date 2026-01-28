@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from stdface_vals import StdIntList
-from lattice.geometry_output import print_xsf, print_geometry
+from lattice.geometry_output import print_xsf, print_geometry, _cell_diff
 
 
 def _make_stdi(
@@ -242,6 +242,58 @@ class TestPrintXsf:
                     pytest.fail("PRIMCOORD not found")
             finally:
                 os.chdir(orig)
+
+
+class TestCellDiff:
+    """Tests for _cell_diff helper."""
+
+    def test_basic_difference(self):
+        """Test basic cell coordinate difference."""
+        Cell = np.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [2.0, 1.0, 0.0],
+        ])
+        diff = _cell_diff(Cell, 2, 0)
+        assert diff == [2, 1, 0]
+
+    def test_returns_integers(self):
+        """Test that result is a list of integers."""
+        Cell = np.array([
+            [0.0, 0.0, 0.0],
+            [3.0, 2.0, 1.0],
+        ])
+        diff = _cell_diff(Cell, 1, 0)
+        assert all(isinstance(x, int) for x in diff)
+        assert diff == [3, 2, 1]
+
+    def test_negative_difference(self):
+        """Test negative cell difference (reversed indices)."""
+        Cell = np.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 2.0, 3.0],
+        ])
+        diff = _cell_diff(Cell, 0, 1)
+        assert diff == [-1, -2, -3]
+
+    def test_same_cell(self):
+        """Test that same cell gives zero difference."""
+        Cell = np.array([
+            [5.0, 5.0, 5.0],
+            [1.0, 2.0, 3.0],
+        ])
+        diff = _cell_diff(Cell, 0, 0)
+        assert diff == [0, 0, 0]
+
+    def test_float_to_int_conversion(self):
+        """Test that float coordinates are converted to int."""
+        Cell = np.array([
+            [0.0, 0.0, 0.0],
+            [1.5, 2.7, 3.9],  # floats that should truncate
+        ])
+        diff = _cell_diff(Cell, 1, 0)
+        # int() truncates towards zero
+        assert diff == [1, 2, 3]
 
 
 class TestBackwardCompatibility:

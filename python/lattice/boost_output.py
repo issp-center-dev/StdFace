@@ -75,12 +75,9 @@ def write_boost_j_full(fp: TextIO, J: np.ndarray, scale: float = 0.25) -> None:
     scale : float, optional
         Multiplicative scaling factor.  Default is ``0.25``.
     """
-    for i in range(3):
-        fp.write(
-            f"{scale * J[i, 0]:25.15e} "
-            f"{scale * J[i, 1]:25.15e} "
-            f"{scale * J[i, 2]:25.15e}\n"
-        )
+    for row in J:
+        scaled = scale * row
+        fp.write(f"{scaled[0]:25.15e} {scaled[1]:25.15e} {scaled[2]:25.15e}\n")
 
 
 def write_boost_j_symmetric(fp: TextIO, J: np.ndarray, scale: float = 0.25) -> None:

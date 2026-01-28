@@ -72,6 +72,31 @@ def _parity_sign(value: int) -> int:
     return 1 if value % 2 == 0 else -1
 
 
+def _check_commensurate(rbox_sub: np.ndarray, box: np.ndarray, ncell_sub: int) -> bool:
+    """Check whether a sublattice is commensurate with the main lattice.
+
+    The sublattice is commensurate if for all i, j in {0,1,2}:
+    ``(rbox_sub[i, :] · box[j, :]) % ncell_sub == 0``
+
+    Parameters
+    ----------
+    rbox_sub : np.ndarray
+        Reciprocal box matrix of the sublattice (3x3).
+    box : np.ndarray
+        Box matrix of the main lattice (3x3).
+    ncell_sub : int
+        Determinant of the sublattice box (number of cells).
+
+    Returns
+    -------
+    bool
+        ``True`` if the sublattice is commensurate, ``False`` otherwise.
+    """
+    # Compute all dot products: prod[i,j] = rbox_sub[i,:] · box[j,:]
+    prod = rbox_sub.astype(int) @ box.astype(int).T
+    return bool(np.all(prod % ncell_sub == 0))
+
+
 def _fold_site_sub(
     StdI: StdIntList,
     iCellV: list[int],
@@ -169,14 +194,9 @@ def _init_site_sub(StdI: StdIntList) -> None:
         exit_program(-1)
 
     # Check commensurate
-    for ii in range(3):
-        for jj in range(3):
-            prod = 0
-            for kk in range(3):
-                prod += int(StdI.rboxsub[ii, kk]) * int(StdI.box[jj, kk])
-            if prod % StdI.NCellsub != 0:
-                print("\n ERROR ! Sublattice is INCOMMENSURATE !\n")
-                exit_program(-1)
+    if not _check_commensurate(StdI.rboxsub, StdI.box, StdI.NCellsub):
+        print("\n ERROR ! Sublattice is INCOMMENSURATE !\n")
+        exit_program(-1)
 
 
 def _assign_orb_sector(

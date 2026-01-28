@@ -121,10 +121,8 @@ def hopping(
             and StdI.method == MethodType.TIME_EVOLUTION
             and StdI.PumpBody == 1):
         for it in range(StdI.Lanczos_max):
-            Cphase = 0.0
-            for ii in range(3):
-                Cphase += StdI.At[it][ii] * dR[ii]
-            coef = math.cos(Cphase) + 1j * math.sin(-Cphase)
+            Cphase = np.dot(StdI.At[it], dR)
+            coef = np.exp(-1j * Cphase)
             for ispin in range(2):
                 StdI.pump[it][StdI.npump[it]] = coef * trans0
                 StdI.pumpindx[it][StdI.npump[it]][0] = isite

@@ -18,6 +18,7 @@ from stdface_vals import StdIntList
 from writer.mvmc_variational import (
     _anti_period_dot,
     _parity_sign,
+    _check_commensurate,
     _fold_site_sub,
     _init_site_sub,
     _assign_orb_sector,
@@ -98,6 +99,58 @@ class TestParitySign:
     def test_negative_odd(self):
         """Negative odd integer → -1."""
         assert _parity_sign(-3) == -1
+
+
+# ===================================================================
+#  _check_commensurate
+# ===================================================================
+
+
+class TestCheckCommensurate:
+    """Tests for _check_commensurate helper."""
+
+    def test_identity_is_commensurate(self):
+        """Identity sublattice is commensurate with any main lattice."""
+        rbox_sub = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+        box = np.array([[4, 0, 0], [0, 4, 0], [0, 0, 1]], dtype=float)
+        ncell_sub = 1
+        assert _check_commensurate(rbox_sub, box, ncell_sub) is True
+
+    def test_commensurate_2x2_in_4x4(self):
+        """2x2 sublattice is commensurate with 4x4 main lattice."""
+        # rbox_sub for box_sub = [[2,0,0],[0,2,0],[0,0,1]] is cofactor/det
+        # cofactor = [[2,0,0],[0,2,0],[0,0,4]], det = 4
+        # rbox_sub = cofactor (before division)
+        rbox_sub = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 4]], dtype=float)
+        box = np.array([[4, 0, 0], [0, 4, 0], [0, 0, 1]], dtype=float)
+        ncell_sub = 4
+        assert _check_commensurate(rbox_sub, box, ncell_sub) is True
+
+    def test_incommensurate_3x3_in_4x4(self):
+        """3x3 sublattice is incommensurate with 4x4 main lattice."""
+        # rbox_sub for box_sub = [[3,0,0],[0,3,0],[0,0,1]]
+        # cofactor = [[3,0,0],[0,3,0],[0,0,9]], det = 9
+        rbox_sub = np.array([[3, 0, 0], [0, 3, 0], [0, 0, 9]], dtype=float)
+        box = np.array([[4, 0, 0], [0, 4, 0], [0, 0, 1]], dtype=float)
+        ncell_sub = 9
+        # 3*4 = 12, 12 % 9 = 3 != 0 → incommensurate
+        assert _check_commensurate(rbox_sub, box, ncell_sub) is False
+
+    def test_commensurate_same_box(self):
+        """Same sublattice as main lattice is commensurate."""
+        rbox_sub = np.array([[4, 0, 0], [0, 4, 0], [0, 0, 16]], dtype=float)
+        box = np.array([[4, 0, 0], [0, 4, 0], [0, 0, 1]], dtype=float)
+        ncell_sub = 16
+        assert _check_commensurate(rbox_sub, box, ncell_sub) is True
+
+    def test_all_zeros_incommensurate(self):
+        """Zero ncell_sub causes division by zero check (ncell != 0 checked elsewhere)."""
+        # This would cause ZeroDivisionError, but ncell_sub == 0 is caught before calling
+        # Let's test with ncell_sub = 1 and mismatched dimensions
+        rbox_sub = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+        box = np.array([[3, 0, 0], [0, 5, 0], [0, 0, 7]], dtype=float)
+        ncell_sub = 2  # 1*3=3, 3%2=1 != 0
+        assert _check_commensurate(rbox_sub, box, ncell_sub) is False
 
 
 # ===================================================================

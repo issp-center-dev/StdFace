@@ -18,6 +18,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import itertools
 import math
 from enum import IntEnum
 from typing import TextIO
@@ -92,15 +93,9 @@ def _check_in_box(rvec: np.ndarray, inverse_matrix: np.ndarray) -> bool:
     bool
         True if inside the box, False otherwise.
     """
-    judge_vec = np.zeros(3)
-    for i in range(3):
-        for j in range(3):
-            judge_vec[i] += rvec[j] * inverse_matrix[j, i]
-    return bool(
-        abs(judge_vec[0]) <= 1
-        and abs(judge_vec[1]) <= 1
-        and abs(judge_vec[2]) <= 1
-    )
+    # judge_vec = rvec @ inverse_matrix
+    judge_vec = rvec @ inverse_matrix
+    return bool(np.all(np.abs(judge_vec) <= 1))
 
 
 def _geometry_w90(StdI: StdIntList) -> None:
@@ -129,10 +124,7 @@ def _geometry_w90(StdI: StdIntList) -> None:
     with fp_geom:
         # Read direct lattice vectors
         for ii in range(3):
-            vals = fp_geom.readline().split()
-            StdI.direct[ii, 0] = float(vals[0])
-            StdI.direct[ii, 1] = float(vals[1])
-            StdI.direct[ii, 2] = float(vals[2])
+            StdI.direct[ii, :] = [float(x) for x in fp_geom.readline().split()[:3]]
 
         # Read number of correlated sites
         StdI.NsiteUC = int(fp_geom.readline().split()[0])
@@ -141,17 +133,14 @@ def _geometry_w90(StdI: StdIntList) -> None:
         # Allocate and read Wannier centre positions
         StdI.tau = np.zeros((StdI.NsiteUC, 3))
         for isite in range(StdI.NsiteUC):
-            vals = fp_geom.readline().split()
-            StdI.tau[isite, 0] = float(vals[0])
-            StdI.tau[isite, 1] = float(vals[1])
-            StdI.tau[isite, 2] = float(vals[2])
+            StdI.tau[isite, :] = [float(x) for x in fp_geom.readline().split()[:3]]
 
     print("    Direct lattice vectors:")
-    for ii in range(3):
-        print(f"      {StdI.direct[ii, 0]:10.5f} {StdI.direct[ii, 1]:10.5f} {StdI.direct[ii, 2]:10.5f}")
+    for row in StdI.direct:
+        print(f"      {row[0]:10.5f} {row[1]:10.5f} {row[2]:10.5f}")
     print("    Wannier centres:")
-    for isite in range(StdI.NsiteUC):
-        print(f"      {StdI.tau[isite, 0]:10.5f} {StdI.tau[isite, 1]:10.5f} {StdI.tau[isite, 2]:10.5f}")
+    for tau_row in StdI.tau[:StdI.NsiteUC]:
+        print(f"      {tau_row[0]:10.5f} {tau_row[1]:10.5f} {tau_row[2]:10.5f}")
 
 
 def _apply_boundary_weights(
@@ -181,23 +170,18 @@ def _apply_boundary_weights(
     numpy.ndarray
         Band lattice extent for each dimension, shape ``(3,)``, dtype int.
     """
-    Band_lattice = np.zeros(3, dtype=int)
-
-    for iWSC in range(nWSC):
-        for ii in range(3):
-            if abs(indx_tot[iWSC, ii]) > Band_lattice[ii]:
-                Band_lattice[ii] = abs(indx_tot[iWSC, ii])
+    # Compute max absolute index per dimension
+    Band_lattice = np.max(np.abs(indx_tot[:nWSC]), axis=0).astype(int)
 
     if StdI.W != NaN_i and StdI.L != NaN_i and StdI.Height != NaN_i:
-        Model_lattice = np.zeros(3, dtype=int)
-        Model_lattice[0] = StdI.W // 2 if StdI.W % 2 == 0 else 0
-        Model_lattice[1] = StdI.L // 2 if StdI.L % 2 == 0 else 0
-        Model_lattice[2] = StdI.Height // 2 if StdI.Height % 2 == 0 else 0
+        dims = np.array([StdI.W, StdI.L, StdI.Height], dtype=int)
+        # Model_lattice[i] = dims[i] // 2 if dims[i] is even, else 0
+        Model_lattice = np.where(dims % 2 == 0, dims // 2, 0)
         for ii in range(3):
             if Model_lattice[ii] < Band_lattice[ii] and Model_lattice[ii] != 0:
-                for iWSC in range(nWSC):
-                    if abs(indx_tot[iWSC, ii]) == Model_lattice[ii]:
-                        Weight_tot[iWSC] *= 0.5
+                # Apply 0.5 weight at boundary
+                mask = np.abs(indx_tot[:nWSC, ii]) == Model_lattice[ii]
+                Weight_tot[:nWSC][mask] *= 0.5
 
     return Band_lattice
 
@@ -243,14 +227,16 @@ def _count_and_store_terms(
     tUJ : list
         Coefficient arrays.  Modified in-place.
     """
-    # Count effective terms
+    # Apply weights: broadcast Weight_tot over Wannier indices
+    Mat_tot[:nWSC, :, :] *= Weight_tot[:nWSC, np.newaxis, np.newaxis]
+
+    # Print and count effective terms
     print("\n      EFFECTIVE terms:")
     print("           R0   R1   R2 band_i band_f Hamiltonian")
     NtUJ[itUJ] = 0
     for iWSC in range(nWSC):
         for iWan in range(NsiteUC):
             for jWan in range(NsiteUC):
-                Mat_tot[iWSC, iWan, jWan] *= Weight_tot[iWSC]
                 if cutoff < abs(Mat_tot[iWSC, iWan, jWan]):
                     print(
                         f"        {indx_tot[iWSC, 0]:5d}{indx_tot[iWSC, 1]:5d}"
@@ -261,22 +247,17 @@ def _count_and_store_terms(
                     NtUJ[itUJ] += 1
     print(f"      Total number of EFFECTIVE term = {NtUJ[itUJ]}")
 
-    # Store terms
-    tUJ_arr = np.zeros(NtUJ[itUJ], dtype=complex)
-    tUJindx_arr = np.zeros((NtUJ[itUJ], 5), dtype=int)
+    # Extract surviving terms using numpy masking
+    abs_mat = np.abs(Mat_tot[:nWSC, :NsiteUC, :NsiteUC])
+    mask = abs_mat > cutoff
+    wsc_idx, iwan_idx, jwan_idx = np.nonzero(mask)
 
-    count = 0
-    for iWSC in range(nWSC):
-        for iWan in range(NsiteUC):
-            for jWan in range(NsiteUC):
-                if cutoff < abs(Mat_tot[iWSC, iWan, jWan]):
-                    tUJindx_arr[count, 0] = indx_tot[iWSC, 0]
-                    tUJindx_arr[count, 1] = indx_tot[iWSC, 1]
-                    tUJindx_arr[count, 2] = indx_tot[iWSC, 2]
-                    tUJindx_arr[count, 3] = iWan
-                    tUJindx_arr[count, 4] = jWan
-                    tUJ_arr[count] = Mat_tot[iWSC, iWan, jWan]
-                    count += 1
+    tUJ_arr = Mat_tot[wsc_idx, iwan_idx, jwan_idx].copy()
+    tUJindx_arr = np.column_stack([
+        indx_tot[wsc_idx, :],
+        iwan_idx,
+        jwan_idx,
+    ])
 
     # Extend the lists to hold the results
     while len(tUJ) <= itUJ:
@@ -364,22 +345,15 @@ def _read_w90(
             for iWan in range(nWan):
                 for jWan in range(nWan):
                     vals = fp_hr.readline().split()
-                    indx_tot[iWSC, 0] = int(vals[0])
-                    indx_tot[iWSC, 1] = int(vals[1])
-                    indx_tot[iWSC, 2] = int(vals[2])
+                    indx_tot[iWSC, :] = [int(vals[0]), int(vals[1]), int(vals[2])]
                     iWan0 = int(vals[3])
                     jWan0 = int(vals[4])
                     dtmp_re = float(vals[5])
                     dtmp_im = float(vals[6])
-
                     # Compute Euclidean length
-                    dR = np.zeros(3)
-                    for ii in range(3):
-                        for jj in range(3):
-                            dR[ii] += StdI.direct[jj, ii] * (
-                                StdI.tau[jWan, jj] - StdI.tau[iWan, jj] + indx_tot[iWSC, jj]
-                            )
-                    length = math.sqrt(dR[0] ** 2 + dR[1] ** 2 + dR[2] ** 2)
+                    tau_diff = StdI.tau[jWan, :] - StdI.tau[iWan, :] + indx_tot[iWSC, :]
+                    dR = StdI.direct.T @ tau_diff
+                    length = np.linalg.norm(dR)
                     if length > cutoff_length > 0.0:
                         dtmp_re = 0.0
                         dtmp_im = 0.0
@@ -389,9 +363,7 @@ def _read_w90(
                             dtmp_re = 0.0
                             dtmp_im = 0.0
                     else:
-                        if (abs(indx_tot[iWSC, 0]) > cutoff_R[0]
-                                or abs(indx_tot[iWSC, 1]) > cutoff_R[1]
-                                or abs(indx_tot[iWSC, 2]) > cutoff_R[2]):
+                        if np.any(np.abs(indx_tot[iWSC]) > cutoff_R):
                             dtmp_re = 0.0
                             dtmp_im = 0.0
 
@@ -400,19 +372,12 @@ def _read_w90(
 
             # Apply inversion symmetry and delete duplication
             for jWSC in range(iWSC):
-                if (indx_tot[iWSC, 0] == -indx_tot[jWSC, 0]
-                        and indx_tot[iWSC, 1] == -indx_tot[jWSC, 1]
-                        and indx_tot[iWSC, 2] == -indx_tot[jWSC, 2]):
-                    for iWan in range(StdI.NsiteUC):
-                        for jWan in range(StdI.NsiteUC):
-                            Mat_tot[iWSC, iWan, jWan] = 0.0
+                if np.all(indx_tot[iWSC] == -indx_tot[jWSC]):
+                    Mat_tot[iWSC, :, :] = 0.0
 
-            if (indx_tot[iWSC, 0] == 0
-                    and indx_tot[iWSC, 1] == 0
-                    and indx_tot[iWSC, 2] == 0):
+            if np.all(indx_tot[iWSC] == 0):
                 for iWan in range(StdI.NsiteUC):
-                    for jWan in range(iWan):
-                        Mat_tot[iWSC, iWan, jWan] = 0.0
+                    Mat_tot[iWSC, iWan, :iWan] = 0.0
 
     # Apply boundary-halving weights
     _apply_boundary_weights(indx_tot, Weight_tot, nWSC, StdI)
@@ -477,9 +442,7 @@ def _read_density_matrix(
             for iWan in range(nWan):
                 for jWan in range(nWan):
                     vals = fp_dr.readline().split()
-                    indx_tot[iWSC, 0] = int(vals[0])
-                    indx_tot[iWSC, 1] = int(vals[1])
-                    indx_tot[iWSC, 2] = int(vals[2])
+                    indx_tot[iWSC, :] = [int(vals[0]), int(vals[1]), int(vals[2])]
                     iWan0 = int(vals[3])
                     jWan0 = int(vals[4])
                     dtmp_re = float(vals[5])
@@ -487,11 +450,8 @@ def _read_density_matrix(
 
                     if iWan0 <= StdI.NsiteUC and jWan0 <= StdI.NsiteUC:
                         Mat_tot[iWSC, iWan0 - 1, jWan0 - 1] = dtmp_re + 1j * dtmp_im
-                    for ii in range(3):
-                        if indx_tot[iWSC, ii] < Rmin[ii]:
-                            Rmin[ii] = indx_tot[iWSC, ii]
-                        if indx_tot[iWSC, ii] > Rmax[ii]:
-                            Rmax[ii] = indx_tot[iWSC, ii]
+                    Rmin = np.minimum(Rmin, indx_tot[iWSC])
+                    Rmax = np.maximum(Rmax, indx_tot[iWSC])
 
     NR = Rmax - Rmin + 1
     print(f"      Minimum R : {Rmin[0]} {Rmin[1]} {Rmin[2]}")
@@ -500,18 +460,18 @@ def _read_density_matrix(
 
     # Build dictionary: (R0, R1, R2) -> 2D array
     DenMat: dict[tuple[int, int, int], np.ndarray] = {}
-    for i0 in range(Rmin[0], Rmax[0] + 1):
-        for i1 in range(Rmin[1], Rmax[1] + 1):
-            for i2 in range(Rmin[2], Rmax[2] + 1):
-                DenMat[(i0, i1, i2)] = np.zeros(
-                    (StdI.NsiteUC, StdI.NsiteUC), dtype=complex
-                )
+    for i0, i1, i2 in itertools.product(
+        range(Rmin[0], Rmax[0] + 1),
+        range(Rmin[1], Rmax[1] + 1),
+        range(Rmin[2], Rmax[2] + 1),
+    ):
+        DenMat[(i0, i1, i2)] = np.zeros(
+            (StdI.NsiteUC, StdI.NsiteUC), dtype=complex
+        )
 
     for iWSC in range(nWSC):
-        key = (int(indx_tot[iWSC, 0]), int(indx_tot[iWSC, 1]), int(indx_tot[iWSC, 2]))
-        for iWan in range(nWan):
-            for jWan in range(nWan):
-                DenMat[key][iWan, jWan] = Mat_tot[iWSC, iWan, jWan]
+        key = tuple(indx_tot[iWSC].astype(int))
+        DenMat[key][:, :] = Mat_tot[iWSC, :nWan, :nWan]
 
     return DenMat
 
@@ -830,13 +790,12 @@ def _apply_hopping_terms(
                 int(tUJindx[0][it, 3]), int(tUJindx[0][it, 4]),
             )
             if StdI.model == ModelType.SPIN:
-                Jtmp = np.zeros((3, 3))
-                for ii in range(3):
-                    Jtmp[ii, ii] = (
-                        2.0 * tUJ[0][it] * np.conj(tUJ[0][it])
-                        * (1.0 / Uspin[int(tUJindx[0][it, 3])]
-                           + 1.0 / Uspin[int(tUJindx[0][it, 4])])
-                    ).real
+                diag_val = (
+                    2.0 * tUJ[0][it] * np.conj(tUJ[0][it])
+                    * (1.0 / Uspin[int(tUJindx[0][it, 3])]
+                       + 1.0 / Uspin[int(tUJindx[0][it, 4])])
+                ).real
+                Jtmp = np.diag([diag_val, diag_val, diag_val])
                 general_j(StdI, Jtmp, StdI.S2, StdI.S2, isite, jsite)
             else:
                 hopping(StdI, -Cphase * tUJ[0][it], jsite, isite, dR)

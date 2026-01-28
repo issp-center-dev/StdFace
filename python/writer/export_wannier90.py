@@ -28,6 +28,7 @@ import numpy as np
 
 from stdface_vals import StdIntList, NaN_i, UNSET_STRING
 from param_check import exit_program
+from lattice.site_util import _cell_vector
 
 # -----------------------------------------------------------------------
 #  Module-level constants
@@ -122,19 +123,17 @@ def _write_geometry(StdI: StdIntList, fname: str) -> None:
 
     with fp_out:
         # Print primitive vectors
-        for ii in range(3):
-            fp_out.write(f"{StdI.direct[ii, 0]:16.12f} "
-                         f"{StdI.direct[ii, 1]:16.12f} "
-                         f"{StdI.direct[ii, 2]:16.12f}\n")
+        for row in StdI.direct:
+            fp_out.write(f"{row[0]:16.12f} {row[1]:16.12f} {row[2]:16.12f}\n")
 
         # Print number of orbits
         fp_out.write(f"{StdI.NsiteUC}\n")
 
         # Print centre of orbits
-        for k in range(StdI.NsiteUC):
-            fp_out.write(f"{StdI.tau[k, 0]:25.15e} "
-                         f"{StdI.tau[k, 1]:25.15e} "
-                         f"{StdI.tau[k, 2]:25.15e}\n")
+        for tau_row in StdI.tau[:StdI.NsiteUC]:
+            fp_out.write(f"{tau_row[0]:25.15e} "
+                         f"{tau_row[1]:25.15e} "
+                         f"{tau_row[2]:25.15e}\n")
     print(f"{fname:>24s} is written.")
 
 
@@ -213,18 +212,17 @@ def _build_wannier_matrix(
     matrix : numpy.ndarray
         Flat complex array of length ``nvol * nsiteuc**2 * nspin**2``.
     """
-    rmin = [intr_table[0].r[i] for i in range(3)]
-    rmax = [intr_table[0].r[i] for i in range(3)]
+    rmin = list(intr_table[0].r)
+    rmax = list(intr_table[0].r)
 
-    for k in range(1, nintr_table):
-        for i in range(3):
-            r = intr_table[k].r[i]
+    for item in intr_table[1:]:
+        for i, r in enumerate(item.r):
             if r < rmin[i]:
                 rmin[i] = r
             if r > rmax[i]:
                 rmax[i] = r
 
-    rr = [max(abs(rmin[i]), abs(rmax[i])) for i in range(3)]
+    rr = [max(abs(lo), abs(hi)) for lo, hi in zip(rmin, rmax)]
 
     nvol = (rr[0] * 2 + 1) * (rr[1] * 2 + 1) * (rr[2] * 2 + 1)
     matrix_size = nvol * nsiteuc * nsiteuc * nspin * nspin
@@ -379,25 +377,18 @@ def _unfold_site(StdI: StdIntList, v_in: List[int]) -> List[int]:
     list of int
         Output coordinates in the unfolded range (length 3).
     """
-    v = [0, 0, 0]
-    for i in range(3):
-        for j in range(3):
-            v[i] += int(StdI.rbox[i, j]) * v_in[j]
+    # v = rbox @ v_in (matrix-vector product)
+    v = StdI.rbox.astype(int) @ np.array(v_in)
 
-    for i in range(3):
-        vv = 1.0 * v[i] / StdI.NCell
-        if vv > 0.5:
-            v[i] -= StdI.NCell
-        elif vv <= -0.5:
-            v[i] += StdI.NCell
+    # Fold to [-N/2, N/2] range using vectorized operations
+    vv = v / StdI.NCell
+    v = np.where(vv > 0.5, v - StdI.NCell, v)
+    v = np.where(vv <= -0.5, v + StdI.NCell, v)
 
-    w = [0, 0, 0]
-    for i in range(3):
-        for j in range(3):
-            w[i] += v[j] * int(StdI.box[j, i])
-        w[i] //= StdI.NCell
+    # w = (v @ box) // NCell
+    w = (v @ StdI.box.astype(int)) // StdI.NCell
 
-    return w
+    return w.tolist()
 
 
 # -----------------------------------------------------------------------
@@ -587,20 +578,19 @@ def _build_inter_table(
         jcell = idx_j // StdI.NsiteUC
         jsite = idx_j % StdI.NsiteUC
 
-        rr = [int(StdI.Cell[jcell, i] - StdI.Cell[icell, i])
-              for i in range(3)]
+        jCV = _cell_vector(StdI.Cell, jcell)
+        iCV = _cell_vector(StdI.Cell, icell)
+        rr = [j - i for j, i in zip(jCV, iCV)]
         rr = _unfold_site(StdI, rr)
 
         # Check consistency
         is_found = False
-        for j in range(len(intr_table)):
-            if (intr_table[j].r == rr
-                    and intr_table[j].a == isite
-                    and intr_table[j].b == jsite):
+        for item in intr_table:
+            if item.r == rr and item.a == isite and item.b == jsite:
                 is_found = True
-                if abs(intr_table[j].v - intr_value[k]) > _EPS:
+                if abs(item.v - intr_value[k]) > _EPS:
                     print(f"WARNING: not uniform. "
-                          f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
+                          f"expected=({item.v.real},{item.v.imag}), "
                           f"found=({intr_value[k].real},{intr_value[k].imag}) "
                           f"for index {idx_i},{idx_j}")
                 break
@@ -743,24 +733,22 @@ def _build_transfer_table(
         jcell = idx_j // StdI.NsiteUC
         jsite = idx_j % StdI.NsiteUC
 
-        rr = [int(StdI.Cell[jcell, i] - StdI.Cell[icell, i])
-              for i in range(3)]
+        jCV = _cell_vector(StdI.Cell, jcell)
+        iCV = _cell_vector(StdI.Cell, icell)
+        rr = [j - i for j, i in zip(jCV, iCV)]
         rr = _unfold_site(StdI, rr)
 
         intr_value[k] *= -1  # by convention
 
         # Check consistency
         is_found = False
-        for j in range(len(intr_table)):
-            if (intr_table[j].r == rr
-                    and intr_table[j].a == isite
-                    and intr_table[j].b == jsite
-                    and intr_table[j].s == ispin
-                    and intr_table[j].t == jspin):
+        for item in intr_table:
+            if (item.r == rr and item.a == isite and item.b == jsite
+                    and item.s == ispin and item.t == jspin):
                 is_found = True
-                if abs(intr_table[j].v - intr_value[k]) > _EPS:
+                if abs(item.v - intr_value[k]) > _EPS:
                     print(f"WARNING: not uniform. "
-                          f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
+                          f"expected=({item.v.real},{item.v.imag}), "
                           f"found=({intr_value[k].real},{intr_value[k].imag}) "
                           f"for index {idx_i},{idx_j}")
                 break
@@ -864,12 +852,12 @@ def _build_coulomb_intra_table(
         isite = idx_i % StdI.NsiteUC
 
         is_found = False
-        for j in range(len(intr_table)):
-            if intr_table[j].a == isite:
+        for item in intr_table:
+            if item.a == isite:
                 is_found = True
-                if abs(intr_table[j].v - intr_value[k]) > _EPS:
+                if abs(item.v - intr_value[k]) > _EPS:
                     print(f"WARNING: not uniform. "
-                          f"expected=({intr_table[j].v.real},{intr_table[j].v.imag}), "
+                          f"expected=({item.v.real},{item.v.imag}), "
                           f"found=({intr_value[k].real},{intr_value[k].imag}) "
                           f"for index {idx_i}")
                 break

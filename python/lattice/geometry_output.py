@@ -23,7 +23,29 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import numpy as np
+
 from stdface_vals import StdIntList, ModelType, SolverType
+
+
+def _cell_diff(Cell, iCell: int, jCell: int) -> list[int]:
+    """Compute difference between two cell coordinate rows as integers.
+
+    Parameters
+    ----------
+    Cell : np.ndarray
+        ``(NCell, 3)`` array of fractional cell coordinates.
+    iCell : int
+        Row index of the first (minuend) cell.
+    jCell : int
+        Row index of the second (subtrahend) cell.
+
+    Returns
+    -------
+    list of int
+        ``[int(Cell[iCell, k] - Cell[jCell, k]) for k in range(3)]``.
+    """
+    return (Cell[iCell] - Cell[jCell]).astype(int).tolist()
 
 
 def print_xsf(StdI: StdIntList) -> None:
@@ -54,32 +76,25 @@ def print_xsf(StdI: StdIntList) -> None:
     with open("lattice.xsf", "w") as fp:
         fp.write("CRYSTAL\n")
         fp.write("PRIMVEC\n")
-        for ii in range(3):
-            vec = [0.0, 0.0, 0.0]
-            for jj in range(3):
-                for kk in range(3):
-                    vec[jj] += float(StdI.box[ii, kk]) * StdI.direct[kk, jj]
+        # PRIMVEC = box @ direct (each row is a primitive vector)
+        primvec = StdI.box @ StdI.direct
+        for vec in primvec:
             fp.write(f"{vec[0]:15.5f} {vec[1]:15.5f} {vec[2]:15.5f}\n")
 
         if do_convvec:
             fp.write("CONVVEC\n")
-            for ii in range(3):
+            for ii, length_val in enumerate(StdI.length):
                 row = [0.0, 0.0, 0.0]
-                for jj in range(3):
-                    if ii == jj:
-                        row[jj] = StdI.length[ii]
+                row[ii] = length_val
                 fp.write(f"{row[0]:15.5f} {row[1]:15.5f} {row[2]:15.5f}\n")
 
         fp.write("PRIMCOORD\n")
         fp.write(f"{StdI.NCell * StdI.NsiteUC} 1\n")
         for iCell in range(StdI.NCell):
             for isite in range(StdI.NsiteUC):
-                vec = [0.0, 0.0, 0.0]
-                for jj in range(3):
-                    for kk in range(3):
-                        vec[jj] += ((float(StdI.Cell[iCell, kk])
-                                     + StdI.tau[isite, kk])
-                                    * StdI.direct[kk, jj])
+                # vec = (Cell[iCell] + tau[isite]) @ direct
+                frac_coord = StdI.Cell[iCell, :] + StdI.tau[isite, :]
+                vec = frac_coord @ StdI.direct
                 fp.write(f"H {vec[0]:15.5f} {vec[1]:15.5f} {vec[2]:15.5f}\n")
 
 
@@ -110,28 +125,21 @@ def print_geometry(StdI: StdIntList) -> None:
         return
 
     with open("geometry.dat", "w") as fp:
-        for ii in range(3):
-            fp.write(f"{StdI.direct[ii, 0]:25.15e} "
-                     f"{StdI.direct[ii, 1]:25.15e} "
-                     f"{StdI.direct[ii, 2]:25.15e}\n")
+        for row in StdI.direct:
+            fp.write(f"{row[0]:25.15e} {row[1]:25.15e} {row[2]:25.15e}\n")
         fp.write(f"{StdI.phase[0]:25.15e} "
                  f"{StdI.phase[1]:25.15e} "
                  f"{StdI.phase[2]:25.15e}\n")
-        for ii in range(3):
-            fp.write(f"{int(StdI.box[ii, 0])} "
-                     f"{int(StdI.box[ii, 1])} "
-                     f"{int(StdI.box[ii, 2])}\n")
+        for row in StdI.box:
+            fp.write(f"{int(row[0])} {int(row[1])} {int(row[2])}\n")
 
         for iCell in range(StdI.NCell):
+            diff = _cell_diff(StdI.Cell, iCell, 0)
             for isite in range(StdI.NsiteUC):
-                fp.write(f"{StdI.Cell[iCell, 0] - StdI.Cell[0, 0]} "
-                         f"{StdI.Cell[iCell, 1] - StdI.Cell[0, 1]} "
-                         f"{StdI.Cell[iCell, 2] - StdI.Cell[0, 2]} "
-                         f"{isite}\n")
+                fp.write(f"{diff[0]} {diff[1]} {diff[2]} {isite}\n")
         if StdI.model == ModelType.KONDO:
             for iCell in range(StdI.NCell):
+                diff = _cell_diff(StdI.Cell, iCell, 0)
                 for isite in range(StdI.NsiteUC):
-                    fp.write(f"{StdI.Cell[iCell, 0] - StdI.Cell[0, 0]} "
-                             f"{StdI.Cell[iCell, 1] - StdI.Cell[0, 1]} "
-                             f"{StdI.Cell[iCell, 2] - StdI.Cell[0, 2]} "
+                    fp.write(f"{diff[0]} {diff[1]} {diff[2]} "
                              f"{isite + StdI.NsiteUC}\n")

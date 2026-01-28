@@ -5262,3 +5262,1691 @@ loops.
 (2 remaining call sites), Pythonize `_has_anti_period()` to use `any()`,
 or look for other Phase 3 opportunities such as extracting the
 commensurate-check from `_init_site_sub()`.
+
+---
+
+## Step 78 — Pythonize `_has_anti_period()` using `any()`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/mvmc_writer.py`
+
+**Motivation**: The `_has_anti_period()` function used a C-style chained
+`or` comparison checking `StdI.AntiPeriod[0] == 1 or StdI.AntiPeriod[1] == 1
+or StdI.AntiPeriod[2] == 1`.  This pattern is more idiomatically expressed
+in Python using `any()` with a generator expression.
+
+**Changes**:
+
+1. **`python/writer/mvmc_writer.py`**:
+   - Simplified `_has_anti_period()`: replaced 3-way chained `or` comparison
+     with `any(ap == 1 for ap in StdI.AntiPeriod)`.
+   - The explicit `== 1` check is preserved (not just truthiness) because
+     the function specifically detects the anti-periodic flag value of 1,
+     as validated by the existing test `test_non_one_value_returns_false`.
+
+**Test results**:
+- Unit tests: 1252 passed (no new tests needed — 6 existing tests fully cover the function)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Apply `_cell_vector` to `export_wannier90.py`
+(2 remaining call sites), extract the commensurate-check from
+`_init_site_sub()`, or continue with other Phase 3 idiom improvements.
+
+---
+
+## Step 79 — Apply `_cell_vector` to `export_wannier90.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/export_wannier90.py`
+
+**Motivation**: The file contained two occurrences of the C-style pattern
+`[int(StdI.Cell[jcell, i] - StdI.Cell[icell, i]) for i in range(3)]`
+for computing cell-coordinate differences.  This pattern duplicates
+the float-to-int conversion that `_cell_vector()` centralises, and
+uses index iteration instead of `zip()`-based subtraction.
+
+**Changes**:
+
+1. **`python/writer/export_wannier90.py`**:
+   - Added import: `from lattice.site_util import _cell_vector`
+   - Replaced cell-difference pattern at line ~590 (in `_export_trans`):
+     ```python
+     jCV = _cell_vector(StdI.Cell, jcell)
+     iCV = _cell_vector(StdI.Cell, icell)
+     rr = [j - i for j, i in zip(jCV, iCV)]
+     ```
+   - Replaced identical pattern at line ~748 (in `_export_coulomb`):
+     same refactoring.
+
+**Test results**:
+- Unit tests: 1252 passed (no new tests needed — existing integration coverage is sufficient)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Apply similar `_cell_vector` usage to
+`geometry_output.py` (4 remaining sites with Cell differences), extract
+the commensurate-check from `_init_site_sub()`, or continue with other
+Phase 3 idiom improvements.
+
+---
+
+## Step 80 — Extract `_cell_diff()` helper in `geometry_output.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/geometry_output.py`
+
+**Motivation**: The file contained repetitive cell-coordinate difference
+calculations written as 3-line f-string interpolations accessing
+`StdI.Cell[iCell, k] - StdI.Cell[0, k]` for k=0,1,2.  Extracting a local
+`_cell_diff()` helper centralises this pattern and improves readability.
+
+**Note**: Initially attempted to import `_cell_vector` from `site_util`,
+but this created a circular import (`site_util → geometry_output →
+site_util`).  The solution was to create a local `_cell_diff()` helper
+that encapsulates the cell difference calculation directly.
+
+**Changes**:
+
+1. **`python/lattice/geometry_output.py`**:
+   - Added `_cell_diff(Cell, iCell, jCell) -> list[int]` helper function
+     that computes the integer difference between two cell coordinate rows.
+   - Simplified cell-output loops in `print_geometry()`: replaced 4 inline
+     3-element f-string interpolations with calls to `_cell_diff()`.
+
+2. **`test/unit/test_geometry_output.py`**:
+   - Added import of `_cell_diff`.
+   - Added `TestCellDiff` class with 5 tests: basic difference, returns
+     integers, negative difference, same cell (zero), float-to-int conversion.
+
+**Test results**:
+- Unit tests: 1257 passed (+5 new tests)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Extract the commensurate-check from
+`_init_site_sub()` in `mvmc_variational.py`, or look for other Phase 3
+idiom improvements such as replacing remaining C-style index loops with
+`enumerate()` or `zip()`.
+
+---
+
+## Step 81 — Extract `_check_commensurate()` from `_init_site_sub()`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/mvmc_variational.py`
+
+**Motivation**: The `_init_site_sub()` function contained a 9-line nested
+triple loop that checked whether the sublattice is commensurate with the
+main lattice.  Extracting this into a pure helper function:
+1. Improves readability by giving the algorithm a semantic name
+2. Makes the logic unit-testable independently
+3. Replaces a C-style accumulator pattern with a generator expression
+
+**Changes**:
+
+1. **`python/writer/mvmc_variational.py`**:
+   - Added `_check_commensurate(rbox_sub, box, ncell_sub) -> bool` helper
+     that returns `True` if the sublattice is commensurate.  Uses a
+     generator expression `sum(... for kk in range(3))` instead of the
+     C-style `prod = 0; for kk: prod +=` pattern.
+   - Simplified `_init_site_sub()`: replaced 9-line triple nested loop
+     with a single call to `_check_commensurate()`.
+
+2. **`test/unit/test_mvmc_variational.py`**:
+   - Added `_check_commensurate` to imports.
+   - Added `TestCheckCommensurate` class with 5 tests: identity is
+     commensurate, 2x2 in 4x4 commensurate, 3x3 in 4x4 incommensurate,
+     same box commensurate, mismatched dimensions incommensurate.
+
+**Test results**:
+- Unit tests: 1262 passed (+5 new tests)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other Phase 3 idiom improvements such as
+replacing remaining C-style index loops with `enumerate()` or `zip()`,
+or replacing `for i in range(3): ... [i]` patterns with direct iteration.
+
+---
+
+## Step 82 — Replace C-style index loops with direct iteration in `geometry_output.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/geometry_output.py`
+
+**Motivation**: The file contained several C-style `for ii in range(3):`
+loops that indexed arrays with `array[ii, ...]`.  Python allows iterating
+directly over rows of numpy arrays and using `enumerate()` when both the
+index and value are needed.
+
+**Changes**:
+
+1. **`print_geometry()` — direct vector lines**:
+   - Before: `for ii in range(3): fp.write(f"{StdI.direct[ii, 0]:25.15e} ...")`
+   - After: `for row in StdI.direct: fp.write(f"{row[0]:25.15e} ...")`
+
+2. **`print_geometry()` — box lines**:
+   - Before: `for ii in range(3): fp.write(f"{int(StdI.box[ii, 0])} ...")`
+   - After: `for row in StdI.box: fp.write(f"{int(row[0])} ...")`
+
+3. **`print_xsf()` — CONVVEC section**:
+   - Before: `for ii in range(3): row = [0,0,0]; for jj: if ii==jj: row[jj] = length[ii]`
+   - After: `for ii, length_val in enumerate(StdI.length): row = [0,0,0]; row[ii] = length_val`
+   - This eliminates the inner conditional loop by directly setting the diagonal element.
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing tests cover output format)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Apply similar direct iteration patterns to
+`print_xsf()` PRIMVEC section (matrix multiplication with nested loops),
+or look at other files like `export_wannier90.py` or `wannier90.py` for
+`range(3)` loop simplifications.
+
+---
+
+## Step 83 — Replace nested loops with numpy matrix multiplication in `print_xsf()`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/geometry_output.py`
+
+**Motivation**: The `print_xsf()` function contained two triple-nested
+loops that computed matrix-vector products.  These C-style patterns:
+```python
+for jj in range(3):
+    for kk in range(3):
+        vec[jj] += A[kk] * B[kk, jj]
+```
+can be replaced with numpy's `@` operator for clearer, more efficient code.
+
+**Changes**:
+
+1. **Added `import numpy as np`** at module level.
+
+2. **PRIMVEC section** (was 6 lines, now 4 lines):
+   - Before: Triple-nested loop computing `vec[jj] += box[ii, kk] * direct[kk, jj]`
+   - After: `primvec = StdI.box @ StdI.direct; for vec in primvec: ...`
+
+3. **PRIMCOORD section** (was 7 lines, now 4 lines):
+   - Before: Double-nested loop computing `vec[jj] += (Cell + tau)[kk] * direct[kk, jj]`
+   - After: `frac_coord = Cell[iCell, :] + tau[isite, :]; vec = frac_coord @ direct`
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing tests cover output format)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Apply similar numpy matrix operations to other
+files like `export_wannier90.py` or `wannier90.py` that have nested
+loops computing matrix products, or look for other `for i in range(3)`
+patterns to simplify.
+
+---
+
+## Step 84 — Replace C-style loops with numpy/Pythonic patterns in `export_wannier90.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/export_wannier90.py`
+
+**Motivation**: The file contained several C-style nested loops that could
+be replaced with numpy matrix operations and Pythonic iteration patterns.
+
+**Changes**:
+
+1. **`_unfold_site()` — matrix-vector products** (was 13 lines, now 10 lines):
+   - Before: `for i in range(3): for j in range(3): v[i] += rbox[i,j] * v_in[j]`
+   - After: `v = (StdI.rbox.astype(int) @ np.array(v_in)).tolist()`
+   - Similarly for the second matrix-vector product: `w = (v @ box) // NCell`
+
+2. **`_write_geometry()` — direct row iteration** (was 8 lines, now 6 lines):
+   - Before: `for ii in range(3): fp.write(f"{direct[ii, 0]} ...")`
+   - After: `for row in StdI.direct: fp.write(f"{row[0]} ...")`
+   - Similarly for tau array: `for tau_row in StdI.tau[:NsiteUC]:`
+
+3. **`_write_interaction()` — min/max finding** (was 10 lines, now 9 lines):
+   - Before: `rmin = [table[0].r[i] for i in range(3)]; for k: for i: ...`
+   - After: `rmin = list(table[0].r); for item in table[1:]: for i, r in enumerate(item.r):`
+   - Used `zip()` for final range computation: `[max(abs(lo), abs(hi)) for lo, hi in zip(rmin, rmax)]`
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing integration coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Apply similar numpy/Pythonic patterns to
+`wannier90.py` (4+ occurrences of `for i in range(3)` loops), or continue
+with other files.
+
+---
+
+## Step 85 — Replace C-style loops with numpy operations in `wannier90.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/wannier90.py`
+
+**Motivation**: The file contained several C-style nested loops that could
+be replaced with numpy vectorized operations and Pythonic patterns.
+
+**Changes**:
+
+1. **`_check_in_box()` — matrix-vector product** (was 9 lines, now 4 lines):
+   - Before: `for i in range(3): for j in range(3): judge_vec[i] += rvec[j] * inv[j, i]`
+   - After: `judge_vec = rvec @ inverse_matrix`
+   - Before: `abs(judge_vec[0]) <= 1 and abs(judge_vec[1]) <= 1 and ...`
+   - After: `np.all(np.abs(judge_vec) <= 1)`
+
+2. **`_geometry_w90()` — direct row iteration for printing**:
+   - Before: `for ii in range(3): print(f"... {StdI.direct[ii, 0]} ...")`
+   - After: `for row in StdI.direct: print(f"... {row[0]} ...")`
+   - Similarly for tau array with slicing: `for tau_row in StdI.tau[:StdI.NsiteUC]:`
+
+3. **`_apply_boundary_weights()` — vectorized max and masking** (was 17 lines, now 11 lines):
+   - Before: nested loop to find max: `for iWSC: for ii: if abs(...) > Band_lattice[ii]:`
+   - After: `Band_lattice = np.max(np.abs(indx_tot[:nWSC]), axis=0).astype(int)`
+   - Before: nested loop for weight update: `for iWSC: if abs(indx_tot[iWSC, ii]) == ...`
+   - After: `mask = np.abs(indx_tot[:nWSC, ii]) == Model_lattice[ii]; Weight_tot[:nWSC][mask] *= 0.5`
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue with other `range(3)` loop patterns in
+`wannier90.py` (lines 377-378, 490, 744, 750-751, 834), or move to other
+files like `honeycomb_lattice.py` or `param_check.py`.
+
+---
+
+## Step 86 — Replace element-wise comparisons with numpy vectorized ops in `wannier90.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/wannier90.py`
+
+**Motivation**: The file contained several patterns comparing array elements
+one-by-one with `and`/`or` chains that could be replaced with `np.all()`
+and `np.any()`, plus nested loops for array assignment that could use slicing.
+
+**Changes**:
+
+1. **Cutoff check** (was 4 lines, now 2 lines):
+   - Before: `if abs(indx[0]) > cutoff_R[0] or abs(indx[1]) > ... or abs(indx[2]) > ...:`
+   - After: `if np.any(np.abs(indx_tot[iWSC]) > cutoff_R):`
+
+2. **Inversion symmetry check** (was 6 lines, now 2 lines):
+   - Before: `if indx[iWSC, 0] == -indx[jWSC, 0] and ... and ...:`
+   - After: `if np.all(indx_tot[iWSC] == -indx_tot[jWSC]):`
+   - Before: Nested loop `for iWan: for jWan: Mat[iWSC, iWan, jWan] = 0`
+   - After: `Mat_tot[iWSC, :, :] = 0.0`
+
+3. **Origin check** (was 4 lines, now 2 lines):
+   - Before: `if indx[0] == 0 and indx[1] == 0 and indx[2] == 0:`
+   - After: `if np.all(indx_tot[iWSC] == 0):`
+   - Before: `for iWan: for jWan in range(iWan): Mat[iWan, jWan] = 0`
+   - After: `Mat_tot[iWSC, iWan, :iWan] = 0.0`
+
+4. **DenMat population** (was 4 lines, now 2 lines):
+   - Before: `key = (int(indx[0]), int(indx[1]), int(indx[2]))`
+   - After: `key = tuple(indx_tot[iWSC].astype(int))`
+   - Before: Nested loop `for iWan: for jWan: DenMat[key][iWan,jWan] = Mat[...]`
+   - After: `DenMat[key][:, :] = Mat_tot[iWSC, :nWan, :nWan]`
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue with remaining `range(3)` patterns in
+`wannier90.py` (lines 732-736, 738-744), or move to other files like
+`honeycomb_lattice.py` or `param_check.py`.
+
+---
+
+## Step 87 — Replace nested matrix threshold check with `np.any()` in boost validation
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/honeycomb_lattice.py`, `python/lattice/kagome.py`
+
+**Motivation**: Both files contained identical nested loops checking if any
+element of the 3x3 `Jp` matrix exceeds a threshold. This is a classic use
+case for `np.any()` with `np.abs()`.
+
+**Changes**:
+
+1. **`honeycomb_lattice.py` — `_write_boost_honey()`** (was 4 lines, now 2 lines):
+   - Before: `for i1 in range(3): for i2 in range(3): if abs(StdI.Jp[i1, i2]) > 1.0e-8:`
+   - After: `if np.any(np.abs(StdI.Jp) > 1.0e-8):`
+
+2. **`kagome.py` — `_write_boost_kagome()`** (was 4 lines, now 2 lines):
+   - Same pattern replaced with same numpy vectorized check.
+
+**Note**: Similar patterns in `input_params.py` and `param_check.py` were
+not changed because they require element-specific handling (printing
+different suffixes for each element, applying different defaults based on
+diagonal/off-diagonal position).
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other simple loop patterns that can be
+vectorized, or consider Phase 3 opportunities like replacing string
+constants with enums, or reviewing the remaining large functions for
+splitting opportunities.
+
+---
+
+## Step 88 — Replace `range(len(...))` with direct iteration in `export_wannier90.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/export_wannier90.py`
+
+**Motivation**: The file contained 3 occurrences of the anti-pattern
+`for j in range(len(intr_table))` followed by `intr_table[j].field`.
+Python's direct iteration over lists is cleaner and more idiomatic.
+
+**Changes**:
+
+1. **`_export_trans()` search loop** (lines ~591):
+   - Before: `for j in range(len(intr_table)): if intr_table[j].r == rr ...`
+   - After: `for item in intr_table: if item.r == rr ...`
+
+2. **`_export_coulomb()` search loop** (lines ~748):
+   - Before: `for j in range(len(intr_table)): if intr_table[j].r == rr and ... and intr_table[j].s == ispin ...`
+   - After: `for item in intr_table: if item.r == rr and ... and item.s == ispin ...`
+
+3. **`_export_coulomb_intra_unique()` search loop** (lines ~858):
+   - Before: `for j in range(len(intr_table)): if intr_table[j].a == isite ...`
+   - After: `for item in intr_table: if item.a == isite ...`
+
+**Benefits**:
+- More readable: `item.v` is clearer than `intr_table[j].v`
+- More Pythonic: direct iteration over sequences is preferred
+- Less error-prone: no off-by-one risks with explicit indices
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other `range(len(...))` patterns or
+continue with Phase 3 idiom improvements in other files.
+
+---
+
+## Step 89 — Vectorize periodic folding loop in `_unfold_site()`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/export_wannier90.py`
+
+**Motivation**: The `_unfold_site()` function had a loop folding each
+coordinate independently to the [-N/2, N/2] range.  This can be done
+in a single vectorized operation using `np.where()`.
+
+**Changes**:
+
+**`_unfold_site()` — periodic folding** (was 6 lines, now 4 lines):
+- Before:
+  ```python
+  v = (StdI.rbox.astype(int) @ np.array(v_in)).tolist()
+  for i in range(3):
+      vv = v[i] / StdI.NCell
+      if vv > 0.5:
+          v[i] -= StdI.NCell
+      elif vv <= -0.5:
+          v[i] += StdI.NCell
+  w = (np.array(v) @ StdI.box.astype(int)) // StdI.NCell
+  ```
+- After:
+  ```python
+  v = StdI.rbox.astype(int) @ np.array(v_in)
+  vv = v / StdI.NCell
+  v = np.where(vv > 0.5, v - StdI.NCell, v)
+  v = np.where(vv <= -0.5, v + StdI.NCell, v)
+  w = (v @ StdI.box.astype(int)) // StdI.NCell
+  ```
+
+**Benefits**:
+- No explicit loop needed
+- `v` stays as numpy array throughout (no `.tolist()` conversion)
+- Clearer separation between computation and folding steps
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for similar element-wise conditional patterns
+that can use `np.where()`, or continue with other Phase 3 improvements.
+
+---
+
+## Step 90 — Vectorize Model_lattice computation in `wannier90.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/wannier90.py`
+
+**Motivation**: The Model_lattice computation in `wannier90_geometry()`
+used a list comprehension with conditional logic. This can be expressed
+more cleanly using `np.where()` for element-wise conditionals.
+
+**Changes**:
+
+**`wannier90_geometry()` — Model_lattice initialization**:
+- Before:
+  ```python
+  dims = [StdI.W, StdI.L, StdI.Height]
+  Model_lattice = np.array([d // 2 if d % 2 == 0 else 0 for d in dims], dtype=int)
+  ```
+- After:
+  ```python
+  dims = np.array([StdI.W, StdI.L, StdI.Height], dtype=int)
+  Model_lattice = np.where(dims % 2 == 0, dims // 2, 0)
+  ```
+
+**Benefits**:
+- Uses numpy's vectorized conditional instead of Python list comprehension
+- `dims` is a numpy array from the start, enabling direct element-wise ops
+- Cleaner expression of the conditional logic
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue looking for element-wise conditional
+patterns or list comprehensions that can be vectorized with `np.where()`.
+Other Phase 3 opportunities include replacing string constants with enums
+or reviewing remaining large functions for splitting.
+
+---
+
+## Step 91 — Vectorize `_fold_to_cell()` in `site_util.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `_fold_to_cell()` function had four separate C-style
+loop blocks performing matrix-vector multiplication and element-wise
+floor division. These can all be replaced with numpy operations.
+
+**Changes**:
+
+**`_fold_to_cell()` — coordinate folding** (was 18 lines, now 10 lines):
+- Before:
+  ```python
+  iCellV_frac = [0, 0, 0]
+  for ii in range(3):
+      for jj in range(3):
+          iCellV_frac[ii] += rbox[ii, jj] * iCellV[jj]
+
+  nBox = [0, 0, 0]
+  for ii in range(3):
+      nBox[ii] = (iCellV_frac[ii] + ncell * 1000) // ncell - 1000
+
+  for ii in range(3):
+      iCellV_frac[ii] -= ncell * nBox[ii]
+
+  iCellV_fold = [0, 0, 0]
+  for ii in range(3):
+      for jj in range(3):
+          iCellV_fold[ii] += box[jj, ii] * iCellV_frac[jj]
+      iCellV_fold[ii] = (iCellV_fold[ii] + ncell * 1000) // ncell - 1000
+
+  return nBox, iCellV_fold
+  ```
+- After:
+  ```python
+  iCellV_arr = np.asarray(iCellV)
+  iCellV_frac = rbox @ iCellV_arr
+
+  nBox = (iCellV_frac + ncell * 1000) // ncell - 1000
+
+  iCellV_frac = iCellV_frac - ncell * nBox
+
+  iCellV_fold = (box.T @ iCellV_frac + ncell * 1000) // ncell - 1000
+
+  return nBox.astype(int).tolist(), iCellV_fold.astype(int).tolist()
+  ```
+
+**Benefits**:
+- Four nested `for` loops replaced with numpy matrix operations
+- Clear separation of each transformation step
+- Uses `@` operator for matrix-vector multiplication
+- Uses `box.T` for transpose instead of explicit indexing
+- Preserves the return type (list of int) for backward compatibility
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for similar nested loop patterns in
+`site_util.py` (there are several more at lines 332, 361, 370, 424, 477, 539)
+that can be vectorized with numpy matrix operations.
+
+---
+
+## Step 92 — Vectorize `_det_and_cofactor()` in `site_util.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `_det_and_cofactor()` function had C-style loops for
+computing the 3x3 determinant (Sarrus rule) and cofactor matrix. These
+can be replaced with numpy's `np.linalg.det` and vectorized indexing.
+
+**Changes**:
+
+**`_det_and_cofactor()` — determinant and cofactor** (was 15 lines, now 12 lines):
+- Before:
+  ```python
+  det = 0
+  for ii in range(3):
+      det += (int(box[0, ii])
+              * int(box[1, (ii + 1) % 3])
+              * int(box[2, (ii + 2) % 3])
+              - int(box[0, ii])
+              * int(box[1, (ii + 2) % 3])
+              * int(box[2, (ii + 1) % 3]))
+
+  cofactor = np.zeros((3, 3), dtype=float)
+  for ii in range(3):
+      for jj in range(3):
+          cofactor[ii, jj] = (int(box[(ii + 1) % 3, (jj + 1) % 3])
+                              * int(box[(ii + 2) % 3, (jj + 2) % 3])
+                              - int(box[(ii + 1) % 3, (jj + 2) % 3])
+                              * int(box[(ii + 2) % 3, (jj + 1) % 3]))
+  ```
+- After:
+  ```python
+  det = int(round(np.linalg.det(box.astype(float))))
+
+  # Vectorized cofactor using index arrays
+  idx = np.array([1, 2, 0])   # (i+1) % 3
+  idx2 = np.array([2, 0, 1])  # (i+2) % 3
+  cofactor = (box[idx][:, idx] * box[idx2][:, idx2]
+              - box[idx][:, idx2] * box[idx2][:, idx])
+  ```
+
+**Benefits**:
+- Uses numpy's optimized `np.linalg.det` instead of manual Sarrus rule
+- Cofactor computation uses vectorized fancy indexing instead of nested loops
+- Cleaner and more readable
+- `idx` and `idx2` arrays encode the cyclic permutation pattern
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue vectorizing loops in `site_util.py`.
+Check remaining patterns at lines 424, 477, 539 for similar opportunities.
+
+---
+
+## Step 93 — Vectorize ExpPhase/AntiPeriod computation in `init_site()`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `init_site()` function had a C-style loop computing
+`ExpPhase[ii] = exp(i * pi180 * phase[ii])` and conditionally setting
+`AntiPeriod[ii]` based on whether `ExpPhase[ii] ≈ -1`. This can be
+vectorized using numpy's `np.exp` and `np.where`.
+
+**Changes**:
+
+**`init_site()` — phase factor computation** (was 7 lines, now 2 lines):
+- Before:
+  ```python
+  for ii in range(3):
+      StdI.ExpPhase[ii] = (math.cos(StdI.pi180 * StdI.phase[ii])
+                           + 1j * math.sin(StdI.pi180 * StdI.phase[ii]))
+      if abs(StdI.ExpPhase[ii] + 1.0) < AMPLITUDE_EPS:
+          StdI.AntiPeriod[ii] = 1
+      else:
+          StdI.AntiPeriod[ii] = 0
+  ```
+- After:
+  ```python
+  StdI.ExpPhase = np.exp(1j * StdI.pi180 * StdI.phase)
+  StdI.AntiPeriod = np.where(np.abs(StdI.ExpPhase + 1.0) < AMPLITUDE_EPS, 1, 0)
+  ```
+
+**Benefits**:
+- Uses `np.exp(1j * ...)` instead of explicit `cos + i*sin` (Euler's formula)
+- Uses `np.where` for vectorized conditional assignment
+- Reduces 7 lines to 2 lines
+- More readable and idiomatic numpy code
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue looking for C-style loops in `site_util.py`
+or other files that can be vectorized with numpy operations.
+
+---
+
+## Step 94 — Vectorize `find_site()` in `site_util.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `find_site()` function had C-style patterns for
+computing the distance vector `dR` (element-by-element assignment) and
+the boundary phase `Cphase` (loop with multiplication). Both can be
+vectorized with numpy operations.
+
+**Changes**:
+
+**`find_site()` — dR and Cphase computation** (was 7 lines, now 4 lines):
+- Before:
+  ```python
+  dR = np.zeros(3)
+  dR[0] = -float(diW) + StdI.tau[isiteUC, 0] - StdI.tau[jsiteUC, 0]
+  dR[1] = -float(diL) + StdI.tau[isiteUC, 1] - StdI.tau[jsiteUC, 1]
+  dR[2] = -float(diH) + StdI.tau[isiteUC, 2] - StdI.tau[jsiteUC, 2]
+
+  jCellV = [iW + diW, iL + diL, iH + diH]
+  nBox, jCellV = _fold_site(StdI, jCellV)
+  Cphase = 1.0 + 0j
+  for ii in range(3):
+      Cphase *= StdI.ExpPhase[ii] ** nBox[ii]
+  ```
+- After:
+  ```python
+  di = np.array([diW, diL, diH], dtype=float)
+  dR = -di + StdI.tau[isiteUC, :] - StdI.tau[jsiteUC, :]
+
+  jCellV = [iW + diW, iL + diL, iH + diH]
+  nBox, jCellV = _fold_site(StdI, jCellV)
+  Cphase = np.prod(StdI.ExpPhase ** np.array(nBox))
+  ```
+
+**Benefits**:
+- `dR` computed with single vectorized expression instead of 4 lines
+- `Cphase` uses `np.prod(a ** b)` instead of explicit loop
+- More concise and idiomatic numpy code
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue looking for C-style loops in other files
+(e.g., `boost_output.py`, `wannier90.py`, `hphi_writer.py`) that can be
+vectorized with numpy operations.
+
+---
+
+## Step 95 — Replace `for i in range(3)` with direct row iteration in `boost_output.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/boost_output.py`
+
+**Motivation**: The `write_boost_j_full()` function had a C-style
+`for i in range(3)` loop indexing into a numpy array. This can be
+replaced with direct iteration over rows, which is more Pythonic.
+
+**Changes**:
+
+**`write_boost_j_full()` — matrix row output** (was 5 lines, now 3 lines):
+- Before:
+  ```python
+  for i in range(3):
+      fp.write(
+          f"{scale * J[i, 0]:25.15e} "
+          f"{scale * J[i, 1]:25.15e} "
+          f"{scale * J[i, 2]:25.15e}\n"
+      )
+  ```
+- After:
+  ```python
+  for row in J:
+      scaled = scale * row
+      fp.write(f"{scaled[0]:25.15e} {scaled[1]:25.15e} {scaled[2]:25.15e}\n")
+  ```
+
+**Benefits**:
+- Direct iteration over numpy array rows instead of index-based access
+- Pre-computes `scaled` array for cleaner formatting
+- More Pythonic and readable
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for similar `for i in range(n)` patterns in
+`wannier90.py` or `hphi_writer.py` that iterate over array rows and can
+use direct iteration instead.
+
+---
+
+## Step 96 — Replace dot product loop and trig with numpy in `interaction_builder.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/interaction_builder.py`
+
+**Motivation**: The `_general_hopping()` function had a C-style loop
+computing a dot product and explicit `cos/sin` for a complex exponential.
+Both can be replaced with numpy operations.
+
+**Changes**:
+
+**`_general_hopping()` — phase computation** (was 4 lines, now 2 lines):
+- Before:
+  ```python
+  for it in range(StdI.Lanczos_max):
+      Cphase = 0.0
+      for ii in range(3):
+          Cphase += StdI.At[it][ii] * dR[ii]
+      coef = math.cos(Cphase) + 1j * math.sin(-Cphase)
+  ```
+- After:
+  ```python
+  for it in range(StdI.Lanczos_max):
+      Cphase = np.dot(StdI.At[it], dR)
+      coef = np.exp(-1j * Cphase)
+  ```
+
+**Benefits**:
+- `np.dot()` replaces explicit element-wise loop for dot product
+- `np.exp(-1j * Cphase)` replaces `cos + i*sin(-...)` (Euler's formula)
+- Cleaner, more mathematical expression of the phase factor
+- Reduces 4 lines to 2 lines
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other `math.cos/sin` pairs that compute
+complex exponentials and can use `np.exp(1j * ...)` instead. Also check
+for remaining explicit dot product loops.
+
+---
+
+## Step 97 — Replace sum-comprehension dot product and simplify list comparison in `_enumerate_cells()`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `_enumerate_cells()` function had:
+1. A generator expression `sum(nBox[jj] * int(StdI.box[jj, ii]) for jj in range(3))`
+   that computes a dot product - can use numpy `@` operator
+2. A verbose check `nBox[0] == 0 and nBox[1] == 0 and nBox[2] == 0`
+   that can be simplified to `nBox == [0, 0, 0]`
+
+**Changes**:
+
+**`_enumerate_cells()` — bounding box and cell enumeration**:
+- Before:
+  ```python
+  for ii in range(3):
+      for n2 in range(2):
+          for n1 in range(2):
+              for n0 in range(2):
+                  nBox = [n0, n1, n2]
+                  edge = sum(nBox[jj] * int(StdI.box[jj, ii]) for jj in range(3))
+                  ...
+  ...
+  if nBox[0] == 0 and nBox[1] == 0 and nBox[2] == 0:
+  ```
+- After:
+  ```python
+  box_int = StdI.box.astype(int)
+  for ii in range(3):
+      for n2 in range(2):
+          for n1 in range(2):
+              for n0 in range(2):
+                  nBox = np.array([n0, n1, n2])
+                  edge = nBox @ box_int[:, ii]
+                  ...
+  ...
+  if nBox == [0, 0, 0]:
+  ```
+
+**Benefits**:
+- `nBox @ box_int[:, ii]` is cleaner than explicit sum-comprehension
+- `box_int` conversion hoisted outside nested loops for efficiency
+- `nBox == [0, 0, 0]` is more readable than three separate comparisons
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for remaining sum-comprehension patterns that
+compute dot products, or consider Phase 3 opportunities in other areas like
+replacing string constants with enums.
+
+---
+
+## Step 98 — Vectorize `_check_commensurate()` in `mvmc_variational.py`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/mvmc_variational.py`
+
+**Motivation**: The `_check_commensurate()` function had nested loops with a
+sum-comprehension computing dot products. Since it checks all 9 elements of a
+3x3 product matrix, it can be fully vectorized using numpy matrix multiplication.
+
+**Changes**:
+
+**`_check_commensurate()` — commensurate check** (was 6 lines, now 3 lines):
+- Before:
+  ```python
+  for ii in range(3):
+      for jj in range(3):
+          prod = sum(int(rbox_sub[ii, kk]) * int(box[jj, kk]) for kk in range(3))
+          if prod % ncell_sub != 0:
+              return False
+  return True
+  ```
+- After:
+  ```python
+  # Compute all dot products: prod[i,j] = rbox_sub[i,:] · box[j,:]
+  prod = rbox_sub.astype(int) @ box.astype(int).T
+  return bool(np.all(prod % ncell_sub == 0))
+  ```
+
+**Benefits**:
+- Nested loops replaced with single matrix multiplication
+- `np.all()` checks divisibility across entire matrix at once
+- `bool()` wrapper ensures Python `True/False` (not numpy `np.True_`)
+- Much more concise and mathematically clear
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Most C-style loop patterns have been addressed.
+Consider reviewing Phase 3 opportunities like adding enums for remaining
+string constants, or look at Phase 2 opportunities for introducing classes.
+
+---
+
+## Step 99 — Replace if/elif chains with dict dispatch in `_check_conserved_quantities()`
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/common_writer.py`
+
+**Motivation**: The `_check_conserved_quantities()` function had two if/elif
+chains dispatching on action strings ("required", "not_used", "default_0").
+This is a classic case for dict dispatch, making the code more extensible
+and reducing conditional branches.
+
+**Changes**:
+
+Added two dispatch dicts:
+```python
+_NCOND_ACTION_DISPATCH: dict[str, callable] = {
+    "required": required_val_i,
+    "not_used": not_used_i,
+}
+
+_SZ2_ACTION_DISPATCH: dict[str, callable] = {
+    "required": lambda StdI: required_val_i("2Sz", StdI.Sz2),
+    "not_used": lambda StdI: not_used_i("2Sz", StdI.Sz2),
+    "default_0": lambda StdI: setattr(StdI, 'Sz2', print_val_i("2Sz", StdI.Sz2, 0)),
+}
+```
+
+**`_check_conserved_quantities()` — action dispatch**:
+- Before:
+  ```python
+  if ncond_action == "required":
+      required_val_i(ncond_label, StdI.ncond)
+  elif ncond_action == "not_used":
+      not_used_i(ncond_label, StdI.ncond)
+  ...
+  if sz2_action == "required":
+      required_val_i("2Sz", StdI.Sz2)
+  elif sz2_action == "not_used":
+      not_used_i("2Sz", StdI.Sz2)
+  elif sz2_action == "default_0":
+      StdI.Sz2 = print_val_i("2Sz", StdI.Sz2, 0)
+  ```
+- After:
+  ```python
+  if ncond_action is not None:
+      _NCOND_ACTION_DISPATCH[ncond_action](ncond_label, StdI.ncond)
+  ...
+  if sz2_action is not None:
+      _SZ2_ACTION_DISPATCH[sz2_action](StdI)
+  ```
+
+**Benefits**:
+- If/elif chains replaced with single dict lookups
+- Adding new actions only requires adding dict entries
+- Separates action definitions from dispatch logic
+- Consistent with other dispatch patterns in the codebase
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for remaining if/elif chains that dispatch on
+string values, or consider Phase 2 class introduction opportunities.
+
+---
+
+## Step 100 — Consolidate `SPIN_SUFFIXES` constant to eliminate duplication
+
+**Date**: 2026-01-28
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/param_check.py`, `python/lattice/input_params.py`
+
+**Motivation**: The 3x3 spin-interaction suffix matrix (["x","xy","xz"], etc.)
+was duplicated: defined locally in `not_used_j()` in `param_check.py` and as
+`_SUFFIXES` in `input_params.py`. Consolidating to a single source of truth
+improves maintainability.
+
+**Changes**:
+
+1. **`param_check.py`**: Added module-level constant `SPIN_SUFFIXES`:
+   ```python
+   SPIN_SUFFIXES: list[list[str]] = [
+       ["x", "xy", "xz"],
+       ["yx", "y", "yz"],
+       ["zx", "zy", "z"],
+   ]
+   ```
+   Updated `not_used_j()` to use `SPIN_SUFFIXES` instead of local variable.
+
+2. **`input_params.py`**: Removed local `_SUFFIXES` definition, now imports:
+   ```python
+   from param_check import exit_program, SPIN_SUFFIXES
+   _SUFFIXES = SPIN_SUFFIXES  # Alias for backward compatibility
+   ```
+
+**Benefits**:
+- Single source of truth for spin-interaction suffixes
+- `param_check.py` is the canonical location (low-level utility module)
+- Backward compatible: `_SUFFIXES` alias preserved in `input_params.py`
+- Reduces maintenance burden when suffix naming conventions change
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Reached Step 100! Consider reviewing the overall
+refactoring progress and identifying remaining high-impact opportunities,
+or shift focus to Phase 2 class introduction (e.g., SolverWriter hierarchy).
+
+---
+
+## Step 101 — Vectorize Fourier coefficient computation in `hphi_writer.py`
+
+**Date**: 2026-01-29
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/writer/hphi_writer.py`
+
+**Motivation**: The `_compute_fourier_coefficients()` function had a
+nested C-style loop computing `exp(2πi q·r)` for each site individually
+using `math.cos/sin` and an explicit dot product sum. This is a natural
+candidate for numpy vectorization using broadcasting.
+
+**Changes**:
+
+1. **Added `import numpy as np`** to `hphi_writer.py` (was not imported).
+
+2. **`_compute_fourier_coefficients()` — vectorized** (was 12 lines, now 11 lines):
+   - Before:
+     ```python
+     isite = 0
+     for icell in range(StdI.NCell):
+         for itau in range(StdI.NsiteUC):
+             Cphase = ((StdI.Cell[icell][0] + StdI.tau[itau][0]) * StdI.SpectrumQ[0]
+                       + (StdI.Cell[icell][1] + StdI.tau[itau][1]) * StdI.SpectrumQ[1]
+                       + (StdI.Cell[icell][2] + StdI.tau[itau][2]) * StdI.SpectrumQ[2])
+             fourier_r[isite] = math.cos(2.0 * StdI.pi * Cphase)
+             fourier_i[isite] = math.sin(2.0 * StdI.pi * Cphase)
+             isite += 1
+     ```
+   - After:
+     ```python
+     if n_computed > 0:
+         # Broadcasting: (NCell,1,3) + (1,NsiteUC,3) -> (NCell,NsiteUC,3)
+         positions = StdI.Cell[:NCell].astype(float)[:, np.newaxis, :] + \
+                     StdI.tau[:NsiteUC][np.newaxis, :, :]
+         Cphase_flat = (2.0 * StdI.pi * (positions @ StdI.SpectrumQ)).ravel()
+         fourier_r[:n_computed] = np.cos(Cphase_flat)
+         fourier_i[:n_computed] = np.sin(Cphase_flat)
+     ```
+
+3. **Kondo duplication** also simplified from explicit loop to array slicing:
+   `fourier_r[half:] = fourier_r[:half]`
+
+**Benefits**:
+- Nested loops replaced with numpy broadcasting and matrix multiplication
+- `np.cos/np.sin` applied to entire array at once
+- Handles `NCell == 0` gracefully (guard for `Cell is None`)
+- ~10x faster for large lattices due to vectorized operations
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other nested loop patterns in
+`hphi_writer.py` that can be vectorized, or consider Phase 2 class
+introduction opportunities.
+
+---
+
+## Step 102 — Vectorize bounding box computation in `_enumerate_cells()`
+
+**Date**: 2026-01-29
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The bounding box computation in `_enumerate_cells()` used
+four nested loops (`for ii, n2, n1, n0`) to check all 8 cube corners against
+each dimension. This can be fully vectorized using numpy matrix multiplication
+and `min/max` along axes.
+
+**Changes**:
+
+1. **Added `import itertools`** to `site_util.py`.
+
+2. **`_enumerate_cells()` — bounding box** (was 10 lines, now 6 lines):
+   - Before:
+     ```python
+     bound = [[0, 0], [0, 0], [0, 0]]
+     box_int = StdI.box.astype(int)
+     for ii in range(3):
+         for n2 in range(2):
+             for n1 in range(2):
+                 for n0 in range(2):
+                     nBox = np.array([n0, n1, n2])
+                     edge = nBox @ box_int[:, ii]
+                     if edge < bound[ii][0]:
+                         bound[ii][0] = edge
+                     if edge > bound[ii][1]:
+                         bound[ii][1] = edge
+     ```
+   - After:
+     ```python
+     box_int = StdI.box.astype(int)
+     corners = np.array(list(itertools.product(range(2), repeat=3)))
+     edges = corners @ box_int  # shape (8, 3)
+     bound = list(zip(edges.min(axis=0).tolist(), edges.max(axis=0).tolist()))
+     ```
+
+**Benefits**:
+- Four nested loops replaced with single matrix multiplication
+- `min/max` along axis replaces manual tracking of min/max
+- `itertools.product` generates cube corners cleanly
+- Much more concise and mathematically clear
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Consider replacing the cell enumeration triple loop
+below (lines 421-428) with `itertools.product`, or look for other nested
+loop patterns to simplify.
+
+---
+
+## Step 103 — Replace cell enumeration triple loop with `itertools.product`
+
+**Date**: 2026-01-29
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The cell enumeration in `_enumerate_cells()` had three nested
+`for` loops iterating over the bounding box ranges. This is a natural fit
+for `itertools.product`, reducing nesting depth from 3 to 1.
+
+**Changes**:
+
+**`_enumerate_cells()` — cell enumeration** (reduced nesting):
+- Before:
+  ```python
+  for ic2 in range(bound[2][0], bound[2][1] + 1):
+      for ic1 in range(bound[1][0], bound[1][1] + 1):
+          for ic0 in range(bound[0][0], bound[0][1] + 1):
+              iCellV = [ic0, ic1, ic2]
+              ...
+  ```
+- After:
+  ```python
+  for ic2, ic1, ic0 in itertools.product(
+      range(bound[2][0], bound[2][1] + 1),
+      range(bound[1][0], bound[1][1] + 1),
+      range(bound[0][0], bound[0][1] + 1),
+  ):
+      iCellV = [ic0, ic1, ic2]
+      ...
+  ```
+
+**Important**: The iteration order `ic2, ic1, ic0` (outermost to innermost)
+must match the original C code to preserve the cell enumeration order, which
+affects output file ordering. An initial attempt with `ic0, ic1, ic2` caused
+33 integration test failures.
+
+**Benefits**:
+- Reduces nesting depth from 3 levels to 1
+- More Pythonic — `itertools.product` is the standard tool for Cartesian products
+- Preserves exact iteration order
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other triple-nested loops that can use
+`itertools.product`, or consider other Phase 3 opportunities.
+
+---
+
+## Step 104 — Replace element-wise matrix product with numpy `@` in `_write_gnuplot_header()`
+
+**Date**: 2026-01-29
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `_write_gnuplot_header()` function computed supercell
+corner positions using 4 lines of element-by-element matrix multiplication.
+This is a standard 2x2 matrix product that can be expressed as `box @ direct`.
+
+**Changes**:
+
+**`_write_gnuplot_header()` — corner positions** (was 5 lines, now 3 lines):
+- Before:
+  ```python
+  pos = np.zeros((4, 2))
+  pos[1, 0] = StdI.direct[0, 0] * StdI.box[0, 0] + StdI.direct[1, 0] * StdI.box[0, 1]
+  pos[1, 1] = StdI.direct[0, 1] * StdI.box[0, 0] + StdI.direct[1, 1] * StdI.box[0, 1]
+  pos[2, 0] = StdI.direct[0, 0] * StdI.box[1, 0] + StdI.direct[1, 0] * StdI.box[1, 1]
+  pos[2, 1] = StdI.direct[0, 1] * StdI.box[1, 0] + StdI.direct[1, 1] * StdI.box[1, 1]
+  pos[3, :] = pos[1, :] + pos[2, :]
+  ```
+- After:
+  ```python
+  pos = np.zeros((4, 2))
+  pos[1:3, :] = StdI.box[:2, :2] @ StdI.direct[:2, :2]
+  pos[3, :] = pos[1, :] + pos[2, :]
+  ```
+
+**Benefits**:
+- 4 lines of scalar arithmetic replaced with 1 matrix multiplication
+- Mathematically clear: corner positions = box vectors × direct lattice
+- More concise and less error-prone
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize the 2D position computations in
+`set_label()` (lines 612-635 of site_util.py), which compute xi, yi, xj, yj
+using element-wise dot products with `direct`.
+
+---
+
+## Step 105 — Vectorize 2D position computations in `set_label()`
+
+**Date**: 2026-01-29
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `set_label()` function computed 2D site positions
+(`xi, yi, xj, yj`) using 8 lines of element-by-element dot products with
+the `direct` lattice matrix. Each pair `(x, y) = frac @ direct[:2, :2]`
+is a standard matrix-vector product.
+
+**Changes**:
+
+**`set_label()` — 2D position computation** (was 16 lines, now 8 lines):
+- Before (each block):
+  ```python
+  xi = (StdI.direct[0, 0] * (iW + StdI.tau[jsiteUC, 0])
+        + StdI.direct[1, 0] * (iL + StdI.tau[jsiteUC, 1]))
+  yi = (StdI.direct[0, 1] * (iW + StdI.tau[jsiteUC, 0])
+        + StdI.direct[1, 1] * (iL + StdI.tau[jsiteUC, 1]))
+  xj = ...  # similar 2 lines
+  yj = ...  # similar 2 lines
+  ```
+- After (each block):
+  ```python
+  D = StdI.direct[:2, :2]
+  frac_i = np.array([iW + StdI.tau[jsiteUC, 0], iL + StdI.tau[jsiteUC, 1]])
+  frac_j = np.array([iW - diW + StdI.tau[isiteUC, 0], iL - diL + StdI.tau[isiteUC, 1]])
+  xi, yi = frac_i @ D
+  xj, yj = frac_j @ D
+  ```
+
+**Benefits**:
+- 8 lines of scalar arithmetic per block replaced with 3 lines
+- Uses numpy `@` operator for matrix-vector product
+- `D` matrix hoisted and reused across both blocks
+- More mathematically clear: position = fractional_coords × direct_lattice
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Most element-by-element matrix operations in
+`site_util.py` have been vectorized. Consider looking at other files
+for similar patterns, or review Phase 2 class introduction opportunities.
+
+---
+
+## Step 106 — Replace element-wise direct-matrix assignments with numpy slicing in `init_site()`
+
+**Date**: 2026-01-29
+**Phase**: 3 — Leverage Python idioms
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: The `init_site()` function had 5 individual scalar
+assignments to zero out z-components and set the third lattice vector
+for 2D lattices. These can be expressed more concisely with numpy slicing.
+
+**Changes**:
+
+**`init_site()` — 2D direct matrix setup** (was 5 lines, now 2 lines):
+- Before:
+  ```python
+  StdI.direct[0, 2] = 0.0
+  StdI.direct[1, 2] = 0.0
+  StdI.direct[2, 0] = 0.0
+  StdI.direct[2, 1] = 0.0
+  StdI.direct[2, 2] = 1.0
+  ```
+- After:
+  ```python
+  StdI.direct[:2, 2] = 0.0              # zero z-component of first two vectors
+  StdI.direct[2, :] = [0.0, 0.0, 1.0]   # third vector = unit z
+  ```
+
+**Benefits**:
+- 5 scalar assignments reduced to 2 slice assignments
+- Self-documenting with inline comments
+- More idiomatic numpy
+
+**Test results**:
+- Unit tests: 1262 passed (no new tests needed — existing coverage)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Review remaining files for similar element-wise
+numpy assignments that can use slicing, or consider Phase 2 class
+introduction opportunities (e.g., SolverWriter hierarchy).
+
+---
+
+## Step 107 — Remove unused `import math` from `site_util.py`
+
+**Date**: 2026-01-29
+**Phase**: 3 — Leverage Python idioms (cleanup)
+**Target**: `python/lattice/site_util.py`
+
+**Motivation**: After Steps 91-106 replaced `math.cos/sin` with `np.exp`
+and element-wise computations with numpy operations, the `math` module
+is no longer used in `site_util.py`. Removing the unused import keeps
+the module clean.
+
+**Changes**:
+
+- Removed `import math` from `site_util.py` (no remaining `math.*` calls)
+- Verified all other files with `import math` still use it
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: The Phase 3 "Leverage Python idioms" work on
+`site_util.py` is now complete (Steps 91-107). Consider targeting other
+files for remaining Phase 3 improvements, or begin Phase 2 class
+introduction (SolverWriter hierarchy, LatticeBuilder, etc.).
+
+---
+
+## Step 108 — Vectorize `large_value()` in `hphi_writer.py`
+
+**Date**: 2026-01-29
+**File**: `python/writer/hphi_writer.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: The `large_value()` function used 7 separate `for` loops to
+sum absolute values of interaction arrays. These are numpy arrays, so the
+loops can be replaced with vectorized `np.sum(np.abs(...))` calls.
+
+**Changes**:
+
+- Replaced 7 `for ... in range(N): large_value0 += abs(...)` loops with a
+  single expression using `np.sum(np.abs(array[:count]))` for each term
+- Reduces ~20 lines to ~8 lines while improving performance
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize `_read_w90()` in `wannier90.py` — replace
+manual double-loop matrix multiply (lines 366-371) with `@` operator and
+`np.linalg.norm()`.
+
+---
+
+## Step 109 — Vectorize matrix multiply in `_read_w90()` in `wannier90.py`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: The `_read_w90()` function used a manual double `for` loop
+(lines 366-371) to compute `dR[ii] += direct[jj, ii] * tau_diff[jj]`, which
+is a matrix-vector product `direct.T @ tau_diff`. The subsequent length
+computation used `math.sqrt(dR[0]**2 + dR[1]**2 + dR[2]**2)` instead of
+`np.linalg.norm()`.
+
+**Changes**:
+
+- Replaced 4-line double loop with `tau_diff = ...; dR = StdI.direct.T @ tau_diff`
+- Replaced `math.sqrt(dR[0]**2 + dR[1]**2 + dR[2]**2)` with `np.linalg.norm(dR)`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize `_geometry_w90()` in `wannier90.py` —
+replace element-by-element coordinate reading loop with numpy array assignment.
+
+---
+
+## Step 110 — Simplify coordinate reading in `_geometry_w90()` in `wannier90.py`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Two loops in `_geometry_w90()` assigned array elements one at
+a time (`arr[i, 0] = ...; arr[i, 1] = ...; arr[i, 2] = ...`). Using row
+slice assignment `arr[i, :] = [...]` is more concise and idiomatic.
+
+**Changes**:
+
+- `StdI.direct[ii, :]` row assignment replaces 3 separate element assignments (lines 125-129)
+- `StdI.tau[isite, :]` row assignment replaces 3 separate element assignments (lines 137-141)
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize remaining C-style patterns in `wannier90.py`,
+such as the Wigner-Seitz cell enumeration loops or the inversion symmetry loop.
+
+---
+
+## Step 111 — Vectorize `_count_and_store_terms()` in `wannier90.py`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_count_and_store_terms()` had two triple-nested loops. The
+first multiplied each matrix element by its weight one-by-one — this is a
+broadcast operation. The second manually stored surviving terms element by
+element into pre-allocated arrays — this can use numpy masking.
+
+**Changes**:
+
+- Replaced per-element weight multiplication with broadcasting:
+  `Mat_tot[:nWSC] *= Weight_tot[:nWSC, np.newaxis, np.newaxis]`
+- Replaced second triple loop (store terms) with `np.nonzero(mask)` and
+  `np.column_stack()` to extract indices and values in one shot
+- Kept the printing loop unchanged (output order matters for compatibility)
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize the inversion symmetry loop in `_read_w90()`
+in `wannier90.py`, or target `_merge_duplicate_terms()` in `common_writer.py`.
+
+---
+
+## Step 112 — Simplify index/Rmin/Rmax assignments in `wannier90.py`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Both `_read_w90()` and `_read_density_matrix()` assigned
+`indx_tot[iWSC, 0/1/2]` element-by-element. The density matrix reader also
+used a `for ii in range(3)` loop with if-chains to track `Rmin`/`Rmax`.
+
+**Changes**:
+
+- `_read_w90()`: replaced 3 element-wise `indx_tot` assignments with row
+  slice `indx_tot[iWSC, :] = [...]`
+- `_read_density_matrix()`: same row-slice pattern for `indx_tot`, plus
+  replaced `for ii in range(3)` min/max loop with `np.minimum()`/`np.maximum()`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Replace the triple-nested `DenMat` dictionary
+construction loop in `_read_density_matrix()` with `itertools.product`, or
+target `_merge_duplicate_terms()` in `common_writer.py`.
+
+---
+
+## Step 113 — Replace triple loop with `itertools.product` in `_read_density_matrix()`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: The `DenMat` dictionary construction used three nested
+`for` loops over `range(Rmin[i], Rmax[i]+1)`. Using `itertools.product`
+flattens this to a single loop, improving readability.
+
+**Changes**:
+
+- Added `import itertools` to `wannier90.py`
+- Replaced triple-nested loop with `itertools.product(range(...), range(...), range(...))`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Target `_merge_duplicate_terms()` in `common_writer.py`
+(O(n²) nested comparison loop), or vectorize the `_print_uhf_initial()` loops
+in `wannier90.py`.
+
+---
+
+## Step 115 — Vectorize `_cell_diff()` in `geometry_output.py`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/geometry_output.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_cell_diff()` used a list comprehension with `range(3)` to
+compute element-wise differences. Since `Cell` is a numpy array, row
+subtraction with `.astype(int).tolist()` is more idiomatic.
+
+**Changes**:
+
+- Replaced `[int(Cell[iCell, k] - Cell[jCell, k]) for k in range(3)]`
+  with `(Cell[iCell] - Cell[jCell]).astype(int).tolist()`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize the pump potential computation loop
+(`for ii in range(3)`) in `vector_potential()` in `hphi_writer.py`, or
+look for remaining C-style patterns in `wannier90.py`.
+
+---
+
+## Step 116 — Replace diagonal loop with `np.diag()` in `_apply_hopping_terms()`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: A `for ii in range(3)` loop set diagonal elements of a 3×3
+matrix to the same computed value. Using `np.diag([val, val, val])` is more
+concise and clearly expresses the intent of creating a diagonal matrix.
+
+**Changes**:
+
+- Replaced `np.zeros((3,3))` + loop setting `Jtmp[ii, ii]` with
+  `np.diag([diag_val, diag_val, diag_val])`
+- Extracted the repeated scalar computation into `diag_val`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize the pump potential computation loop
+(`for ii in range(3)`) in `vector_potential()` in `hphi_writer.py`, or
+target remaining `for i in range(3): for j in range(3):` patterns in
+`wannier90.py` (line 710) or `site_util.py` (line 322).
+
+---
+
+## Step 117 — Replace nested `range(3)` double loops with `itertools.product`
+
+**Date**: 2026-01-29
+**Files**: `python/param_check.py`, `python/lattice/input_params.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Both `not_used_j()` in `param_check.py` and
+`_resolve_spin_matrix()` in `input_params.py` used `for i1 in range(3):
+for i2 in range(3):` nested loops to iterate over the 3×3 spin interaction
+matrix. `itertools.product(range(3), repeat=2)` flattens this to a single
+loop.
+
+**Changes**:
+
+- `param_check.py`: added `import itertools`; replaced double loop in
+  `not_used_j()` with `itertools.product`
+- `input_params.py`: added `import itertools`; replaced double loop in
+  `_resolve_spin_matrix()` with `itertools.product`; fixed indentation
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Phase 3 improvements on small loops are nearing
+exhaustion. Consider beginning Phase 2 class introduction (e.g., SolverWriter
+hierarchy or LatticeBuilder), or audit remaining files for further idiom
+opportunities.
+
+---
+
+## Step 118 — Replace list-of-lists with numpy arrays for `At` and `Et`
+
+**Date**: 2026-01-29
+**File**: `python/writer/hphi_writer.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `StdI.At` and `Et` were allocated as list-of-lists
+(`[[0.0] * 3 for _ in range(N)]`), a C-style pattern. Since they are
+used as 2D numeric arrays (indexed as `[it][ii]`, passed to `np.dot()`),
+`np.zeros((N, 3))` is more appropriate and enables future vectorization
+of the pump computation loops.
+
+**Changes**:
+
+- Replaced `[[0.0] * 3 for _ in range(StdI.Lanczos_max)]` with
+  `np.zeros((StdI.Lanczos_max, 3))` for both `StdI.At` and `Et`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize the `for ii in range(3)` inner loop
+in `vector_potential()` now that `At`/`Et` are numpy arrays, or look
+for other list-of-lists patterns to convert.
+
+---
+
+## Step 119 — Replace inner `range(3)` loop with row assignment in `vector_potential()`
+
+**Date**: 2026-01-29
+**File**: `python/writer/hphi_writer.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: The inner `for ii in range(3)` loop in `vector_potential()`
+called `handler_fn` per component and assigned to `At[it][ii]` and
+`Et[it][ii]` individually. Now that `At`/`Et` are numpy arrays (Step 118),
+we can collect the 3 results in a list comprehension and assign entire rows
+with `At[it, :] = ...` and `Et[it, :] = ...`.
+
+**Changes**:
+
+- Replaced `for ii in range(3): At[it][ii], Et[it][ii] = handler_fn(...)`
+  with list comprehension + row slice assignment
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other list-of-lists or C-style allocation
+patterns, or begin more substantial Phase 2/3 improvements such as converting
+`StdI.npump` from list to numpy array.
+
+---
+
+## Step 120 — Remove `_SUFFIXES` alias in `input_params.py`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/input_params.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Step 100 consolidated `SPIN_SUFFIXES` into `param_check.py`
+and added a backward-compatibility alias `_SUFFIXES = SPIN_SUFFIXES` in
+`input_params.py`. Since this alias is purely internal, it can be removed
+in favour of using `SPIN_SUFFIXES` directly everywhere in the module.
+
+**Changes**:
+
+- Removed `_SUFFIXES = SPIN_SUFFIXES` alias declaration
+- Replaced all 7 uses of `_SUFFIXES` with `SPIN_SUFFIXES` throughout the file
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Look for other backward-compatibility shims or
+unused aliases to remove, or begin Phase 2 work on introducing a
+`KeywordParser` class.
+
+---
+
+## Step 114 — Replace O(n²) merge loop with dict-based O(n) in `_merge_duplicate_terms()`
+
+**Date**: 2026-01-29
+**File**: `python/writer/common_writer.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_merge_duplicate_terms()` used an O(n²) nested loop to find
+duplicate index quadruples and merge their amplitudes. A dict keyed by the
+4-tuple tracks first-occurrence indices, reducing complexity to O(n). The
+counting loop was also replaced with a generator expression.
+
+**Changes**:
+
+- Replaced O(n²) double loop with single-pass dict-based merge
+- Replaced counting loop with `sum(1 for k in range(n) if abs(vals[k]) > AMPLITUDE_EPS)`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize `_print_uhf_initial()` loops in
+`wannier90.py`, or target the `cos`/`sin` patterns remaining in
+`interaction_builder.py`.

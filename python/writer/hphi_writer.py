@@ -31,6 +31,8 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from stdface_vals import StdIntList, ModelType, MethodType, NaN_i, UNSET_STRING, AMPLITUDE_EPS
 from param_check import exit_program, print_val_d, print_val_i
 from .common_writer import _merge_duplicate_terms
@@ -181,28 +183,15 @@ def large_value(StdI: StdIntList) -> None:
         - ``LargeValue`` -- set **in place** to the computed value
           (unless the user already specified it).
     """
-    large_value0 = 0.0
-
-    for ktrans in range(StdI.ntrans):
-        large_value0 += abs(StdI.trans[ktrans])
-
-    for kintr in range(StdI.nintr):
-        large_value0 += abs(StdI.intr[kintr])
-
-    for kintr in range(StdI.NCintra):
-        large_value0 += abs(StdI.Cintra[kintr])
-
-    for kintr in range(StdI.NCinter):
-        large_value0 += abs(StdI.Cinter[kintr])
-
-    for kintr in range(StdI.NEx):
-        large_value0 += 2.0 * abs(StdI.Ex[kintr])
-
-    for kintr in range(StdI.NPairLift):
-        large_value0 += 2.0 * abs(StdI.PairLift[kintr])
-
-    for kintr in range(StdI.NHund):
-        large_value0 += 2.0 * abs(StdI.Hund[kintr])
+    large_value0 = (
+        np.sum(np.abs(StdI.trans[:StdI.ntrans]))
+        + np.sum(np.abs(StdI.intr[:StdI.nintr]))
+        + np.sum(np.abs(StdI.Cintra[:StdI.NCintra]))
+        + np.sum(np.abs(StdI.Cinter[:StdI.NCinter]))
+        + 2.0 * np.sum(np.abs(StdI.Ex[:StdI.NEx]))
+        + 2.0 * np.sum(np.abs(StdI.PairLift[:StdI.NPairLift]))
+        + 2.0 * np.sum(np.abs(StdI.Hund[:StdI.NHund]))
+    )
 
     large_value0 /= float(StdI.nsite)
 
@@ -646,24 +635,24 @@ def _compute_fourier_coefficients(StdI: StdIntList) -> tuple[list[float], list[f
     fourier_i : list of float
         Imaginary parts, length ``nsite``.
     """
-    fourier_r = [0.0] * StdI.nsite
-    fourier_i = [0.0] * StdI.nsite
+    fourier_r = np.zeros(StdI.nsite)
+    fourier_i = np.zeros(StdI.nsite)
+    n_computed = StdI.NCell * StdI.NsiteUC
 
-    isite = 0
-    for icell in range(StdI.NCell):
-        for itau in range(StdI.NsiteUC):
-            Cphase = ((StdI.Cell[icell][0] + StdI.tau[itau][0]) * StdI.SpectrumQ[0]
-                      + (StdI.Cell[icell][1] + StdI.tau[itau][1]) * StdI.SpectrumQ[1]
-                      + (StdI.Cell[icell][2] + StdI.tau[itau][2]) * StdI.SpectrumQ[2])
-            fourier_r[isite] = math.cos(2.0 * StdI.pi * Cphase)
-            fourier_i[isite] = math.sin(2.0 * StdI.pi * Cphase)
-            isite += 1
+    if n_computed > 0:
+        # Compute position vectors: Cell[icell] + tau[itau] for all (icell, itau) pairs
+        # Shape: (NCell, 1, 3) + (1, NsiteUC, 3) -> (NCell, NsiteUC, 3)
+        positions = StdI.Cell[:StdI.NCell, :].astype(float)[:, np.newaxis, :] + \
+                    StdI.tau[:StdI.NsiteUC, :][np.newaxis, :, :]
+        # Dot with SpectrumQ: shape (NCell, NsiteUC), then flatten to site order
+        Cphase_flat = (2.0 * StdI.pi * (positions @ StdI.SpectrumQ)).ravel()
+        fourier_r[:n_computed] = np.cos(Cphase_flat)
+        fourier_i[:n_computed] = np.sin(Cphase_flat)
 
     if StdI.model == ModelType.KONDO:
         half = StdI.nsite // 2
-        for isite in range(half):
-            fourier_r[isite + half] = fourier_r[isite]
-            fourier_i[isite + half] = fourier_i[isite]
+        fourier_r[half:] = fourier_r[:half]
+        fourier_i[half:] = fourier_i[:half]
 
     return fourier_r, fourier_i
 
@@ -956,8 +945,8 @@ def vector_potential(StdI: StdIntList) -> None:
     StdI.ExpandCoef = print_val_i("ExpandCoef", StdI.ExpandCoef, 10)
 
     # Allocate A(t) and E(t) arrays: Lanczos_max x 3
-    StdI.At = [[0.0] * 3 for _ in range(StdI.Lanczos_max)]
-    Et = [[0.0] * 3 for _ in range(StdI.Lanczos_max)]
+    StdI.At = np.zeros((StdI.Lanczos_max, 3))
+    Et = np.zeros((StdI.Lanczos_max, 3))
 
     # Resolve PumpType default
     if StdI.PumpType == UNSET_STRING:
@@ -978,9 +967,10 @@ def vector_potential(StdI: StdIntList) -> None:
     if handler_fn is not None:
         for it in range(StdI.Lanczos_max):
             time = StdI.dt * float(it)
-            for ii in range(3):
-                StdI.At[it][ii], Et[it][ii] = handler_fn(
-                    time, StdI.VecPot[ii], StdI.freq, StdI.tshift, StdI.tdump)
+            results = [handler_fn(time, StdI.VecPot[ii], StdI.freq,
+                                  StdI.tshift, StdI.tdump) for ii in range(3)]
+            StdI.At[it, :] = [r[0] for r in results]
+            Et[it, :] = [r[1] for r in results]
 
     # ------------------------------------------------------------------
     #  Write potential.dat for one-body pump

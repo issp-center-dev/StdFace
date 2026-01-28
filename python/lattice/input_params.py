@@ -29,21 +29,13 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import itertools
 import math
 
 import numpy as np
 
-from param_check import exit_program
+from param_check import exit_program, SPIN_SUFFIXES
 
-
-# ---------------------------------------------------------------------------
-#  Spin interaction suffix matrix (shared by input_spin_nn and input_spin)
-# ---------------------------------------------------------------------------
-_SUFFIXES: list[list[str]] = [
-    ["x", "xy", "xz"],
-    ["yx", "y", "yz"],
-    ["zx", "zy", "z"],
-]
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +99,7 @@ def _check_scalar_vs_matrix(scalar: float, mat: np.ndarray,
     idx = _first_set_index(mat)
     if idx is not None:
         i1, i2 = idx
-        print(f"\n ERROR! {scalar_name} and {mat_name}{_SUFFIXES[i1][i2]} conflict !\n")
+        print(f"\n ERROR! {scalar_name} and {mat_name}{SPIN_SUFFIXES[i1][i2]} conflict !\n")
         exit_program(-1)
 
 
@@ -131,8 +123,8 @@ def _check_matrix_vs_matrix(mat_a: np.ndarray, mat_b: np.ndarray,
     if idx_a is not None and idx_b is not None:
         i1, i2 = idx_a
         i3, i4 = idx_b
-        print(f"\n ERROR! {name_a}{_SUFFIXES[i1][i2]} "
-              f"and {name_b}{_SUFFIXES[i3][i4]} conflict !\n")
+        print(f"\n ERROR! {name_a}{SPIN_SUFFIXES[i1][i2]} "
+              f"and {name_b}{SPIN_SUFFIXES[i3][i4]} conflict !\n")
         exit_program(-1)
 
 
@@ -166,21 +158,20 @@ def _resolve_spin_matrix(
     JAll : float, optional
         Global isotropic value. Default is NaN (unset).
     """
-    for i1 in range(3):
-        for i2 in range(3):
-            if not math.isnan(J0[i1, i2]):
-                print(f"  {J0name + _SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
-            elif J is not None and not math.isnan(J[i1, i2]):
-                J0[i1, i2] = J[i1, i2]
-                print(f"  {J0name + _SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
-            elif i1 == i2 and not math.isnan(J0All):
-                J0[i1, i2] = J0All
-                print(f"  {J0name + _SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
-            elif i1 == i2 and not math.isnan(JAll):
-                J0[i1, i2] = JAll
-                print(f"  {J0name + _SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
-            else:
-                J0[i1, i2] = 0.0
+    for i1, i2 in itertools.product(range(3), repeat=2):
+        if not math.isnan(J0[i1, i2]):
+            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+        elif J is not None and not math.isnan(J[i1, i2]):
+            J0[i1, i2] = J[i1, i2]
+            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+        elif i1 == i2 and not math.isnan(J0All):
+            J0[i1, i2] = J0All
+            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+        elif i1 == i2 and not math.isnan(JAll):
+            J0[i1, i2] = JAll
+            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+        else:
+            J0[i1, i2] = 0.0
 
 
 def input_spin_nn(

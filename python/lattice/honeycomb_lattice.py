@@ -232,11 +232,9 @@ def honeycomb_boost(StdI: StdIntList) -> None:
         print("\nERROR ! (a0W, a0L, a1W, a1L) can not be used with SpinGCBoost.\n")
         exit_program(-1)
 
-    for i1 in range(3):
-        for i2 in range(3):
-            if abs(StdI.Jp[i1, i2]) > 1.0e-8:
-                print("\nERROR ! J' can not be used with SpinGCBoost.\n")
-                exit_program(-1)
+    if np.any(np.abs(StdI.Jp) > 1.0e-8):
+        print("\nERROR ! J' can not be used with SpinGCBoost.\n")
+        exit_program(-1)
 
     # Magnetic field
     with open("boost.def", "w") as fp:
