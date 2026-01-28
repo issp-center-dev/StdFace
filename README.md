@@ -46,10 +46,19 @@ StdFace reads a simple configuration file specifying the physical model and latt
 
 ## Requirements
 
+### C Implementation
+
 - CMake 2.8.12 or later
 - C99-compatible compiler (GCC, Clang, Intel, Fujitsu, etc.)
 
+### Python Implementation
+
+- Python 3.10 or later
+- NumPy
+
 ## Installation
+
+### C Implementation
 
 ```bash
 git clone https://github.com/issp-center-dev/StdFace
@@ -59,7 +68,7 @@ cmake --build build
 cmake --install build --prefix /path/to/install
 ```
 
-### Build Options
+#### Build Options
 
 Enable one or more solver modes:
 
@@ -75,6 +84,18 @@ Build all solvers:
 ```bash
 cmake -B build -DHPHI=ON -DMVMC=ON -DUHF=ON -DHWAVE=ON
 cmake --build build
+```
+
+### Python Implementation
+
+The Python implementation requires no installation. Simply ensure Python 3.10+ and NumPy are available:
+
+```bash
+# Check Python version
+python3 --version  # Should be 3.10 or later
+
+# Install NumPy if needed
+pip install numpy
 ```
 
 ## Quick Start
@@ -94,11 +115,74 @@ nelec = 4
 
 2. Run StdFace:
 
+**C Implementation:**
 ```bash
 ./hphi_dry.out stan.in
 ```
 
+**Python Implementation:**
+```bash
+PYTHONPATH=python python3 python/__main__.py stan.in
+```
+
+To select a solver (Python):
+```bash
+PYTHONPATH=python python3 python/__main__.py stan.in --solver mVMC
+PYTHONPATH=python python3 python/__main__.py stan.in --solver UHF
+PYTHONPATH=python python3 python/__main__.py stan.in --solver HWAVE
+```
+
 3. Input files for the target solver are generated in the current directory.
+
+Both implementations produce identical output files.
+
+## Python Implementation
+
+The `python/` directory contains a fully-featured Python port of StdFace that produces byte-identical output to the C implementation. The Python codebase has been refactored into idiomatic Python with:
+
+- **Modular architecture**: Organized into `lattice/` and `writer/` subpackages
+- **Comprehensive testing**: 1,252 unit tests and 83 integration tests
+- **Python idioms**: Enums, dict dispatch, context managers, and helper functions
+- **Full feature parity**: Supports all lattices, models, and solvers
+
+### Python Project Structure
+
+```
+python/
+  __main__.py              # CLI entry point
+  stdface_main.py          # Main logic
+  stdface_vals.py          # Data structures
+  stdface_model_util.py    # Shared utilities
+  keyword_parser.py        # Keyword parsing
+  param_check.py           # Parameter validation
+  lattice/                 # Lattice implementations
+    chain_lattice.py
+    square_lattice.py
+    honeycomb_lattice.py
+    kagome.py
+    wannier90.py
+    ...
+  writer/                  # Solver-specific writers
+    common_writer.py
+    hphi_writer.py
+    mvmc_writer.py
+    ...
+```
+
+### Running Python Tests
+
+**Unit Tests:**
+```bash
+python3 -m pytest test/unit/ -v
+```
+
+**Integration Tests:**
+```bash
+# Run all integration tests
+bash test/run_all_integration.sh
+```
+
+For more details, see [python/README.md](python/README.md).
 
 ## Documentation
 
