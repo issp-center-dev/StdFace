@@ -22,7 +22,6 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 import numpy as np
 
@@ -69,7 +68,7 @@ class _IntrItem:
     v : complex
         Interaction strength.
     """
-    r: List[int] = field(default_factory=lambda: [0, 0, 0])
+    r: list[int] = field(default_factory=lambda: [0, 0, 0])
     a: int = 0
     b: int = 0
     s: int = 0
@@ -143,7 +142,7 @@ def _write_geometry(StdI: StdIntList, fname: str) -> None:
 
 def _compute_index(rx: int, ry: int, rz: int,
                    a: int, b: int, s: int, t: int,
-                   rr: List[int], nsiteuc: int, nspin: int) -> int:
+                   rr: list[int], nsiteuc: int, nspin: int) -> int:
     """Compute flat index into the interaction matrix.
 
     Parameters
@@ -182,7 +181,7 @@ def _compute_index(rx: int, ry: int, rz: int,
 
 def _build_wannier_matrix(
     nintr_table: int,
-    intr_table: List[_IntrItem],
+    intr_table: list[_IntrItem],
     nsiteuc: int,
     nspin: int,
 ) -> tuple[list[int], int, np.ndarray]:
@@ -312,7 +311,7 @@ def _write_wannier_body(
                             f"{matrix[idx].imag:16.12f}\n")
 
 
-def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
+def _write_wannier90(nintr_table: int, intr_table: list[_IntrItem],
                      nsiteuc: int, nspin: int,
                      fname: str, tagname: str) -> None:
     """Write interaction parameters to file in Wannier90 format.
@@ -362,7 +361,7 @@ def _write_wannier90(nintr_table: int, intr_table: List[_IntrItem],
 #  Unfold site coordinates
 # -----------------------------------------------------------------------
 
-def _unfold_site(StdI: StdIntList, v_in: List[int]) -> List[int]:
+def _unfold_site(StdI: StdIntList, v_in: list[int]) -> list[int]:
     """Convert site coordinates from [0, N] to [-N/2, N/2] range.
 
     Parameters
@@ -395,7 +394,7 @@ def _unfold_site(StdI: StdIntList, v_in: List[int]) -> List[int]:
 #  Key generation / comparison helpers
 # -----------------------------------------------------------------------
 
-def _generate_key(keylen: int, index: List[int], ordered: int) -> List[int]:
+def _generate_key(keylen: int, index: list[int], ordered: int) -> list[int]:
     """Generate key for interaction table entry.
 
     Parameters
@@ -480,8 +479,8 @@ def _accumulate_list(keylen: int,
             key_order.append(idx)
 
     # Filter out near-zero entries
-    intr_index: List[List[int]] = []
-    intr_value: List[complex] = []
+    intr_index: list[list[int]] = []
+    intr_value: list[complex] = []
     for key in key_order:
         if abs(accum[key]) >= _EPS:
             intr_index.append(list(key))
@@ -497,9 +496,9 @@ def _accumulate_list(keylen: int,
 def _build_inter_table(
     StdI: StdIntList,
     nintr: int,
-    intr_index: List[List[int]],
+    intr_index: list[list[int]],
     intr_value: np.ndarray,
-) -> List[_IntrItem]:
+) -> list[_IntrItem]:
     """Build a deduplicated interaction table in relative coordinates.
 
     Converts accumulated inter-site interaction entries from absolute
@@ -523,7 +522,7 @@ def _build_inter_table(
     list of _IntrItem
         Deduplicated interaction entries in relative coordinates.
     """
-    intr_table: List[_IntrItem] = []
+    intr_table: list[_IntrItem] = []
     seen: dict[tuple, int] = {}  # key -> index in intr_table
 
     for k in range(nintr):
@@ -642,10 +641,10 @@ def _export_inter_real(StdI: StdIntList,
 def _build_transfer_table(
     StdI: StdIntList,
     nintr: int,
-    intr_index: List[List[int]],
+    intr_index: list[list[int]],
     intr_value: np.ndarray,
     spin_dep: int,
-) -> List[_IntrItem]:
+) -> list[_IntrItem]:
     """Build a deduplicated transfer table in relative coordinates.
 
     Converts accumulated transfer entries from absolute site indices
@@ -673,7 +672,7 @@ def _build_transfer_table(
     list of _IntrItem
         Deduplicated transfer entries in relative coordinates.
     """
-    intr_table: List[_IntrItem] = []
+    intr_table: list[_IntrItem] = []
     seen: dict[tuple, int] = {}  # key -> index in intr_table
 
     for k in range(nintr):
@@ -768,9 +767,9 @@ def _export_transfer(StdI: StdIntList,
 def _build_coulomb_intra_table(
     StdI: StdIntList,
     nintr: int,
-    intr_index: List[List[int]],
+    intr_index: list[list[int]],
     intr_value: np.ndarray,
-) -> List[_IntrItem]:
+) -> list[_IntrItem]:
     """Build a deduplicated on-site Coulomb table.
 
     Converts accumulated on-site Coulomb entries from absolute site
@@ -794,7 +793,7 @@ def _build_coulomb_intra_table(
     list of _IntrItem
         Deduplicated on-site Coulomb entries.
     """
-    intr_table: List[_IntrItem] = []
+    intr_table: list[_IntrItem] = []
 
     for k in range(nintr):
         idx_i = intr_index[k][0]

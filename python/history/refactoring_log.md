@@ -7055,3 +7055,29 @@ both functions and their 6 unit tests.
 
 **Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
 class, or continue Phase 3 idiom improvements in other modules.
+
+---
+
+## Step 119 — Replace `typing.List` with builtin `list` in `export_wannier90.py`
+
+**Date**: 2026-01-29
+**File**: `python/writer/export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Python 3.10+ supports `list[...]` natively for type hints,
+making `from typing import List` unnecessary. Replaced all occurrences and
+removed the import.
+
+**Changes**:
+
+- Removed `from typing import List`
+- Replaced all `List[...]` annotations with `list[...]` (17 occurrences)
+
+**Test results**:
+- Unit tests: 1256 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Apply the same `typing` modernization to other files
+(`site_util.py`, `wannier90.py`, `interaction_builder.py`, `boost_output.py`)
+which still use `from typing import TextIO`, or begin Phase 2 class
+introduction.
