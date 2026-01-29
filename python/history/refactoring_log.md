@@ -8083,3 +8083,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1260 passed (1 removed)
 - Integration: 83/83 passed
+
+## Step 186 — 2026-01-29
+
+**Files**: `python/lattice/interaction_builder.py`
+**Change**: Extracted the duplicated model-dispatch logic (spin → `general_j`, electron → `hopping` + `coulomb`) from `add_neighbor_interaction` and `add_neighbor_interaction_3d` into a shared `_dispatch_bond_interaction` helper. Both functions now delegate to this single helper after resolving site indices.
+**Phase**: 3 — Python idioms (DRY)
+
+**Tests**:
+- Unit: 1260 passed
+- Integration: 83/83 passed

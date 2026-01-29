@@ -536,6 +536,41 @@ def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None
         setattr(StdI, count_attr, 0)
 
 
+def _dispatch_bond_interaction(
+    StdI: StdIntList,
+    isite: int, jsite: int,
+    Cphase: complex, dR: np.ndarray,
+    J: np.ndarray, t: complex, V: float,
+) -> None:
+    """Apply the model-dependent interaction for a single bond.
+
+    For spin models calls :func:`general_j`; for electron models calls
+    :func:`hopping` and :func:`coulomb`.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Model parameter structure (modified in-place).
+    isite, jsite : int
+        Global site indices of the two bond endpoints.
+    Cphase : complex
+        Boundary phase factor.
+    dR : numpy.ndarray
+        Distance vector R_i − R_j (shape ``(3,)``).
+    J : numpy.ndarray
+        3×3 spin-coupling matrix (used when model is SPIN).
+    t : complex
+        Hopping amplitude *before* phase multiplication (used otherwise).
+    V : float
+        Coulomb repulsion (used otherwise).
+    """
+    if StdI.model == ModelType.SPIN:
+        general_j(StdI, J, StdI.S2, StdI.S2, isite, jsite)
+    else:
+        hopping(StdI, Cphase * t, isite, jsite, dR)
+        coulomb(StdI, V, isite, jsite)
+
+
 def add_neighbor_interaction(
     StdI: StdIntList,
     fp: TextIO | None,
@@ -589,11 +624,7 @@ def add_neighbor_interaction(
 
     isite, jsite, Cphase, dR = set_label(
         StdI, fp, iW, iL, diW, diL, isiteUC, jsiteUC, connect)
-    if StdI.model == ModelType.SPIN:
-        general_j(StdI, J, StdI.S2, StdI.S2, isite, jsite)
-    else:
-        hopping(StdI, Cphase * t, isite, jsite, dR)
-        coulomb(StdI, V, isite, jsite)
+    _dispatch_bond_interaction(StdI, isite, jsite, Cphase, dR, J, t, V)
     return isite, jsite, Cphase, dR
 
 
@@ -645,11 +676,7 @@ def add_neighbor_interaction_3d(
 
     isite, jsite, Cphase, dR = find_site(
         StdI, iW, iL, iH, diW, diL, diH, isiteUC, jsiteUC)
-    if StdI.model == ModelType.SPIN:
-        general_j(StdI, J, StdI.S2, StdI.S2, isite, jsite)
-    else:
-        hopping(StdI, Cphase * t, isite, jsite, dR)
-        coulomb(StdI, V, isite, jsite)
+    _dispatch_bond_interaction(StdI, isite, jsite, Cphase, dR, J, t, V)
     return isite, jsite, Cphase, dR
 
 
