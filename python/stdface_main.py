@@ -452,6 +452,52 @@ def _reset_vals(StdI: StdIntList) -> None:
 
 
 # ===================================================================
+#  Model / method resolution
+# ===================================================================
+
+
+def _resolve_model_and_method(StdI: StdIntList, solver: str) -> None:
+    """Normalise the model name and HPhi method, updating *StdI* in place.
+
+    Looks up ``StdI.model`` in :data:`MODEL_ALIASES` (and, for HPhi,
+    :data:`MODEL_ALIASES_HPHI_BOOST`) to resolve the canonical
+    :class:`ModelType`, the grand-canonical flag ``lGC``, and the Boost
+    flag ``lBoost``.
+
+    For HPhi, also normalises ``StdI.method`` via :data:`METHOD_ALIASES`
+    and, if the method is time-evolution, computes the vector potential.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Parameter structure (modified in place).
+    solver : str
+        Solver name.
+
+    Raises
+    ------
+    SystemExit
+        If the model name is not recognised.
+    """
+    StdI.lGC = 0
+    StdI.lBoost = 0
+
+    model_info = MODEL_ALIASES.get(StdI.model)
+    if model_info is None and solver == SolverType.HPhi:
+        model_info = MODEL_ALIASES_HPHI_BOOST.get(StdI.model)
+    if model_info is not None:
+        StdI.model, StdI.lGC, StdI.lBoost = model_info
+    else:
+        _unsupported_system(StdI.model, StdI.lattice)
+
+    if solver == SolverType.HPhi:
+        StdI.method = METHOD_ALIASES.get(StdI.method, StdI.method)
+
+        if StdI.method == MethodType.TIME_EVOLUTION:
+            _vector_potential(StdI)
+
+
+# ===================================================================
 #  Input file parsing
 # ===================================================================
 
@@ -570,29 +616,7 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     else:
         print(f"    CDataFileHead = {StdI.CDataFileHead}")
 
-    # ------------------------------------------------------------------
-    #  Check / normalise the model name
-    # ------------------------------------------------------------------
-    StdI.lGC = 0
-    StdI.lBoost = 0
-
-    model_info = MODEL_ALIASES.get(StdI.model)
-    if model_info is None and solver == SolverType.HPhi:
-        model_info = MODEL_ALIASES_HPHI_BOOST.get(StdI.model)
-    if model_info is not None:
-        StdI.model, StdI.lGC, StdI.lBoost = model_info
-    else:
-        _unsupported_system(StdI.model, StdI.lattice)
-
-    # ------------------------------------------------------------------
-    #  Check / normalise the method (HPhi only)
-    # ------------------------------------------------------------------
-    if solver == SolverType.HPhi:
-        StdI.method = METHOD_ALIASES.get(StdI.method, StdI.method)
-
-        # Compute vector potential and electrical field
-        if StdI.method == MethodType.TIME_EVOLUTION:
-            _vector_potential(StdI)
+    _resolve_model_and_method(StdI, solver)
 
     # ------------------------------------------------------------------
     #  Generate Hamiltonian definition files -- lattice dispatch

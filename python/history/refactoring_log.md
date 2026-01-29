@@ -7883,3 +7883,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 167 — 2026-01-29
+
+**Files**: `python/stdface_main.py`
+**Change**: Extracted model name normalisation and HPhi method resolution from `stdface_main()` into `_resolve_model_and_method(StdI, solver)`. This covers MODEL_ALIASES lookup, MODEL_ALIASES_HPHI_BOOST fallback, METHOD_ALIASES normalisation, and vector potential computation for time-evolution. Reduces `stdface_main` by ~20 lines.
+**Phase**: 1 — Extract modules (function extraction from stdface_main)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
