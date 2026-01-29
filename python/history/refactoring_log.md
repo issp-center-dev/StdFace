@@ -7763,3 +7763,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 157 — 2026-01-29
+
+**Files**: `python/lattice/boost_output.py`
+**Change**: Replaced 12-line hardcoded upper-triangle symmetric matrix write in `write_boost_j_symmetric` with 2-line implementation: construct symmetric matrix via `np.triu(J) + np.triu(J, 1).T` and delegate to `write_boost_j_full`.
+**Phase**: 3 — Leverage Python idioms (code reuse + numpy)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

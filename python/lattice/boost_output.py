@@ -101,21 +101,8 @@ def write_boost_j_symmetric(fp: TextIO, J: np.ndarray, scale: float = 0.25) -> N
     scale : float, optional
         Multiplicative scaling factor.  Default is ``0.25``.
     """
-    fp.write(
-        f"{scale * J[0, 0]:25.15e} "
-        f"{scale * J[0, 1]:25.15e} "
-        f"{scale * J[0, 2]:25.15e}\n"
-    )
-    fp.write(
-        f"{scale * J[0, 1]:25.15e} "
-        f"{scale * J[1, 1]:25.15e} "
-        f"{scale * J[1, 2]:25.15e}\n"
-    )
-    fp.write(
-        f"{scale * J[0, 2]:25.15e} "
-        f"{scale * J[1, 2]:25.15e} "
-        f"{scale * J[2, 2]:25.15e}\n"
-    )
+    Jsym = np.triu(J) + np.triu(J, 1).T
+    write_boost_j_full(fp, Jsym, scale)
 
 
 def write_boost_6spin_star(fp: TextIO, StdI: StdIntList) -> None:
