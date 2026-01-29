@@ -7556,3 +7556,21 @@ single grouped import block using parenthesized imports.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+## Step 142 — De-duplicate print in `_resolve_spin_matrix`
+
+**Date**: 2026-01-29
+**File(s)**: `python/lattice/input_params.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: In `_resolve_spin_matrix()`, the identical print statement
+`print(f"  {label:>14s} = {J0[i1, i2]:<10.5f}")` appeared 4 times (once per
+resolution branch). Replaced with a `resolved` flag and a single print at
+the end of the if/elif chain.
+
+**Why**: DRY — 4 identical print calls replaced with one, reducing duplication
+while preserving identical output.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

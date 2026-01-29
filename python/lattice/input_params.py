@@ -159,19 +159,24 @@ def _resolve_spin_matrix(
         Global isotropic value. Default is NaN (unset).
     """
     for i1, i2 in itertools.product(range(3), repeat=2):
+        resolved = False
         if not math.isnan(J0[i1, i2]):
-            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+            resolved = True
         elif J is not None and not math.isnan(J[i1, i2]):
             J0[i1, i2] = J[i1, i2]
-            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+            resolved = True
         elif i1 == i2 and not math.isnan(J0All):
             J0[i1, i2] = J0All
-            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+            resolved = True
         elif i1 == i2 and not math.isnan(JAll):
             J0[i1, i2] = JAll
-            print(f"  {J0name + SPIN_SUFFIXES[i1][i2]:>14s} = {J0[i1, i2]:<10.5f}")
+            resolved = True
         else:
             J0[i1, i2] = 0.0
+
+        if resolved:
+            label = J0name + SPIN_SUFFIXES[i1][i2]
+            print(f"  {label:>14s} = {J0[i1, i2]:<10.5f}")
 
 
 def input_spin_nn(
