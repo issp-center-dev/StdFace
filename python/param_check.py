@@ -109,7 +109,8 @@ def print_val_dd(valname: str, val: float, val0: float, val1: float) -> float:
     """Print and optionally set a real-valued parameter with two defaults.
 
     If *val* is NaN, use the primary default *val0* if specified,
-    otherwise fall back to the secondary default *val1*.
+    otherwise fall back to the secondary default *val1*.  Delegates to
+    :func:`print_val_d` after resolving the effective default.
 
     Parameters
     ----------
@@ -127,15 +128,8 @@ def print_val_dd(valname: str, val: float, val0: float, val1: float) -> float:
     float
         The (possibly updated) value.
     """
-    if math.isnan(val):
-        if math.isnan(val0):
-            val = val1
-        else:
-            val = val0
-        print(f"  {valname:>15s} = {val:<10.5f}  ######  DEFAULT VALUE IS USED  ######")
-    else:
-        print(f"  {valname:>15s} = {val:<10.5f}")
-    return val
+    default = val1 if math.isnan(val0) else val0
+    return print_val_d(valname, val, default)
 
 
 def print_val_c(valname: str, val: complex, val0: complex) -> complex:

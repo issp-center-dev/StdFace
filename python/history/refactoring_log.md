@@ -7352,3 +7352,27 @@ to eliminate duplication.
 - Integration tests: 83/83 passed
 
 **Suggested next step**: Continue Phase 3 cleanup or begin Phase 2 class work.
+
+---
+
+## Step 131 — Simplify `print_val_dd` to delegate to `print_val_d`
+
+**Date**: 2026-01-29
+**File**: `python/param_check.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `print_val_dd()` duplicated the print/default logic from
+`print_val_d()` with an extra level of default resolution. Simplified to
+resolve the effective default first, then delegate to `print_val_d()`.
+Reduced from 7 lines of logic to 2.
+
+**Changes**:
+
+- Replaced body of `print_val_dd` with `default = val1 if isnan(val0) else val0`
+  followed by `return print_val_d(valname, val, default)`
+
+**Test results**:
+- Unit tests: 1253 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue Phase 3 cleanup or begin Phase 2 class work.
