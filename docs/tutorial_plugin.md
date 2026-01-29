@@ -1,6 +1,6 @@
 # Plugin Tutorial: Adding New Solvers and Lattices
 
-StdFace uses a plugin architecture where solvers and lattices are self-registering modules. This tutorial explains how to add a new solver or lattice without modifying any existing code.
+StdFace uses a plugin architecture where solvers and lattices are self-registering modules. This tutorial explains how to add a new solver or lattice by creating a new plugin module and wiring it into the existing discovery mechanism.
 
 ## Table of Contents
 
