@@ -7919,3 +7919,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 170 — 2026-01-29
+
+**Files**: `python/stdface_vals.py`, `python/version.py`, `python/lattice/__init__.py`, `python/writer/__init__.py`
+**Change**: Added `from __future__ import annotations` to the 4 remaining Python source files that were missing it (`stdface_vals.py`, `version.py`, `lattice/__init__.py`, `writer/__init__.py`). Also added `-> None` return type annotation to `print_version()` — the last public function without one. All Python source files now consistently use future annotations.
+**Phase**: 3 — Leverage Python idioms (consistency)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed
