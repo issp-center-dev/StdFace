@@ -177,6 +177,28 @@ def store_with_check_dup_d(keyword: str, value: str, current: float) -> float:
     return float(value)
 
 
+def _safe_float(s: str) -> float:
+    """Parse a string to float, returning 0.0 on empty or invalid input.
+
+    Parameters
+    ----------
+    s : str
+        String to parse.
+
+    Returns
+    -------
+    float
+        Parsed value, or 0.0 if *s* is empty or not a valid number.
+    """
+    s = s.strip()
+    if not s:
+        return 0.0
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
 def store_with_check_dup_c(keyword: str, value: str, current: complex) -> complex:
     """Store a complex value after checking for duplicate assignment.
 
@@ -212,31 +234,9 @@ def store_with_check_dup_c(keyword: str, value: str, current: complex) -> comple
         _fail_duplicate(keyword)
 
     # Split on comma, mirroring the C strtok(",") logic
-    if "," in value:
-        parts = value.split(",", 1)
-        real_str = parts[0].strip()
-        imag_str = parts[1].strip() if len(parts) > 1 else ""
-    else:
-        real_str = value.strip()
-        imag_str = ""
-
-    # Parse real part
-    if real_str == "":
-        real_part = 0.0
-    else:
-        try:
-            real_part = float(real_str)
-        except ValueError:
-            real_part = 0.0
-
-    # Parse imaginary part
-    if imag_str == "":
-        imag_part = 0.0
-    else:
-        try:
-            imag_part = float(imag_str)
-        except ValueError:
-            imag_part = 0.0
+    parts = value.split(",", 1) if "," in value else [value]
+    real_part = _safe_float(parts[0])
+    imag_part = _safe_float(parts[1]) if len(parts) > 1 else 0.0
 
     return complex(real_part, imag_part)
 

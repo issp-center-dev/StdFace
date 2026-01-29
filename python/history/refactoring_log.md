@@ -7304,3 +7304,28 @@ into a single `_fail_duplicate(keyword)` helper to eliminate the duplication.
 
 **Suggested next step**: Begin Phase 2 class introduction work (e.g.
 `KeywordParser` class or `SolverWriter` hierarchy).
+
+---
+
+## Step 129 — Simplify complex parsing in `store_with_check_dup_c` with `_safe_float`
+
+**Date**: 2026-01-29
+**File**: `python/keyword_parser.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `store_with_check_dup_c()` had 18 lines of verbose parsing
+logic with duplicated try/except blocks for real and imaginary parts. Extracted
+a `_safe_float(s)` helper (returns 0.0 for empty/invalid input) and reduced
+the parsing to 3 lines.
+
+**Changes**:
+
+- Added `_safe_float(s)` helper function
+- Replaced 18-line parsing block with 3-line version using `_safe_float`
+
+**Test results**:
+- Unit tests: 1253 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Begin Phase 2 class introduction work, or continue
+cleaning up remaining C-style patterns.
