@@ -7130,3 +7130,30 @@ Simplified both to idiomatic `with open(...) as fp:`.
 
 **Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
 class, or continue finding remaining C-style patterns in other modules.
+
+---
+
+## Step 122 — Change `_generate_key` to return tuple instead of list
+
+**Date**: 2026-01-29
+**File**: `python/writer/export_wannier90.py`, `test/unit/test_export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_generate_key()` returned `list[int]` but its only caller
+immediately wrapped the result in `tuple()` for use as a dict key.  Changed
+return type to `tuple[int, ...]` to avoid the extra conversion, and also
+condensed the conditional returns using ternary expressions.
+
+**Changes**:
+
+- Changed `_generate_key` return type from `list[int]` to `tuple[int, ...]`
+- Replaced `return [...]` with `return (...)` for all branches
+- Removed `tuple()` wrapper at the call site in `_accumulate_list`
+- Updated 7 unit tests to expect tuples
+
+**Test results**:
+- Unit tests: 1256 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
+class or a `SolverWriter` hierarchy.

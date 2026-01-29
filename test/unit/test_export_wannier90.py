@@ -126,31 +126,31 @@ class TestGenerateKey:
 
     def test_keylen_1(self):
         result = ew._generate_key(1, [42], 0)
-        assert result == [42]
+        assert result == (42,)
 
     def test_keylen_2_unordered(self):
         result = ew._generate_key(2, [5, 3], 0)
-        assert result == [5, 3]
+        assert result == (5, 3)
 
     def test_keylen_2_ordered_swap(self):
         result = ew._generate_key(2, [5, 3], 1)
-        assert result == [3, 5]
+        assert result == (3, 5)
 
     def test_keylen_2_ordered_no_swap(self):
         result = ew._generate_key(2, [2, 7], 1)
-        assert result == [2, 7]
+        assert result == (2, 7)
 
     def test_keylen_4_unordered(self):
         result = ew._generate_key(4, [3, 0, 1, 1], 0)
-        assert result == [3, 0, 1, 1]
+        assert result == (3, 0, 1, 1)
 
     def test_keylen_4_ordered_swap(self):
         result = ew._generate_key(4, [5, 0, 2, 1], 1)
-        assert result == [2, 1, 5, 0]
+        assert result == (2, 1, 5, 0)
 
     def test_keylen_4_ordered_no_swap(self):
         result = ew._generate_key(4, [1, 0, 3, 1], 1)
-        assert result == [1, 0, 3, 1]
+        assert result == (1, 0, 3, 1)
 
 
 class TestComputeIndex:

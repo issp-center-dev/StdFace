@@ -382,8 +382,8 @@ def _unfold_site(StdI: StdIntList, v_in: list[int]) -> list[int]:
 #  Key generation / comparison helpers
 # -----------------------------------------------------------------------
 
-def _generate_key(keylen: int, index: list[int], ordered: int) -> list[int]:
-    """Generate key for interaction table entry.
+def _generate_key(keylen: int, index: list[int], ordered: int) -> tuple[int, ...]:
+    """Generate hashable key for interaction table entry.
 
     Parameters
     ----------
@@ -396,26 +396,20 @@ def _generate_key(keylen: int, index: list[int], ordered: int) -> list[int]:
 
     Returns
     -------
-    list of int
-        Generated key.
+    tuple of int
+        Generated key (hashable, suitable as dict key).
     """
     if keylen == 1:
-        return [index[0]]
+        return (index[0],)
     elif keylen == 2:
         i, j = index[0], index[1]
-        if ordered == 1 and i > j:
-            return [j, i]
-        else:
-            return [i, j]
+        return (j, i) if ordered == 1 and i > j else (i, j)
     elif keylen == 4:
         i, s, j, t = index[0], index[1], index[2], index[3]
-        if ordered == 1 and i > j:
-            return [j, t, i, s]
-        else:
-            return [i, s, j, t]
+        return (j, t, i, s) if ordered == 1 and i > j else (i, s, j, t)
     else:
         _fatal(f"unsupported keylen: {keylen}")
-        return []  # unreachable
+        return ()  # unreachable
 
 
 # -----------------------------------------------------------------------
@@ -457,7 +451,7 @@ def _accumulate_list(keylen: int,
     key_order: list[tuple[int, ...]] = []
 
     for k in range(ntbl):
-        idx = tuple(_generate_key(keylen, list(tbl_index[k, :keylen]), ordered))
+        idx = _generate_key(keylen, list(tbl_index[k, :keylen]), ordered)
         val = complex(tbl_value[k])
 
         if idx in accum:
