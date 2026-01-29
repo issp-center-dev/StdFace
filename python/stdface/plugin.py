@@ -18,6 +18,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .core.stdface_vals import StdIntList
 
+try:
+    from importlib.metadata import entry_points
+except ImportError:
+    # Python < 3.10
+    from importlib_metadata import entry_points  # type: ignore[import-not-found]
+
 
 class SolverPlugin(ABC):
     """Abstract base class for solver plugins.
@@ -254,12 +260,41 @@ def get_plugin(name: str) -> SolverPlugin:
 
 
 def _discover_plugins() -> None:
-    """Load built-in plugins by importing the solvers package.
+    """Load built-in and external plugins.
 
-    This function is called lazily on first access to ensure plugins
-    are registered even if the solvers package hasn't been imported yet.
+    This function:
+    1. Imports the built-in stdface.solvers package to auto-register built-in plugins
+    2. Discovers and loads external plugins via the "stdface.solvers" entry point
+
+    Called lazily on first access to ensure plugins are registered even if the
+    solvers package hasn't been imported yet.
     """
+    # Load built-in plugins
     try:
         import stdface.solvers  # noqa: F401 — triggers auto-registration
     except ImportError:
         pass
+
+    # Load external plugins from entry points
+    eps = entry_points()
+    # Handle both old (dict) and new (SelectableGroups) API
+    if hasattr(eps, 'select'):
+        # Python 3.10+ / importlib.metadata >= 3.6
+        solver_eps = eps.select(group='stdface.solvers')
+    else:
+        # Python 3.9 / older importlib_metadata
+        solver_eps = eps.get('stdface.solvers', [])
+
+    for ep in solver_eps:
+        try:
+            plugin_class = ep.load()
+            # Instantiate and register if not already registered
+            # (built-in plugins are already registered via import above)
+            if callable(plugin_class):
+                plugin_instance = plugin_class()
+                if plugin_instance.name not in _plugins:
+                    register(plugin_instance)
+        except Exception:
+            # Silently skip plugins that fail to load
+            # This prevents one broken plugin from breaking the entire system
+            pass
