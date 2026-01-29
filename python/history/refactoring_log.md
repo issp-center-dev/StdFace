@@ -7376,3 +7376,22 @@ Reduced from 7 lines of logic to 2.
 - Integration tests: 83/83 passed
 
 **Suggested next step**: Continue Phase 3 cleanup or begin Phase 2 class work.
+
+## Step 132 — Simplify `try/open + else` to `try/open + except` in `stdface_main.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/stdface_main.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Removed the `else` clause from the `try/open/except` block in
+`stdface_main()`. The success-path `print()` was in an `else` block (a C-ism
+from the original translation). Since the `except` branch calls
+`exit_program(-1)`, the `print` can safely be placed after the `try/except`
+block without changing semantics. This matches the same cleanup done in
+Step 121 for `export_wannier90.py`.
+
+**Why**: Simpler control flow; removes unnecessary `else` clause.
+
+**Tests**:
+- Unit: 1253 passed
+- Integration: 83/83 passed

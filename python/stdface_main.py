@@ -480,8 +480,8 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     except OSError:
         print(f"\n  ERROR !  Cannot open input file {fname} !\n")
         exit_program(-1)
-    else:
-        print(f"\n  Open Standard-Mode Inputfile {fname} \n")
+
+    print(f"\n  Open Standard-Mode Inputfile {fname} \n")
 
     _reset_vals(StdI)
 
