@@ -7963,3 +7963,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 174 — 2026-01-29
+
+**Files**: `python/lattice/honeycomb_lattice.py`
+**Change**: Replaced 12 repetitive `add_neighbor_interaction` calls in `honeycomb()` with a data-driven `_BONDS` tuple and loop. Each bond is `(dW, dL, site_i, site_j, nn_level, J, t, V)`. Covers nearest, second-nearest, and third-nearest neighbor bonds. Reduces 46 lines to 20 lines.
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

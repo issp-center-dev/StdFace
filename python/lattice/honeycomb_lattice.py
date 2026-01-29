@@ -170,53 +170,27 @@ def honeycomb(StdI: StdIntList) -> None:
             for isiteUC in range(StdI.NsiteUC):
                 add_local_terms(StdI, isite + isiteUC, jsite_base + isiteUC)
 
-            # Nearest neighbor intra cell 0 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 0, 0, 1, 1, StdI.J0, StdI.t0, StdI.V0)
-
-            # Nearest neighbor along W 1 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 1, 0, 1, StdI.J1, StdI.t1, StdI.V1)
-
-            # Nearest neighbor along L 1 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 1, 0, 1, StdI.J2, StdI.t2, StdI.V2)
-
-            # Second nearest neighbor along W 0 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 0, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p)
-
-            # Second nearest neighbor along W 1 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 1, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p)
-
-            # Second nearest neighbor along L 0 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p)
-
-            # Second nearest neighbor along L 1 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 1, 1, 2, StdI.J1p, StdI.t1p, StdI.V1p)
-
-            # Second nearest neighbor along W-L 0 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, -1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-
-            # Second nearest neighbor along W-L 1 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, -1, 1, 1, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-
-            # Third nearest neighbor along W-L 0 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, -1, 0, 1, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp)
-
-            # Third nearest neighbor along -W-L 0 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, -1, -1, 0, 1, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp)
-
-            # Third nearest neighbor along -W+L 0 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, -1, 1, 0, 1, 3, StdI.J2pp, StdI.t2pp, StdI.V2pp)
+            # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
+            _BONDS = (
+                # Nearest neighbor (nn=1)
+                (0, 0, 0, 1, 1, StdI.J0, StdI.t0, StdI.V0),     # intra cell
+                (1, 0, 1, 0, 1, StdI.J1, StdI.t1, StdI.V1),     # along W
+                (0, 1, 1, 0, 1, StdI.J2, StdI.t2, StdI.V2),     # along L
+                # Second nearest neighbor (nn=2)
+                (1, 0, 0, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p),  # along W, 0->0
+                (1, 0, 1, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p),  # along W, 1->1
+                (0, 1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),  # along L, 0->0
+                (0, 1, 1, 1, 2, StdI.J1p, StdI.t1p, StdI.V1p),  # along L, 1->1
+                (1, -1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p), # along W-L, 0->0
+                (1, -1, 1, 1, 2, StdI.J0p, StdI.t0p, StdI.V0p), # along W-L, 1->1
+                # Third nearest neighbor (nn=3)
+                (1, -1, 0, 1, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp),  # along W-L
+                (-1, -1, 0, 1, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # along -W-L
+                (-1, 1, 0, 1, 3, StdI.J2pp, StdI.t2pp, StdI.V2pp),  # along -W+L
+            )
+            for dW, dL, si, sj, nn, J, t, V in _BONDS:
+                add_neighbor_interaction(
+                    StdI, fp, iW, iL, dW, dL, si, sj, nn, J, t, V)
 
 
 def honeycomb_boost(StdI: StdIntList) -> None:
