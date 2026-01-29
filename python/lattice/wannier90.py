@@ -1134,6 +1134,48 @@ def _write_wan2site(StdI: StdIntList) -> None:
                 fp.write(f"{isite:5d}{nx:5d}{ny:5d}{nz:5d}{it:5d}\n")
 
 
+def _validate_interaction_params(StdI: StdIntList) -> None:
+    """Validate and default lambda/alpha interaction-strength parameters.
+
+    Sets ``lambda_U``, ``lambda_J``, and ``alpha`` on *StdI*, using
+    ``lambda_`` as a shared default when it is not NaN.  Exits if
+    any value is out of range.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Parameter structure (modified in place).
+
+    Raises
+    ------
+    SystemExit
+        If ``lambda_U`` or ``lambda_J`` is negative, or ``alpha`` is
+        outside [0, 1].
+    """
+    if math.isnan(StdI.lambda_):
+        StdI.lambda_U = print_val_d("lambda_U", StdI.lambda_U, 1.0)
+        StdI.lambda_J = print_val_d("lambda_J", StdI.lambda_J, 1.0)
+    else:
+        StdI.lambda_U = print_val_d("lambda_U", StdI.lambda_U, StdI.lambda_)
+        StdI.lambda_J = print_val_d("lambda_J", StdI.lambda_J, StdI.lambda_)
+
+    if StdI.lambda_U < 0.0 or StdI.lambda_J < 0.0:
+        print(
+            "\n  Error: the value of lambda_U / lambda_J must be "
+            "greater than or equal to 0. \n",
+            file=sys.stderr,
+        )
+        exit_program(-1)
+
+    StdI.alpha = print_val_d("alpha", StdI.alpha, 0.5)
+    if StdI.alpha > 1.0 or StdI.alpha < 0.0:
+        print(
+            "\n  Error: the value of alpha must be in the range 0<= alpha <= 1. \n",
+            file=sys.stderr,
+        )
+        exit_program(-1)
+
+
 # ---------------------------------------------------------------------------
 #  Main entry point
 # ---------------------------------------------------------------------------
@@ -1174,35 +1216,8 @@ def wannier90(StdI: StdIntList) -> None:
     print("\n  @ Wannier90 Geometry \n")
     _geometry_w90(StdI)
 
-    # Set parameters to tune the strength of interactions
-    if math.isnan(StdI.lambda_):
-        # Lambda is not defined
-        StdI.lambda_U = print_val_d("lambda_U", StdI.lambda_U, 1.0)
-        StdI.lambda_J = print_val_d("lambda_J", StdI.lambda_J, 1.0)
-    else:
-        StdI.lambda_U = print_val_d("lambda_U", StdI.lambda_U, StdI.lambda_)
-        StdI.lambda_J = print_val_d("lambda_J", StdI.lambda_J, StdI.lambda_)
-
-    if StdI.lambda_U < 0.0 or StdI.lambda_J < 0.0:
-
-        print(
-            "\n  Error: the value of lambda_U / lambda_J must be "
-            "greater than or equal to 0. \n",
-            file=sys.stderr,
-        )
-        exit_program(-1)
-
-    # Determine double-counting mode
+    _validate_interaction_params(StdI)
     idcmode = _parse_double_counting_mode(StdI.double_counting_mode)
-
-    StdI.alpha = print_val_d("alpha", StdI.alpha, 0.5)
-    if StdI.alpha > 1.0 or StdI.alpha < 0.0:
-
-        print(
-            "\n  Error: the value of alpha must be in the range 0<= alpha <= 1. \n",
-            file=sys.stderr,
-        )
-        exit_program(-1)
 
     # Read Hopping
     print("\n  @ Wannier90 hopping \n")

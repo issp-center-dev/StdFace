@@ -7931,3 +7931,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 171 — 2026-01-29
+
+**Files**: `python/lattice/wannier90.py`
+**Change**: Extracted lambda/alpha validation from `wannier90()` (the largest function at 129 lines) into `_validate_interaction_params(StdI)`. This handles defaulting `lambda_U`/`lambda_J` (using `lambda_` as shared default when set), range-checking both lambdas, and defaulting/range-checking `alpha`. Reduces `wannier90()` by ~25 lines.
+**Phase**: 1 — Extract modules (function extraction from wannier90)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed
