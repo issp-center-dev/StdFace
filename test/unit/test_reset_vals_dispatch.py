@@ -13,7 +13,7 @@ import math
 import numpy as np
 import pytest
 
-from stdface_main import (
+from stdface.core.stdface_main import (
     _COMMON_RESET_SCALARS,
     _COMMON_RESET_ARRAYS,
     _SOLVER_RESET_SCALARS,
@@ -26,7 +26,7 @@ from stdface_main import (
     NaN_d,
     NaN_c,
 )
-from stdface_vals import StdIntList, SolverType
+from stdface.core.stdface_vals import StdIntList, SolverType
 
 
 def _make_stdi(solver: str) -> StdIntList:

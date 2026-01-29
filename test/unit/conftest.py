@@ -1,7 +1,7 @@
 """Pytest configuration for StdFace unit tests.
 
-Adds the python/ directory to sys.path so that translated Python modules
-can be imported directly by name (e.g., ``from stdface_vals import StdIntList``).
+Adds the python/ directory to sys.path so that the ``stdface`` package
+can be imported (e.g., ``from stdface.core.stdface_vals import StdIntList``).
 """
 from __future__ import annotations
 

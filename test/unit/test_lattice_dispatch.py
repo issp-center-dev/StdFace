@@ -1,126 +1,143 @@
-"""Unit tests for lattice dispatch tables.
+"""Unit tests for lattice dispatch tables and plugin registry.
 
-Tests for the ``LATTICE_DISPATCH`` and ``BOOST_DISPATCH`` dict tables
-in ``stdface_main``.
+Tests for the lattice plugin registry and backward-compatible
+``LATTICE_DISPATCH`` and ``BOOST_DISPATCH`` proxies in ``stdface_main``.
 """
 from __future__ import annotations
 
 import pytest
 
-from stdface_main import LATTICE_DISPATCH, BOOST_DISPATCH
-
-from lattice import chain_lattice
-from lattice import square_lattice
-from lattice import ladder
-from lattice import triangular_lattice
-from lattice import honeycomb_lattice
-from lattice import kagome
-from lattice import orthorhombic
-from lattice import fc_ortho
-from lattice import pyrochlore
-from lattice import wannier90 as wannier90_mod
+from stdface.core.stdface_main import LATTICE_DISPATCH, BOOST_DISPATCH
+from stdface.lattice import get_lattice, get_all_lattices, LatticePlugin
 
 
-class TestLatticeDispatch:
-    """Tests for the LATTICE_DISPATCH table."""
+class TestLatticeRegistry:
+    """Tests for the lattice plugin registry."""
 
-    def test_chain_aliases(self):
-        """Test that chain aliases all resolve to chain_lattice.chain."""
-        assert LATTICE_DISPATCH["chain"] is chain_lattice.chain
-        assert LATTICE_DISPATCH["chainlattice"] is chain_lattice.chain
+    def test_get_chain(self):
+        plugin = get_lattice("chain")
+        assert plugin.name == "chain"
+        assert plugin.ndim == 1
+
+    def test_get_chain_alias(self):
+        assert get_lattice("chain") is get_lattice("chainlattice")
+
+    def test_get_square(self):
+        plugin = get_lattice("tetragonal")
+        assert plugin.name == "tetragonal"
+        assert plugin.ndim == 2
 
     def test_square_aliases(self):
-        """Test that square/tetragonal aliases resolve correctly."""
-        assert LATTICE_DISPATCH["tetragonal"] is square_lattice.tetragonal
-        assert LATTICE_DISPATCH["tetragonallattice"] is square_lattice.tetragonal
-        assert LATTICE_DISPATCH["square"] is square_lattice.tetragonal
-        assert LATTICE_DISPATCH["squarelattice"] is square_lattice.tetragonal
+        p = get_lattice("tetragonal")
+        assert get_lattice("tetragonallattice") is p
+        assert get_lattice("square") is p
+        assert get_lattice("squarelattice") is p
 
-    def test_ladder_aliases(self):
-        """Test that ladder aliases resolve correctly."""
-        assert LATTICE_DISPATCH["ladder"] is ladder.ladder
-        assert LATTICE_DISPATCH["ladderlattice"] is ladder.ladder
+    def test_get_triangular(self):
+        plugin = get_lattice("triangular")
+        assert plugin.name == "triangular"
+        assert plugin.ndim == 2
 
-    def test_triangular_aliases(self):
-        """Test that triangular aliases resolve correctly."""
-        assert LATTICE_DISPATCH["triangular"] is triangular_lattice.triangular
-        assert LATTICE_DISPATCH["triangularlattice"] is triangular_lattice.triangular
+    def test_get_honeycomb(self):
+        plugin = get_lattice("honeycomb")
+        assert plugin.name == "honeycomb"
+        assert plugin.ndim == 2
 
-    def test_honeycomb_aliases(self):
-        """Test that honeycomb aliases resolve correctly."""
-        assert LATTICE_DISPATCH["honeycomb"] is honeycomb_lattice.honeycomb
-        assert LATTICE_DISPATCH["honeycomblattice"] is honeycomb_lattice.honeycomb
+    def test_get_kagome(self):
+        plugin = get_lattice("kagome")
+        assert plugin.name == "kagome"
+        assert plugin.ndim == 2
 
-    def test_kagome_aliases(self):
-        """Test that kagome aliases resolve correctly."""
-        assert LATTICE_DISPATCH["kagome"] is kagome.kagome
-        assert LATTICE_DISPATCH["kagomelattice"] is kagome.kagome
+    def test_get_ladder(self):
+        plugin = get_lattice("ladder")
+        assert plugin.name == "ladder"
+        assert plugin.ndim == 1
+
+    def test_get_orthorhombic(self):
+        plugin = get_lattice("orthorhombic")
+        assert plugin.name == "orthorhombic"
+        assert plugin.ndim == 3
 
     def test_orthorhombic_aliases(self):
-        """Test that orthorhombic/cubic aliases resolve correctly."""
-        assert LATTICE_DISPATCH["orthorhombic"] is orthorhombic.orthorhombic
-        assert LATTICE_DISPATCH["simpleorthorhombic"] is orthorhombic.orthorhombic
-        assert LATTICE_DISPATCH["cubic"] is orthorhombic.orthorhombic
-        assert LATTICE_DISPATCH["simplecubic"] is orthorhombic.orthorhombic
+        p = get_lattice("orthorhombic")
+        assert get_lattice("simpleorthorhombic") is p
+        assert get_lattice("cubic") is p
+        assert get_lattice("simplecubic") is p
+
+    def test_get_fco(self):
+        plugin = get_lattice("fco")
+        assert plugin.name == "fco"
+        assert plugin.ndim == 3
 
     def test_fco_aliases(self):
-        """Test that face-centered orthorhombic aliases resolve correctly."""
-        assert LATTICE_DISPATCH["face-centeredorthorhombic"] is fc_ortho.fc_ortho
-        assert LATTICE_DISPATCH["fcorthorhombic"] is fc_ortho.fc_ortho
-        assert LATTICE_DISPATCH["fco"] is fc_ortho.fc_ortho
-        assert LATTICE_DISPATCH["face-centeredcubic"] is fc_ortho.fc_ortho
-        assert LATTICE_DISPATCH["fccubic"] is fc_ortho.fc_ortho
-        assert LATTICE_DISPATCH["fcc"] is fc_ortho.fc_ortho
+        p = get_lattice("fco")
+        assert get_lattice("face-centeredorthorhombic") is p
+        assert get_lattice("fcorthorhombic") is p
+        assert get_lattice("face-centeredcubic") is p
+        assert get_lattice("fccubic") is p
+        assert get_lattice("fcc") is p
 
-    def test_pyrochlore(self):
-        """Test that pyrochlore resolves correctly."""
-        assert LATTICE_DISPATCH["pyrochlore"] is pyrochlore.pyrochlore
+    def test_get_pyrochlore(self):
+        plugin = get_lattice("pyrochlore")
+        assert plugin.name == "pyrochlore"
+        assert plugin.ndim == 3
 
-    def test_wannier90(self):
-        """Test that wannier90 resolves correctly."""
-        assert LATTICE_DISPATCH["wannier90"] is wannier90_mod.wannier90
+    def test_get_wannier90(self):
+        plugin = get_lattice("wannier90")
+        assert plugin.name == "wannier90"
+        assert plugin.ndim == 3
 
-    def test_unknown_returns_none(self):
-        """Test that unknown lattice returns None via .get()."""
+    def test_unknown_raises(self):
+        with pytest.raises(KeyError):
+            get_lattice("nosuchlattice")
+
+    def test_all_plugins_are_lattice_plugins(self):
+        for plugin in get_all_lattices():
+            assert isinstance(plugin, LatticePlugin)
+
+    def test_all_have_setup(self):
+        for plugin in get_all_lattices():
+            assert callable(plugin.setup)
+
+    def test_all_have_boost(self):
+        for plugin in get_all_lattices():
+            assert callable(plugin.boost)
+
+    def test_get_all_lattices_count(self):
+        """There should be 10 unique lattice plugins."""
+        assert len(get_all_lattices()) == 10
+
+
+class TestLatticeDispatchProxy:
+    """Tests for backward-compatible LATTICE_DISPATCH proxy."""
+
+    def test_chain_callable(self):
+        assert callable(LATTICE_DISPATCH["chain"])
+
+    def test_contains(self):
+        assert "chain" in LATTICE_DISPATCH
+        assert "nosuchlattice" not in LATTICE_DISPATCH
+
+    def test_get_returns_none_for_unknown(self):
         assert LATTICE_DISPATCH.get("nosuchlattice") is None
 
     def test_all_entries_callable(self):
-        """Test that every entry in the dispatch table is callable."""
         for name, func in LATTICE_DISPATCH.items():
             assert callable(func), f"LATTICE_DISPATCH[{name!r}] is not callable"
 
 
-class TestBoostDispatch:
-    """Tests for the BOOST_DISPATCH table."""
+class TestBoostDispatchProxy:
+    """Tests for backward-compatible BOOST_DISPATCH proxy."""
 
-    def test_chain_boost(self):
-        """Test chain boost alias."""
-        assert BOOST_DISPATCH["chain"] is chain_lattice.chain_boost
-        assert BOOST_DISPATCH["chainlattice"] is chain_lattice.chain_boost
-
-    def test_honeycomb_boost(self):
-        """Test honeycomb boost alias."""
-        assert BOOST_DISPATCH["honeycomb"] is honeycomb_lattice.honeycomb_boost
-        assert BOOST_DISPATCH["honeycomblattice"] is honeycomb_lattice.honeycomb_boost
-
-    def test_kagome_boost(self):
-        """Test kagome boost alias."""
-        assert BOOST_DISPATCH["kagome"] is kagome.kagome_boost
-        assert BOOST_DISPATCH["kagomelattice"] is kagome.kagome_boost
-
-    def test_ladder_boost(self):
-        """Test ladder boost alias."""
-        assert BOOST_DISPATCH["ladder"] is ladder.ladder_boost
-        assert BOOST_DISPATCH["ladderlattice"] is ladder.ladder_boost
+    def test_chain_boost_callable(self):
+        assert callable(BOOST_DISPATCH["chain"])
 
     def test_unsupported_lattice_not_in_boost(self):
-        """Test that lattices without boost are not in BOOST_DISPATCH."""
         assert "square" not in BOOST_DISPATCH
         assert "triangular" not in BOOST_DISPATCH
         assert "pyrochlore" not in BOOST_DISPATCH
         assert "wannier90" not in BOOST_DISPATCH
 
     def test_all_entries_callable(self):
-        """Test that every entry in the boost table is callable."""
         for name, func in BOOST_DISPATCH.items():
             assert callable(func), f"BOOST_DISPATCH[{name!r}] is not callable"

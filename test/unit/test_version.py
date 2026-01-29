@@ -4,7 +4,7 @@ Tests for the Python translation of version.h.
 """
 from __future__ import annotations
 
-import version
+import stdface.core.version as version
 
 
 class TestVersionConstants:

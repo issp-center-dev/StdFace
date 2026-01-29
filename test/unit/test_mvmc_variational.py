@@ -14,8 +14,8 @@ import tempfile
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from writer.mvmc_variational import (
+from stdface.core.stdface_vals import StdIntList
+from stdface.solvers.mvmc.variational import (
     _anti_period_dot,
     _parity_sign,
     _check_commensurate,

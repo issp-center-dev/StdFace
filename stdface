@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# StdFace entry point
+# Usage:
+#   ./stdface stan.in
+#   ./stdface stan.in --solver mVMC
+#   ./stdface -v
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PYTHONPATH="${SCRIPT_DIR}/python" exec python3 -m stdface "$@"

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from stdface_main import MODEL_ALIASES, MODEL_ALIASES_HPHI_BOOST, METHOD_ALIASES
+from stdface.core.stdface_main import MODEL_ALIASES, MODEL_ALIASES_HPHI_BOOST, METHOD_ALIASES
 
 
 class TestModelAliases:

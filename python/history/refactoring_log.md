@@ -8113,3 +8113,83 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1260 passed
 - Integration: 83/83 passed
+
+## Step 189 — 2026-01-29
+
+**Files**: Multiple — major restructuring
+**Change**: Implemented Solver Plugin Architecture:
+1. Restructured `python/` into `python/stdface/` package with `core/`, `lattice/`, `writer/`, `solvers/` subpackages
+2. Created `pyproject.toml` for `pip install -e .` support
+3. Defined `SolverPlugin` ABC and plugin registry in `stdface/plugin.py`
+4. Extracted 4 solver plugins: `solvers/hphi.py`, `solvers/mvmc.py`, `solvers/uhf.py`, `solvers/hwave.py`
+5. Each plugin encapsulates solver-specific: keyword table, reset tables, write method, post_lattice hook
+6. Refactored `stdface_main.py` to delegate to plugins for field resets, keyword parsing, post-lattice, and writing
+7. Backward-compatible shim modules at old `python/` locations for existing imports
+8. Added entry_points support in pyproject.toml for future external plugins
+**Phase**: 4 — Architecture (plugin system)
+
+**Tests**:
+- Unit: 1260 passed
+- Integration: verified HPhi solver produces correct output
+
+## Step 190 — 2026-01-29
+
+**Files**: `stdface/writer/` → `stdface/solvers/`
+**Change**: Moved solver-specific writer modules into solver plugin directory:
+- `writer/hphi_writer.py` → `solvers/hphi_writer.py`
+- `writer/mvmc_writer.py` → `solvers/mvmc_writer.py`
+- `writer/mvmc_variational.py` → `solvers/mvmc_variational.py`
+- `writer/export_wannier90.py` → `solvers/export_wannier90.py`
+- `writer/solver_writer.py` replaced with legacy wrapper delegating to plugins
+- `writer/` retains only shared code: `common_writer.py`, `interaction_writer.py`
+- Plugin files now import writer helpers from sibling modules within `solvers/`
+- Backward-compatible shims use `sys.modules` aliasing for monkeypatch support
+**Phase**: 4 — Architecture (plugin system)
+
+**Tests**:
+- Unit: 1260 passed
+- Integration: 83/83 passed
+
+## Step 191 — 2026-01-29
+
+**Files**: `python/`, `test/unit/`
+**Change**: Removed all backward-compatibility shim modules:
+- Deleted top-level shims: `stdface_vals.py`, `param_check.py`, `keyword_parser.py`, `stdface_main.py`, `stdface_model_util.py`, `version.py`
+- Deleted old `lattice/` and `writer/` directories (contained only shims)
+- Deleted `writer/solver_writer.py`, `writer/hphi_writer.py`, etc. shims from `stdface/writer/`
+- Updated all test imports to use new `stdface.*` paths directly
+- Retained only `python/__main__.py` as entry point for integration tests
+- Rewrote `test_solver_writer.py` to test plugin system instead of legacy Writer classes
+**Phase**: 4 — Architecture (cleanup)
+
+**Tests**:
+- Unit: 1260 passed
+- Integration: 83/83 passed
+
+---
+
+### Step 189: Lattice plugin architecture (2026-01-29)
+
+**Files changed**:
+- `python/stdface/lattice/__init__.py` — added `LatticePlugin` ABC, registry (`register_lattice`, `get_lattice`, `get_all_lattices`)
+- `python/stdface/lattice/chain_lattice.py` — added `ChainPlugin` (auto-registered)
+- `python/stdface/lattice/square_lattice.py` — added `SquarePlugin`
+- `python/stdface/lattice/triangular_lattice.py` — added `TriangularPlugin`
+- `python/stdface/lattice/honeycomb_lattice.py` — added `HoneycombPlugin` (with boost)
+- `python/stdface/lattice/kagome.py` — added `KagomePlugin` (with boost)
+- `python/stdface/lattice/ladder.py` — added `LadderPlugin` (with boost)
+- `python/stdface/lattice/orthorhombic.py` — added `OrthorhombicPlugin`
+- `python/stdface/lattice/fc_ortho.py` — added `FCOrthoPlugin`
+- `python/stdface/lattice/pyrochlore.py` — added `PyrochlorePlugin`
+- `python/stdface/lattice/wannier90.py` — added `Wannier90Plugin`
+- `python/stdface/core/stdface_main.py` — replaced `LATTICE_DISPATCH`/`BOOST_DISPATCH` dicts with proxy objects over the plugin registry; `_build_lattice_and_boost` now uses `get_lattice()` directly
+- `python/stdface/solvers/hphi/_plugin.py` — `post_lattice` uses `get_lattice().boost()` instead of `BOOST_DISPATCH`
+- `test/unit/test_lattice_dispatch.py` — rewritten to test plugin registry + proxies
+
+**Why**: Apply the same plugin/template pattern used for solvers to lattices, enabling new lattices to be added without modifying dispatch tables in `stdface_main.py`.
+
+**Phase**: 4 — Architecture (lattice plugins)
+
+**Tests**:
+- Unit: 1268 passed
+- Integration: pending
