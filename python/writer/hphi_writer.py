@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+from typing import NamedTuple
 
 import numpy as np
 
@@ -90,18 +91,33 @@ INITIAL_VEC_TYPE_TO_INT: dict[str, int] = {
 }
 """Maps the ``InitialVecType`` string to its integer code."""
 
-EIGENVEC_IO_TO_FLAGS: dict[str, tuple[int, int]] = {
-    "none":  (0, 0),
-    "in":    (1, 0),
-    "out":   (0, 1),
-    "inout": (1, 1),
+class _IOFlags(NamedTuple):
+    """Pair of input/output flag integers for I/O dispatch tables.
+
+    Attributes
+    ----------
+    flag0 : int
+        First flag (InputEigenVec for EigenVecIO, iOutputHam for HamIO).
+    flag1 : int
+        Second flag (OutputEigenVec for EigenVecIO, iInputHam for HamIO).
+    """
+
+    flag0: int
+    flag1: int
+
+
+EIGENVEC_IO_TO_FLAGS: dict[str, _IOFlags] = {
+    "none":  _IOFlags(0, 0),
+    "in":    _IOFlags(1, 0),
+    "out":   _IOFlags(0, 1),
+    "inout": _IOFlags(1, 1),
 }
 """Maps ``EigenVecIO`` string to ``(InputEigenVec, OutputEigenVec)`` flags."""
 
-HAM_IO_TO_FLAGS: dict[str, tuple[int, int]] = {
-    "none": (0, 0),
-    "out":  (1, 0),
-    "in":   (0, 1),
+HAM_IO_TO_FLAGS: dict[str, _IOFlags] = {
+    "none": _IOFlags(0, 0),
+    "out":  _IOFlags(1, 0),
+    "in":   _IOFlags(0, 1),
 }
 """Maps ``HamIO`` string to ``(iOutputHam, iInputHam)`` flags."""
 

@@ -7835,3 +7835,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 163 — 2026-01-29
+
+**Files**: `python/writer/hphi_writer.py`
+**Change**: Replaced bare `tuple[int, int]` in `EIGENVEC_IO_TO_FLAGS` and `HAM_IO_TO_FLAGS` with a shared `_IOFlags(NamedTuple)` class having named fields `flag0`, `flag1`. Added docstring. Call site tuple unpacking works unchanged.
+**Phase**: 2 — Introduce classes (NamedTuple for typed metadata)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
