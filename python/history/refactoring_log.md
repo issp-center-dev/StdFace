@@ -7667,3 +7667,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 149 — 2026-01-29
+
+**Files**: `python/writer/mvmc_writer.py`
+**Change**: Simplified conditional write in `_write_gutzwiller_file` Gutzwiller loop — replaced if/else branching with `int(condition)` to compute the flag value directly.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

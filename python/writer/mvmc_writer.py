@@ -426,10 +426,8 @@ def _write_gutzwiller_file(
             fp.write(f"{isite:5d}  {Gutz[isite]:5d}\n")
 
         for iGutz in range(NGutzwiller):
-            if StdI.model == ModelType.HUBBARD or iGutz > 0:
-                fp.write(f"{iGutz:5d}  {1:5d}\n")
-            else:
-                fp.write(f"{iGutz:5d}  {0:5d}\n")
+            flag = int(StdI.model == ModelType.HUBBARD or iGutz > 0)
+            fp.write(f"{iGutz:5d}  {flag:5d}\n")
 
 
 def print_gutzwiller(StdI: StdIntList) -> None:
