@@ -16,8 +16,125 @@ the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+from enum import Enum
+
 import numpy as np
+
+
+class ModelType(str, Enum):
+    """Canonical model type identifiers.
+
+    Inherits from ``str`` so that ``ModelType.SPIN == "spin"`` is ``True``,
+    preserving full backward compatibility with existing string comparisons.
+
+    Attributes
+    ----------
+    SPIN : str
+        Pure spin model (S=1/2 or general S).
+    HUBBARD : str
+        Fermion Hubbard model.
+    KONDO : str
+        Kondo lattice model (itinerant + localised spins).
+    """
+
+    SPIN = "spin"
+    HUBBARD = "hubbard"
+    KONDO = "kondo"
+
+
+class SolverType(str, Enum):
+    """Canonical solver type identifiers.
+
+    Inherits from ``str`` so that ``SolverType.HPhi == "HPhi"`` is ``True``,
+    preserving full backward compatibility with existing string comparisons.
+
+    Attributes
+    ----------
+    HPhi : str
+        Exact-diagonalisation / Lanczos solver.
+    mVMC : str
+        Many-variable Variational Monte Carlo solver.
+    UHF : str
+        Unrestricted Hartree-Fock solver.
+    HWAVE : str
+        H-wave solver (Hartree-Fock / RPA / Wannier90 export).
+    """
+
+    HPhi = "HPhi"
+    mVMC = "mVMC"
+    UHF = "UHF"
+    HWAVE = "HWAVE"
+
+
+class MethodType(str, Enum):
+    """Canonical HPhi calculation method identifiers.
+
+    Inherits from ``str`` so that ``MethodType.LANCZOS == "lanczos"`` is
+    ``True``, preserving full backward compatibility with existing string
+    comparisons.
+
+    Attributes
+    ----------
+    LANCZOS : str
+        Lanczos diagonalisation.
+    LANCZOS_ENERGY : str
+        Lanczos (energy-only, skip eigenvector).
+    TPQ : str
+        Thermal Pure Quantum state method.
+    FULLDIAG : str
+        Full (direct) diagonalisation.
+    CG : str
+        Conjugate Gradient method.
+    TIME_EVOLUTION : str
+        Real-time evolution (pump / quench).
+    CTPQ : str
+        Canonical Thermal Pure Quantum state method.
+    """
+
+    LANCZOS = "lanczos"
+    LANCZOS_ENERGY = "lanczosenergy"
+    TPQ = "tpq"
+    FULLDIAG = "fulldiag"
+    CG = "cg"
+    TIME_EVOLUTION = "timeevolution"
+    CTPQ = "ctpq"
+
+
+# ---------------------------------------------------------------------------
+#  Sentinel constants (matching the C code)
+# ---------------------------------------------------------------------------
+
+NaN_i: int = 2147483647
+"""Sentinel for an unset integer parameter (same as ``INT_MAX`` in C)."""
+
+NaN_d: float = float("nan")
+"""Sentinel for an unset float parameter (IEEE NaN)."""
+
+NaN_c: complex = complex(float("nan"), 0.0)
+"""Sentinel for an unset complex parameter (real part is NaN)."""
+
+UNSET_STRING: str = "****"
+"""Sentinel for an unset string parameter (C convention ``"****"``)."""
+
+
+# ---------------------------------------------------------------------------
+#  Numerical tolerances
+# ---------------------------------------------------------------------------
+
+AMPLITUDE_EPS: float = 1e-6
+"""Threshold for treating an amplitude as non-zero in output files.
+
+Terms with ``abs(coeff) <= AMPLITUDE_EPS`` are suppressed when writing
+interaction, transfer, and pump definition files.
+"""
+
+ZERO_BODY_EPS: float = 1e-12
+"""Threshold for skipping zero-amplitude terms when accumulating
+one-body (transfer) and two-body (InterAll) Hamiltonian entries.
+"""
 
 
 @dataclass
@@ -26,11 +143,6 @@ class StdIntList:
 
     Attributes
     ----------
-    NaN_i : int
-        Sentinel value for uninitialized integer parameters.
-        Set in ``StdFace_ResetVals()``.
-    pi : float
-        pi = 3.14...
     lattice : str
         Name of lattice. Input parameter.
     a : float
@@ -191,8 +303,6 @@ class StdIntList:
         Transverse magnetic field (y), input parameter.
     K : float
         4-spin term. Not used.
-    pi180 : float
-        pi / 180, set in ``StdFace_ResetVals()``.
     phase : np.ndarray
         Boundary phase (shape ``(3,)``), input parameter ``phase0``, etc.
     ExpPhase : np.ndarray
@@ -497,15 +607,9 @@ class StdIntList:
     """
 
     # ------------------------------------------------------------------
-    #  Initial (undefined) / sentinel
-    # ------------------------------------------------------------------
-    NaN_i: int = 2147483647
-    pi: float = 0.0
-
-    # ------------------------------------------------------------------
     #  Parameters for LATTICE
     # ------------------------------------------------------------------
-    lattice: str = ""
+    lattice: str = UNSET_STRING
     a: float = 0.0
     length: np.ndarray = field(default_factory=lambda: np.zeros(3))
     W: int = 0
@@ -522,7 +626,7 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Parameters for MODEL
     # ------------------------------------------------------------------
-    model: str = ""
+    model: str = UNSET_STRING
     mu: float = 0.0
 
     # Hopping parameters (complex)
@@ -592,7 +696,6 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Phase for the boundary
     # ------------------------------------------------------------------
-    pi180: float = 0.0
     phase: np.ndarray = field(default_factory=lambda: np.zeros(3))
     ExpPhase: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=complex))
     AntiPeriod: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
@@ -641,8 +744,8 @@ class StdIntList:
     ncond: int = 0
     lGC: int = 0
     S2: int = 0
-    outputmode: str = ""
-    CDataFileHead: str = ""
+    outputmode: str = UNSET_STRING
+    CDataFileHead: str = UNSET_STRING
     Sz2: int = 0
     ioutputmode: int = 0
 
@@ -664,7 +767,7 @@ class StdIntList:
     lambda_: float = 0.0
     lambda_U: float = 0.0
     lambda_J: float = 0.0
-    double_counting_mode: str = ""
+    double_counting_mode: str = UNSET_STRING
     alpha: float = 0.0
 
     # ------------------------------------------------------------------
@@ -675,11 +778,11 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  HPhi fields
     # ------------------------------------------------------------------
-    method: str = ""
-    Restart: str = ""
-    InitialVecType: str = ""
-    EigenVecIO: str = ""
-    HamIO: str = ""
+    method: str = UNSET_STRING
+    Restart: str = UNSET_STRING
+    InitialVecType: str = UNSET_STRING
+    EigenVecIO: str = UNSET_STRING
+    HamIO: str = UNSET_STRING
     FlgTemp: int = 0
     Lanczos_max: int = 0
     initial_iv: int = 0
@@ -696,8 +799,8 @@ class StdIntList:
     list_6spin_star: None = None
     num_pivot: int = 0
     ishift_nspin: int = 0
-    CalcSpec: str = ""
-    SpectrumType: str = ""
+    CalcSpec: str = UNSET_STRING
+    SpectrumType: str = UNSET_STRING
     Nomega: int = 0
     OmegaMax: float = 0.0
     OmegaMin: float = 0.0
@@ -705,14 +808,14 @@ class StdIntList:
     OmegaIm: float = 0.0
     SpectrumQ: np.ndarray = field(default_factory=lambda: np.zeros(3))
     SpectrumBody: int = 0
-    OutputExVec: str = ""
+    OutputExVec: str = UNSET_STRING
     dt: float = 0.0
     tshift: float = 0.0
     tdump: float = 0.0
     freq: float = 0.0
     Uquench: float = 0.0
     VecPot: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    PumpType: str = ""
+    PumpType: str = UNSET_STRING
     PumpBody: int = 0
     npump: None = None
     pumpindx: None = None
@@ -723,7 +826,7 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  mVMC fields
     # ------------------------------------------------------------------
-    CParaFileHead: str = ""
+    CParaFileHead: str = UNSET_STRING
     NVMCCalMode: int = 0
     NLanczosMode: int = 0
     NDataIdxStart: int = 0
@@ -768,7 +871,7 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  HWAVE-only fields
     # ------------------------------------------------------------------
-    calcmode: str = ""
-    fileprefix: str = ""
+    calcmode: str = UNSET_STRING
+    fileprefix: str = UNSET_STRING
     export_all: int = 0
     lattice_gp: int = 0

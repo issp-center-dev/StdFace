@@ -306,7 +306,7 @@ class TestPrintValI:
 
 
 class TestNotUsed:
-    """Tests for not_used_d, not_used_c, not_used_j, not_used_i."""
+    """Tests for not_used_d, not_used_j, not_used_i."""
 
     def test_not_used_d_nan_ok(self):
         """NaN value should not trigger exit."""
@@ -317,14 +317,14 @@ class TestNotUsed:
         with pytest.raises(SystemExit):
             smu.not_used_d("x", 1.0)
 
-    def test_not_used_c_nan_ok(self):
-        """NaN real part should not trigger exit."""
-        smu.not_used_c("t", complex(float("nan"), 0))
+    def test_not_used_d_complex_nan_ok(self):
+        """Complex NaN real part should not trigger exit via not_used_d."""
+        smu.not_used_d("t", complex(float("nan"), 0))
 
-    def test_not_used_c_specified_exits(self):
-        """Specified value should trigger exit."""
+    def test_not_used_d_complex_specified_exits(self):
+        """Complex specified value should trigger exit via not_used_d."""
         with pytest.raises(SystemExit):
-            smu.not_used_c("t", 1.0 + 0j)
+            smu.not_used_d("t", 1.0 + 0j)
 
     def test_not_used_i_sentinel_ok(self):
         """Sentinel value should not trigger exit."""

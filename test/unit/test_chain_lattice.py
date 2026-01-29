@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from stdface_vals import StdIntList
-import chain_lattice as cl
+from lattice import chain_lattice as cl
 
 
 # ---------------------------------------------------------------------------

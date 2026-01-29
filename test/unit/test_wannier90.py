@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from stdface_vals import StdIntList
-import wannier90 as w90
+from lattice import wannier90 as w90
 
 
 # ---------------------------------------------------------------------------
@@ -27,39 +27,6 @@ NaN_c = complex(float("nan"), 0.0)
 # ---------------------------------------------------------------------------
 #  Helpers: inverse matrix / in-box
 # ---------------------------------------------------------------------------
-
-
-class TestCalcInverseMatrix:
-    """Tests for the internal _calc_inverse_matrix helper."""
-
-    def test_identity(self):
-        """Inverse of the identity matrix should be the identity matrix."""
-        mat = np.eye(3)
-        inv = w90._calc_inverse_matrix(mat)
-        np.testing.assert_allclose(inv, np.eye(3), atol=1e-12)
-
-    def test_diagonal(self):
-        """Inverse of a diagonal matrix should have reciprocal entries."""
-        mat = np.diag([2.0, 4.0, 5.0])
-        inv = w90._calc_inverse_matrix(mat)
-        expected = np.diag([0.5, 0.25, 0.2])
-        np.testing.assert_allclose(inv, expected, atol=1e-12)
-
-    def test_general_3x3(self):
-        """Inverse of a general non-singular 3x3 matrix."""
-        mat = np.array([[1.0, 2.0, 3.0],
-                        [0.0, 1.0, 4.0],
-                        [5.0, 6.0, 0.0]])
-        inv = w90._calc_inverse_matrix(mat)
-        product = mat @ inv
-        np.testing.assert_allclose(product, np.eye(3), atol=1e-12)
-
-    def test_roundtrip(self):
-        """M @ inv(M) should be the identity for a random matrix."""
-        rng = np.random.default_rng(42)
-        mat = rng.random((3, 3)) + np.eye(3)
-        inv = w90._calc_inverse_matrix(mat)
-        np.testing.assert_allclose(mat @ inv, np.eye(3), atol=1e-10)
 
 
 class TestCheckInBox:
@@ -260,7 +227,7 @@ class TestModuleStructure:
 
     def test_import(self):
         """wannier90 module should import without error."""
-        import wannier90
+        from lattice import wannier90
         assert wannier90 is not None
 
     def test_wannier90_function_exists(self):
@@ -358,7 +325,7 @@ class TestReadW90:
         _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix="test")
 
         s = StdIntList()
-        s.NaN_i = NaN_i
+
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
@@ -387,7 +354,7 @@ class TestReadW90:
         """Should skip gracefully when file is missing."""
         os.chdir(tmp_path)
         s = StdIntList()
-        s.NaN_i = NaN_i
+
 
         NtUJ = [0, 0, 0]
         tUJ = [None, None, None]
@@ -411,7 +378,7 @@ class TestReadW90:
         _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix="test")
 
         s = StdIntList()
-        s.NaN_i = NaN_i
+
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
@@ -458,7 +425,7 @@ class TestReadW90:
             f.write("  0  0  0  1  1  -2.000000  0.000000\n")
 
         s = StdIntList()
-        s.NaN_i = NaN_i
+
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
@@ -532,6 +499,228 @@ class TestReadDensityMatrix:
 
 
 # ---------------------------------------------------------------------------
+#  Tests: _read_w90_with_cutoff
+# ---------------------------------------------------------------------------
+
+
+class TestReadW90WithCutoff:
+    """Tests for the _read_w90_with_cutoff helper."""
+
+    def test_returns_updated_cutoff_values(self, tmp_path):
+        """Should return resolved cutoff_val and cutoff_length."""
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix="test")
+
+        s = StdIntList()
+        s.NsiteUC = NsiteUC
+        s.direct = np.eye(3)
+        s.tau = np.zeros((NsiteUC, 3))
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
+        s.CDataFileHead = "test"
+
+        cutoff_R = np.full(3, NaN_i, dtype=int)
+        cutoff_Vec = np.full((3, 3), NaN_d)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        val, length = w90._read_w90_with_cutoff(
+            s, "t", "t", "_hr.dat",
+            NaN_d, NaN_d,
+            cutoff_R, cutoff_Vec,
+            cutoff_length_default=-1.0,
+            cutoff_R_defaults=(None, None, None),
+            itUJ=0, NtUJ=NtUJ, tUJindx=tUJindx, lam=1.0, tUJ=tUJ,
+        )
+
+        # cutoff_val should default to 1e-8
+        np.testing.assert_allclose(val, 1.0e-8, atol=1e-15)
+        # cutoff_length should default to -1.0
+        np.testing.assert_allclose(length, -1.0, atol=1e-15)
+
+    def test_sets_cutoff_R_defaults(self, tmp_path):
+        """Should set cutoff_R values from defaults when provided."""
+        os.chdir(tmp_path)
+        NsiteUC = 1
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix="test")
+
+        s = StdIntList()
+        s.NsiteUC = NsiteUC
+        s.direct = np.eye(3)
+        s.tau = np.zeros((NsiteUC, 3))
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
+        s.CDataFileHead = "test"
+
+        cutoff_R = np.full(3, NaN_i, dtype=int)
+        cutoff_Vec = np.full((3, 3), NaN_d)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._read_w90_with_cutoff(
+            s, "u", "U", "_hr.dat",
+            NaN_d, NaN_d,
+            cutoff_R, cutoff_Vec,
+            cutoff_length_default=0.3,
+            cutoff_R_defaults=(0, 0, 0),
+            itUJ=0, NtUJ=NtUJ, tUJindx=tUJindx, lam=1.0, tUJ=tUJ,
+        )
+
+        # All cutoff_R should be set to 0
+        assert cutoff_R[0] == 0
+        assert cutoff_R[1] == 0
+        assert cutoff_R[2] == 0
+
+    def test_skips_cutoff_R_for_none_default(self, tmp_path):
+        """Should not modify cutoff_R when default is None."""
+        os.chdir(tmp_path)
+        NsiteUC = 1
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix="test")
+
+        s = StdIntList()
+        s.NsiteUC = NsiteUC
+        s.direct = np.eye(3)
+        s.tau = np.zeros((NsiteUC, 3))
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
+        s.CDataFileHead = "test"
+
+        cutoff_R = np.array([5, 5, 5], dtype=int)
+        cutoff_Vec = np.full((3, 3), NaN_d)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._read_w90_with_cutoff(
+            s, "t", "t", "_hr.dat",
+            NaN_d, NaN_d,
+            cutoff_R, cutoff_Vec,
+            cutoff_length_default=-1.0,
+            cutoff_R_defaults=(None, None, None),
+            itUJ=0, NtUJ=NtUJ, tUJindx=tUJindx, lam=1.0, tUJ=tUJ,
+        )
+
+        # cutoff_R should remain at original values (not modified)
+        assert cutoff_R[0] == 5
+        assert cutoff_R[1] == 5
+        assert cutoff_R[2] == 5
+
+    def test_sets_cutoff_vec_from_box(self, tmp_path):
+        """Should set cutoff_Vec to box*0.5 as default."""
+        os.chdir(tmp_path)
+        NsiteUC = 1
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix="test")
+
+        s = StdIntList()
+        s.NsiteUC = NsiteUC
+        s.direct = np.eye(3)
+        s.tau = np.zeros((NsiteUC, 3))
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        s.box = np.array([[4, 0, 0], [0, 6, 0], [0, 0, 2]], dtype=int)
+        s.CDataFileHead = "test"
+
+        cutoff_R = np.full(3, NaN_i, dtype=int)
+        cutoff_Vec = np.full((3, 3), NaN_d)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._read_w90_with_cutoff(
+            s, "u", "U", "_ur.dat",
+            NaN_d, NaN_d,
+            cutoff_R, cutoff_Vec,
+            cutoff_length_default=0.3,
+            cutoff_R_defaults=(0, 0, 0),
+            itUJ=0, NtUJ=NtUJ, tUJindx=tUJindx, lam=1.0, tUJ=tUJ,
+        )
+
+        # Diagonal: box*0.5
+        np.testing.assert_allclose(cutoff_Vec[0, 0], 2.0, atol=1e-12)
+        np.testing.assert_allclose(cutoff_Vec[1, 1], 3.0, atol=1e-12)
+        np.testing.assert_allclose(cutoff_Vec[2, 2], 1.0, atol=1e-12)
+        # Off-diagonal: 0*0.5 = 0
+        np.testing.assert_allclose(cutoff_Vec[0, 1], 0.0, atol=1e-12)
+
+    def test_reads_terms(self, tmp_path):
+        """Should populate NtUJ and tUJ after reading."""
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix="test")
+
+        s = StdIntList()
+        s.NsiteUC = NsiteUC
+        s.direct = np.eye(3)
+        s.tau = np.zeros((NsiteUC, 3))
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
+        s.CDataFileHead = "test"
+
+        cutoff_R = np.array([10, 10, 10], dtype=int)
+        cutoff_Vec = np.full((3, 3), NaN_i, dtype=float)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._read_w90_with_cutoff(
+            s, "t", "t", "_hr.dat",
+            NaN_d, NaN_d,
+            cutoff_R, cutoff_Vec,
+            cutoff_length_default=-1.0,
+            cutoff_R_defaults=(None, None, None),
+            itUJ=0, NtUJ=NtUJ, tUJindx=tUJindx, lam=1.0, tUJ=tUJ,
+        )
+
+        assert NtUJ[0] > 0
+        assert tUJ[0] is not None
+        assert tUJindx[0] is not None
+
+    def test_missing_file_is_noop(self, tmp_path):
+        """Should silently skip when the data file is missing."""
+        os.chdir(tmp_path)
+
+        s = StdIntList()
+        s.NsiteUC = 1
+        s.direct = np.eye(3)
+        s.tau = np.zeros((1, 3))
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
+        s.CDataFileHead = "nonexistent"
+
+        cutoff_R = np.full(3, NaN_i, dtype=int)
+        cutoff_Vec = np.full((3, 3), NaN_d)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._read_w90_with_cutoff(
+            s, "t", "t", "_hr.dat",
+            NaN_d, NaN_d,
+            cutoff_R, cutoff_Vec,
+            cutoff_length_default=-1.0,
+            cutoff_R_defaults=(None, None, None),
+            itUJ=0, NtUJ=NtUJ, tUJindx=tUJindx, lam=1.0, tUJ=tUJ,
+        )
+
+        # Should not crash, NtUJ should remain 0
+        assert NtUJ[0] == 0
+
+
+# ---------------------------------------------------------------------------
 #  Tests: DCMode enum
 # ---------------------------------------------------------------------------
 
@@ -545,6 +734,57 @@ class TestDCMode:
         assert w90._DCMode.HARTREE == 1
         assert w90._DCMode.HARTREE_U == 2
         assert w90._DCMode.FULL == 3
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _parse_double_counting_mode
+# ---------------------------------------------------------------------------
+
+
+class TestParseDoubleCountingMode:
+    """Tests for the _parse_double_counting_mode helper."""
+
+    def test_none_returns_notcorrect(self):
+        """'none' should map to NOTCORRECT."""
+        assert w90._parse_double_counting_mode("none") == w90._DCMode.NOTCORRECT
+
+    def test_unset_string_returns_notcorrect(self):
+        """UNSET_STRING sentinel should map to NOTCORRECT."""
+        from stdface_vals import UNSET_STRING
+        assert w90._parse_double_counting_mode(UNSET_STRING) == w90._DCMode.NOTCORRECT
+
+    def test_hartree_returns_hartree(self):
+        """'hartree' should map to HARTREE."""
+        assert w90._parse_double_counting_mode("hartree") == w90._DCMode.HARTREE
+
+    def test_hartree_u_returns_hartree_u(self):
+        """'hartree_u' should map to HARTREE_U."""
+        assert w90._parse_double_counting_mode("hartree_u") == w90._DCMode.HARTREE_U
+
+    def test_full_returns_full(self):
+        """'full' should map to FULL."""
+        assert w90._parse_double_counting_mode("full") == w90._DCMode.FULL
+
+    def test_invalid_mode_exits(self):
+        """An unrecognised string should cause exit."""
+        with pytest.raises(SystemExit):
+            w90._parse_double_counting_mode("bogus")
+
+    def test_return_type_is_dcmode(self):
+        """Return value should be an instance of _DCMode enum."""
+        result = w90._parse_double_counting_mode("hartree")
+        assert isinstance(result, w90._DCMode)
+
+    def test_dc_mode_map_keys(self):
+        """_DC_MODE_MAP should contain exactly the expected keys."""
+        from stdface_vals import UNSET_STRING
+        expected_keys = {"none", UNSET_STRING, "hartree", "hartree_u", "full"}
+        assert set(w90._DC_MODE_MAP.keys()) == expected_keys
+
+    def test_dc_mode_map_values(self):
+        """_DC_MODE_MAP values should all be _DCMode members."""
+        for key, val in w90._DC_MODE_MAP.items():
+            assert isinstance(val, w90._DCMode), f"key={key!r} maps to non-_DCMode {val!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -737,3 +977,597 @@ class TestWannier90DoubleCountingModeError:
 
         with pytest.raises(SystemExit):
             w90.wannier90(s)
+
+
+# ---------------------------------------------------------------------------
+#  Helpers: set up interaction arrays for direct helper tests
+# ---------------------------------------------------------------------------
+
+
+def _setup_interactions(s: StdIntList, ntransMax: int = 100, nintrMax: int = 100) -> None:
+    """Allocate interaction arrays on StdIntList for testing."""
+    s.transindx = np.zeros((ntransMax, 4), dtype=int)
+    s.trans = np.zeros(ntransMax, dtype=complex)
+    s.ntrans = 0
+    s.intrindx = np.zeros((nintrMax, 8), dtype=int)
+    s.intr = np.zeros(nintrMax, dtype=complex)
+    s.nintr = 0
+    s.CintraIndx = np.zeros((nintrMax, 1), dtype=int)
+    s.Cintra = np.zeros(nintrMax)
+    s.NCintra = 0
+    s.CinterIndx = np.zeros((nintrMax, 2), dtype=int)
+    s.Cinter = np.zeros(nintrMax)
+    s.NCinter = 0
+    s.HundIndx = np.zeros((nintrMax, 2), dtype=int)
+    s.Hund = np.zeros(nintrMax)
+    s.NHund = 0
+    s.ExIndx = np.zeros((nintrMax, 2), dtype=int)
+    s.Ex = np.zeros(nintrMax)
+    s.NEx = 0
+    s.PLIndx = np.zeros((nintrMax, 2), dtype=int)
+    s.PairLift = np.zeros(nintrMax)
+    s.NPairLift = 0
+    s.PHIndx = np.zeros((nintrMax, 2), dtype=int)
+    s.PairHopp = np.zeros(nintrMax)
+    s.NPairHopp = 0
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _apply_hopping_terms
+# ---------------------------------------------------------------------------
+
+
+class TestApplyHoppingTerms:
+    """Tests for the _apply_hopping_terms helper."""
+
+    def test_none_indices_is_noop(self):
+        """Should do nothing when tUJindx[0] is None."""
+        s = StdIntList()
+        s.model = "hubbard"
+        _setup_interactions(s)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+        ntrans_before = s.ntrans
+        w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
+        assert s.ntrans == ntrans_before
+
+    def test_local_hopping_hubbard(self):
+        """Local hopping term should add on-site transfer for Hubbard."""
+        s = StdIntList()
+        s.model = "hubbard"
+        s.NsiteUC = 1
+        _setup_interactions(s)
+        # On-site term: R=(0,0,0), iWan=jWan=0
+        tUJindx_arr = np.array([[0, 0, 0, 0, 0]], dtype=int)
+        tUJ_arr = np.array([-1.0 + 0j])
+        NtUJ = [1, 0, 0]
+        tUJ = [tUJ_arr, None, None]
+        tUJindx = [tUJindx_arr, None, None]
+
+        w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
+
+        # Should add 2 transfer terms (one per spin)
+        assert s.ntrans == 2
+        # Transfer value should be -(-1.0) = 1.0
+        np.testing.assert_allclose(s.trans[0], 1.0 + 0j, atol=1e-12)
+        np.testing.assert_allclose(s.trans[1], 1.0 + 0j, atol=1e-12)
+
+    def test_local_hopping_spin_is_noop(self):
+        """Local hopping should be skipped for spin model."""
+        s = StdIntList()
+        s.model = "spin"
+        s.NsiteUC = 1
+        _setup_interactions(s)
+        tUJindx_arr = np.array([[0, 0, 0, 0, 0]], dtype=int)
+        tUJ_arr = np.array([-1.0 + 0j])
+        NtUJ = [1, 0, 0]
+        tUJ = [tUJ_arr, None, None]
+        tUJindx = [tUJindx_arr, None, None]
+
+        w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
+
+        # No transfer terms added for spin local hopping
+        assert s.ntrans == 0
+
+    def test_zero_terms_is_noop(self):
+        """Should do nothing when NtUJ[0] is 0."""
+        s = StdIntList()
+        s.model = "hubbard"
+        _setup_interactions(s)
+        tUJindx_arr = np.zeros((0, 5), dtype=int)
+        tUJ_arr = np.zeros(0, dtype=complex)
+        NtUJ = [0, 0, 0]
+        tUJ = [tUJ_arr, None, None]
+        tUJindx = [tUJindx_arr, None, None]
+
+        w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
+
+        assert s.ntrans == 0
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _apply_coulomb_terms
+# ---------------------------------------------------------------------------
+
+
+class TestApplyCoulombTerms:
+    """Tests for the _apply_coulomb_terms helper."""
+
+    def test_none_indices_is_noop(self):
+        """Should do nothing when tUJindx[1] is None."""
+        s = StdIntList()
+        s.model = "hubbard"
+        _setup_interactions(s)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+        ncintra_before = s.NCintra
+        w90._apply_coulomb_terms(
+            s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
+            w90._DCMode.NOTCORRECT, None,
+        )
+        assert s.NCintra == ncintra_before
+
+    def test_local_coulomb_adds_cintra(self):
+        """Local Coulomb term should add intra-site Coulomb."""
+        s = StdIntList()
+        s.model = "hubbard"
+        s.NsiteUC = 1
+        _setup_interactions(s)
+        # On-site U: R=(0,0,0), iWan=jWan=0
+        tUJindx_arr = np.array([[0, 0, 0, 0, 0]], dtype=int)
+        tUJ_arr = np.array([4.0 + 0j])
+        NtUJ = [0, 1, 0]
+        tUJ = [None, tUJ_arr, None]
+        tUJindx = [None, tUJindx_arr, None]
+
+        w90._apply_coulomb_terms(
+            s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
+            w90._DCMode.NOTCORRECT, None,
+        )
+
+        assert s.NCintra == 1
+        np.testing.assert_allclose(s.Cintra[0], 4.0, atol=1e-12)
+        assert s.CintraIndx[0, 0] == 0
+
+    def test_local_coulomb_dc_adds_transfer(self):
+        """Local Coulomb with double-counting adds transfer terms."""
+        s = StdIntList()
+        s.model = "hubbard"
+        s.NsiteUC = 1
+        s.alpha = 0.5
+        _setup_interactions(s)
+
+        tUJindx_arr = np.array([[0, 0, 0, 0, 0]], dtype=int)
+        tUJ_arr = np.array([4.0 + 0j])
+        NtUJ = [0, 1, 0]
+        tUJ = [None, tUJ_arr, None]
+        tUJindx = [None, tUJindx_arr, None]
+
+        DenMat = {(0, 0, 0): np.array([[0.5 + 0j]])}
+
+        w90._apply_coulomb_terms(
+            s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
+            w90._DCMode.HARTREE, DenMat,
+        )
+
+        assert s.NCintra == 1
+        # Should add 2 transfer terms (one per spin)
+        assert s.ntrans == 2
+        # alpha * U * DenMat = 0.5 * 4.0 * 0.5 = 1.0
+        np.testing.assert_allclose(s.trans[0], 1.0 + 0j, atol=1e-12)
+
+    def test_zero_terms_is_noop(self):
+        """Should do nothing when NtUJ[1] is 0."""
+        s = StdIntList()
+        s.model = "hubbard"
+        _setup_interactions(s)
+        tUJindx_arr = np.zeros((0, 5), dtype=int)
+        tUJ_arr = np.zeros(0, dtype=complex)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, tUJ_arr, None]
+        tUJindx = [None, tUJindx_arr, None]
+
+        w90._apply_coulomb_terms(
+            s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
+            w90._DCMode.NOTCORRECT, None,
+        )
+
+        assert s.NCintra == 0
+        assert s.ntrans == 0
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _apply_hund_terms
+# ---------------------------------------------------------------------------
+
+
+class TestApplyHundTerms:
+    """Tests for the _apply_hund_terms helper."""
+
+    def test_none_indices_is_noop(self):
+        """Should do nothing when tUJindx[2] is None."""
+        s = StdIntList()
+        s.model = "hubbard"
+        _setup_interactions(s)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+        nhund_before = s.NHund
+        w90._apply_hund_terms(
+            s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
+            w90._DCMode.NOTCORRECT, None,
+        )
+        assert s.NHund == nhund_before
+
+    def test_local_hund_term_skipped(self):
+        """Local Hund term (same site) should be skipped."""
+        s = StdIntList()
+        s.model = "hubbard"
+        s.NsiteUC = 1
+        _setup_interactions(s)
+        # On-site: R=(0,0,0), iWan=jWan=0 — should be skipped
+        tUJindx_arr = np.array([[0, 0, 0, 0, 0]], dtype=int)
+        tUJ_arr = np.array([0.5 + 0j])
+        NtUJ = [0, 0, 1]
+        tUJ = [None, None, tUJ_arr]
+        tUJindx = [None, None, tUJindx_arr]
+
+        w90._apply_hund_terms(
+            s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
+            w90._DCMode.NOTCORRECT, None,
+        )
+
+        assert s.NHund == 0
+        assert s.NEx == 0
+        assert s.NPairHopp == 0
+
+    def test_zero_terms_is_noop(self):
+        """Should do nothing when NtUJ[2] is 0."""
+        s = StdIntList()
+        s.model = "hubbard"
+        _setup_interactions(s)
+        tUJindx_arr = np.zeros((0, 5), dtype=int)
+        tUJ_arr = np.zeros(0, dtype=complex)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, tUJ_arr]
+        tUJindx = [None, None, tUJindx_arr]
+
+        w90._apply_hund_terms(
+            s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
+            w90._DCMode.NOTCORRECT, None,
+        )
+
+        assert s.NHund == 0
+        assert s.NEx == 0
+        assert s.NPairHopp == 0
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _validate_wannier_params
+# ---------------------------------------------------------------------------
+
+
+class TestValidateWannierParams:
+    """Tests for the _validate_wannier_params helper."""
+
+    def test_spin_model_sets_S2(self):
+        """Spin model should set S2 default to 1."""
+        s = StdIntList()
+        s.model = "spin"
+        s.K = NaN_d
+        s.h = NaN_d
+        s.Gamma = NaN_d
+        s.Gamma_y = NaN_d
+        s.U = NaN_d
+        s.S2 = NaN_i
+        s.mu = NaN_d
+        w90._validate_wannier_params(s)
+        assert s.S2 == 1
+        assert s.h == 0.0
+        assert s.Gamma == 0.0
+        assert s.Gamma_y == 0.0
+
+    def test_hubbard_model_sets_mu(self):
+        """Hubbard model should set mu default to 0.0."""
+        s = StdIntList()
+        s.model = "hubbard"
+        s.K = NaN_d
+        s.h = NaN_d
+        s.Gamma = NaN_d
+        s.Gamma_y = NaN_d
+        s.U = NaN_d
+        s.S2 = NaN_i
+        s.mu = NaN_d
+        w90._validate_wannier_params(s)
+        assert s.mu == 0.0
+
+    def test_kondo_model_exits(self):
+        """Kondo model should cause exit."""
+        s = StdIntList()
+        s.model = "kondo"
+        s.K = NaN_d
+        s.h = NaN_d
+        s.Gamma = NaN_d
+        s.Gamma_y = NaN_d
+        s.U = NaN_d
+        s.S2 = NaN_i
+        s.mu = NaN_d
+        with pytest.raises(SystemExit):
+            w90._validate_wannier_params(s)
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _build_wannier_interactions
+# ---------------------------------------------------------------------------
+
+
+class TestBuildWannierInteractions:
+    """Tests for _build_wannier_interactions."""
+
+    def test_hubbard_allocates_arrays(self, tmp_path):
+        """Should allocate interaction arrays for Hubbard model."""
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        prefix = "test"
+        _write_geom_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_ur_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_jr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+
+        s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
+        w90.wannier90(s)
+
+        assert s.transindx is not None
+        assert s.trans is not None
+        assert s.ntrans >= 0
+
+    def test_spin_allocates_arrays(self, tmp_path):
+        """Should allocate interaction arrays for Spin model."""
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        prefix = "test"
+        _write_geom_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_ur_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_jr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+
+        s = _make_wannier_StdI(model="spin", prefix=prefix, W=2, L=2, Height=1)
+        w90.wannier90(s)
+
+        assert s.transindx is not None
+        assert s.intrindx is not None
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _write_wan2site
+# ---------------------------------------------------------------------------
+
+
+class TestWriteWan2site:
+    """Tests for _write_wan2site."""
+
+    def test_creates_file(self, tmp_path):
+        """Should create wan2site.dat in working directory."""
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        prefix = "test"
+        _write_geom_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_ur_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_jr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+
+        s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
+        w90.wannier90(s)
+
+        assert (tmp_path / "wan2site.dat").exists()
+
+    def test_content_format(self, tmp_path):
+        """wan2site.dat should contain expected header and site data."""
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        prefix = "test"
+        _write_geom_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_ur_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_jr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+
+        s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
+        w90.wannier90(s)
+
+        content = (tmp_path / "wan2site.dat").read_text()
+        assert "Total site number" in content
+        assert "site nx ny nz norb" in content
+        # Should have data lines for all sites
+        lines = [l for l in content.strip().split("\n")
+                 if l.strip() and "=" not in l
+                 and "site" not in l.lower() and "total" not in l.lower()]
+        assert len(lines) == s.NCell * s.NsiteUC
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _apply_boundary_weights
+# ---------------------------------------------------------------------------
+
+
+class TestApplyBoundaryWeights:
+    """Tests for the _apply_boundary_weights helper."""
+
+    def test_returns_band_lattice(self):
+        """Should return the maximum absolute R-vector extent per dimension."""
+        indx_tot = np.array([
+            [0, 0, 0],
+            [1, -2, 0],
+            [-1, 1, 3],
+        ], dtype=int)
+        Weight_tot = np.ones(3)
+        s = StdIntList()
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        band = w90._apply_boundary_weights(indx_tot, Weight_tot, 3, s)
+        np.testing.assert_array_equal(band, [1, 2, 3])
+
+    def test_no_halving_when_dimensions_unset(self):
+        """Weights should be unchanged when W/L/Height are unset."""
+        indx_tot = np.array([[1, 0, 0], [-1, 0, 0]], dtype=int)
+        Weight_tot = np.ones(2)
+        s = StdIntList()
+        s.W = NaN_i
+        s.L = NaN_i
+        s.Height = NaN_i
+        w90._apply_boundary_weights(indx_tot, Weight_tot, 2, s)
+        np.testing.assert_array_equal(Weight_tot, [1.0, 1.0])
+
+    def test_halving_at_boundary(self):
+        """Boundary WSCs should have halved weight for even lattice dims."""
+        # W=4 => Model_lattice[0] = 2; Band_lattice[0] = 3 (from |R0|=3)
+        # Condition: Model_lattice < Band_lattice AND |R0| == Model_lattice
+        indx_tot = np.array([
+            [0, 0, 0],
+            [1, 0, 0],
+            [2, 0, 0],
+            [-2, 0, 0],
+            [3, 0, 0],
+        ], dtype=int)
+        Weight_tot = np.ones(5)
+        s = StdIntList()
+        s.W = 4   # Model_lattice[0] = 2
+        s.L = 1   # odd => Model_lattice[1] = 0 => no halving in dim 1
+        s.Height = 1
+        w90._apply_boundary_weights(indx_tot, Weight_tot, 5, s)
+        # WSC 0 (R0=0) and WSC 1 (R0=1): unchanged
+        assert Weight_tot[0] == 1.0
+        assert Weight_tot[1] == 1.0
+        # WSC 2 (|R0|=2 == Model_lattice[0]) and WSC 3 (|R0|=2): halved
+        assert Weight_tot[2] == 0.5
+        assert Weight_tot[3] == 0.5
+        # WSC 4 (|R0|=3 != 2): unchanged
+        assert Weight_tot[4] == 1.0
+
+    def test_no_halving_when_model_exceeds_band(self):
+        """No halving when model lattice > band lattice extent."""
+        indx_tot = np.array([[1, 0, 0]], dtype=int)
+        Weight_tot = np.ones(1)
+        s = StdIntList()
+        s.W = 10  # Model_lattice[0] = 5, Band_lattice[0] = 1
+        s.L = 10
+        s.Height = 10
+        w90._apply_boundary_weights(indx_tot, Weight_tot, 1, s)
+        assert Weight_tot[0] == 1.0
+
+
+# ---------------------------------------------------------------------------
+#  Tests: _count_and_store_terms
+# ---------------------------------------------------------------------------
+
+
+class TestCountAndStoreTerms:
+    """Tests for the _count_and_store_terms helper."""
+
+    def test_counts_above_cutoff(self):
+        """Should count only terms above the cutoff threshold."""
+        nWSC = 1
+        NsiteUC = 2
+        Mat_tot = np.zeros((nWSC, NsiteUC, NsiteUC), dtype=complex)
+        Mat_tot[0, 0, 0] = 2.0 + 0j    # above cutoff
+        Mat_tot[0, 0, 1] = 0.001 + 0j   # below cutoff
+        Mat_tot[0, 1, 0] = 0.0 + 0j     # zero
+        Mat_tot[0, 1, 1] = -1.5 + 0.5j  # above cutoff
+        indx_tot = np.array([[0, 0, 0]], dtype=int)
+        Weight_tot = np.ones(nWSC)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._count_and_store_terms(
+            Mat_tot, indx_tot, Weight_tot, nWSC,
+            NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
+        )
+
+        assert NtUJ[0] == 2
+        assert tUJ[0] is not None
+        assert len(tUJ[0]) == 2
+
+    def test_applies_weights_before_counting(self):
+        """Should multiply by Weight_tot before checking cutoff."""
+        nWSC = 1
+        NsiteUC = 1
+        Mat_tot = np.zeros((nWSC, NsiteUC, NsiteUC), dtype=complex)
+        Mat_tot[0, 0, 0] = 0.05 + 0j  # above 0.01, but weight makes it 0.025
+        indx_tot = np.array([[0, 0, 0]], dtype=int)
+        Weight_tot = np.array([0.5])
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._count_and_store_terms(
+            Mat_tot, indx_tot, Weight_tot, nWSC,
+            NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
+        )
+
+        assert NtUJ[0] == 1
+        np.testing.assert_allclose(tUJ[0][0], 0.025 + 0j, atol=1e-12)
+
+    def test_stores_correct_indices(self):
+        """Should store the correct R-vector and band indices."""
+        nWSC = 1
+        NsiteUC = 2
+        Mat_tot = np.zeros((nWSC, NsiteUC, NsiteUC), dtype=complex)
+        Mat_tot[0, 0, 1] = 1.0 + 0j
+        indx_tot = np.array([[3, -1, 2]], dtype=int)
+        Weight_tot = np.ones(nWSC)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._count_and_store_terms(
+            Mat_tot, indx_tot, Weight_tot, nWSC,
+            NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
+        )
+
+        assert NtUJ[0] == 1
+        np.testing.assert_array_equal(tUJindx[0][0], [3, -1, 2, 0, 1])
+
+    def test_all_below_cutoff_returns_empty(self):
+        """Should return empty arrays when all terms are below cutoff."""
+        nWSC = 1
+        NsiteUC = 1
+        Mat_tot = np.zeros((nWSC, NsiteUC, NsiteUC), dtype=complex)
+        Mat_tot[0, 0, 0] = 0.001 + 0j
+        indx_tot = np.array([[0, 0, 0]], dtype=int)
+        Weight_tot = np.ones(nWSC)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._count_and_store_terms(
+            Mat_tot, indx_tot, Weight_tot, nWSC,
+            NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
+        )
+
+        assert NtUJ[0] == 0
+        assert len(tUJ[0]) == 0
+
+    def test_itUJ_index_selects_slot(self):
+        """Should store into the correct tUJ/tUJindx slot."""
+        nWSC = 1
+        NsiteUC = 1
+        Mat_tot = np.zeros((nWSC, NsiteUC, NsiteUC), dtype=complex)
+        Mat_tot[0, 0, 0] = 5.0 + 0j
+        indx_tot = np.array([[0, 0, 0]], dtype=int)
+        Weight_tot = np.ones(nWSC)
+        NtUJ = [0, 0, 0]
+        tUJ = [None, None, None]
+        tUJindx = [None, None, None]
+
+        w90._count_and_store_terms(
+            Mat_tot, indx_tot, Weight_tot, nWSC,
+            NsiteUC, 0.01, 2, NtUJ, tUJindx, tUJ,
+        )
+
+        assert NtUJ[2] == 1
+        assert tUJ[0] is None  # slot 0 untouched
+        assert tUJ[1] is None  # slot 1 untouched
+        assert tUJ[2] is not None

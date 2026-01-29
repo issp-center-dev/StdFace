@@ -23,6 +23,8 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see http://www.gnu.org/licenses/.
 """
 
+from __future__ import annotations
+
 # Semantic Versioning http://semver.org
 # <major>.<minor>.<patch>-<prerelease>
 VERSION_MAJOR = 0
@@ -31,7 +33,7 @@ VERSION_PATCH = 0
 VERSION_PRERELEASE = ""  # "alpha", "beta.1", etc.
 
 
-def print_version():
+def print_version() -> None:
     """Print the StdFace version string to standard output.
 
     Prints a version string in the format ``major.minor.patch``.
