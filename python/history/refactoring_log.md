@@ -7739,3 +7739,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 155 — 2026-01-29
+
+**Files**: `python/writer/export_wannier90.py`
+**Change**: Used slice unpacking and `divmod` in `_generate_key`, `_build_inter_table`, and `_build_transfer_table`. Replaced `index[0], index[1], ...` with `index[:N]` unpacking, and `idx // N` / `idx % N` pairs with `divmod(idx, N)`. Also inlined the intermediate `rr` variable in the cell vector difference computation.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

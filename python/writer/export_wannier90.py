@@ -376,10 +376,10 @@ def _generate_key(keylen: int, index: list[int], ordered: int) -> tuple[int, ...
     if keylen == 1:
         return (index[0],)
     elif keylen == 2:
-        i, j = index[0], index[1]
+        i, j = index[:2]
         return (j, i) if ordered == 1 and i > j else (i, j)
     elif keylen == 4:
-        i, s, j, t = index[0], index[1], index[2], index[3]
+        i, s, j, t = index[:4]
         return (j, t, i, s) if ordered == 1 and i > j else (i, s, j, t)
     else:
         _fatal(f"unsupported keylen: {keylen}")
@@ -482,18 +482,14 @@ def _build_inter_table(
     seen: dict[tuple, int] = {}  # key -> index in intr_table
 
     for k in range(nintr):
-        idx_i = intr_index[k][0]
-        idx_j = intr_index[k][1]
+        idx_i, idx_j = intr_index[k][:2]
 
-        icell = idx_i // StdI.NsiteUC
-        isite = idx_i % StdI.NsiteUC
-        jcell = idx_j // StdI.NsiteUC
-        jsite = idx_j % StdI.NsiteUC
+        icell, isite = divmod(idx_i, StdI.NsiteUC)
+        jcell, jsite = divmod(idx_j, StdI.NsiteUC)
 
         jCV = _cell_vector(StdI.Cell, jcell)
         iCV = _cell_vector(StdI.Cell, icell)
-        rr = [j - i for j, i in zip(jCV, iCV)]
-        rr = _unfold_site(StdI, rr)
+        rr = _unfold_site(StdI, [j - i for j, i in zip(jCV, iCV)])
 
         lookup_key = (tuple(rr), isite, jsite)
         if lookup_key in seen:
@@ -629,20 +625,14 @@ def _build_transfer_table(
     seen: dict[tuple, int] = {}  # key -> index in intr_table
 
     for k in range(nintr):
-        idx_i = intr_index[k][0]
-        ispin = intr_index[k][1]
-        idx_j = intr_index[k][2]
-        jspin = intr_index[k][3]
+        idx_i, ispin, idx_j, jspin = intr_index[k][:4]
 
-        icell = idx_i // StdI.NsiteUC
-        isite = idx_i % StdI.NsiteUC
-        jcell = idx_j // StdI.NsiteUC
-        jsite = idx_j % StdI.NsiteUC
+        icell, isite = divmod(idx_i, StdI.NsiteUC)
+        jcell, jsite = divmod(idx_j, StdI.NsiteUC)
 
         jCV = _cell_vector(StdI.Cell, jcell)
         iCV = _cell_vector(StdI.Cell, icell)
-        rr = [j - i for j, i in zip(jCV, iCV)]
-        rr = _unfold_site(StdI, rr)
+        rr = _unfold_site(StdI, [j - i for j, i in zip(jCV, iCV)])
 
         intr_value[k] *= -1  # by convention
 
