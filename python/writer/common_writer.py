@@ -46,6 +46,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType, NaN_i, UNSET_STRING,
     AMPLITUDE_EPS,
@@ -243,7 +245,7 @@ def _write_namelist_mvmc(fp, StdI: StdIntList) -> None:
     fp.write("        TransSym  qptransidx.def\n")
 
 
-_NAMELIST_BODY_DISPATCH: dict[SolverType, callable] = {
+_NAMELIST_BODY_DISPATCH: dict[SolverType, Callable] = {
     SolverType.HPhi: _write_namelist_hphi,
     SolverType.mVMC: _write_namelist_mvmc,
 }
@@ -435,7 +437,7 @@ _MODPARA_BANNER: dict[str, str] = {
 """Maps UHF/HWAVE solver type to the ``modpara.def`` banner line."""
 
 
-_MODPARA_BODY_DISPATCH: dict[str, callable] = {
+_MODPARA_BODY_DISPATCH: dict[str, Callable] = {
     SolverType.HPhi:  _write_modpara_hphi,
     SolverType.mVMC:  _write_modpara_mvmc,
     SolverType.UHF:   _write_modpara_uhf_hwave,
@@ -997,7 +999,7 @@ def _check_mod_para_uhf(StdI: StdIntList) -> None:
     StdI.NMPTrans = print_val_i("NMPTrans", StdI.NMPTrans, 0)
 
 
-_SOLVER_DEFAULTS_DISPATCH: dict[str, callable] = {
+_SOLVER_DEFAULTS_DISPATCH: dict[str, Callable] = {
     SolverType.HPhi: _check_mod_para_hphi,
     SolverType.mVMC: _check_mod_para_mvmc,
     SolverType.UHF:  _check_mod_para_uhf,
@@ -1045,13 +1047,13 @@ _CONSERVED_QTY_RULES: dict[tuple, tuple[str, str | None, str | None]] = {
 """Rules for validating ``ncond`` and ``2Sz`` by (model, is_hphi, lGC)."""
 
 # Dispatch tables for ncond and Sz2 validation actions
-_NCOND_ACTION_DISPATCH: dict[str, callable] = {
+_NCOND_ACTION_DISPATCH: dict[str, Callable] = {
     "required": required_val_i,
     "not_used": not_used_i,
 }
 """Maps ncond action strings to validation functions (label, value) -> None."""
 
-_SZ2_ACTION_DISPATCH: dict[str, callable] = {
+_SZ2_ACTION_DISPATCH: dict[str, Callable] = {
     "required": lambda StdI: required_val_i("2Sz", StdI.Sz2),
     "not_used": lambda StdI: not_used_i("2Sz", StdI.Sz2),
     "default_0": lambda StdI: setattr(StdI, 'Sz2', print_val_i("2Sz", StdI.Sz2, 0)),

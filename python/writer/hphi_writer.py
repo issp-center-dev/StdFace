@@ -30,6 +30,7 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 
 import numpy as np
 
@@ -559,7 +560,7 @@ def _spectrum_down(
     return 1, 1
 
 
-_SPECTRUM_HANDLERS: dict[str, callable] = {
+_SPECTRUM_HANDLERS: dict[str, Callable] = {
     "szsz": _spectrum_szsz,
     "s+s-": _spectrum_spsm,
     "density": _spectrum_density,

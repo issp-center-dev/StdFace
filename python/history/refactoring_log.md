@@ -7506,3 +7506,22 @@ C-translated implementation was redundant.
 **Tests**:
 - Unit: 1246 passed (4 removed)
 - Integration: 83/83 passed
+
+## Step 139 — Replace `callable` with `Callable` in type annotations
+
+**Date**: 2026-01-29
+**File(s)**: `python/writer/hphi_writer.py`, `python/writer/common_writer.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Replaced 6 occurrences of `callable` (lowercase, a builtin function)
+with `Callable` (from `collections.abc`) in type annotations for dispatch
+dictionaries. Added `from collections.abc import Callable` to both files.
+
+**Why**: `callable` is a builtin function, not a type annotation. The proper
+type hint is `collections.abc.Callable`. While `from __future__ import
+annotations` makes this a string-only check, using the correct type is
+important for type checkers and documentation.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
