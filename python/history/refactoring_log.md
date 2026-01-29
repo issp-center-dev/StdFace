@@ -7256,3 +7256,27 @@ and more efficient (C-level loop instead of Python generator).
 
 **Suggested next step**: Begin Phase 2 class introduction work (e.g.
 `KeywordParser` class or `SolverWriter` hierarchy).
+
+---
+
+## Step 127 — Move inline `import sys` to top-level imports
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`, `python/writer/export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Both files had multiple inline `import sys` statements inside
+functions/conditionals (a C-style pattern from the original translation).
+Moved to standard top-level imports per PEP 8.
+
+**Changes**:
+
+- `wannier90.py`: added `import sys` at top, removed 5 inline occurrences
+- `export_wannier90.py`: added `import sys` at top, removed 1 inline occurrence
+
+**Test results**:
+- Unit tests: 1253 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Check for other inline imports across the codebase,
+or begin Phase 2 class introduction work.

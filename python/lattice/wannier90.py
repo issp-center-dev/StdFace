@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import itertools
 import math
+import sys
 from enum import IntEnum
 from typing import TextIO
 
@@ -117,7 +118,7 @@ def _geometry_w90(StdI: StdIntList) -> None:
     try:
         fp_geom = open(filename, "r")
     except FileNotFoundError:
-        import sys
+
         print(f"\n  Error: Fail to open the file {filename}. \n", file=sys.stderr)
         exit_program(-1)
 
@@ -411,7 +412,7 @@ def _read_density_matrix(
         2D numpy arrays of shape ``(NsiteUC, NsiteUC)`` containing the
         density matrix elements.
     """
-    import sys
+
 
     try:
         fp_dr = open(filename, "r")
@@ -601,7 +602,7 @@ def _parse_double_counting_mode(mode_str: str) -> _DCMode:
     if result is not None:
         return result
 
-    import sys
+
     print(
         "\n  Error: the word of doublecounting is not correct "
         "(select from none, hartree, hartree_u, full). \n",
@@ -1210,7 +1211,7 @@ def wannier90(StdI: StdIntList) -> None:
         StdI.lambda_J = print_val_d("lambda_J", StdI.lambda_J, StdI.lambda_)
 
     if StdI.lambda_U < 0.0 or StdI.lambda_J < 0.0:
-        import sys
+
         print(
             "\n  Error: the value of lambda_U / lambda_J must be "
             "greater than or equal to 0. \n",
@@ -1223,7 +1224,7 @@ def wannier90(StdI: StdIntList) -> None:
 
     StdI.alpha = print_val_d("alpha", StdI.alpha, 0.5)
     if StdI.alpha > 1.0 or StdI.alpha < 0.0:
-        import sys
+
         print(
             "\n  Error: the value of alpha must be in the range 0<= alpha <= 1. \n",
             file=sys.stderr,

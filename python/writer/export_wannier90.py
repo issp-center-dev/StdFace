@@ -21,6 +21,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -88,7 +89,6 @@ def _fatal(msg: str) -> None:
     msg : str
         Error description.
     """
-    import sys
     print(f"ERROR: {msg}", file=sys.stderr)
     exit_program(-1)
 
