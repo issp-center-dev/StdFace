@@ -66,6 +66,7 @@ __pycache__/
 # Python package metadata
 *.egg-info/
 dist/
+*.egg
 
 # Build Output
 build/

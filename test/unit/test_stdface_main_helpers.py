@@ -8,7 +8,7 @@ import os
 
 import pytest
 
-from stdface.core.stdface_vals import StdIntList, ModelType, SolverType, MethodType, NaN_d
+from stdface.core.stdface_vals import StdIntList, ModelType, SolverType, MethodType
 from stdface.core.stdface_main import _parse_input_file, _resolve_model_and_method
 
 
