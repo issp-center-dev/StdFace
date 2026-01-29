@@ -55,7 +55,6 @@ def _check_in_box(rvec: np.ndarray, inverse_matrix: np.ndarray) -> bool:
     bool
         True if inside the box, False otherwise.
     """
-    # judge_vec = rvec @ inverse_matrix
     judge_vec = rvec @ inverse_matrix
     return bool(np.all(np.abs(judge_vec) <= 1))
 

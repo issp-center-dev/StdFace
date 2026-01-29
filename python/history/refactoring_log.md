@@ -7525,3 +7525,19 @@ important for type checkers and documentation.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+## Step 140 — Remove unused import and dead comment
+
+**Date**: 2026-01-29
+**File(s)**: `python/writer/mvmc_variational.py`, `python/lattice/wannier90.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Removed unused `print_val_i` import from `mvmc_variational.py`.
+Removed stale duplicate comment `# judge_vec = rvec @ inverse_matrix` in
+`_check_in_box()` in `wannier90.py`.
+
+**Why**: Dead code / dead comment cleanup.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

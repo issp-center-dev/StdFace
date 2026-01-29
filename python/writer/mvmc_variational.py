@@ -26,7 +26,7 @@ from __future__ import annotations
 import numpy as np
 
 from stdface_vals import StdIntList, ModelType, NaN_i
-from param_check import exit_program, print_val_i
+from param_check import exit_program
 from lattice.site_util import (
     _cell_vector, _fold_to_cell, _fold_site, _find_cell_index,
     _validate_box_params, _det_and_cofactor, find_site,
