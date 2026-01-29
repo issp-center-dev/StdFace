@@ -7787,3 +7787,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 159 — 2026-01-29
+
+**Files**: `python/stdface_main.py`
+**Change**: Improved type annotations for `LATTICE_DISPATCH` and `BOOST_DISPATCH` dispatch tables from `dict[str, object]` to `dict[str, Callable[[StdIntList], None]]`. Added `from collections.abc import Callable` import.
+**Phase**: 3 — Leverage Python idioms (type safety)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

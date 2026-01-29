@@ -30,6 +30,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
     NaN_i, NaN_d, NaN_c, UNSET_STRING,
@@ -66,7 +68,7 @@ from lattice import (
 # ---------------------------------------------------------------------------
 #  Maps every recognised lattice alias to its builder function.
 #  Each function has the signature ``(StdI: StdIntList) -> None``.
-LATTICE_DISPATCH: dict[str, object] = {
+LATTICE_DISPATCH: dict[str, Callable[[StdIntList], None]] = {
     "chain":                        chain_lattice.chain,
     "chainlattice":                 chain_lattice.chain,
     "face-centeredorthorhombic":    fc_ortho.fc_ortho,
@@ -96,7 +98,7 @@ LATTICE_DISPATCH: dict[str, object] = {
 }
 """Maps lattice name aliases to their builder functions."""
 
-BOOST_DISPATCH: dict[str, object] = {
+BOOST_DISPATCH: dict[str, Callable[[StdIntList], None]] = {
     "chain":            chain_lattice.chain_boost,
     "chainlattice":     chain_lattice.chain_boost,
     "honeycomb":        honeycomb_lattice.honeycomb_boost,
