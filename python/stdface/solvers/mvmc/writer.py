@@ -70,26 +70,29 @@ def print_orb(StdI: StdIntList) -> None:
     Translated from the C function ``PrintOrb()`` in ``StdFace_main.c``.
     """
     with open("orbitalidx.def", "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"NOrbitalIdx {StdI.NOrb:10d}\n")
-        fp.write(f"ComplexType {StdI.ComplexType:10d}\n")
-        fp.write("=============================================\n")
-        fp.write("=============================================\n")
+        lines = [
+            "=============================================\n",
+            f"NOrbitalIdx {StdI.NOrb:10d}\n",
+            f"ComplexType {StdI.ComplexType:10d}\n",
+            "=============================================\n",
+            "=============================================\n",
+        ]
 
         has_anti = _has_anti_period(StdI)
 
         for isite in range(StdI.nsite):
             for jsite in range(StdI.nsite):
                 if has_anti:
-                    fp.write(f"{isite:5d}  {jsite:5d}  "
-                             f"{StdI.Orb[isite][jsite]:5d}  "
-                             f"{StdI.AntiOrb[isite][jsite]:5d}\n")
+                    lines.append(f"{isite:5d}  {jsite:5d}  "
+                                 f"{StdI.Orb[isite][jsite]:5d}  "
+                                 f"{StdI.AntiOrb[isite][jsite]:5d}\n")
                 else:
-                    fp.write(f"{isite:5d}  {jsite:5d}  "
-                             f"{StdI.Orb[isite][jsite]:5d}\n")
+                    lines.append(f"{isite:5d}  {jsite:5d}  "
+                                 f"{StdI.Orb[isite][jsite]:5d}\n")
 
         for iOrb in range(StdI.NOrb):
-            fp.write(f"{iOrb:5d}  {1:5d}\n")
+            lines.append(f"{iOrb:5d}  {1:5d}\n")
+        fp.write("".join(lines))
 
     print("    orbitalidx.def is written.")
 
@@ -140,16 +143,22 @@ def _compute_parallel_orbitals(
     reverse = np.asarray(AntiOrb, dtype=int).copy()
 
     # (2) Symmetrise — process each orbital in ascending order.
-    #     For each iorb, find all (i,j) with OrbGC[i,j]==iorb and set
-    #     OrbGC[j,i]=iorb, reverse[j,i]=-reverse[i,j].
-    #     Order matters: later iorb can overwrite earlier iorb's writes.
-    #     Process sequentially to preserve the original semantics where
-    #     each (i,j) match writes to (j,i) immediately.
+    #     Build a reverse map (value -> list of positions) in a single
+    #     pass, then iterate orbitals in order.  This replaces NOrb
+    #     full-matrix scans with one scan + targeted updates.
+    from collections import defaultdict
+    orb_positions: dict[int, list[tuple[int, int]]] = defaultdict(list)
+    for r in range(nsite):
+        for c in range(nsite):
+            v = int(OrbGC[r, c])
+            if 0 <= v < NOrb:
+                orb_positions[v].append((r, c))
+
     for iorb in range(NOrb):
-        rows, cols = np.where(OrbGC == iorb)
-        for r, c in zip(rows, cols):
-            OrbGC[c, r] = iorb
-            reverse[c, r] = -reverse[r, c]
+        for r, c in orb_positions.get(iorb, ()):
+            if OrbGC[r, c] == iorb:
+                OrbGC[c, r] = iorb
+                reverse[c, r] = -reverse[r, c]
 
     # (3) Renumber — lower triangle (isite > jsite).
     #     Replace each newly-seen positive orbital value with a negative
@@ -195,22 +204,23 @@ def _write_orbitalidxpara(
         Number of parallel orbital indices.
     """
     with open("orbitalidxpara.def", "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"NOrbitalIdx {NOrbGC:10d}\n")
-        fp.write(f"ComplexType {ComplexType:10d}\n")
-        fp.write("=============================================\n")
-        fp.write("=============================================\n")
+        lines = [
+            "=============================================\n",
+            f"NOrbitalIdx {NOrbGC:10d}\n",
+            f"ComplexType {ComplexType:10d}\n",
+            "=============================================\n",
+            "=============================================\n",
+        ]
 
         for isite in range(nsite):
-            for jsite in range(nsite):
-                if isite >= jsite:
-                    continue
-                fp.write(f"{isite:5d}  {jsite:5d}  "
-                         f"{OrbGC[isite][jsite]:5d}  "
-                         f"{reverse[isite][jsite]:5d}\n")
+            for jsite in range(isite + 1, nsite):
+                lines.append(f"{isite:5d}  {jsite:5d}  "
+                             f"{OrbGC[isite][jsite]:5d}  "
+                             f"{reverse[isite][jsite]:5d}\n")
 
         for iOrbGC in range(NOrbGC):
-            fp.write(f"{iOrbGC:5d}  {1:5d}\n")
+            lines.append(f"{iOrbGC:5d}  {1:5d}\n")
+        fp.write("".join(lines))
 
 
 def _write_orbitalidxgen(
@@ -237,40 +247,41 @@ def _write_orbitalidxgen(
     has_anti = _has_anti_period(StdI)
 
     with open("orbitalidxgen.def", "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"NOrbitalIdx {StdI.NOrb + 2 * NOrbGC:10d}\n")
-        fp.write(f"ComplexType {StdI.ComplexType:10d}\n")
-        fp.write("=============================================\n")
-        fp.write("=============================================\n")
+        lines = [
+            "=============================================\n",
+            f"NOrbitalIdx {StdI.NOrb + 2 * NOrbGC:10d}\n",
+            f"ComplexType {StdI.ComplexType:10d}\n",
+            "=============================================\n",
+            "=============================================\n",
+        ]
 
         # -- anti-parallel section --
         for isite in range(nsite):
             for jsite in range(nsite):
                 if has_anti:
-                    fp.write(f"{isite:5d}  0  {jsite:5d}  1  "
-                             f"{StdI.Orb[isite][jsite]:5d}  "
-                             f"{StdI.AntiOrb[isite][jsite]:5d}\n")
+                    lines.append(f"{isite:5d}  0  {jsite:5d}  1  "
+                                 f"{StdI.Orb[isite][jsite]:5d}  "
+                                 f"{StdI.AntiOrb[isite][jsite]:5d}\n")
                 else:
-                    fp.write(f"{isite:5d}  0  {jsite:5d}  1  "
-                             f"{StdI.Orb[isite][jsite]:5d}  {1:5d}\n")
+                    lines.append(f"{isite:5d}  0  {jsite:5d}  1  "
+                                 f"{StdI.Orb[isite][jsite]:5d}  {1:5d}\n")
 
         # -- parallel section (upper triangle) --
         for isite in range(nsite):
-            for jsite in range(nsite):
-                if isite >= jsite:
-                    continue
-                fp.write(f"{isite:5d}  0  {jsite:5d}  0  "
-                         f"{OrbGC[isite][jsite] + StdI.NOrb:5d}  "
-                         f"{reverse[isite][jsite]:5d}\n")
-                fp.write(f"{isite:5d}  1  {jsite:5d}  1  "
-                         f"{OrbGC[isite][jsite] + StdI.NOrb + NOrbGC:5d}  "
-                         f"{reverse[isite][jsite]:5d}\n")
+            for jsite in range(isite + 1, nsite):
+                lines.append(f"{isite:5d}  0  {jsite:5d}  0  "
+                             f"{OrbGC[isite][jsite] + StdI.NOrb:5d}  "
+                             f"{reverse[isite][jsite]:5d}\n")
+                lines.append(f"{isite:5d}  1  {jsite:5d}  1  "
+                             f"{OrbGC[isite][jsite] + StdI.NOrb + NOrbGC:5d}  "
+                             f"{reverse[isite][jsite]:5d}\n")
 
         for iOrbGC in range(StdI.NOrb):
-            fp.write(f"{iOrbGC:5d}  {1:5d}\n")
+            lines.append(f"{iOrbGC:5d}  {1:5d}\n")
 
         for iOrbGC in range(NOrbGC * 2):
-            fp.write(f"{iOrbGC + StdI.NOrb:5d}  {1:5d}\n")
+            lines.append(f"{iOrbGC + StdI.NOrb:5d}  {1:5d}\n")
+        fp.write("".join(lines))
 
 
 def print_orb_para(StdI: StdIntList) -> None:
@@ -419,18 +430,21 @@ def _write_gutzwiller_file(
         Per-site Gutzwiller index array.
     """
     with open("gutzwilleridx.def", "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"NGutzwillerIdx {NGutzwiller:10d}\n")
-        fp.write(f"ComplexType {0:10d}\n")
-        fp.write("=============================================\n")
-        fp.write("=============================================\n")
+        lines = [
+            "=============================================\n",
+            f"NGutzwillerIdx {NGutzwiller:10d}\n",
+            f"ComplexType {0:10d}\n",
+            "=============================================\n",
+            "=============================================\n",
+        ]
 
         for isite in range(StdI.nsite):
-            fp.write(f"{isite:5d}  {Gutz[isite]:5d}\n")
+            lines.append(f"{isite:5d}  {Gutz[isite]:5d}\n")
 
         for iGutz in range(NGutzwiller):
             flag = int(StdI.model == ModelType.HUBBARD or iGutz > 0)
-            fp.write(f"{iGutz:5d}  {flag:5d}\n")
+            lines.append(f"{iGutz:5d}  {flag:5d}\n")
+        fp.write("".join(lines))
 
 
 def print_gutzwiller(StdI: StdIntList) -> None:

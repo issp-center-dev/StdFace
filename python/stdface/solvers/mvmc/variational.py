@@ -161,17 +161,20 @@ def proj(StdI: StdIntList) -> None:
             StdI.NSym += 1
 
     with open("qptransidx.def", "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"NQPTrans {StdI.NSym:10d}\n")
-        fp.write("=============================================\n")
-        fp.write("======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n")
-        fp.write("=============================================\n")
+        lines = [
+            "=============================================\n",
+            f"NQPTrans {StdI.NSym:10d}\n",
+            "=============================================\n",
+            "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n",
+            "=============================================\n",
+        ]
         for iSym in range(StdI.NSym):
-            fp.write(f"{iSym} {1.0:10.5f}\n")
+            lines.append(f"{iSym} {1.0:10.5f}\n")
         for iSym in range(StdI.NSym):
             for jsite in range(StdI.nsite):
                 a = _parity_sign(Anti[iSym][jsite])
-                fp.write(f"{iSym:5d}  {jsite:5d}  {Sym[iSym][jsite]:5d}  {a:5d}\n")
+                lines.append(f"{iSym:5d}  {jsite:5d}  {Sym[iSym][jsite]:5d}  {a:5d}\n")
+        fp.write("".join(lines))
     print("    qptransidx.def is written.")
 
 
@@ -276,16 +279,23 @@ def generate_orb(StdI: StdIntList) -> None:
     StdI.AntiOrb = np.zeros((StdI.nsite, StdI.nsite), dtype=int)
     CellDone = np.zeros((StdI.NCell, StdI.NCell), dtype=int)
 
+    # Pre-compute cell vectors and sector list outside loops
+    cell_vectors = [_cell_vector(StdI.Cell, k) for k in range(StdI.NCell)]
+    sectors = [(0, 0)]
+    if StdI.model == ModelType.KONDO:
+        half = StdI.nsite // 2
+        sectors += [(half, 0), (0, half), (half, half)]
+
     iOrb = 0
     for iCell in range(StdI.NCell):
-        iCV = _cell_vector(StdI.Cell, iCell)
+        iCV = cell_vectors[iCell]
         nBox, iCellV = _fold_site_sub(StdI, iCV)
         nBox, iCellV = _fold_site(StdI, iCellV)
 
         iCell2 = _find_cell_index(StdI, iCellV)
 
         for jCell in range(StdI.NCell):
-            jCV = _cell_vector(StdI.Cell, jCell)
+            jCV = cell_vectors[jCell]
             jCellV = [jc + v - ic for jc, v, ic in zip(jCV, iCellV, iCV)]
             nBox, jCellV = _fold_site(StdI, jCellV)
 
@@ -296,12 +306,6 @@ def generate_orb(StdI: StdIntList) -> None:
             nBox_d, _ = _fold_site(StdI, dCellV)
             anti_val = _parity_sign(
                 _anti_period_dot(StdI.AntiPeriod, nBox_d))
-
-            # Build list of (i_offset, j_offset) sector pairs
-            sectors = [(0, 0)]
-            if StdI.model == ModelType.KONDO:
-                half = StdI.nsite // 2
-                sectors += [(half, 0), (0, half), (half, half)]
 
             for isite in range(StdI.NsiteUC):
                 for jsite in range(StdI.NsiteUC):
@@ -350,12 +354,21 @@ def _jastrow_momentum_projected(
     # (1) Copy Orbital index (vectorised)
     Jastrow[:, :] = StdI.Orb[:StdI.nsite, :StdI.nsite]
 
-    # (2) Symmetrize — for each orbital value in ascending order,
-    #     mirror (i,j) -> (j,i).  Sequential to preserve order semantics.
+    # (2) Symmetrize — build reverse map in one pass, then process
+    #     each orbital in ascending order to preserve overwrite semantics.
+    from collections import defaultdict
+    nsite = StdI.nsite
+    orb_positions: dict[int, list[tuple[int, int]]] = defaultdict(list)
+    for r in range(nsite):
+        for c in range(nsite):
+            v = int(Jastrow[r, c])
+            if 0 <= v < StdI.NOrb:
+                orb_positions[v].append((r, c))
+
     for iorb in range(StdI.NOrb):
-        rows, cols = np.where(Jastrow == iorb)
-        for r, c in zip(rows, cols):
-            Jastrow[c, r] = iorb
+        for r, c in orb_positions.get(iorb, ()):
+            if Jastrow[r, c] == iorb:
+                Jastrow[c, r] = iorb
 
     # (3) Exclude local-spin sites and renumber
     NJastrow = 0 if StdI.model == ModelType.HUBBARD else -1
@@ -409,8 +422,11 @@ def _jastrow_global_optimization(
         Jastrow[:half, :] = 0
         NJastrow += 1
 
+    # Pre-compute cell vectors to avoid repeated _cell_vector calls
+    cell_vectors = [_cell_vector(StdI.Cell, k) for k in range(StdI.NCell)]
+
     for dCell in range(StdI.NCell):
-        dCV = _cell_vector(StdI.Cell, dCell)
+        dCV = cell_vectors[dCell]
         isite, jsite, Cphase, dR_arr = find_site(
             StdI, 0, 0, 0, -dCV[0], -dCV[1], -dCV[2], 0, 0)
         if StdI.model == ModelType.KONDO:
@@ -419,16 +435,17 @@ def _jastrow_global_optimization(
         if iCell_j < dCell:
             continue
         reversal = 1 if iCell_j == dCell else 0
+        dCV_is_zero = (dCV == [0, 0, 0])
 
         for isiteUC in range(StdI.NsiteUC):
             for jsiteUC in range(StdI.NsiteUC):
                 if reversal == 1 and jsiteUC > isiteUC:
                     continue
-                if isiteUC == jsiteUC and dCV == [0, 0, 0]:
+                if isiteUC == jsiteUC and dCV_is_zero:
                     continue
 
                 for iCell_idx in range(StdI.NCell):
-                    iCV = _cell_vector(StdI.Cell, iCell_idx)
+                    iCV = cell_vectors[iCell_idx]
                     i_s, j_s, _, _ = find_site(
                         StdI,
                         iCV[0], iCV[1], iCV[2],
@@ -462,21 +479,24 @@ def print_jastrow(StdI: StdIntList) -> None:
         NJastrow = _jastrow_global_optimization(StdI, Jastrow)
 
     with open("jastrowidx.def", "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"NJastrowIdx {NJastrow:10d}\n")
-        fp.write(f"ComplexType {0:10d}\n")
-        fp.write("=============================================\n")
-        fp.write("=============================================\n")
+        lines = [
+            "=============================================\n",
+            f"NJastrowIdx {NJastrow:10d}\n",
+            f"ComplexType {0:10d}\n",
+            "=============================================\n",
+            "=============================================\n",
+        ]
 
         for isite in range(StdI.nsite):
             for jsite in range(StdI.nsite):
                 if isite == jsite:
                     continue
-                fp.write(f"{isite:5d}  {jsite:5d}  {Jastrow[isite, jsite]:5d}\n")
+                lines.append(f"{isite:5d}  {jsite:5d}  {Jastrow[isite, jsite]:5d}\n")
 
         for iJastrow in range(NJastrow):
             if StdI.model == ModelType.HUBBARD or iJastrow > 0:
-                fp.write(f"{iJastrow:5d}  {1:5d}\n")
+                lines.append(f"{iJastrow:5d}  {1:5d}\n")
             else:
-                fp.write(f"{iJastrow:5d}  {0:5d}\n")
+                lines.append(f"{iJastrow:5d}  {0:5d}\n")
+        fp.write("".join(lines))
     print("    jastrowidx.def is written.")

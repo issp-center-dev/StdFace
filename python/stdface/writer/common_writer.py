@@ -513,6 +513,11 @@ class GreenFunctionIndices:
         self.is_kondo = is_kondo
         self.is_mvmc = is_mvmc
 
+        # Pre-compute lookup tables to avoid per-call overhead in tight loops
+        self._spin_max = [1 if locspinflag[s] == 0 else locspinflag[s]
+                          for s in range(nsite)]
+        self._is_local_spin = [locspinflag[s] != 0 for s in range(nsite)]
+
     # ------------------------------------------------------------------
     #  Low-level helpers
     # ------------------------------------------------------------------
@@ -533,8 +538,7 @@ class GreenFunctionIndices:
         int
             Maximum spin index (inclusive upper bound).
         """
-        flag = self.locspinflag[site]
-        return 1 if flag == 0 else flag
+        return self._spin_max[site]
 
     def skip_local_spin_pair(self, site_a: int, site_b: int) -> bool:
         """Return True if a pair of distinct local-spin sites should be skipped.
@@ -552,8 +556,8 @@ class GreenFunctionIndices:
             ``True`` if both sites are local-spin and distinct.
         """
         return (site_a != site_b
-                and self.locspinflag[site_a] != 0
-                and self.locspinflag[site_b] != 0)
+                and self._is_local_spin[site_a]
+                and self._is_local_spin[site_b])
 
     def kondo_site(self, isite: int) -> int:
         """Map a Kondo unit-cell index to the physical site index.
