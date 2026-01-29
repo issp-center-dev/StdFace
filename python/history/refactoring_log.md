@@ -8093,3 +8093,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1260 passed
 - Integration: 83/83 passed
+
+## Step 187 — 2026-01-29
+
+**Files**: `python/writer/export_wannier90.py`
+**Change**: Replaced 5 repetitive `_export_inter_real` calls in `export_interaction()` with a data-driven `_INTER_REAL_EXPORTS` tuple and loop. Each call differed only in (count_attr, indx_attr, val_attr, filename, tag). Reduces 20 lines to 10.
+**Phase**: 3 — Python idioms (DRY)
+
+**Tests**:
+- Unit: 1260 passed
+- Integration: 83/83 passed

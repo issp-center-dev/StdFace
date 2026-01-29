@@ -884,27 +884,16 @@ def export_interaction(StdI: StdIntList) -> None:
         StdI.NCintra, StdI.CintraIndx, StdI.Cintra,
         _prefix(StdI, "coulombintra.dat"), "CoulombIntra")
 
-    _export_inter_real(
-        StdI,
-        StdI.NCinter, StdI.CinterIndx, StdI.Cinter,
-        _prefix(StdI, "coulombinter.dat"), "CoulombInter")
-
-    _export_inter_real(
-        StdI,
-        StdI.NHund, StdI.HundIndx, StdI.Hund,
-        _prefix(StdI, "hund.dat"), "Hund")
-
-    _export_inter_real(
-        StdI,
-        StdI.NEx, StdI.ExIndx, StdI.Ex,
-        _prefix(StdI, "exchange.dat"), "Exchange")
-
-    _export_inter_real(
-        StdI,
-        StdI.NPairLift, StdI.PLIndx, StdI.PairLift,
-        _prefix(StdI, "pairlift.dat"), "PairLift")
-
-    _export_inter_real(
-        StdI,
-        StdI.NPairHopp, StdI.PHIndx, StdI.PairHopp,
-        _prefix(StdI, "pairhopp.dat"), "PairHopp")
+    # Two-body shortcut interactions: (count_attr, indx_attr, val_attr, filename, tag)
+    _INTER_REAL_EXPORTS = (
+        ("NCinter",    "CinterIndx", "Cinter",   "coulombinter.dat", "CoulombInter"),
+        ("NHund",      "HundIndx",   "Hund",     "hund.dat",         "Hund"),
+        ("NEx",        "ExIndx",     "Ex",        "exchange.dat",     "Exchange"),
+        ("NPairLift",  "PLIndx",     "PairLift", "pairlift.dat",     "PairLift"),
+        ("NPairHopp",  "PHIndx",     "PairHopp", "pairhopp.dat",     "PairHopp"),
+    )
+    for cnt_attr, idx_attr, val_attr, fname_suffix, tag in _INTER_REAL_EXPORTS:
+        _export_inter_real(
+            StdI,
+            getattr(StdI, cnt_attr), getattr(StdI, idx_attr), getattr(StdI, val_attr),
+            _prefix(StdI, fname_suffix), tag)
