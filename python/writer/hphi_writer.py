@@ -645,7 +645,7 @@ def _compute_fourier_coefficients(StdI: StdIntList) -> tuple[list[float], list[f
         positions = StdI.Cell[:StdI.NCell, :].astype(float)[:, np.newaxis, :] + \
                     StdI.tau[:StdI.NsiteUC, :][np.newaxis, :, :]
         # Dot with SpectrumQ: shape (NCell, NsiteUC), then flatten to site order
-        Cphase_flat = (2.0 * StdI.pi * (positions @ StdI.SpectrumQ)).ravel()
+        Cphase_flat = (2.0 * math.pi * (positions @ StdI.SpectrumQ)).ravel()
         fourier_r[:n_computed] = np.cos(Cphase_flat)
         fourier_i[:n_computed] = np.sin(Cphase_flat)
 

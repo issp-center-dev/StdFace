@@ -17,11 +17,6 @@ from stdface_vals import (
 class TestStdIntListDefaults:
     """Tests for default initialization of StdIntList."""
 
-    def test_pi_default(self):
-        """pi should default to 0.0 (set later by ResetVals)."""
-        s = StdIntList()
-        assert s.pi == 0.0
-
     def test_string_defaults(self):
         """String fields should default to UNSET_STRING or empty string."""
         s = StdIntList()

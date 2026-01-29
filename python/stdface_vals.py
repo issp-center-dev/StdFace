@@ -141,8 +141,6 @@ class StdIntList:
 
     Attributes
     ----------
-    pi : float
-        pi = 3.14...
     lattice : str
         Name of lattice. Input parameter.
     a : float
@@ -303,8 +301,6 @@ class StdIntList:
         Transverse magnetic field (y), input parameter.
     K : float
         4-spin term. Not used.
-    pi180 : float
-        pi / 180, set in ``StdFace_ResetVals()``.
     phase : np.ndarray
         Boundary phase (shape ``(3,)``), input parameter ``phase0``, etc.
     ExpPhase : np.ndarray
@@ -609,11 +605,6 @@ class StdIntList:
     """
 
     # ------------------------------------------------------------------
-    #  Mathematical constants
-    # ------------------------------------------------------------------
-    pi: float = 0.0
-
-    # ------------------------------------------------------------------
     #  Parameters for LATTICE
     # ------------------------------------------------------------------
     lattice: str = UNSET_STRING
@@ -703,7 +694,6 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Phase for the boundary
     # ------------------------------------------------------------------
-    pi180: float = 0.0
     phase: np.ndarray = field(default_factory=lambda: np.zeros(3))
     ExpPhase: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=complex))
     AntiPeriod: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))

@@ -456,7 +456,7 @@ def init_site(StdI: StdIntList, fp: TextIO | None, dim: int) -> None:
     # (2) Define the phase factor at each boundary
     if dim == 2:
         StdI.phase[2] = 0.0
-    StdI.ExpPhase = np.exp(1j * StdI.pi180 * StdI.phase)
+    StdI.ExpPhase = np.exp(1j * (np.pi / 180.0) * StdI.phase)
     StdI.AntiPeriod = np.where(np.abs(StdI.ExpPhase + 1.0) < AMPLITUDE_EPS, 1, 0)
 
     # (3) Allocate tau (intrinsic structure of unit-cell)

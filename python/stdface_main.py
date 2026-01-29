@@ -30,8 +30,6 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
-import math
-
 from stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
     NaN_i, NaN_d, NaN_c, UNSET_STRING,
@@ -402,10 +400,6 @@ def _reset_vals(StdI: StdIntList) -> None:
         The global parameter structure whose fields are reset **in
         place**.
     """
-    # Mathematical constants
-    StdI.pi = math.pi
-    StdI.pi180 = math.pi / 180.0
-
     # --- Common scalar fields (table-driven) --------------------------------
     for name, value in _COMMON_RESET_SCALARS:
         setattr(StdI, name, value)

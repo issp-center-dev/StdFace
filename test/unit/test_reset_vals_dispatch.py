@@ -433,20 +433,6 @@ class TestCommonResetTableContent:
 class TestResetVals:
     """Tests for _reset_vals using the data-driven tables."""
 
-    def test_sets_pi(self):
-        """Test that pi is set correctly."""
-        StdI = StdIntList()
-        StdI.solver = "HPhi"
-        _reset_vals(StdI)
-        assert StdI.pi == pytest.approx(math.pi)
-
-    def test_sets_pi180(self):
-        """Test that pi180 is set correctly."""
-        StdI = StdIntList()
-        StdI.solver = "HPhi"
-        _reset_vals(StdI)
-        assert StdI.pi180 == pytest.approx(math.pi / 180.0)
-
     def test_common_float_scalars_are_nan(self):
         """Test that common float scalar fields are set to NaN."""
         StdI = StdIntList()

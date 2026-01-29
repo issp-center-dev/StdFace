@@ -7446,3 +7446,25 @@ Python where `math.pi` is a built-in constant.
 **Tests**:
 - Unit: 1253 passed
 - Integration: 83/83 passed
+
+## Step 136 — Eliminate `StdI.pi` and `StdI.pi180` fields
+
+**Date**: 2026-01-29
+**File(s)**: `python/stdface_main.py`, `python/stdface_vals.py`,
+`python/lattice/site_util.py`, `python/writer/hphi_writer.py`,
+`test/unit/test_stdface_vals.py`, `test/unit/test_reset_vals_dispatch.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Removed the `pi` and `pi180` fields from `StdIntList` and their
+initialization in `_reset_vals()`. Replaced `StdI.pi` with `math.pi` in
+`hphi_writer.py` and `StdI.pi180` with `np.pi / 180.0` in `site_util.py`.
+Removed the now-unused `import math` from `stdface_main.py`. Deleted 3
+obsolete unit tests.
+
+**Why**: Storing `math.pi` as a mutable instance field is a C-ism from the
+original `struct StdIntList`. In Python, `math.pi` and `np.pi` are standard
+library constants that should be used directly.
+
+**Tests**:
+- Unit: 1250 passed (3 removed)
+- Integration: 83/83 passed
