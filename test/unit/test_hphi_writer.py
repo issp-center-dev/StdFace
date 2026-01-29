@@ -31,6 +31,7 @@ from writer.hphi_writer import (
     _write_excitation_file,
     _validate_ngpu_scalapack,
     _write_calcmod_file,
+    _CalcModParams,
     _pulselaser_At_Et,
     _aclaser_At_Et,
     _dclaser_At_Et,
@@ -1128,10 +1129,12 @@ class TestWriteCalcmodFile:
         StdI.NGPU = NaN_i
         StdI.Scalapack = NaN_i
         _write_calcmod_file(
-            StdI, iCalcType=0, iCalcModel=0, iCalcEigenvec=0,
-            iRestart=0, iCalcSpec=0, iInitialVecType=0,
-            InputEigenVec=0, OutputEigenVec=0,
-            iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            StdI, _CalcModParams(
+                iCalcType=0, iCalcModel=0, iCalcEigenvec=0,
+                iRestart=0, iCalcSpec=0, iInitialVecType=0,
+                InputEigenVec=0, OutputEigenVec=0,
+                iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            ),
         )
         assert (tmp_path / "calcmod.def").exists()
 
@@ -1142,10 +1145,12 @@ class TestWriteCalcmodFile:
         StdI.NGPU = NaN_i
         StdI.Scalapack = NaN_i
         _write_calcmod_file(
-            StdI, iCalcType=2, iCalcModel=3, iCalcEigenvec=1,
-            iRestart=1, iCalcSpec=0, iInitialVecType=0,
-            InputEigenVec=0, OutputEigenVec=0,
-            iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            StdI, _CalcModParams(
+                iCalcType=2, iCalcModel=3, iCalcEigenvec=1,
+                iRestart=1, iCalcSpec=0, iInitialVecType=0,
+                InputEigenVec=0, OutputEigenVec=0,
+                iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            ),
         )
         content = (tmp_path / "calcmod.def").read_text()
         assert "CalcType   2" in content
@@ -1159,10 +1164,12 @@ class TestWriteCalcmodFile:
         StdI.NGPU = 4
         StdI.Scalapack = NaN_i
         _write_calcmod_file(
-            StdI, iCalcType=2, iCalcModel=0, iCalcEigenvec=0,
-            iRestart=0, iCalcSpec=0, iInitialVecType=0,
-            InputEigenVec=0, OutputEigenVec=0,
-            iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            StdI, _CalcModParams(
+                iCalcType=2, iCalcModel=0, iCalcEigenvec=0,
+                iRestart=0, iCalcSpec=0, iInitialVecType=0,
+                InputEigenVec=0, OutputEigenVec=0,
+                iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            ),
         )
         content = (tmp_path / "calcmod.def").read_text()
         assert "NGPU   4" in content
@@ -1174,10 +1181,12 @@ class TestWriteCalcmodFile:
         StdI.NGPU = NaN_i
         StdI.Scalapack = 1
         _write_calcmod_file(
-            StdI, iCalcType=0, iCalcModel=0, iCalcEigenvec=0,
-            iRestart=0, iCalcSpec=0, iInitialVecType=0,
-            InputEigenVec=0, OutputEigenVec=0,
-            iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            StdI, _CalcModParams(
+                iCalcType=0, iCalcModel=0, iCalcEigenvec=0,
+                iRestart=0, iCalcSpec=0, iInitialVecType=0,
+                InputEigenVec=0, OutputEigenVec=0,
+                iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            ),
         )
         content = (tmp_path / "calcmod.def").read_text()
         assert "Scalapack   1" in content
@@ -1189,10 +1198,12 @@ class TestWriteCalcmodFile:
         StdI.NGPU = NaN_i
         StdI.Scalapack = NaN_i
         _write_calcmod_file(
-            StdI, iCalcType=0, iCalcModel=0, iCalcEigenvec=0,
-            iRestart=0, iCalcSpec=0, iInitialVecType=0,
-            InputEigenVec=0, OutputEigenVec=0,
-            iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            StdI, _CalcModParams(
+                iCalcType=0, iCalcModel=0, iCalcEigenvec=0,
+                iRestart=0, iCalcSpec=0, iInitialVecType=0,
+                InputEigenVec=0, OutputEigenVec=0,
+                iInputHam=0, iOutputHam=0, iOutputExVec=0,
+            ),
         )
         content = (tmp_path / "calcmod.def").read_text()
         assert "NGPU" not in content

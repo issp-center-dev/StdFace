@@ -7859,3 +7859,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 165 — 2026-01-29
+
+**Files**: `python/writer/hphi_writer.py`, `test/unit/test_hphi_writer.py`
+**Change**: Introduced `_CalcModParams(NamedTuple)` to replace the 11 positional integer parameters of `_write_calcmod_file`. The function signature shrank from 12 parameters (StdI + 11 ints) to 2 (StdI + params). Updated 5 test call sites and added `_CalcModParams` import to tests.
+**Phase**: 2 — Introduce classes (parameter object)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

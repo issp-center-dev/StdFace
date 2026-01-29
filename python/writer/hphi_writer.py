@@ -241,27 +241,11 @@ def _validate_ngpu_scalapack(StdI: StdIntList) -> None:
             exit_program(-1)
 
 
-def _write_calcmod_file(
-    StdI: StdIntList,
-    iCalcType: int,
-    iCalcModel: int,
-    iCalcEigenvec: int,
-    iRestart: int,
-    iCalcSpec: int,
-    iInitialVecType: int,
-    InputEigenVec: int,
-    OutputEigenVec: int,
-    iInputHam: int,
-    iOutputHam: int,
-    iOutputExVec: int,
-) -> None:
-    """Write ``calcmod.def`` with the resolved integer parameters.
+class _CalcModParams(NamedTuple):
+    """Resolved integer parameters for ``calcmod.def``.
 
-    Parameters
+    Attributes
     ----------
-    StdI : StdIntList
-        The global parameter structure.  Reads ``NGPU`` and ``Scalapack``
-        for conditional output lines.
     iCalcType : int
         Calculation type code (0–5).
     iCalcModel : int
@@ -285,6 +269,31 @@ def _write_calcmod_file(
     iOutputExVec : int
         Whether to output excited-state vectors.
     """
+
+    iCalcType: int
+    iCalcModel: int
+    iCalcEigenvec: int
+    iRestart: int
+    iCalcSpec: int
+    iInitialVecType: int
+    InputEigenVec: int
+    OutputEigenVec: int
+    iInputHam: int
+    iOutputHam: int
+    iOutputExVec: int
+
+
+def _write_calcmod_file(StdI: StdIntList, params: _CalcModParams) -> None:
+    """Write ``calcmod.def`` with the resolved integer parameters.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        The global parameter structure.  Reads ``NGPU`` and ``Scalapack``
+        for conditional output lines.
+    params : _CalcModParams
+        Resolved calculation-mode parameters.
+    """
     with open("calcmod.def", "w") as fp:
         fp.write("#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 3:CG, 4:Time-evolution 5:cTPQ\n")
         fp.write("#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n")
@@ -294,17 +303,17 @@ def _write_calcmod_file(
             fp.write("#NGPU (for FullDiag): The number of GPU\n")
         if StdI.Scalapack != NaN_i:
             fp.write("#Scalapack (for FullDiag) = 0:w/o ScaLAPACK, 1:w/ ScaLAPACK\n")
-        fp.write(f"CalcType {iCalcType:3d}\n")
-        fp.write(f"CalcModel {iCalcModel:3d}\n")
-        fp.write(f"ReStart {iRestart:3d}\n")
-        fp.write(f"CalcSpec {iCalcSpec:3d}\n")
-        fp.write(f"CalcEigenVec {iCalcEigenvec:3d}\n")
-        fp.write(f"InitialVecType {iInitialVecType:3d}\n")
-        fp.write(f"InputEigenVec {InputEigenVec:3d}\n")
-        fp.write(f"OutputEigenVec {OutputEigenVec:3d}\n")
-        fp.write(f"InputHam {iInputHam:3d}\n")
-        fp.write(f"OutputHam {iOutputHam:3d}\n")
-        fp.write(f"OutputExVec {iOutputExVec:3d}\n")
+        fp.write(f"CalcType {params.iCalcType:3d}\n")
+        fp.write(f"CalcModel {params.iCalcModel:3d}\n")
+        fp.write(f"ReStart {params.iRestart:3d}\n")
+        fp.write(f"CalcSpec {params.iCalcSpec:3d}\n")
+        fp.write(f"CalcEigenVec {params.iCalcEigenvec:3d}\n")
+        fp.write(f"InitialVecType {params.iInitialVecType:3d}\n")
+        fp.write(f"InputEigenVec {params.InputEigenVec:3d}\n")
+        fp.write(f"OutputEigenVec {params.OutputEigenVec:3d}\n")
+        fp.write(f"InputHam {params.iInputHam:3d}\n")
+        fp.write(f"OutputHam {params.iOutputHam:3d}\n")
+        fp.write(f"OutputExVec {params.iOutputExVec:3d}\n")
         if StdI.NGPU != NaN_i:
             fp.write(f"NGPU {StdI.NGPU:3d}\n")
         if StdI.Scalapack != NaN_i:
@@ -391,9 +400,12 @@ def print_calc_mod(StdI: StdIntList) -> None:
     # ------------------------------------------------------------------
     _validate_ngpu_scalapack(StdI)
     _write_calcmod_file(
-        StdI, iCalcType, iCalcModel, iCalcEigenvec,
-        iRestart, iCalcSpec, iInitialVecType,
-        InputEigenVec, OutputEigenVec, iInputHam, iOutputHam, iOutputExVec,
+        StdI,
+        _CalcModParams(
+            iCalcType, iCalcModel, iCalcEigenvec,
+            iRestart, iCalcSpec, iInitialVecType,
+            InputEigenVec, OutputEigenVec, iInputHam, iOutputHam, iOutputExVec,
+        ),
     )
 
     print("     calcmod.def is written.\n")
