@@ -215,7 +215,8 @@ def _build_wannier_matrix(
 
     rr = [max(abs(lo), abs(hi)) for lo, hi in zip(rmin, rmax)]
 
-    nvol = (rr[0] * 2 + 1) * (rr[1] * 2 + 1) * (rr[2] * 2 + 1)
+    dims = [rr[i] * 2 + 1 for i in range(3)]
+    nvol = dims[0] * dims[1] * dims[2]
     matrix_size = nvol * nsiteuc * nsiteuc * nspin * nspin
     matrix = np.zeros(matrix_size, dtype=complex)
 
@@ -268,10 +269,11 @@ def _write_wannier_body(
         Flat complex interaction matrix.
     """
     spin_pairs = list(itertools.product(range(nspin), repeat=2))
+    dims = [rr[i] * 2 + 1 for i in range(3)]
     for r in range(nvol):
-        rz = r % (rr[2] * 2 + 1) - rr[2]
-        ry = (r // (rr[2] * 2 + 1)) % (rr[1] * 2 + 1) - rr[1]
-        rx = (r // ((rr[2] * 2 + 1) * (rr[1] * 2 + 1))) % (rr[0] * 2 + 1) - rr[0]
+        rz = r % dims[2] - rr[2]
+        ry = (r // dims[2]) % dims[1] - rr[1]
+        rx = (r // (dims[2] * dims[1])) % dims[0] - rr[0]
 
         for a in range(nsiteuc):
             for b in range(nsiteuc):

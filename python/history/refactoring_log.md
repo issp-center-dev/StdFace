@@ -7703,3 +7703,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 152 — 2026-01-29
+
+**Files**: `python/writer/export_wannier90.py`
+**Change**: Precomputed `dims = [rr[i] * 2 + 1 for i in range(3)]` in `_build_wannier_matrix` and `_write_wannier_body`, replacing 5 repeated `rr[i] * 2 + 1` subexpressions with `dims[i]`.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
