@@ -141,7 +141,7 @@ Both implementations produce identical output files.
 The `python/` directory contains a fully-featured Python port of StdFace that produces byte-identical output to the C implementation. The Python codebase has been refactored into idiomatic Python with:
 
 - **Modular architecture**: Organized into `lattice/` and `writer/` subpackages
-- **Comprehensive testing**: 1,252 unit tests and 83 integration tests
+- **Comprehensive testing**: 1,260 unit tests and 94 integration tests
 - **Python idioms**: Enums, dict dispatch, context managers, and helper functions
 - **Full feature parity**: Supports all lattices, models, and solvers
 
@@ -155,18 +155,31 @@ python/
   stdface_model_util.py    # Shared utilities
   keyword_parser.py        # Keyword parsing
   param_check.py           # Parameter validation
+  version.py               # Version information
   lattice/                 # Lattice implementations
     chain_lattice.py
+    ladder.py
     square_lattice.py
+    triangular_lattice.py
     honeycomb_lattice.py
     kagome.py
+    orthorhombic.py
+    fc_ortho.py
+    pyrochlore.py
     wannier90.py
-    ...
+    input_params.py
+    interaction_builder.py
+    site_util.py
+    geometry_output.py
+    boost_output.py
   writer/                  # Solver-specific writers
     common_writer.py
     hphi_writer.py
     mvmc_writer.py
-    ...
+    mvmc_variational.py
+    solver_writer.py
+    interaction_writer.py
+    export_wannier90.py
 ```
 
 ### Running Python Tests
