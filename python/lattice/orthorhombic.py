@@ -157,46 +157,27 @@ def orthorhombic(StdI: StdIntList) -> None:
             isite += StdI.NCell
         add_local_terms(StdI, isite, kCell)
 
-        # Nearest neighbor along W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0)
-        # Nearest neighbor along L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1)
-        # Nearest neighbor along H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2)
-
-        # Second nearest neighbor along +L+H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p)
-        # Second nearest neighbor along +L-H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 1, -1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p)
-        # Second nearest neighbor along +H+W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p)
-        # Second nearest neighbor along +H-W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, -1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p)
-        # Second nearest neighbor along +W+L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p)
-        # Second nearest neighbor along +W-L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, -1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p)
-
-        # Third nearest neighbor along +W+L+H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp)
-        # Third nearest neighbor along -W+L+H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, -1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp)
-        # Third nearest neighbor along +W-L+H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, -1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp)
-        # Third nearest neighbor along +W+L-H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 1, -1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp)
+        # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
+        _BONDS = (
+            # Nearest neighbor
+            (1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
+            (0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
+            (0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
+            # Second nearest neighbor
+            (0, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),   # +L+H
+            (0, 1, -1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),  # +L-H
+            (1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),   # +H+W
+            (-1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),  # +H-W
+            (1, 1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),   # +W+L
+            (1, -1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),  # +W-L
+            # Third nearest neighbor
+            (1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),   # +W+L+H
+            (-1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # -W+L+H
+            (1, -1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # +W-L+H
+            (1, 1, -1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # +W+L-H
+        )
+        for dW, dL, dH, si, sj, J, t, V in _BONDS:
+            add_neighbor_interaction_3d(
+                StdI, iW, iL, iH, dW, dL, dH, si, sj, J, t, V)
 
     close_lattice_xsf(StdI)
