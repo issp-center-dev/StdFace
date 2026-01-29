@@ -113,9 +113,9 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J0p, StdI->J0pAll, "J0'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J1p, StdI->J1pAll, "J1'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J2p, StdI->J2pAll, "J2'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J1pp, StdI->J1ppAll, "J1'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J2pp, StdI->J2ppAll, "J2'");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0''");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J1pp, StdI->J1ppAll, "J1''");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J2pp, StdI->J2ppAll, "J2''");
     /**/
     StdFace_NotUsed_d("mu", StdI->mu);
     StdFace_NotUsed_d("U", StdI->U);

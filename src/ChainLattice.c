@@ -123,7 +123,7 @@ void StdFace_Chain(
     StdFace_PrintVal_d("D", &StdI->D[2][2], 0.0);
     StdFace_InputSpinNN(StdI->J, StdI->JAll, StdI->J0, StdI->J0All, "J0");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J0p, StdI->J0pAll, "J0'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0'");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0''");
     /**/
     StdFace_NotUsed_d("mu", StdI->mu);
     StdFace_NotUsed_d("U", StdI->U);

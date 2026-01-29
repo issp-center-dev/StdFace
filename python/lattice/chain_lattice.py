@@ -120,7 +120,7 @@ def chain(StdI: StdIntList) -> None:
             StdI.D[2, 2] = print_val_d("D", StdI.D[2, 2], 0.0)
             input_spin_nn(StdI.J, StdI.JAll, StdI.J0, StdI.J0All, "J0")
             input_spin_nn(StdI.Jp, StdI.JpAll, StdI.J0p, StdI.J0pAll, "J0'")
-            input_spin_nn(StdI.Jpp, StdI.JppAll, StdI.J0pp, StdI.J0ppAll, "J0'")
+            input_spin_nn(StdI.Jpp, StdI.JppAll, StdI.J0pp, StdI.J0ppAll, "J0''")
 
             not_used_d("mu", StdI.mu)
             not_used_d("U", StdI.U)
