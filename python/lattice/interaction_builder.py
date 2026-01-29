@@ -83,12 +83,10 @@ def trans(
     """
     if abs(trans0) < ZERO_BODY_EPS:
         return
-    StdI.trans[StdI.ntrans] = trans0
-    StdI.transindx[StdI.ntrans][0] = isite
-    StdI.transindx[StdI.ntrans][1] = ispin
-    StdI.transindx[StdI.ntrans][2] = jsite
-    StdI.transindx[StdI.ntrans][3] = jspin
-    StdI.ntrans += 1
+    n = StdI.ntrans
+    StdI.trans[n] = trans0
+    StdI.transindx[n] = [isite, ispin, jsite, jspin]
+    StdI.ntrans = n + 1
 
 
 def hopping(
@@ -254,13 +252,10 @@ def intr(
     """
     if abs(intr0) < ZERO_BODY_EPS:
         return
-    StdI.intr[StdI.nintr] = intr0
-    idx = StdI.intrindx[StdI.nintr]
-    idx[0] = site1; idx[1] = spin1
-    idx[2] = site2; idx[3] = spin2
-    idx[4] = site3; idx[5] = spin3
-    idx[6] = site4; idx[7] = spin4
-    StdI.nintr += 1
+    n = StdI.nintr
+    StdI.intr[n] = intr0
+    StdI.intrindx[n] = [site1, spin1, site2, spin2, site3, spin3, site4, spin4]
+    StdI.nintr = n + 1
 
 
 def _spin_ladder_factor(S: float, Sz: float) -> float:
@@ -316,16 +311,16 @@ def _add_spin_half_terms(
         respectively.
     """
     # Hund: -0.5 * Jzz
-    StdI.Hund[StdI.NHund] = -0.5 * J[2, 2]
-    StdI.HundIndx[StdI.NHund][0] = isite
-    StdI.HundIndx[StdI.NHund][1] = jsite
-    StdI.NHund += 1
+    n = StdI.NHund
+    StdI.Hund[n] = -0.5 * J[2, 2]
+    StdI.HundIndx[n] = [isite, jsite]
+    StdI.NHund = n + 1
 
     # Cinter: -0.25 * Jzz
-    StdI.Cinter[StdI.NCinter] = -0.25 * J[2, 2]
-    StdI.CinterIndx[StdI.NCinter][0] = isite
-    StdI.CinterIndx[StdI.NCinter][1] = jsite
-    StdI.NCinter += 1
+    n = StdI.NCinter
+    StdI.Cinter[n] = -0.25 * J[2, 2]
+    StdI.CinterIndx[n] = [isite, jsite]
+    StdI.NCinter = n + 1
 
     # Check whether off-diagonal J elements allow Ex/PairLift shortcut
     cond_offdiag = (abs(J[0, 1]) < AMPLITUDE_EPS and abs(J[1, 0]) < AMPLITUDE_EPS)
@@ -340,15 +335,14 @@ def _add_spin_half_terms(
         StdI.Ex[StdI.NEx] = -0.25 * (J[0, 0] + J[1, 1])
     else:
         StdI.Ex[StdI.NEx] = 0.25 * (J[0, 0] + J[1, 1])
-    StdI.ExIndx[StdI.NEx][0] = isite
-    StdI.ExIndx[StdI.NEx][1] = jsite
+    StdI.ExIndx[StdI.NEx] = [isite, jsite]
     StdI.NEx += 1
 
     # Pair lift
-    StdI.PairLift[StdI.NPairLift] = 0.25 * (J[0, 0] - J[1, 1])
-    StdI.PLIndx[StdI.NPairLift][0] = isite
-    StdI.PLIndx[StdI.NPairLift][1] = jsite
-    StdI.NPairLift += 1
+    n = StdI.NPairLift
+    StdI.PairLift[n] = 0.25 * (J[0, 0] - J[1, 1])
+    StdI.PLIndx[n] = [isite, jsite]
+    StdI.NPairLift = n + 1
 
     return False, False  # both handled by shortcut
 
@@ -457,10 +451,10 @@ def coulomb(StdI: StdIntList, V: float, isite: int, jsite: int) -> None:
     jsite : int
         Second site index.
     """
-    StdI.Cinter[StdI.NCinter] = V
-    StdI.CinterIndx[StdI.NCinter][0] = isite
-    StdI.CinterIndx[StdI.NCinter][1] = jsite
-    StdI.NCinter += 1
+    n = StdI.NCinter
+    StdI.Cinter[n] = V
+    StdI.CinterIndx[n] = [isite, jsite]
+    StdI.NCinter = n + 1
 
 
 def compute_max_interactions(

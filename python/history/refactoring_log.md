@@ -7606,3 +7606,23 @@ element-by-element indexing.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+## Step 145 — Replace element-by-element index writes with slice assignment in `interaction_builder.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/lattice/interaction_builder.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: In `trans()`, `intr()`, `coulomb()`, and `_add_spin_half_terms()`,
+replaced C-style element-by-element index array writes like
+`StdI.transindx[n][0] = isite; StdI.transindx[n][1] = ispin; ...` with
+single-line slice assignments like `StdI.transindx[n] = [isite, ispin, ...]`.
+Also cached `StdI.ntrans` / `StdI.nintr` / etc. in a local `n` variable to
+avoid repeated attribute lookups.
+
+**Why**: Cleaner, more Pythonic array assignment; reduces C-ism verbosity.
+Each function body is now 2-3 lines shorter.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
