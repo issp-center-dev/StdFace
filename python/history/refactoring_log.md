@@ -7413,3 +7413,19 @@ no `collections.abc` equivalent.
 **Tests**:
 - Unit: 1253 passed
 - Integration: 83/83 passed
+
+## Step 134 — Replace `if len(x) > 0` with `if x` in `export_wannier90.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/writer/export_wannier90.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Replaced 3 occurrences of `if len(intr_table) > 0:` with the
+idiomatic `if intr_table:` truthiness check.
+
+**Why**: Python lists are truthy when non-empty; explicit `len() > 0` is a
+C-ism.
+
+**Tests**:
+- Unit: 1253 passed
+- Integration: 83/83 passed

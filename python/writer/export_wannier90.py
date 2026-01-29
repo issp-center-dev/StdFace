@@ -570,7 +570,7 @@ def _export_inter(StdI: StdIntList,
     if nintr > 0:
         intr_table = _build_inter_table(StdI, nintr, intr_index, intr_value)
 
-        if len(intr_table) > 0:
+        if intr_table:
             _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC, 1,
                              fname, tagname)
         else:
@@ -732,7 +732,7 @@ def _export_transfer(StdI: StdIntList,
         intr_table = _build_transfer_table(
             StdI, nintr, intr_index, intr_value, spin_dep)
 
-        if len(intr_table) > 0:
+        if intr_table:
             _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC,
                              2 if spin_dep == 1 else 1,
                              fname, tagname)
@@ -833,7 +833,7 @@ def _export_coulomb_intra(StdI: StdIntList,
         intr_table = _build_coulomb_intra_table(
             StdI, nintr, intr_index, intr_value)
 
-        if len(intr_table) > 0:
+        if intr_table:
             _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC, 1,
                              fname, tagname)
         else:
