@@ -7395,3 +7395,21 @@ Step 121 for `export_wannier90.py`.
 **Tests**:
 - Unit: 1253 passed
 - Integration: 83/83 passed
+
+## Step 133 — Replace `typing.Iterator` with `collections.abc.Iterator` in `site_util.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/lattice/site_util.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Replaced `from typing import Iterator` with
+`from collections.abc import Iterator`. The `typing` module re-exports from
+`collections.abc` are deprecated since Python 3.9; since our target is 3.10+,
+use the canonical import. `TextIO` remains imported from `typing` as it has
+no `collections.abc` equivalent.
+
+**Why**: Follow modern Python import conventions; avoid deprecated re-exports.
+
+**Tests**:
+- Unit: 1253 passed
+- Integration: 83/83 passed

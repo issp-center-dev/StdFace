@@ -35,7 +35,8 @@ from __future__ import annotations
 
 import itertools
 from contextlib import contextmanager
-from typing import Iterator, TextIO
+from collections.abc import Iterator
+from typing import TextIO
 
 import numpy as np
 
