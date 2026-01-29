@@ -174,44 +174,25 @@ def pyrochlore(StdI: StdIntList) -> None:
                     general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + isiteUC)
                     mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite + isiteUC)
 
-        # Intra-Cell along W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0)
-        # Intra-Cell along L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 0, 0, 2, StdI.J1, StdI.t1, StdI.V1)
-        # Intra-Cell along H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 0, 0, 3, StdI.J2, StdI.t2, StdI.V2)
-
-        # Intra-Cell along L-H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 0, 2, 3, StdI.J0p, StdI.t0p, StdI.V0p)
-        # Intra-Cell along H-W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 0, 3, 1, StdI.J1p, StdI.t1p, StdI.V1p)
-        # Intra-Cell along W-L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 0, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p)
-
-        # Inter-Cell along W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 0, 0, 1, 0, StdI.J0, StdI.t0, StdI.V0)
-        # Inter-Cell along L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 1, 0, 2, 0, StdI.J1, StdI.t1, StdI.V1)
-        # Inter-Cell along H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 1, 3, 0, StdI.J2, StdI.t2, StdI.V2)
-
-        # Inter-Cell along L-H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, -1, 1, 3, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-        # Inter-Cell along H-W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 0, -1, 1, 3, StdI.J1p, StdI.t1p, StdI.V1p)
-        # Inter-Cell along W-L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, -1, 1, 0, 2, 1, StdI.J2p, StdI.t2p, StdI.V2p)
+        # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
+        _BONDS = (
+            # Intra-cell
+            (0, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),    # along W
+            (0, 0, 0, 0, 2, StdI.J1, StdI.t1, StdI.V1),    # along L
+            (0, 0, 0, 0, 3, StdI.J2, StdI.t2, StdI.V2),    # along H
+            (0, 0, 0, 2, 3, StdI.J0p, StdI.t0p, StdI.V0p), # along L-H
+            (0, 0, 0, 3, 1, StdI.J1p, StdI.t1p, StdI.V1p), # along H-W
+            (0, 0, 0, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p), # along W-L
+            # Inter-cell
+            (1, 0, 0, 1, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
+            (0, 1, 0, 2, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
+            (0, 0, 1, 3, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
+            (0, -1, 1, 3, 2, StdI.J0p, StdI.t0p, StdI.V0p),  # along L-H
+            (1, 0, -1, 1, 3, StdI.J1p, StdI.t1p, StdI.V1p),  # along H-W
+            (-1, 1, 0, 2, 1, StdI.J2p, StdI.t2p, StdI.V2p),  # along W-L
+        )
+        for dW, dL, dH, si, sj, J, t, V in _BONDS:
+            add_neighbor_interaction_3d(
+                StdI, iW, iL, iH, dW, dL, dH, si, sj, J, t, V)
 
     close_lattice_xsf(StdI)

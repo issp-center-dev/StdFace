@@ -7953,3 +7953,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 173 — 2026-01-29
+
+**Files**: `python/lattice/pyrochlore.py`
+**Change**: Replaced 12 repetitive `add_neighbor_interaction_3d` calls in `pyrochlore()` with a data-driven `_BONDS` tuple and a loop. Each bond is `(dW, dL, dH, site_i, site_j, J, t, V)`. Reduces 38 lines to 17 lines.
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed
