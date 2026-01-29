@@ -7799,3 +7799,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 160 — 2026-01-29
+
+**Files**: `python/writer/interaction_writer.py`, `test/unit/test_interaction_writer.py`
+**Change**: Replaced `list[dict]` for `_INTERACTION_TYPES` with a typed `_InteractionMeta(NamedTuple)` class. Each entry now has typed, named fields instead of string-keyed dict entries. Updated call site to use `**spec._asdict()` and updated 3 tests to use attribute access instead of dict access.
+**Phase**: 2 — Introduce classes (NamedTuple for typed metadata)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

@@ -24,6 +24,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from stdface_vals import StdIntList, AMPLITUDE_EPS
 
 
@@ -211,67 +213,59 @@ def _process_interaction(
 #  Interaction-type metadata table
 # ---------------------------------------------------------------------------
 
-_INTERACTION_TYPES: list[dict] = [
-    {
-        "nterms_attr": "NCintra",
-        "indx_attr": "CintraIndx",
-        "coeff_attr": "Cintra",
-        "flag_attr": "LCintra",
-        "filename": "coulombintra.def",
-        "count_label": "NCoulombIntra",
-        "banner": "================== CoulombIntra ================",
-        "n_indices": 1,
-    },
-    {
-        "nterms_attr": "NCinter",
-        "indx_attr": "CinterIndx",
-        "coeff_attr": "Cinter",
-        "flag_attr": "LCinter",
-        "filename": "coulombinter.def",
-        "count_label": "NCoulombInter",
-        "banner": "================== CoulombInter ================",
-        "n_indices": 2,
-    },
-    {
-        "nterms_attr": "NHund",
-        "indx_attr": "HundIndx",
-        "coeff_attr": "Hund",
-        "flag_attr": "LHund",
-        "filename": "hund.def",
-        "count_label": "NHund",
-        "banner": "=============== Hund coupling ===============",
-        "n_indices": 2,
-    },
-    {
-        "nterms_attr": "NEx",
-        "indx_attr": "ExIndx",
-        "coeff_attr": "Ex",
-        "flag_attr": "LEx",
-        "filename": "exchange.def",
-        "count_label": "NExchange",
-        "banner": "====== ExchangeCoupling coupling ============",
-        "n_indices": 2,
-    },
-    {
-        "nterms_attr": "NPairLift",
-        "indx_attr": "PLIndx",
-        "coeff_attr": "PairLift",
-        "flag_attr": "LPairLift",
-        "filename": "pairlift.def",
-        "count_label": "NPairLift",
-        "banner": "====== Pair-Lift term ============",
-        "n_indices": 2,
-    },
-    {
-        "nterms_attr": "NPairHopp",
-        "indx_attr": "PHIndx",
-        "coeff_attr": "PairHopp",
-        "flag_attr": "LPairHopp",
-        "filename": "pairhopp.def",
-        "count_label": "NPairHopp",
-        "banner": "====== Pair-Hopping term ============",
-        "n_indices": 2,
-    },
+
+class _InteractionMeta(NamedTuple):
+    """Metadata for one interaction type (attribute names, file info).
+
+    Attributes
+    ----------
+    nterms_attr : str
+        Name of the StdIntList attribute holding the term count.
+    indx_attr : str
+        Name of the index-array attribute.
+    coeff_attr : str
+        Name of the coefficient-array attribute.
+    flag_attr : str
+        Name of the output-flag attribute.
+    filename : str
+        Output ``.def`` file name.
+    count_label : str
+        Label for the count header line.
+    banner : str
+        Description banner in the header.
+    n_indices : int
+        Number of site indices per term (1 or 2).
+    """
+
+    nterms_attr: str
+    indx_attr: str
+    coeff_attr: str
+    flag_attr: str
+    filename: str
+    count_label: str
+    banner: str
+    n_indices: int
+
+
+_INTERACTION_TYPES: list[_InteractionMeta] = [
+    _InteractionMeta("NCintra", "CintraIndx", "Cintra", "LCintra",
+                     "coulombintra.def", "NCoulombIntra",
+                     "================== CoulombIntra ================", 1),
+    _InteractionMeta("NCinter", "CinterIndx", "Cinter", "LCinter",
+                     "coulombinter.def", "NCoulombInter",
+                     "================== CoulombInter ================", 2),
+    _InteractionMeta("NHund", "HundIndx", "Hund", "LHund",
+                     "hund.def", "NHund",
+                     "=============== Hund coupling ===============", 2),
+    _InteractionMeta("NEx", "ExIndx", "Ex", "LEx",
+                     "exchange.def", "NExchange",
+                     "====== ExchangeCoupling coupling ============", 2),
+    _InteractionMeta("NPairLift", "PLIndx", "PairLift", "LPairLift",
+                     "pairlift.def", "NPairLift",
+                     "====== Pair-Lift term ============", 2),
+    _InteractionMeta("NPairHopp", "PHIndx", "PairHopp", "LPairHopp",
+                     "pairhopp.def", "NPairHopp",
+                     "====== Pair-Hopping term ============", 2),
 ]
 """Metadata for the 6 standard interaction types processed by
 :func:`print_interactions`.  Each entry maps attribute names, file
@@ -529,7 +523,7 @@ def print_interactions(StdI: StdIntList) -> None:
     #  Standard interaction types (data-driven)
     # =================================================================
     for spec in _INTERACTION_TYPES:
-        _process_interaction(StdI, **spec)
+        _process_interaction(StdI, **spec._asdict())
 
     # =================================================================
     #  InterAll

@@ -277,18 +277,18 @@ class TestInteractionTypesTable:
         assert len(_INTERACTION_TYPES) == 6
 
     def test_coulomb_intra_is_1idx(self):
-        assert _INTERACTION_TYPES[0]["n_indices"] == 1
-        assert _INTERACTION_TYPES[0]["filename"] == "coulombintra.def"
+        assert _INTERACTION_TYPES[0].n_indices == 1
+        assert _INTERACTION_TYPES[0].filename == "coulombintra.def"
 
     def test_remaining_five_are_2idx(self):
         for spec in _INTERACTION_TYPES[1:]:
-            assert spec["n_indices"] == 2
+            assert spec.n_indices == 2
 
-    def test_all_entries_have_required_keys(self):
+    def test_all_entries_have_required_fields(self):
         required = {"nterms_attr", "indx_attr", "coeff_attr", "flag_attr",
                      "filename", "count_label", "banner", "n_indices"}
         for spec in _INTERACTION_TYPES:
-            assert set(spec.keys()) == required
+            assert set(spec._fields) == required
 
 
 class TestMergeInterallEquivalent:
