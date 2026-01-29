@@ -7727,3 +7727,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 154 — 2026-01-29
+
+**Files**: `python/writer/export_wannier90.py`
+**Change**: Flattened nested `if nintr > 0: if intr_table: ... else: skip else: skip` pattern in 3 export functions (`_export_inter`, `_export_transfer`, `_export_coulomb_intra`) into a single conditional expression + if/else, removing 3 duplicated "is skipped" print statements.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

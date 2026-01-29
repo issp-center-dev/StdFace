@@ -541,14 +541,11 @@ def _export_inter(StdI: StdIntList,
     nintr, intr_index, intr_value = _accumulate_list(
         2, ntbl, tbl_index, tbl_value, 1)
 
-    if nintr > 0:
-        intr_table = _build_inter_table(StdI, nintr, intr_index, intr_value)
+    intr_table = (_build_inter_table(StdI, nintr, intr_index, intr_value)
+                  if nintr > 0 else [])
 
-        if intr_table:
-            _write_wannier90(intr_table, StdI.NsiteUC, 1,
-                             fname, tagname)
-        else:
-            print(f"{fname:>24s} is skipped.")
+    if intr_table:
+        _write_wannier90(intr_table, StdI.NsiteUC, 1, fname, tagname)
     else:
         print(f"{fname:>24s} is skipped.")
 
@@ -702,16 +699,13 @@ def _export_transfer(StdI: StdIntList,
     nintr, intr_index, intr_value = _accumulate_list(
         4, ntbl, tbl_index, tbl_value, 0)
 
-    if nintr > 0:
-        intr_table = _build_transfer_table(
-            StdI, nintr, intr_index, intr_value, spin_dep)
+    intr_table = (_build_transfer_table(
+        StdI, nintr, intr_index, intr_value, spin_dep)
+        if nintr > 0 else [])
 
-        if intr_table:
-            _write_wannier90(intr_table, StdI.NsiteUC,
-                             2 if spin_dep == 1 else 1,
-                             fname, tagname)
-        else:
-            print(f"{fname:>24s} is skipped.")
+    if intr_table:
+        _write_wannier90(intr_table, StdI.NsiteUC,
+                         2 if spin_dep == 1 else 1, fname, tagname)
     else:
         print(f"{fname:>24s} is skipped.")
 
@@ -803,15 +797,12 @@ def _export_coulomb_intra(StdI: StdIntList,
     nintr, intr_index, intr_value = _accumulate_list(
         1, ntbl, tbl_index, tbl_value_c, 1)
 
-    if nintr > 0:
-        intr_table = _build_coulomb_intra_table(
-            StdI, nintr, intr_index, intr_value)
+    intr_table = (_build_coulomb_intra_table(
+        StdI, nintr, intr_index, intr_value)
+        if nintr > 0 else [])
 
-        if intr_table:
-            _write_wannier90(intr_table, StdI.NsiteUC, 1,
-                             fname, tagname)
-        else:
-            print(f"{fname:>24s} is skipped.")
+    if intr_table:
+        _write_wannier90(intr_table, StdI.NsiteUC, 1, fname, tagname)
     else:
         print(f"{fname:>24s} is skipped.")
 
