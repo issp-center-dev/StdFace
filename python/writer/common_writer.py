@@ -47,6 +47,7 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import NamedTuple
 
 import numpy as np
 
@@ -1010,33 +1011,44 @@ UHF and H-wave share the same defaults handler
 #  Conserved-quantity validation rules
 # -------------------------------------------------------------------
 #
-# Each rule is a tuple: ``(ncond_label, ncond_action, sz2_action)``
-#
-# Actions:
-#   "required"  → ``required_val_i(label, val)``
-#   "not_used"  → ``not_used_i(label, val)``
-#   "default_0" → ``StdI.Sz2 = print_val_i("2Sz", StdI.Sz2, 0)``
-#   None        → no check performed on that quantity
-#
+class _ConservedQtyRule(NamedTuple):
+    """Validation rule for conserved quantities (ncond and 2Sz).
+
+    Attributes
+    ----------
+    ncond_label : str
+        Label used for the ncond check (``"nelec"`` or ``"ncond"``).
+    ncond_action : str or None
+        Action for ncond: ``"required"``, ``"not_used"``, or ``None``.
+    sz2_action : str or None
+        Action for 2Sz: ``"required"``, ``"not_used"``, ``"default_0"``,
+        or ``None``.
+    """
+
+    ncond_label: str
+    ncond_action: str | None
+    sz2_action: str | None
+
+
 # The key is ``(ModelType, is_hphi: bool, lGC: int)``.
 # For Spin model, is_hphi is ignored (keyed as True and False with same rule).
 
-_CONSERVED_QTY_RULES: dict[tuple, tuple[str, str | None, str | None]] = {
+_CONSERVED_QTY_RULES: dict[tuple, _ConservedQtyRule] = {
     # Hubbard
-    (ModelType.HUBBARD, True,  0): ("nelec", "required", None),
-    (ModelType.HUBBARD, True,  1): ("nelec", "not_used", "not_used"),
-    (ModelType.HUBBARD, False, 0): ("ncond", "required", "default_0"),
-    (ModelType.HUBBARD, False, 1): ("ncond", "required", "not_used"),
+    (ModelType.HUBBARD, True,  0): _ConservedQtyRule("nelec", "required", None),
+    (ModelType.HUBBARD, True,  1): _ConservedQtyRule("nelec", "not_used", "not_used"),
+    (ModelType.HUBBARD, False, 0): _ConservedQtyRule("ncond", "required", "default_0"),
+    (ModelType.HUBBARD, False, 1): _ConservedQtyRule("ncond", "required", "not_used"),
     # Spin (is_hphi dimension doesn't matter — same rules)
-    (ModelType.SPIN,    True,  0): ("ncond", "not_used", "required"),
-    (ModelType.SPIN,    True,  1): ("ncond", "not_used", "not_used"),
-    (ModelType.SPIN,    False, 0): ("ncond", "not_used", "required"),
-    (ModelType.SPIN,    False, 1): ("ncond", "not_used", "not_used"),
+    (ModelType.SPIN,    True,  0): _ConservedQtyRule("ncond", "not_used", "required"),
+    (ModelType.SPIN,    True,  1): _ConservedQtyRule("ncond", "not_used", "not_used"),
+    (ModelType.SPIN,    False, 0): _ConservedQtyRule("ncond", "not_used", "required"),
+    (ModelType.SPIN,    False, 1): _ConservedQtyRule("ncond", "not_used", "not_used"),
     # Kondo
-    (ModelType.KONDO,   True,  0): ("ncond", "required", None),
-    (ModelType.KONDO,   True,  1): ("nelec", "not_used", "not_used"),
-    (ModelType.KONDO,   False, 0): ("ncond", "required", "default_0"),
-    (ModelType.KONDO,   False, 1): ("ncond", "required", "not_used"),
+    (ModelType.KONDO,   True,  0): _ConservedQtyRule("ncond", "required", None),
+    (ModelType.KONDO,   True,  1): _ConservedQtyRule("nelec", "not_used", "not_used"),
+    (ModelType.KONDO,   False, 0): _ConservedQtyRule("ncond", "required", "default_0"),
+    (ModelType.KONDO,   False, 1): _ConservedQtyRule("ncond", "required", "not_used"),
 }
 """Rules for validating ``ncond`` and ``2Sz`` by (model, is_hphi, lGC)."""
 
