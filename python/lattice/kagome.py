@@ -167,53 +167,26 @@ def kagome(StdI: StdIntList) -> None:
             for isiteUC in range(StdI.NsiteUC):
                 add_local_terms(StdI, isite + isiteUC, jsite_base + isiteUC)
 
-            # Nearest neighbor intra cell 0 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 0, 0, 1, 1, StdI.J2, StdI.t2, StdI.V2)
-
-            # Nearest neighbor intra cell 0 -> 2
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 0, 0, 2, 1, StdI.J1, StdI.t1, StdI.V1)
-
-            # Nearest neighbor intra cell 1 -> 2
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 0, 1, 2, 1, StdI.J0, StdI.t0, StdI.V0)
-
-            # Nearest neighbor along W 1 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 1, 0, 1, StdI.J2, StdI.t2, StdI.V2)
-
-            # Nearest neighbor along L 2 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 2, 0, 1, StdI.J1, StdI.t1, StdI.V1)
-
-            # Nearest neighbor along W-L 1 -> 2
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, -1, 1, 2, 1, StdI.J0, StdI.t0, StdI.V0)
-
-            # Second nearest neighbor along W 2 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 2, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p)
-
-            # Second nearest neighbor along W 1 -> 2
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 1, 2, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-
-            # Second nearest neighbor along L 1 -> 0
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 1, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p)
-
-            # Second nearest neighbor along L 2 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 2, 1, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-
-            # Second nearest neighbor along W-L 0 -> 2
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, -1, 0, 2, 2, StdI.J1p, StdI.t1p, StdI.V1p)
-
-            # Second nearest neighbor along L-W 0 -> 1
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, -1, 1, 0, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p)
+            # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
+            _BONDS = (
+                # Nearest neighbor (nn=1)
+                (0, 0, 0, 1, 1, StdI.J2, StdI.t2, StdI.V2),     # intra 0->1
+                (0, 0, 0, 2, 1, StdI.J1, StdI.t1, StdI.V1),     # intra 0->2
+                (0, 0, 1, 2, 1, StdI.J0, StdI.t0, StdI.V0),     # intra 1->2
+                (1, 0, 1, 0, 1, StdI.J2, StdI.t2, StdI.V2),     # along W
+                (0, 1, 2, 0, 1, StdI.J1, StdI.t1, StdI.V1),     # along L
+                (1, -1, 1, 2, 1, StdI.J0, StdI.t0, StdI.V0),    # along W-L
+                # Second nearest neighbor (nn=2)
+                (1, 0, 2, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),  # along W, 2->0
+                (1, 0, 1, 2, 2, StdI.J0p, StdI.t0p, StdI.V0p),  # along W, 1->2
+                (0, 1, 1, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p),  # along L, 1->0
+                (0, 1, 2, 1, 2, StdI.J0p, StdI.t0p, StdI.V0p),  # along L, 2->1
+                (1, -1, 0, 2, 2, StdI.J1p, StdI.t1p, StdI.V1p), # along W-L, 0->2
+                (-1, 1, 0, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p), # along L-W, 0->1
+            )
+            for dW, dL, si, sj, nn, J, t, V in _BONDS:
+                add_neighbor_interaction(
+                    StdI, fp, iW, iL, dW, dL, si, sj, nn, J, t, V)
 
 
 def kagome_boost(StdI: StdIntList) -> None:

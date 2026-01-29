@@ -7973,3 +7973,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 175 — 2026-01-29
+
+**Files**: `python/lattice/kagome.py`
+**Change**: Replaced 12 repetitive `add_neighbor_interaction` calls in `kagome()` with a data-driven `_BONDS` tuple and loop. Covers nearest (6 bonds) and second-nearest (6 bonds) neighbor interactions. Reduces 46 lines to 20 lines.
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed
