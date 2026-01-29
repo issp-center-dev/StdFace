@@ -8103,3 +8103,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1260 passed
 - Integration: 83/83 passed
+
+## Step 188 — 2026-01-29
+
+**Files**: `python/lattice/site_util.py`
+**Change**: Simplified duplicated gnuplot label formatting in `_write_gnuplot_bond`. The `if site < 10` / `else` pattern was repeated identically for `isite` and `jsite`. Replaced with a loop over `(site, x, y)` tuples using a computed format width.
+**Phase**: 3 — Python idioms (DRY)
+
+**Tests**:
+- Unit: 1260 passed
+- Integration: 83/83 passed

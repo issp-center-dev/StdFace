@@ -549,14 +549,9 @@ def _write_gnuplot_bond(
     connect : int
         Line-style selector.  The arrow is only drawn when ``connect < 3``.
     """
-    if isite < 10:
-        fp.write(f'set label "{isite:1d}" at {xi:f}, {yi:f} center front\n')
-    else:
-        fp.write(f'set label "{isite:2d}" at {xi:f}, {yi:f} center front\n')
-    if jsite < 10:
-        fp.write(f'set label "{jsite:1d}" at {xj:f}, {yj:f} center front\n')
-    else:
-        fp.write(f'set label "{jsite:2d}" at {xj:f}, {yj:f} center front\n')
+    for site, x, y in ((isite, xi, yi), (jsite, xj, yj)):
+        w = 1 if site < 10 else 2
+        fp.write(f'set label "{site:{w}d}" at {x:f}, {y:f} center front\n')
     if connect < 3:
         fp.write(f"set arrow from {xi:f}, {yi:f} to {xj:f}, {yj:f} "
                  f"nohead ls {connect:d}\n")
