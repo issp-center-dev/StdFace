@@ -7751,3 +7751,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 156 — 2026-01-29
+
+**Files**: `python/writer/interaction_writer.py`
+**Change**: Used tuple unpacking and cached complex value in the interall.def write loop in `_print_interall`. Replaced `idx[0]..idx[7]` indexed access with `i0, s0, i1, s1, i2, s2, i3, s3` unpacking, and `StdI.intr[kintr].real/.imag` with cached `val`.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

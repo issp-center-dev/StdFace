@@ -487,16 +487,15 @@ def _write_interall(StdI: StdIntList) -> None:
 
             if StdI.lBoost == 0:
                 for kintr in range(StdI.nintr):
-                    if abs(StdI.intr[kintr]) > AMPLITUDE_EPS:
-                        idx = StdI.intrindx[kintr]
-                        re_val = StdI.intr[kintr].real
-                        im_val = StdI.intr[kintr].imag
+                    val = StdI.intr[kintr]
+                    if abs(val) > AMPLITUDE_EPS:
+                        i0, s0, i1, s1, i2, s2, i3, s3 = StdI.intrindx[kintr]
                         fp.write(
-                            f"{idx[0]:5d} {idx[1]:5d} "
-                            f"{idx[2]:5d} {idx[3]:5d} "
-                            f"{idx[4]:5d} {idx[5]:5d} "
-                            f"{idx[6]:5d} {idx[7]:5d} "
-                            f"{re_val:25.15f}  {im_val:25.15f}\n"
+                            f"{i0:5d} {s0:5d} "
+                            f"{i1:5d} {s1:5d} "
+                            f"{i2:5d} {s2:5d} "
+                            f"{i3:5d} {s3:5d} "
+                            f"{val.real:25.15f}  {val.imag:25.15f}\n"
                         )
 
         print("    interall.def is written.")
