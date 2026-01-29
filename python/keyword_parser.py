@@ -40,6 +40,18 @@ def trim_space_quote(text: str) -> str:
     return text.translate(_TRIM_TABLE)
 
 
+def _fail_duplicate(keyword: str) -> None:
+    """Print a duplicate-keyword error and terminate.
+
+    Parameters
+    ----------
+    keyword : str
+        The duplicated keyword name.
+    """
+    print(f"ERROR !  Keyword {keyword} is duplicated ! ")
+    exit_program(-1)
+
+
 def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:
     """Store a string value after checking for duplicate assignment.
 
@@ -66,8 +78,7 @@ def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
     if current != UNSET_STRING:
-        print(f"ERROR !  Keyword {keyword} is duplicated ! ")
-        exit_program(-1)
+        _fail_duplicate(keyword)
     return value
 
 
@@ -102,8 +113,7 @@ def store_with_check_dup_sl(
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
     if current != UNSET_STRING:
-        print(f"ERROR !  Keyword {keyword} is duplicated ! ")
-        exit_program(-1)
+        _fail_duplicate(keyword)
     return value[:maxlen].lower()
 
 
@@ -133,8 +143,7 @@ def store_with_check_dup_i(keyword: str, value: str, current: int) -> int:
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
     if current != NaN_i:
-        print(f"ERROR !  Keyword {keyword} is duplicated ! ")
-        exit_program(-1)
+        _fail_duplicate(keyword)
     # C sscanf("%d") truncates floats like "2.0" -> 2
     return int(float(value))
 
@@ -164,8 +173,7 @@ def store_with_check_dup_d(keyword: str, value: str, current: float) -> float:
         If *current* is not NaN, indicating a duplicate keyword.
     """
     if not math.isnan(current):
-        print(f"ERROR !  Keyword {keyword} is duplicated ! ")
-        exit_program(-1)
+        _fail_duplicate(keyword)
     return float(value)
 
 
@@ -201,8 +209,7 @@ def store_with_check_dup_c(keyword: str, value: str, current: complex) -> comple
         If *current* is already set, indicating a duplicate keyword.
     """
     if not cmath.isnan(current):
-        print(f"ERROR !  Keyword {keyword} is duplicated ! ")
-        exit_program(-1)
+        _fail_duplicate(keyword)
 
     # Split on comma, mirroring the C strtok(",") logic
     if "," in value:

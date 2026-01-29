@@ -7280,3 +7280,27 @@ Moved to standard top-level imports per PEP 8.
 
 **Suggested next step**: Check for other inline imports across the codebase,
 or begin Phase 2 class introduction work.
+
+---
+
+## Step 128 — Extract `_fail_duplicate` helper from `store_with_check_dup_*` functions
+
+**Date**: 2026-01-29
+**File**: `python/keyword_parser.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: The duplicate-keyword error message and `exit_program(-1)` call
+was repeated identically in all 5 `store_with_check_dup_*` functions. Extracted
+into a single `_fail_duplicate(keyword)` helper to eliminate the duplication.
+
+**Changes**:
+
+- Added `_fail_duplicate(keyword)` helper function
+- Replaced 5 identical 2-line blocks with single `_fail_duplicate(keyword)` call
+
+**Test results**:
+- Unit tests: 1253 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Begin Phase 2 class introduction work (e.g.
+`KeywordParser` class or `SolverWriter` hierarchy).
