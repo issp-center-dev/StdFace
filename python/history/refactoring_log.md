@@ -7811,3 +7811,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 161 — 2026-01-29
+
+**Files**: `python/stdface_main.py`
+**Change**: Replaced bare `tuple[ModelType, int, int]` in `MODEL_ALIASES` and `MODEL_ALIASES_HPHI_BOOST` with a typed `_ModelConfig(NamedTuple)` class having named fields `model`, `lGC`, `lBoost`. Added docstring. Call site unpacking (`StdI.model, StdI.lGC, StdI.lBoost = model_info`) works unchanged since NamedTuple is iterable.
+**Phase**: 2 — Introduce classes (NamedTuple for typed metadata)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

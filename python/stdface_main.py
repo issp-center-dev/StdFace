@@ -31,6 +31,7 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import NamedTuple
 
 from stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
@@ -113,25 +114,45 @@ BOOST_DISPATCH: dict[str, Callable[[StdIntList], None]] = {
 # ---------------------------------------------------------------------------
 #  Model name normalisation table
 # ---------------------------------------------------------------------------
-#  Maps user-facing model name aliases to ``(canonical_name, lGC, lBoost)``.
-#  Entries that require ``solver == SolverType.HPhi`` are in a separate dict.
-MODEL_ALIASES: dict[str, tuple[ModelType, int, int]] = {
-    "fermionhubbard":   (ModelType.HUBBARD, 0, 0),
-    "hubbard":          (ModelType.HUBBARD, 0, 0),
-    "fermionhubbardgc": (ModelType.HUBBARD, 1, 0),
-    "hubbardgc":        (ModelType.HUBBARD, 1, 0),
-    "spin":             (ModelType.SPIN,    0, 0),
-    "spingc":           (ModelType.SPIN,    1, 0),
-    "kondolattice":     (ModelType.KONDO,   0, 0),
-    "kondo":            (ModelType.KONDO,   0, 0),
-    "kondolatticegc":   (ModelType.KONDO,   1, 0),
-    "kondogc":          (ModelType.KONDO,   1, 0),
-}
-"""Maps model name aliases to ``(canonical_name, lGC, lBoost)``."""
 
-MODEL_ALIASES_HPHI_BOOST: dict[str, tuple[ModelType, int, int]] = {
-    "spingcboost":      (ModelType.SPIN,    1, 1),
-    "spingccma":        (ModelType.SPIN,    1, 1),
+
+class _ModelConfig(NamedTuple):
+    """Configuration resolved from a user-facing model name alias.
+
+    Attributes
+    ----------
+    model : ModelType
+        Canonical model type (HUBBARD, SPIN, or KONDO).
+    lGC : int
+        Grand-canonical flag (0 = canonical, 1 = grand-canonical).
+    lBoost : int
+        Boost extension flag (0 = off, 1 = on, HPhi only).
+    """
+
+    model: ModelType
+    lGC: int
+    lBoost: int
+
+
+#  Maps user-facing model name aliases to a ``_ModelConfig``.
+#  Entries that require ``solver == SolverType.HPhi`` are in a separate dict.
+MODEL_ALIASES: dict[str, _ModelConfig] = {
+    "fermionhubbard":   _ModelConfig(ModelType.HUBBARD, 0, 0),
+    "hubbard":          _ModelConfig(ModelType.HUBBARD, 0, 0),
+    "fermionhubbardgc": _ModelConfig(ModelType.HUBBARD, 1, 0),
+    "hubbardgc":        _ModelConfig(ModelType.HUBBARD, 1, 0),
+    "spin":             _ModelConfig(ModelType.SPIN,    0, 0),
+    "spingc":           _ModelConfig(ModelType.SPIN,    1, 0),
+    "kondolattice":     _ModelConfig(ModelType.KONDO,   0, 0),
+    "kondo":            _ModelConfig(ModelType.KONDO,   0, 0),
+    "kondolatticegc":   _ModelConfig(ModelType.KONDO,   1, 0),
+    "kondogc":          _ModelConfig(ModelType.KONDO,   1, 0),
+}
+"""Maps model name aliases to a :class:`_ModelConfig`."""
+
+MODEL_ALIASES_HPHI_BOOST: dict[str, _ModelConfig] = {
+    "spingcboost":      _ModelConfig(ModelType.SPIN,    1, 1),
+    "spingccma":        _ModelConfig(ModelType.SPIN,    1, 1),
 }
 """HPhi-only model aliases that enable the Boost extension."""
 
