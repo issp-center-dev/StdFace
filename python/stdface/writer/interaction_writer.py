@@ -134,16 +134,17 @@ def _write_interaction_file(
         Number of site indices per term (1 or 2).
     """
     nintr0 = _count_nonzero(nterms, coeff)
+    lines = ["=============================================\n",
+             f"{count_label} {nintr0:10d}\n",
+             "=============================================\n",
+             f"{banner}\n",
+             "=============================================\n"]
+    for k in range(nterms):
+        if abs(coeff[k]) > AMPLITUDE_EPS:
+            idx_str = " ".join(f"{indx[k][i]:5d}" for i in range(n_indices))
+            lines.append(f"{idx_str} {coeff[k]:25.15f}\n")
     with open(filename, "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"{count_label} {nintr0:10d}\n")
-        fp.write("=============================================\n")
-        fp.write(f"{banner}\n")
-        fp.write("=============================================\n")
-        for k in range(nterms):
-            if abs(coeff[k]) > AMPLITUDE_EPS:
-                idx_str = " ".join(f"{indx[k][i]:5d}" for i in range(n_indices))
-                fp.write(f"{idx_str} {coeff[k]:25.15f}\n")
+        fp.write("".join(lines))
     print(f"    {filename} is written.")
 
 
@@ -472,26 +473,27 @@ def _write_interall(StdI: StdIntList) -> None:
         StdI.Lintr = 1
 
     if StdI.Lintr == 1:
+        lines = ["====================== \n",
+                 f"NInterAll {nintr0:7d}  \n",
+                 "====================== \n",
+                 "========zInterAll===== \n",
+                 "====================== \n"]
+
+        if StdI.lBoost == 0:
+            for kintr in range(StdI.nintr):
+                val = StdI.intr[kintr]
+                if abs(val) > AMPLITUDE_EPS:
+                    i0, s0, i1, s1, i2, s2, i3, s3 = StdI.intrindx[kintr]
+                    lines.append(
+                        f"{i0:5d} {s0:5d} "
+                        f"{i1:5d} {s1:5d} "
+                        f"{i2:5d} {s2:5d} "
+                        f"{i3:5d} {s3:5d} "
+                        f"{val.real:25.15f}  {val.imag:25.15f}\n"
+                    )
+
         with open("interall.def", "w") as fp:
-            fp.write("====================== \n")
-            fp.write(f"NInterAll {nintr0:7d}  \n")
-            fp.write("====================== \n")
-            fp.write("========zInterAll===== \n")
-            fp.write("====================== \n")
-
-            if StdI.lBoost == 0:
-                for kintr in range(StdI.nintr):
-                    val = StdI.intr[kintr]
-                    if abs(val) > AMPLITUDE_EPS:
-                        i0, s0, i1, s1, i2, s2, i3, s3 = StdI.intrindx[kintr]
-                        fp.write(
-                            f"{i0:5d} {s0:5d} "
-                            f"{i1:5d} {s1:5d} "
-                            f"{i2:5d} {s2:5d} "
-                            f"{i3:5d} {s3:5d} "
-                            f"{val.real:25.15f}  {val.imag:25.15f}\n"
-                        )
-
+            fp.write("".join(lines))
         print("    interall.def is written.")
 
 

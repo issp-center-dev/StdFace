@@ -715,38 +715,40 @@ def _write_excitation_file(
         Imaginary parts of Fourier coefficients, length ``nsite``.
     """
     if StdI.SpectrumBody == 1:
+        lines = ["=============================================\n"]
+        if StdI.model == ModelType.KONDO:
+            lines.append(f"NSingle {StdI.nsite // 2 * NumOp}\n")
+        else:
+            lines.append(f"NSingle {StdI.nsite * NumOp}\n")
+        lines.append("=============================================\n")
+        lines.append("============== Single Excitation ============\n")
+        lines.append("=============================================\n")
+        if StdI.model == ModelType.KONDO:
+            for isite in range(StdI.nsite // 2, StdI.nsite):
+                lines.append(f"{isite} {spin[0][0]} 0 "
+                             f"{fourier_r[isite] * coef[0]:25.15f} "
+                             f"{fourier_i[isite] * coef[0]:25.15f}\n")
+        else:
+            for isite in range(StdI.nsite):
+                lines.append(f"{isite} {spin[0][0]} 0 "
+                             f"{fourier_r[isite] * coef[0]:25.15f} "
+                             f"{fourier_i[isite] * coef[0]:25.15f}\n")
         with open("single.def", "w") as fp:
-            fp.write("=============================================\n")
-            if StdI.model == ModelType.KONDO:
-                fp.write(f"NSingle {StdI.nsite // 2 * NumOp}\n")
-            else:
-                fp.write(f"NSingle {StdI.nsite * NumOp}\n")
-            fp.write("=============================================\n")
-            fp.write("============== Single Excitation ============\n")
-            fp.write("=============================================\n")
-            if StdI.model == ModelType.KONDO:
-                for isite in range(StdI.nsite // 2, StdI.nsite):
-                    fp.write(f"{isite} {spin[0][0]} 0 "
-                             f"{fourier_r[isite] * coef[0]:25.15f} "
-                             f"{fourier_i[isite] * coef[0]:25.15f}\n")
-            else:
-                for isite in range(StdI.nsite):
-                    fp.write(f"{isite} {spin[0][0]} 0 "
-                             f"{fourier_r[isite] * coef[0]:25.15f} "
-                             f"{fourier_i[isite] * coef[0]:25.15f}\n")
+            fp.write("".join(lines))
         print("      single.def is written.\n")
     else:
-        with open("pair.def", "w") as fp:
-            fp.write("=============================================\n")
-            fp.write(f"NPair {StdI.nsite * NumOp}\n")
-            fp.write("=============================================\n")
-            fp.write("=============== Pair Excitation =============\n")
-            fp.write("=============================================\n")
-            for isite in range(StdI.nsite):
-                for ispin in range(NumOp):
-                    fp.write(f"{isite} {spin[ispin][0]} {isite} {spin[ispin][1]} 1 "
+        lines = ["=============================================\n",
+                 f"NPair {StdI.nsite * NumOp}\n",
+                 "=============================================\n",
+                 "=============== Pair Excitation =============\n",
+                 "=============================================\n"]
+        for isite in range(StdI.nsite):
+            for ispin in range(NumOp):
+                lines.append(f"{isite} {spin[ispin][0]} {isite} {spin[ispin][1]} 1 "
                              f"{fourier_r[isite] * coef[ispin]:25.15f} "
                              f"{fourier_i[isite] * coef[ispin]:25.15f}\n")
+        with open("pair.def", "w") as fp:
+            fp.write("".join(lines))
         print("        pair.def is written.\n")
 
 
@@ -1022,13 +1024,14 @@ def vector_potential(StdI: StdIntList) -> None:
     #  Write potential.dat for one-body pump
     # ------------------------------------------------------------------
     if StdI.PumpBody == 1:
-        with open("potential.dat", "w") as fp:
-            fp.write("# Time A_W A_L A_H E_W E_L E_H\n")
-            for it in range(StdI.Lanczos_max):
-                time = StdI.dt * float(it)
-                fp.write(f"{time:f} "
+        lines = ["# Time A_W A_L A_H E_W E_L E_H\n"]
+        for it in range(StdI.Lanczos_max):
+            time = StdI.dt * float(it)
+            lines.append(f"{time:f} "
                          f"{StdI.At[it][0]:f} {StdI.At[it][1]:f} {StdI.At[it][2]:f} "
                          f"{Et[it][0]:f} {Et[it][1]:f} {Et[it][2]:f}\n")
+        with open("potential.dat", "w") as fp:
+            fp.write("".join(lines))
 
 
 def print_pump(StdI: StdIntList) -> None:
@@ -1057,44 +1060,46 @@ def print_pump(StdI: StdIntList) -> None:
         - ``Uquench`` -- quench interaction strength.
     """
     if StdI.PumpBody == 1:
+        lines = ["=============================================\n",
+                 f"AllTimeStep {StdI.Lanczos_max}\n",
+                 "=============================================\n",
+                 "=========  OneBody Time Evolution  ==========\n",
+                 "=============================================\n"]
+
+        for it in range(StdI.Lanczos_max):
+            npump0 = _merge_duplicate_terms(
+                StdI.pumpindx[it], StdI.pump[it], StdI.npump[it])
+
+            lines.append(f"{StdI.dt * float(it):f}  {npump0}\n")
+
+            for ipump in range(StdI.npump[it]):
+                val = StdI.pump[it][ipump]
+                if abs(val) <= AMPLITUDE_EPS:
+                    continue
+                i0, s0, i1, s1 = StdI.pumpindx[it][ipump]
+                lines.append(
+                    f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
+                    f"{val.real:25.15f} {val.imag:25.15f}\n"
+                )
+
         with open("teone.def", "w") as fp:
-            fp.write("=============================================\n")
-            fp.write(f"AllTimeStep {StdI.Lanczos_max}\n")
-            fp.write("=============================================\n")
-            fp.write("=========  OneBody Time Evolution  ==========\n")
-            fp.write("=============================================\n")
-
-            for it in range(StdI.Lanczos_max):
-                npump0 = _merge_duplicate_terms(
-                    StdI.pumpindx[it], StdI.pump[it], StdI.npump[it])
-
-                fp.write(f"{StdI.dt * float(it):f}  {npump0}\n")
-
-                for ipump in range(StdI.npump[it]):
-                    val = StdI.pump[it][ipump]
-                    if abs(val) <= AMPLITUDE_EPS:
-                        continue
-                    i0, s0, i1, s1 = StdI.pumpindx[it][ipump]
-                    fp.write(
-                        f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
-                        f"{val.real:25.15f} {val.imag:25.15f}\n"
-                    )
-
+            fp.write("".join(lines))
         print("      teone.def is written.\n")
 
     else:
-        with open("tetwo.def", "w") as fp:
-            fp.write("=============================================\n")
-            fp.write(f"AllTimeStep {StdI.Lanczos_max}\n")
-            fp.write("=============================================\n")
-            fp.write("========== TwoBody Time Evolution ===========\n")
-            fp.write("=============================================\n")
+        lines = ["=============================================\n",
+                 f"AllTimeStep {StdI.Lanczos_max}\n",
+                 "=============================================\n",
+                 "========== TwoBody Time Evolution ===========\n",
+                 "=============================================\n"]
 
-            for it in range(StdI.Lanczos_max):
-                fp.write(f"{StdI.dt * float(it):f}  {StdI.nsite}\n")
-                for isite in range(StdI.nsite):
-                    fp.write(f"{isite:5d} {0:5d} {isite:5d} {0:5d} "
+        for it in range(StdI.Lanczos_max):
+            lines.append(f"{StdI.dt * float(it):f}  {StdI.nsite}\n")
+            for isite in range(StdI.nsite):
+                lines.append(f"{isite:5d} {0:5d} {isite:5d} {0:5d} "
                              f"{isite:5d} {1:5d} {isite:5d} {1:5d} "
                              f"{StdI.Uquench:25.15f}  {0.0:25.15f}\n")
 
+        with open("tetwo.def", "w") as fp:
+            fp.write("".join(lines))
         print("        tetwo.def is written.\n")

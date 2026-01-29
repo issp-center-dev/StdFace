@@ -44,6 +44,7 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 from collections.abc import Callable
+from itertools import product
 from typing import NamedTuple
 
 import numpy as np
@@ -145,14 +146,15 @@ def print_loc_spin(StdI: StdIntList) -> None:
     """
     nlocspin = int(np.count_nonzero(StdI.locspinflag[:StdI.nsite]))
 
+    lines = ["================================ \n",
+             f"NlocalSpin {nlocspin:5d}  \n",
+             "================================ \n",
+             "========i_1LocSpn_0IteElc ====== \n",
+             "================================ \n"]
+    for isite in range(StdI.nsite):
+        lines.append(f"{isite:5d}  {StdI.locspinflag[isite]:5d}\n")
     with open("locspn.def", "w") as fp:
-        fp.write("================================ \n")
-        fp.write(f"NlocalSpin {nlocspin:5d}  \n")
-        fp.write("================================ \n")
-        fp.write("========i_1LocSpn_0IteElc ====== \n")
-        fp.write("================================ \n")
-        for isite in range(StdI.nsite):
-            fp.write(f"{isite:5d}  {StdI.locspinflag[isite]:5d}\n")
+        fp.write("".join(lines))
 
     print("    locspn.def is written.")
 
@@ -178,20 +180,21 @@ def print_trans(StdI: StdIntList) -> None:
     ntrans0 = _merge_duplicate_terms(StdI.transindx, StdI.trans, StdI.ntrans)
 
     # --- write file ---
+    lines = ["======================== \n",
+             f"NTransfer {ntrans0:7d}  \n",
+             "======================== \n",
+             "========i_j_s_tijs====== \n",
+             "======================== \n"]
+    for ktrans in range(StdI.ntrans):
+        val = StdI.trans[ktrans]
+        if abs(val) > AMPLITUDE_EPS:
+            i0, s0, i1, s1 = StdI.transindx[ktrans]
+            lines.append(
+                f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
+                f"{val.real:25.15f} {val.imag:25.15f}\n"
+            )
     with open("trans.def", "w") as fp:
-        fp.write("======================== \n")
-        fp.write(f"NTransfer {ntrans0:7d}  \n")
-        fp.write("======================== \n")
-        fp.write("========i_j_s_tijs====== \n")
-        fp.write("======================== \n")
-        for ktrans in range(StdI.ntrans):
-            val = StdI.trans[ktrans]
-            if abs(val) > AMPLITUDE_EPS:
-                i0, s0, i1, s1 = StdI.transindx[ktrans]
-                fp.write(
-                    f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
-                    f"{val.real:25.15f} {val.imag:25.15f}\n"
-                )
+        fp.write("".join(lines))
 
     print("      trans.def is written.")
 
@@ -593,17 +596,16 @@ class GreenFunctionIndices:
         """
         indices: list[tuple[int, int, int, int]] = []
         xkondo = 2 if self.is_kondo else 1
+        is_local = self._is_local_spin
 
         for isite in range(self.NsiteUC * xkondo):
             isite2 = self.kondo_site(isite)
-
-            for ispin in range(self.spin_max(isite2) + 1):
+            for ispin in range(self._spin_max[isite2] + 1):
                 for jsite in range(self.nsite):
-                    for jspin in range(self.spin_max(jsite) + 1):
-                        if self.skip_local_spin_pair(isite2, jsite):
-                            continue
-                        if ispin == jspin:
-                            indices.append((isite2, ispin, jsite, jspin))
+                    if is_local[isite2] and is_local[jsite] and isite2 != jsite:
+                        continue
+                    if ispin <= self._spin_max[jsite]:
+                        indices.append((isite2, ispin, jsite, ispin))
 
         return indices
 
@@ -618,16 +620,15 @@ class GreenFunctionIndices:
         list of tuple[int, int, int, int]
             Index tuples ``(isite, ispin, jsite, jspin)``.
         """
-        indices: list[tuple[int, int, int, int]] = []
-
-        for isite in range(self.nsite):
-            for ispin in range(self.spin_max(isite) + 1):
-                for jsite in range(self.nsite):
-                    for jspin in range(self.spin_max(jsite) + 1):
-                        if self.skip_local_spin_pair(isite, jsite):
-                            continue
-                        indices.append((isite, ispin, jsite, jspin))
-
+        site_spins = [(s, sp) for s in range(self.nsite)
+                      for sp in range(self._spin_max[s] + 1)]
+        is_local = self._is_local_spin
+        indices: list[tuple[int, int, int, int]] = [
+            (isite, ispin, jsite, jspin)
+            for isite, ispin in site_spins
+            for jsite, jspin in site_spins
+            if not (is_local[isite] and is_local[jsite] and isite != jsite)
+        ]
         return indices
 
     # ------------------------------------------------------------------
@@ -649,35 +650,39 @@ class GreenFunctionIndices:
         """
         indices: list[tuple[int, int, int, int, int, int, int, int]] = []
         xkondo = 2 if self.is_kondo else 1
+        is_mvmc = self.is_mvmc
+        spin_max = self._spin_max
 
         for site1 in range(self.NsiteUC * xkondo):
             site1k = self.kondo_site(site1)
-            S1Max = self.spin_max(site1k)
+            S1Max = spin_max[site1k]
 
-            for spin1 in range(S1Max + 1):
-                for spin2 in range(S1Max + 1):
-                    for site3 in range(self.nsite):
-                        S3Max = self.spin_max(site3)
+            for site3 in range(self.nsite):
+                S3Max = spin_max[site3]
 
+                for spin1 in range(S1Max + 1):
+                    for spin2 in range(S1Max + 1):
+                        # spin4 = spin1 - spin2 + spin3
                         for spin3 in range(S3Max + 1):
-                            for spin4 in range(S3Max + 1):
-                                if spin1 - spin2 + spin3 - spin4 == 0:
-                                    if self.is_mvmc and (
-                                        spin1 != spin2 or spin3 != spin4
-                                    ):
-                                        indices.append((
-                                            site1k, spin1,
-                                            site3, spin4,
-                                            site3, spin3,
-                                            site1k, spin2,
-                                        ))
-                                    else:
-                                        indices.append((
-                                            site1k, spin1,
-                                            site1k, spin2,
-                                            site3, spin3,
-                                            site3, spin4,
-                                        ))
+                            spin4 = spin1 - spin2 + spin3
+                            if spin4 < 0 or spin4 > S3Max:
+                                continue
+                            if is_mvmc and (
+                                spin1 != spin2 or spin3 != spin4
+                            ):
+                                indices.append((
+                                    site1k, spin1,
+                                    site3, spin4,
+                                    site3, spin3,
+                                    site1k, spin2,
+                                ))
+                            else:
+                                indices.append((
+                                    site1k, spin1,
+                                    site1k, spin2,
+                                    site3, spin3,
+                                    site3, spin4,
+                                ))
 
         return indices
 
@@ -692,28 +697,19 @@ class GreenFunctionIndices:
         list of tuple[int, int, int, int, int, int, int, int]
             Index tuples of 8 elements each.
         """
+        site_spins = [(s, sp) for s in range(self.nsite)
+                      for sp in range(self._spin_max[s] + 1)]
+        is_local = self._is_local_spin
+
+        # Precompute valid site pairs (no local-spin pair skip)
         indices: list[tuple[int, int, int, int, int, int, int, int]] = []
-
-        for site1 in range(self.nsite):
-            for spin1 in range(self.spin_max(site1) + 1):
-                for site2 in range(self.nsite):
-                    if self.skip_local_spin_pair(site1, site2):
-                        continue
-
-                    for spin2 in range(self.spin_max(site2) + 1):
-                        for site3 in range(self.nsite):
-                            for spin3 in range(self.spin_max(site3) + 1):
-                                for site4 in range(self.nsite):
-                                    if self.skip_local_spin_pair(site3, site4):
-                                        continue
-
-                                    for spin4 in range(self.spin_max(site4) + 1):
-                                        indices.append((
-                                            site1, spin1,
-                                            site2, spin2,
-                                            site3, spin3,
-                                            site4, spin4,
-                                        ))
+        for (s1, sp1), (s2, sp2) in product(site_spins, repeat=2):
+            if is_local[s1] and is_local[s2] and s1 != s2:
+                continue
+            for (s3, sp3), (s4, sp4) in product(site_spins, repeat=2):
+                if is_local[s3] and is_local[s4] and s3 != s4:
+                    continue
+                indices.append((s1, sp1, s2, sp2, s3, sp3, s4, sp4))
 
         return indices
 

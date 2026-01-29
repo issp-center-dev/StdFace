@@ -348,9 +348,8 @@ def _read_w90(
                         Mat_tot[iWSC, iWan0 - 1, jWan0 - 1] = lam * (dtmp_re + 1j * dtmp_im)
 
             # Apply inversion symmetry and delete duplication
-            for jWSC in range(iWSC):
-                if np.all(indx_tot[iWSC] == -indx_tot[jWSC]):
-                    Mat_tot[iWSC, :, :] = 0.0
+            if iWSC > 0 and np.any(np.all(indx_tot[iWSC] == -indx_tot[:iWSC], axis=1)):
+                Mat_tot[iWSC, :, :] = 0.0
 
             if np.all(indx_tot[iWSC] == 0):
                 for iWan in range(StdI.NsiteUC):
