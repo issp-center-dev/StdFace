@@ -431,40 +431,6 @@ def _generate_key(keylen: int, index: List[int], ordered: int) -> List[int]:
         return []  # unreachable
 
 
-def _is_equal_key(key_a: List[int], key_b: List[int]) -> bool:
-    """Compare two keys for equality.
-
-    Parameters
-    ----------
-    key_a : list of int
-        First key.
-    key_b : list of int
-        Second key.
-
-    Returns
-    -------
-    bool
-        True if keys are equal.
-    """
-    return key_a == key_b
-
-
-def _to_string_key(key: List[int]) -> str:
-    """Convert key to string representation.
-
-    Parameters
-    ----------
-    key : list of int
-        Key array.
-
-    Returns
-    -------
-    str
-        String representation of key.
-    """
-    return "(" + ", ".join(str(k) for k in key) + ")"
-
-
 # -----------------------------------------------------------------------
 #  Accumulate entries
 # -----------------------------------------------------------------------

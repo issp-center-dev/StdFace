@@ -153,32 +153,6 @@ class TestGenerateKey:
         assert result == [1, 0, 3, 1]
 
 
-class TestIsEqualKey:
-    """Tests for _is_equal_key."""
-
-    def test_equal(self):
-        assert ew._is_equal_key([1, 2, 3], [1, 2, 3]) is True
-
-    def test_not_equal(self):
-        assert ew._is_equal_key([1, 2, 3], [1, 2, 4]) is False
-
-    def test_empty(self):
-        assert ew._is_equal_key([], []) is True
-
-
-class TestToStringKey:
-    """Tests for _to_string_key."""
-
-    def test_single(self):
-        assert ew._to_string_key([7]) == "(7)"
-
-    def test_pair(self):
-        assert ew._to_string_key([3, 5]) == "(3, 5)"
-
-    def test_quad(self):
-        assert ew._to_string_key([1, 0, 2, 1]) == "(1, 0, 2, 1)"
-
-
 class TestComputeIndex:
     """Tests for _compute_index."""
 

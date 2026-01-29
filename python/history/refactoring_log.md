@@ -7031,3 +7031,27 @@ Replaced with dict-based O(1) lookups using tuple keys.
 
 **Suggested next step**: Remove now-unused `_is_equal_key` and `_to_string_key`
 helper functions, or begin Phase 2 work on introducing solver writer classes.
+
+---
+
+## Step 118 — Remove unused `_is_equal_key` and `_to_string_key` helpers
+
+**Date**: 2026-01-29
+**File**: `python/writer/export_wannier90.py`, `test/unit/test_export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: After steps 116-117 replaced linear scans with dict lookups,
+`_is_equal_key` and `_to_string_key` are no longer called anywhere. Removed
+both functions and their 6 unit tests.
+
+**Changes**:
+
+- Deleted `_is_equal_key()` and `_to_string_key()` from `export_wannier90.py`
+- Deleted `TestIsEqualKey` and `TestToStringKey` test classes
+
+**Test results**:
+- Unit tests: 1256 passed (6 removed with deleted functions)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
+class, or continue Phase 3 idiom improvements in other modules.
