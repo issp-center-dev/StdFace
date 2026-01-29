@@ -499,39 +499,29 @@ def _accumulate_list(keylen: int,
     intr_value : list of complex
         Output values.
     """
-    intr_index: List[List[int]] = []
-    intr_value: List[complex] = []
-    nintr = 0
+    # Use a dict keyed by tuple for O(1) lookup instead of O(n) linear scan
+    accum: dict[tuple[int, ...], complex] = {}
+    key_order: list[tuple[int, ...]] = []
 
     for k in range(ntbl):
-        idx = _generate_key(keylen, list(tbl_index[k, :keylen]), ordered)
+        idx = tuple(_generate_key(keylen, list(tbl_index[k, :keylen]), ordered))
         val = complex(tbl_value[k])
 
-        is_found = False
-        jj = 0
-        for j in range(nintr):
-            if _is_equal_key(intr_index[j], idx):
-                is_found = True
-                jj = j
-                break
-
-        if is_found:
-            intr_value[jj] += val
+        if idx in accum:
+            accum[idx] += val
         else:
-            intr_index.append(list(idx))
-            intr_value.append(val)
-            nintr += 1
+            accum[idx] = val
+            key_order.append(idx)
 
-    # Eliminate zero entries (iterate in reverse to allow in-place removal)
-    k = nintr - 1
-    while k >= 0:
-        if abs(intr_value[k]) < _EPS:
-            intr_index.pop(k)
-            intr_value.pop(k)
-            nintr -= 1
-        k -= 1
+    # Filter out near-zero entries
+    intr_index: List[List[int]] = []
+    intr_value: List[complex] = []
+    for key in key_order:
+        if abs(accum[key]) >= _EPS:
+            intr_index.append(list(key))
+            intr_value.append(accum[key])
 
-    return nintr, intr_index, intr_value
+    return len(intr_index), intr_index, intr_value
 
 
 # -----------------------------------------------------------------------

@@ -6978,3 +6978,30 @@ loop over `idx in (1, 2)`.
 
 **Suggested next step**: Vectorize remaining `cos`/`sin` patterns in
 `hphi_writer.py` or `interaction_builder.py`.
+
+---
+
+## Step 116 — Replace O(n²) accumulation loop with dict in `_accumulate_list()`
+
+**Date**: 2026-01-29
+**File**: `python/writer/export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_accumulate_list()` used an O(n²) linear scan (`_is_equal_key`
+on every existing entry) to find duplicate keys and merge values. Replaced with
+a dict keyed by tuple for O(1) lookup. The reverse-iteration zero-elimination
+loop was also replaced with a single forward-pass filter.
+
+**Changes**:
+
+- Replaced O(n²) linear-scan deduplication with `dict[tuple[int, ...], complex]`
+- Replaced reverse-iteration zero-elimination with forward-pass filter
+- Preserved insertion order via `key_order` list
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Replace `_is_equal_key` (now unused for accumulation)
+or refactor `_build_inter_table` / `_build_transfer_table` which also have O(n²)
+linear scans for deduplication.
