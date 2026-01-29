@@ -8013,3 +8013,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 179 — 2026-01-29
+
+**Files**: `python/lattice/fc_ortho.py`
+**Change**: Replaced 9 repetitive `add_neighbor_interaction_3d` calls in `fc_ortho()` with a data-driven `_BONDS` tuple and loop. Covers nn (6 equivalent pairs) and nnn (3) bonds. Reduces 30 lines to 15 lines.
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

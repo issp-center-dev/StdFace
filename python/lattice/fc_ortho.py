@@ -164,35 +164,22 @@ def fc_ortho(StdI: StdIntList) -> None:
                 jsite = kCell
                 general_j(StdI, StdI.J, 1, StdI.S2, isite, jsite)
 
-        # Nearest neighbor along W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0)
-        # Nearest neighbor along W (equivalent direction)
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 1, -1, 0, 0, StdI.J0, StdI.t0, StdI.V0)
-
-        # Nearest neighbor along L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1)
-        # Nearest neighbor along L (equivalent direction)
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, -1, 0, 1, 0, 0, StdI.J1, StdI.t1, StdI.V1)
-
-        # Nearest neighbor along H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2)
-        # Nearest neighbor along H (equivalent direction)
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, -1, 0, 0, 0, StdI.J2, StdI.t2, StdI.V2)
-
-        # Second nearest neighbor along -W+L+H
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, -1, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p)
-        # Second nearest neighbor along -L+H+W
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, -1, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p)
-        # Second nearest neighbor along -H+W+L
-        add_neighbor_interaction_3d(
-            StdI, iW, iL, iH, 1, 1, -1, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p)
+        # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
+        _BONDS = (
+            # Nearest neighbor (6 equivalent pairs)
+            (1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
+            (0, 1, -1, 0, 0, StdI.J0, StdI.t0, StdI.V0),     # along W (equiv)
+            (0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
+            (-1, 0, 1, 0, 0, StdI.J1, StdI.t1, StdI.V1),     # along L (equiv)
+            (0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
+            (1, -1, 0, 0, 0, StdI.J2, StdI.t2, StdI.V2),     # along H (equiv)
+            # Second nearest neighbor
+            (-1, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),  # -W+L+H
+            (1, -1, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),  # -L+H+W
+            (1, 1, -1, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),  # -H+W+L
+        )
+        for dW, dL, dH, si, sj, J, t, V in _BONDS:
+            add_neighbor_interaction_3d(
+                StdI, iW, iL, iH, dW, dL, dH, si, sj, J, t, V)
 
     close_lattice_xsf(StdI)
