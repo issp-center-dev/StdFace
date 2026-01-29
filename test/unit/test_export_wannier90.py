@@ -346,7 +346,7 @@ class TestWriteWannier90:
         """One interaction entry, nspin=1."""
         item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=0, t=0, v=1.5 + 0.5j)
         fname = str(tmp_path / "test_w90.dat")
-        ew._write_wannier90(1, [item], 1, 1, fname, "Test")
+        ew._write_wannier90([item], 1, 1, fname, "Test")
 
         with open(fname) as f:
             lines = f.readlines()
@@ -371,7 +371,7 @@ class TestWriteWannier90:
         """Check that the reverse entry is set to conjugate."""
         item = ew._IntrItem(r=[1, 0, 0], a=0, b=0, s=0, t=0, v=1.0 + 2.0j)
         fname = str(tmp_path / "test_hc.dat")
-        ew._write_wannier90(1, [item], 1, 1, fname, "Test")
+        ew._write_wannier90([item], 1, 1, fname, "Test")
 
         with open(fname) as f:
             lines = f.readlines()
@@ -398,7 +398,7 @@ class TestWriteWannier90:
         """nspin=2 should use extended format with s,t columns."""
         item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=1, t=0, v=0.3 + 0j)
         fname = str(tmp_path / "test_spin.dat")
-        ew._write_wannier90(1, [item], 1, 2, fname, "SpinTest")
+        ew._write_wannier90([item], 1, 2, fname, "SpinTest")
 
         with open(fname) as f:
             lines = f.readlines()
@@ -420,7 +420,7 @@ class TestBuildWannierMatrix:
     def test_single_item_rr(self):
         """Single item at r=[0,0,0] gives rr=[0,0,0]."""
         item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=0, t=0, v=1.0 + 0j)
-        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        rr, nvol, matrix = ew._build_wannier_matrix([item], 1, 1)
         assert rr == [0, 0, 0]
         assert nvol == 1
         assert len(matrix) == 1
@@ -428,28 +428,28 @@ class TestBuildWannierMatrix:
     def test_nonzero_r_expands_range(self):
         """Item at r=[1,0,0] gives rr=[1,0,0] and nvol=3."""
         item = ew._IntrItem(r=[1, 0, 0], a=0, b=0, s=0, t=0, v=2.0 + 0j)
-        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        rr, nvol, matrix = ew._build_wannier_matrix([item], 1, 1)
         assert rr == [1, 0, 0]
         assert nvol == 3
 
     def test_matrix_value_placed(self):
         """Check that the item value ends up at the correct matrix index."""
         item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=0, t=0, v=3.5 + 1.0j)
-        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        rr, nvol, matrix = ew._build_wannier_matrix([item], 1, 1)
         idx = ew._compute_index(0, 0, 0, 0, 0, 0, 0, rr, 1, 1)
         assert matrix[idx] == pytest.approx(3.5 + 1.0j)
 
     def test_hermitian_conjugate_filled(self):
         """Reverse-direction entry is set to conjugate when empty."""
         item = ew._IntrItem(r=[1, 0, 0], a=0, b=0, s=0, t=0, v=1.0 + 2.0j)
-        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 1)
+        rr, nvol, matrix = ew._build_wannier_matrix([item], 1, 1)
         ridx = ew._compute_index(-1, 0, 0, 0, 0, 0, 0, rr, 1, 1)
         assert matrix[ridx] == pytest.approx(1.0 - 2.0j)
 
     def test_spin_matrix_size(self):
         """With nspin=2, matrix size is nvol * nsiteuc^2 * nspin^2."""
         item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=1, t=0, v=0.5 + 0j)
-        rr, nvol, matrix = ew._build_wannier_matrix(1, [item], 1, 2)
+        rr, nvol, matrix = ew._build_wannier_matrix([item], 1, 2)
         assert len(matrix) == nvol * 1 * 1 * 2 * 2
 
 

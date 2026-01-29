@@ -174,7 +174,6 @@ def _compute_index(rx: int, ry: int, rz: int,
 # -----------------------------------------------------------------------
 
 def _build_wannier_matrix(
-    nintr_table: int,
     intr_table: list[_IntrItem],
     nsiteuc: int,
     nspin: int,
@@ -187,8 +186,6 @@ def _build_wannier_matrix(
 
     Parameters
     ----------
-    nintr_table : int
-        Number of interaction terms.
     intr_table : list of _IntrItem
         Array of interaction parameters.
     nsiteuc : int
@@ -221,22 +218,20 @@ def _build_wannier_matrix(
     matrix_size = nvol * nsiteuc * nsiteuc * nspin * nspin
     matrix = np.zeros(matrix_size, dtype=complex)
 
-    for k in range(nintr_table):
+    for entry in intr_table:
         idx = _compute_index(
-            intr_table[k].r[0], intr_table[k].r[1], intr_table[k].r[2],
-            intr_table[k].a, intr_table[k].b,
-            intr_table[k].s, intr_table[k].t,
+            entry.r[0], entry.r[1], entry.r[2],
+            entry.a, entry.b, entry.s, entry.t,
             rr, nsiteuc, nspin)
-        matrix[idx] = intr_table[k].v
+        matrix[idx] = entry.v
 
         ridx = _compute_index(
-            -intr_table[k].r[0], -intr_table[k].r[1], -intr_table[k].r[2],
-            intr_table[k].b, intr_table[k].a,
-            intr_table[k].t, intr_table[k].s,
+            -entry.r[0], -entry.r[1], -entry.r[2],
+            entry.b, entry.a, entry.t, entry.s,
             rr, nsiteuc, nspin)
 
         if abs(matrix[ridx]) < _EPS:
-            matrix[ridx] = np.conj(intr_table[k].v)
+            matrix[ridx] = np.conj(entry.v)
 
     return rr, nvol, matrix
 
@@ -305,7 +300,7 @@ def _write_wannier_body(
                             f"{matrix[idx].imag:16.12f}\n")
 
 
-def _write_wannier90(nintr_table: int, intr_table: list[_IntrItem],
+def _write_wannier90(intr_table: list[_IntrItem],
                      nsiteuc: int, nspin: int,
                      fname: str, tagname: str) -> None:
     """Write interaction parameters to file in Wannier90 format.
@@ -315,8 +310,6 @@ def _write_wannier90(nintr_table: int, intr_table: list[_IntrItem],
 
     Parameters
     ----------
-    nintr_table : int
-        Number of interaction terms.
     intr_table : list of _IntrItem
         Array of interaction parameters.
     nsiteuc : int
@@ -329,7 +322,7 @@ def _write_wannier90(nintr_table: int, intr_table: list[_IntrItem],
         Tag identifying interaction type.
     """
     rr, nvol, matrix = _build_wannier_matrix(
-        nintr_table, intr_table, nsiteuc, nspin)
+        intr_table, nsiteuc, nspin)
 
     with open(fname, "w") as fp_out:
         # Write header
@@ -571,7 +564,7 @@ def _export_inter(StdI: StdIntList,
         intr_table = _build_inter_table(StdI, nintr, intr_index, intr_value)
 
         if intr_table:
-            _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC, 1,
+            _write_wannier90(intr_table, StdI.NsiteUC, 1,
                              fname, tagname)
         else:
             print(f"{fname:>24s} is skipped.")
@@ -733,7 +726,7 @@ def _export_transfer(StdI: StdIntList,
             StdI, nintr, intr_index, intr_value, spin_dep)
 
         if intr_table:
-            _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC,
+            _write_wannier90(intr_table, StdI.NsiteUC,
                              2 if spin_dep == 1 else 1,
                              fname, tagname)
         else:
@@ -834,7 +827,7 @@ def _export_coulomb_intra(StdI: StdIntList,
             StdI, nintr, intr_index, intr_value)
 
         if intr_table:
-            _write_wannier90(len(intr_table), intr_table, StdI.NsiteUC, 1,
+            _write_wannier90(intr_table, StdI.NsiteUC, 1,
                              fname, tagname)
         else:
             print(f"{fname:>24s} is skipped.")

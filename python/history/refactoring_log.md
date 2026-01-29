@@ -7679,3 +7679,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 150 — 2026-01-29
+
+**Files**: `python/writer/export_wannier90.py`, `test/unit/test_export_wannier90.py`
+**Change**: Replaced `for k in range(nintr_table)` with `for entry in intr_table` in `_build_wannier_matrix`, eliminating 10 occurrences of `intr_table[k].` repeated indexing. Removed redundant `nintr_table` parameter from `_build_wannier_matrix` and `_write_wannier90`. Updated all call sites and tests.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
