@@ -7655,3 +7655,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 148 — 2026-01-29
+
+**Files**: `python/writer/common_writer.py`
+**Change**: Use tuple unpacking and `for row in greenindx` iteration in `print_1_green` and `print_2_green`, replacing verbose `greenindx[ig][0..7]` repeated indexing.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

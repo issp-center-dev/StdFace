@@ -754,11 +754,9 @@ def print_1_green(StdI: StdIntList) -> None:
         fp.write("===============================\n")
         fp.write("======== Green functions ======\n")
         fp.write("===============================\n")
-        for ig in range(ngreen):
-            fp.write(
-                f"{greenindx[ig][0]:5d} {greenindx[ig][1]:5d} "
-                f"{greenindx[ig][2]:5d} {greenindx[ig][3]:5d}\n"
-            )
+        for row in greenindx:
+            i0, s0, i1, s1 = row
+            fp.write(f"{i0:5d} {s0:5d} {i1:5d} {s1:5d}\n")
 
     print("    greenone.def is written.")
 
@@ -802,12 +800,11 @@ def print_2_green(StdI: StdIntList) -> None:
         fp.write("=============================================\n")
         fp.write("======== Green functions for Sq AND Nq ======\n")
         fp.write("=============================================\n")
-        for ig in range(ngreen):
+        for row in greenindx:
+            i0, s0, i1, s1, i2, s2, i3, s3 = row
             fp.write(
-                f"{greenindx[ig][0]:5d} {greenindx[ig][1]:5d} "
-                f"{greenindx[ig][2]:5d} {greenindx[ig][3]:5d} "
-                f"{greenindx[ig][4]:5d} {greenindx[ig][5]:5d} "
-                f"{greenindx[ig][6]:5d} {greenindx[ig][7]:5d}\n"
+                f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
+                f"{i2:5d} {s2:5d} {i3:5d} {s3:5d}\n"
             )
 
     print("    greentwo.def is written.")
