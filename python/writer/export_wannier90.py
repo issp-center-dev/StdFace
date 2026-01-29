@@ -114,13 +114,7 @@ def _write_geometry(StdI: StdIntList, fname: str) -> None:
     - Number of orbitals per unit cell
     - Orbital positions in fractional coordinates
     """
-    try:
-        fp_out = open(fname, "w")
-    except OSError:
-        _fatal(f"cannot open file for output: {fname}")
-        return  # unreachable, but keeps type checker happy
-
-    with fp_out:
+    with open(fname, "w") as fp_out:
         # Print primitive vectors
         for row in StdI.direct:
             fp_out.write(f"{row[0]:16.12f} {row[1]:16.12f} {row[2]:16.12f}\n")
@@ -337,13 +331,7 @@ def _write_wannier90(nintr_table: int, intr_table: list[_IntrItem],
     rr, nvol, matrix = _build_wannier_matrix(
         nintr_table, intr_table, nsiteuc, nspin)
 
-    try:
-        fp_out = open(fname, "w")
-    except OSError:
-        _fatal(f"cannot open file: {fname}")
-        return
-
-    with fp_out:
+    with open(fname, "w") as fp_out:
         # Write header
         fp_out.write(f"{tagname} in wannier90-like format for uhfk\n")
         fp_out.write(f"{nsiteuc}\n{nvol}\n")

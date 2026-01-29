@@ -7104,3 +7104,29 @@ two `_build_*_table` functions. Replaced with `dict[int, int]` for O(1) lookup.
 
 **Suggested next step**: Simplify the `try/open + with` patterns in
 `export_wannier90.py` to plain `with open(...)`, or begin Phase 2 class work.
+
+---
+
+## Step 121 — Simplify `try/open + with` to `with open()` in `export_wannier90.py`
+
+**Date**: 2026-01-29
+**File**: `python/writer/export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Two file-writing functions (`_write_geometry`, `_write_wannier90`)
+used a C-style pattern of `try: fp = open(...) / except: fatal() / with fp:`.
+Since `_fatal` calls `exit_program(-1)` which terminates the process, the
+try/except was redundant — an uncaught OSError would produce the same effect.
+Simplified both to idiomatic `with open(...) as fp:`.
+
+**Changes**:
+
+- `_write_geometry`: replaced try/except/with with `with open(...) as fp_out:`
+- `_write_wannier90`: same simplification
+
+**Test results**:
+- Unit tests: 1256 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
+class, or continue finding remaining C-style patterns in other modules.
