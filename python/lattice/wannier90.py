@@ -40,45 +40,6 @@ from .site_util import init_site, find_site, set_local_spin_flags
 # ---------------------------------------------------------------------------
 
 
-def _calc_inverse_matrix(cutoff_rvec: np.ndarray) -> np.ndarray:
-    """Calculate inverse of a 3x3 matrix.
-
-    Parameters
-    ----------
-    cutoff_rvec : numpy.ndarray
-        Input 3x3 matrix (shape ``(3, 3)``).
-
-    Returns
-    -------
-    numpy.ndarray
-        Inverse matrix (shape ``(3, 3)``).
-    """
-    N = cutoff_rvec.copy().astype(float)
-
-    det = (N[0, 0] * N[1, 1] * N[2, 2]
-           + N[1, 0] * N[2, 1] * N[0, 2]
-           + N[2, 0] * N[0, 1] * N[1, 2]
-           - N[2, 0] * N[1, 1] * N[0, 2]
-           - N[1, 0] * N[0, 1] * N[2, 2]
-           - N[0, 0] * N[2, 1] * N[1, 2])
-
-    inv = np.zeros((3, 3))
-    inv[0, 0] = N[1, 1] * N[2, 2] - N[1, 2] * N[2, 1]
-    inv[0, 1] = -(N[0, 1] * N[2, 2] - N[0, 2] * N[2, 1])
-    inv[0, 2] = N[0, 1] * N[1, 2] - N[0, 2] * N[1, 1]
-
-    inv[1, 0] = -(N[1, 0] * N[2, 2] - N[2, 0] * N[1, 2])
-    inv[1, 1] = N[0, 0] * N[2, 2] - N[0, 2] * N[2, 0]
-    inv[1, 2] = -(N[0, 0] * N[1, 2] - N[0, 2] * N[1, 0])
-
-    inv[2, 0] = N[1, 0] * N[2, 1] - N[2, 0] * N[1, 1]
-    inv[2, 1] = -(N[0, 0] * N[2, 1] - N[2, 0] * N[0, 1])
-    inv[2, 2] = N[0, 0] * N[1, 1] - N[0, 1] * N[1, 0]
-
-    inv /= det
-    return inv
-
-
 def _check_in_box(rvec: np.ndarray, inverse_matrix: np.ndarray) -> bool:
     """Check if a lattice vector is inside the unit cell box.
 
@@ -355,7 +316,7 @@ def _read_w90(
         indx_tot = np.zeros((nWSC, 3), dtype=int)
 
         if flg_vec:
-            inverse_rvec = _calc_inverse_matrix(cutoff_Rvec)
+            inverse_rvec = np.linalg.inv(cutoff_Rvec.astype(float))
 
         # Read body
         for iWSC in range(nWSC):

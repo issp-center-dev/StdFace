@@ -7487,3 +7487,22 @@ the intent clearer than the raw while-loop.
 **Tests**:
 - Unit: 1250 passed
 - Integration: 83/83 passed
+
+## Step 138 — Replace `_calc_inverse_matrix` with `np.linalg.inv` in `wannier90.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/lattice/wannier90.py`, `test/unit/test_wannier90.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Removed the 37-line hand-coded `_calc_inverse_matrix()` function
+that manually computed the determinant and cofactor matrix of a 3×3 matrix.
+Replaced its single call site with `np.linalg.inv(cutoff_Rvec.astype(float))`.
+Removed the 4 unit tests that were testing this wrapper (testing numpy's own
+`inv` is unnecessary).
+
+**Why**: NumPy provides a well-tested, optimized matrix inverse. The manual
+C-translated implementation was redundant.
+
+**Tests**:
+- Unit: 1246 passed (4 removed)
+- Integration: 83/83 passed

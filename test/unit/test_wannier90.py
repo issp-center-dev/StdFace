@@ -29,39 +29,6 @@ NaN_c = complex(float("nan"), 0.0)
 # ---------------------------------------------------------------------------
 
 
-class TestCalcInverseMatrix:
-    """Tests for the internal _calc_inverse_matrix helper."""
-
-    def test_identity(self):
-        """Inverse of the identity matrix should be the identity matrix."""
-        mat = np.eye(3)
-        inv = w90._calc_inverse_matrix(mat)
-        np.testing.assert_allclose(inv, np.eye(3), atol=1e-12)
-
-    def test_diagonal(self):
-        """Inverse of a diagonal matrix should have reciprocal entries."""
-        mat = np.diag([2.0, 4.0, 5.0])
-        inv = w90._calc_inverse_matrix(mat)
-        expected = np.diag([0.5, 0.25, 0.2])
-        np.testing.assert_allclose(inv, expected, atol=1e-12)
-
-    def test_general_3x3(self):
-        """Inverse of a general non-singular 3x3 matrix."""
-        mat = np.array([[1.0, 2.0, 3.0],
-                        [0.0, 1.0, 4.0],
-                        [5.0, 6.0, 0.0]])
-        inv = w90._calc_inverse_matrix(mat)
-        product = mat @ inv
-        np.testing.assert_allclose(product, np.eye(3), atol=1e-12)
-
-    def test_roundtrip(self):
-        """M @ inv(M) should be the identity for a random matrix."""
-        rng = np.random.default_rng(42)
-        mat = rng.random((3, 3)) + np.eye(3)
-        inv = w90._calc_inverse_matrix(mat)
-        np.testing.assert_allclose(mat @ inv, np.eye(3), atol=1e-10)
-
-
 class TestCheckInBox:
     """Tests for the internal _check_in_box helper."""
 
