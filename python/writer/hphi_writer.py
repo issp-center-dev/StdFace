@@ -900,13 +900,30 @@ def _dclaser_At_Et(
     return V * time, -V
 
 
-_PUMP_TYPE_HANDLERS: dict[str, tuple[int, object]] = {
-    "quench":     (2, None),
-    "pulselaser": (1, _pulselaser_At_Et),
-    "aclaser":    (1, _aclaser_At_Et),
-    "dclaser":    (1, _dclaser_At_Et),
+class _PumpTypeConfig(NamedTuple):
+    """Configuration for a pump-type entry in the dispatch table.
+
+    Attributes
+    ----------
+    pump_body : int
+        Pump body type (1 = one-body laser, 2 = two-body quench).
+    handler_fn : Callable or None
+        Field computation function with signature
+        ``(time, V, freq, tshift, tdump) -> (At, Et)``, or ``None``
+        for quench (no field computation).
+    """
+
+    pump_body: int
+    handler_fn: Callable | None
+
+
+_PUMP_TYPE_HANDLERS: dict[str, _PumpTypeConfig] = {
+    "quench":     _PumpTypeConfig(2, None),
+    "pulselaser": _PumpTypeConfig(1, _pulselaser_At_Et),
+    "aclaser":    _PumpTypeConfig(1, _aclaser_At_Et),
+    "dclaser":    _PumpTypeConfig(1, _dclaser_At_Et),
 }
-"""Maps each PumpType to ``(PumpBody, handler_fn)``.
+"""Maps each PumpType to a :class:`_PumpTypeConfig`.
 
 For ``PumpBody == 2`` (quench), *handler_fn* is ``None`` — no field is
 computed.  For ``PumpBody == 1``, *handler_fn* is called once per
