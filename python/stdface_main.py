@@ -48,16 +48,18 @@ from keyword_parser import (
     parse_common_keyword as _parse_common_keyword,
     parse_solver_keyword as _parse_solver_keyword,
 )
-from lattice import chain_lattice
-from lattice import square_lattice
-from lattice import ladder
-from lattice import triangular_lattice
-from lattice import honeycomb_lattice
-from lattice import kagome
-from lattice import orthorhombic
-from lattice import fc_ortho
-from lattice import pyrochlore
-from lattice import wannier90 as wannier90_mod
+from lattice import (
+    chain_lattice,
+    square_lattice,
+    ladder,
+    triangular_lattice,
+    honeycomb_lattice,
+    kagome,
+    orthorhombic,
+    fc_ortho,
+    pyrochlore,
+    wannier90 as wannier90_mod,
+)
 
 # ---------------------------------------------------------------------------
 #  Lattice dispatch tables

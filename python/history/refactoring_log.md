@@ -7541,3 +7541,18 @@ Removed stale duplicate comment `# judge_vec = rvec @ inverse_matrix` in
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+## Step 141 — Consolidate lattice imports in `stdface_main.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/stdface_main.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Consolidated 10 separate `from lattice import X` statements into a
+single grouped import block using parenthesized imports.
+
+**Why**: Reduces visual clutter; follows PEP 8 grouped import convention.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
