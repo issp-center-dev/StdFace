@@ -100,11 +100,7 @@ def _count_nonzero(nterms: int, coeff: list) -> int:
     int
         Number of non-zero terms.
     """
-    count = 0
-    for k in range(nterms):
-        if abs(coeff[k]) > AMPLITUDE_EPS:
-            count += 1
-    return count
+    return sum(1 for k in range(nterms) if abs(coeff[k]) > AMPLITUDE_EPS)
 
 
 def _write_interaction_file(

@@ -7183,3 +7183,25 @@ to find duplicate interaction terms. Replaced with dict-based O(n) lookups:
 
 **Suggested next step**: Replace the O(n) `_count_nonzero` loop with
 `sum(1 for ...)` or continue to Phase 2 class introduction.
+
+---
+
+## Step 124 — Replace manual counting loop in `_count_nonzero` with generator expression
+
+**Date**: 2026-01-29
+**File**: `python/writer/interaction_writer.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_count_nonzero()` used a manual counter loop. Replaced with
+a single-line `sum(1 for ...)` generator expression — idiomatic Python.
+
+**Changes**:
+
+- Replaced 4-line loop body with `sum(1 for k in range(nterms) if abs(coeff[k]) > AMPLITUDE_EPS)`
+
+**Test results**:
+- Unit tests: 1256 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
+class or `SolverWriter` hierarchy.
