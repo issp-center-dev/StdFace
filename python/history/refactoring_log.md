@@ -7643,3 +7643,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 147 — 2026-01-29
+
+**Files**: `python/writer/common_writer.py`, `python/writer/hphi_writer.py`
+**Change**: Use tuple unpacking for index array writes in `print_trans` (common_writer.py) and pump write loop (hphi_writer.py). Extracts `i0, s0, i1, s1` and `val` variables to avoid repeated indexing.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

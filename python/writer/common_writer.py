@@ -187,14 +187,12 @@ def print_trans(StdI: StdIntList) -> None:
         fp.write("========i_j_s_tijs====== \n")
         fp.write("======================== \n")
         for ktrans in range(StdI.ntrans):
-            if abs(StdI.trans[ktrans]) > AMPLITUDE_EPS:
+            val = StdI.trans[ktrans]
+            if abs(val) > AMPLITUDE_EPS:
+                i0, s0, i1, s1 = StdI.transindx[ktrans]
                 fp.write(
-                    f"{StdI.transindx[ktrans][0]:5d} "
-                    f"{StdI.transindx[ktrans][1]:5d} "
-                    f"{StdI.transindx[ktrans][2]:5d} "
-                    f"{StdI.transindx[ktrans][3]:5d} "
-                    f"{StdI.trans[ktrans].real:25.15f} "
-                    f"{StdI.trans[ktrans].imag:25.15f}\n"
+                    f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
+                    f"{val.real:25.15f} {val.imag:25.15f}\n"
                 )
 
     print("      trans.def is written.")

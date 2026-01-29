@@ -1026,14 +1026,14 @@ def print_pump(StdI: StdIntList) -> None:
                 fp.write(f"{StdI.dt * float(it):f}  {npump0}\n")
 
                 for ipump in range(StdI.npump[it]):
-                    if abs(StdI.pump[it][ipump]) <= AMPLITUDE_EPS:
+                    val = StdI.pump[it][ipump]
+                    if abs(val) <= AMPLITUDE_EPS:
                         continue
-                    fp.write(f"{StdI.pumpindx[it][ipump][0]:5d} "
-                             f"{StdI.pumpindx[it][ipump][1]:5d} "
-                             f"{StdI.pumpindx[it][ipump][2]:5d} "
-                             f"{StdI.pumpindx[it][ipump][3]:5d} "
-                             f"{StdI.pump[it][ipump].real:25.15f} "
-                             f"{StdI.pump[it][ipump].imag:25.15f}\n")
+                    i0, s0, i1, s1 = StdI.pumpindx[it][ipump]
+                    fp.write(
+                        f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
+                        f"{val.real:25.15f} {val.imag:25.15f}\n"
+                    )
 
         print("      teone.def is written.\n")
 
