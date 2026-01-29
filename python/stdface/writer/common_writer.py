@@ -747,14 +747,16 @@ def print_1_green(StdI: StdIntList) -> None:
     ngreen = len(greenindx)
 
     with open("greenone.def", "w") as fp:
-        fp.write("===============================\n")
-        fp.write(f"NCisAjs {ngreen:10d}\n")
-        fp.write("===============================\n")
-        fp.write("======== Green functions ======\n")
-        fp.write("===============================\n")
-        for row in greenindx:
-            i0, s0, i1, s1 = row
-            fp.write(f"{i0:5d} {s0:5d} {i1:5d} {s1:5d}\n")
+        lines = [
+            "===============================\n",
+            f"NCisAjs {ngreen:10d}\n",
+            "===============================\n",
+            "======== Green functions ======\n",
+            "===============================\n",
+        ]
+        for i0, s0, i1, s1 in greenindx:
+            lines.append(f"{i0:5d} {s0:5d} {i1:5d} {s1:5d}\n")
+        fp.write("".join(lines))
 
     print("    greenone.def is written.")
 
@@ -793,17 +795,19 @@ def print_2_green(StdI: StdIntList) -> None:
 
     ngreen = len(greenindx)
     with open("greentwo.def", "w") as fp:
-        fp.write("=============================================\n")
-        fp.write(f"NCisAjsCktAltDC {ngreen:10d}\n")
-        fp.write("=============================================\n")
-        fp.write("======== Green functions for Sq AND Nq ======\n")
-        fp.write("=============================================\n")
-        for row in greenindx:
-            i0, s0, i1, s1, i2, s2, i3, s3 = row
-            fp.write(
+        lines = [
+            "=============================================\n",
+            f"NCisAjsCktAltDC {ngreen:10d}\n",
+            "=============================================\n",
+            "======== Green functions for Sq AND Nq ======\n",
+            "=============================================\n",
+        ]
+        for i0, s0, i1, s1, i2, s2, i3, s3 in greenindx:
+            lines.append(
                 f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
                 f"{i2:5d} {s2:5d} {i3:5d} {s3:5d}\n"
             )
+        fp.write("".join(lines))
 
     print("    greentwo.def is written.")
 

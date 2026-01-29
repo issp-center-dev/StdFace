@@ -67,11 +67,39 @@ def _cell_vector(Cell: np.ndarray, idx: int) -> list[int]:
     return [int(Cell[idx, 0]), int(Cell[idx, 1]), int(Cell[idx, 2])]
 
 
+def _build_cell_map(StdI: StdIntList) -> dict[tuple[int, int, int], int]:
+    """Build or return a cached mapping from cell coordinates to index.
+
+    The map is stored on ``StdI._cell_map`` and reused on subsequent
+    calls.  It is invalidated whenever ``_enumerate_cells`` is called.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Model parameter structure containing the ``Cell`` array and
+        ``NCell`` count.
+
+    Returns
+    -------
+    dict[tuple[int, int, int], int]
+        Mapping from ``(Cell[k,0], Cell[k,1], Cell[k,2])`` to ``k``.
+    """
+    cell_map = getattr(StdI, '_cell_map', None)
+    if cell_map is not None:
+        return cell_map
+    cell_map = {}
+    for k in range(StdI.NCell):
+        key = (int(StdI.Cell[k, 0]), int(StdI.Cell[k, 1]), int(StdI.Cell[k, 2]))
+        if key not in cell_map:
+            cell_map[key] = k
+    StdI._cell_map = cell_map
+    return cell_map
+
+
 def _find_cell_index(StdI: StdIntList, cellV: list[int]) -> int:
     """Find the cell index whose coordinates match *cellV*.
 
-    Performs a linear search over ``StdI.Cell`` to find the row whose
-    three coordinates match *cellV*.
+    Uses a hash map for O(1) lookup instead of linear scan.
 
     Parameters
     ----------
@@ -87,10 +115,8 @@ def _find_cell_index(StdI: StdIntList, cellV: list[int]) -> int:
         Cell index ``k`` such that ``StdI.Cell[k]`` equals *cellV*.
         Returns 0 if no match is found (matching the original C behavior).
     """
-    for k in range(StdI.NCell):
-        if _cell_vector(StdI.Cell, k) == cellV:
-            return k
-    return 0
+    cell_map = _build_cell_map(StdI)
+    return cell_map.get((cellV[0], cellV[1], cellV[2]), 0)
 
 
 def _fold_to_cell(
@@ -417,6 +443,7 @@ def _enumerate_cells(StdI: StdIntList) -> None:
     # Enumerate cells within the bounding box
     # Note: iteration order must be ic2 outermost, ic0 innermost (matching C code)
     StdI.Cell = np.zeros((StdI.NCell, 3), dtype=int)
+    StdI._cell_map = None  # invalidate cell map cache
     jj_idx = 0
     for ic2, ic1, ic0 in itertools.product(
         range(bound[2][0], bound[2][1] + 1),

@@ -347,17 +347,15 @@ def _jastrow_momentum_projected(
     Jastrow : numpy.ndarray
         Final renumbered Jastrow index matrix.
     """
-    # (1) Copy Orbital index
-    for isite in range(StdI.nsite):
-        for jsite in range(StdI.nsite):
-            Jastrow[isite, jsite] = StdI.Orb[isite, jsite]
+    # (1) Copy Orbital index (vectorised)
+    Jastrow[:, :] = StdI.Orb[:StdI.nsite, :StdI.nsite]
 
-    # (2) Symmetrize
+    # (2) Symmetrize — for each orbital value in ascending order,
+    #     mirror (i,j) -> (j,i).  Sequential to preserve order semantics.
     for iorb in range(StdI.NOrb):
-        for isite in range(StdI.nsite):
-            for jsite in range(StdI.nsite):
-                if Jastrow[isite, jsite] == iorb:
-                    Jastrow[jsite, isite] = Jastrow[isite, jsite]
+        rows, cols = np.where(Jastrow == iorb)
+        for r, c in zip(rows, cols):
+            Jastrow[c, r] = iorb
 
     # (3) Exclude local-spin sites and renumber
     NJastrow = 0 if StdI.model == ModelType.HUBBARD else -1
@@ -371,8 +369,7 @@ def _jastrow_momentum_projected(
             if Jastrow[isite, jsite] >= 0:
                 iJastrow = Jastrow[isite, jsite]
                 NJastrow -= 1
-                mask = (Jastrow == iJastrow)
-                Jastrow[mask] = NJastrow
+                Jastrow[Jastrow == iJastrow] = NJastrow
 
     NJastrow = -NJastrow
     Jastrow = -1 - Jastrow

@@ -133,40 +133,43 @@ def _compute_parallel_orbitals(
     NOrbGC : int
         Number of unique parallel orbital indices.
     """
-    # (1) Copy
-    OrbGC = [[0] * nsite for _ in range(nsite)]
-    reverse = [[0] * nsite for _ in range(nsite)]
-    for isite in range(nsite):
-        for jsite in range(nsite):
-            OrbGC[isite][jsite] = int(Orb[isite][jsite])
-            reverse[isite][jsite] = int(AntiOrb[isite][jsite])
+    import numpy as np
 
-    # (2) Symmetrise
+    # (1) Copy into numpy arrays
+    OrbGC = np.asarray(Orb, dtype=int).copy()
+    reverse = np.asarray(AntiOrb, dtype=int).copy()
+
+    # (2) Symmetrise — process each orbital in ascending order.
+    #     For each iorb, find all (i,j) with OrbGC[i,j]==iorb and set
+    #     OrbGC[j,i]=iorb, reverse[j,i]=-reverse[i,j].
+    #     Order matters: later iorb can overwrite earlier iorb's writes.
+    #     Process sequentially to preserve the original semantics where
+    #     each (i,j) match writes to (j,i) immediately.
     for iorb in range(NOrb):
-        for isite in range(nsite):
-            for jsite in range(nsite):
-                if OrbGC[isite][jsite] == iorb:
-                    OrbGC[jsite][isite] = OrbGC[isite][jsite]
-                    reverse[jsite][isite] = -reverse[isite][jsite]
+        rows, cols = np.where(OrbGC == iorb)
+        for r, c in zip(rows, cols):
+            OrbGC[c, r] = iorb
+            reverse[c, r] = -reverse[r, c]
 
-    # (3) Renumber -- lower triangle (isite > jsite)
+    # (3) Renumber — lower triangle (isite > jsite).
+    #     Replace each newly-seen positive orbital value with a negative
+    #     temporary across the entire matrix (vectorised).
     NOrbGC = 0
     for isite in range(nsite):
         for jsite in range(isite):
-            if OrbGC[isite][jsite] >= 0:
-                iOrbGC = OrbGC[isite][jsite]
+            if OrbGC[isite, jsite] >= 0:
+                iOrbGC = OrbGC[isite, jsite]
                 NOrbGC -= 1
-                for isite1 in range(nsite):
-                    for jsite1 in range(nsite):
-                        if OrbGC[isite1][jsite1] == iOrbGC:
-                            OrbGC[isite1][jsite1] = NOrbGC
+                OrbGC[OrbGC == iOrbGC] = NOrbGC
 
     NOrbGC = -NOrbGC
-    for isite in range(nsite):
-        for jsite in range(nsite):
-            OrbGC[isite][jsite] = -1 - OrbGC[isite][jsite]
+    OrbGC = -1 - OrbGC
 
-    return OrbGC, reverse, NOrbGC
+    # Convert back to list-of-lists for downstream compatibility
+    OrbGC_list = OrbGC.tolist()
+    reverse_list = reverse.tolist()
+
+    return OrbGC_list, reverse_list, NOrbGC
 
 
 def _write_orbitalidxpara(

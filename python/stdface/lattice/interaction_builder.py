@@ -375,6 +375,16 @@ def general_j(
     Si = 0.5 * Si2
     Sj = 0.5 * Sj2
 
+    # Precompute spin ladder factors for all needed (S, Sz) pairs
+    ladder_i: dict[int, float] = {}
+    for ispin in range(1, Si2 + 1):
+        Siz = Si - float(ispin)
+        ladder_i[ispin] = _spin_ladder_factor(Si, Siz)
+    ladder_j: dict[int, float] = {}
+    for jspin in range(1, Sj2 + 1):
+        Sjz = Sj - float(jspin)
+        ladder_j[jspin] = _spin_ladder_factor(Sj, Sjz)
+
     for ispin in range(Si2 + 1):
         Siz = Si - float(ispin)
         for jspin in range(Sj2 + 1):
@@ -388,8 +398,8 @@ def general_j(
                      jsite, jspin, jsite, jspin)
 
             if ispin > 0 and jspin > 0 and use_ex:
-                fi = _spin_ladder_factor(Si, Siz)
-                fj = _spin_ladder_factor(Sj, Sjz)
+                fi = ladder_i[ispin]
+                fj = ladder_j[jspin]
 
                 # (2) S_i^+ S_j^- + h.c.
                 intr0 = 0.25 * (J[0, 0] + J[1, 1] + 1j * (J[0, 1] - J[1, 0])) * fi * fj
@@ -411,7 +421,7 @@ def general_j(
 
             # (4) S_i^+ S_{jz} + h.c.
             if ispin > 0:
-                fi = _spin_ladder_factor(Si, Siz)
+                fi = ladder_i[ispin]
                 intr0 = 0.5 * (J[0, 2] - 1j * J[1, 2]) * fi * Sjz
                 intr(StdI, intr0,
                      isite, ispin - 1, isite, ispin,
@@ -422,7 +432,7 @@ def general_j(
 
             # (5) S_{iz} S_j^+ + h.c.
             if jspin > 0:
-                fj = _spin_ladder_factor(Sj, Sjz)
+                fj = ladder_j[jspin]
                 intr0 = 0.5 * (J[2, 0] - 1j * J[2, 1]) * Siz * fj
                 intr(StdI, intr0,
                      isite, ispin, isite, ispin,
