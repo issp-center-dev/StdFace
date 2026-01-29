@@ -12,8 +12,8 @@ import tempfile
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from writer import export_wannier90 as ew
+from stdface.core.stdface_vals import StdIntList
+from stdface.solvers.hwave import export_wannier90 as ew
 
 
 # ---------------------------------------------------------------------------

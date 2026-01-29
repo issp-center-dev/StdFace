@@ -10,10 +10,10 @@ import tempfile
 
 import pytest
 
-from stdface_vals import StdIntList
+from stdface.core.stdface_vals import StdIntList
 import numpy as np
 
-from writer.mvmc_writer import (
+from stdface.solvers.mvmc.writer import (
     print_orb,
     print_orb_para,
     print_gutzwiller,

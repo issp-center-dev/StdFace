@@ -10,8 +10,8 @@ import tempfile
 
 import pytest
 
-from stdface_vals import StdIntList, ModelType, SolverType
-from writer.common_writer import (
+from stdface.core.stdface_vals import StdIntList, ModelType, SolverType
+from stdface.writer.common_writer import (
     print_loc_spin,
     print_trans,
     print_namelist,
@@ -41,7 +41,7 @@ from writer.common_writer import (
     GreenFunctionIndices,
     _merge_duplicate_terms,
 )
-from writer.interaction_writer import print_interactions
+from stdface.writer.interaction_writer import print_interactions
 
 # Sentinel values matching what _reset_vals sets at runtime
 NaN_i = 2147483647

@@ -1,7 +1,6 @@
-"""Unit tests for solver_writer module.
+"""Unit tests for solver plugin system.
 
-Tests for the SolverWriter class hierarchy and the ``get_solver_writer``
-factory function.
+Tests for the SolverPlugin classes and the plugin registry.
 """
 from __future__ import annotations
 
@@ -11,15 +10,12 @@ import tempfile
 
 import pytest
 
-from writer.solver_writer import (
-    SolverWriter,
-    HPhiWriter,
-    MVMCWriter,
-    UHFWriter,
-    HWaveWriter,
-    get_solver_writer,
-)
-from stdface_vals import StdIntList
+from stdface.plugin import SolverPlugin, get_plugin
+from stdface.solvers.hphi import HPhiPlugin
+from stdface.solvers.mvmc import MVMCPlugin
+from stdface.solvers.uhf import UHFPlugin
+from stdface.solvers.hwave import HWavePlugin
+from stdface.core.stdface_vals import StdIntList
 
 # Sentinel values matching the C code
 NaN_i = 2147483647
@@ -103,70 +99,70 @@ def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
 
 
 # =====================================================================
-#  Tests for get_solver_writer factory
+#  Tests for get_plugin registry
 # =====================================================================
 
 
-class TestGetSolverWriter:
-    """Tests for the get_solver_writer factory function."""
+class TestGetPlugin:
+    """Tests for the get_plugin registry function."""
 
-    def test_returns_hphi_writer(self):
-        """Test that 'HPhi' returns an HPhiWriter."""
-        writer = get_solver_writer("HPhi")
-        assert isinstance(writer, HPhiWriter)
-        assert writer.name == "HPhi"
+    def test_returns_hphi_plugin(self):
+        """Test that 'HPhi' returns an HPhiPlugin."""
+        plugin = get_plugin("HPhi")
+        assert isinstance(plugin, HPhiPlugin)
+        assert plugin.name == "HPhi"
 
-    def test_returns_mvmc_writer(self):
-        """Test that 'mVMC' returns an MVMCWriter."""
-        writer = get_solver_writer("mVMC")
-        assert isinstance(writer, MVMCWriter)
-        assert writer.name == "mVMC"
+    def test_returns_mvmc_plugin(self):
+        """Test that 'mVMC' returns an MVMCPlugin."""
+        plugin = get_plugin("mVMC")
+        assert isinstance(plugin, MVMCPlugin)
+        assert plugin.name == "mVMC"
 
-    def test_returns_uhf_writer(self):
-        """Test that 'UHF' returns a UHFWriter."""
-        writer = get_solver_writer("UHF")
-        assert isinstance(writer, UHFWriter)
-        assert writer.name == "UHF"
+    def test_returns_uhf_plugin(self):
+        """Test that 'UHF' returns a UHFPlugin."""
+        plugin = get_plugin("UHF")
+        assert isinstance(plugin, UHFPlugin)
+        assert plugin.name == "UHF"
 
-    def test_returns_hwave_writer(self):
-        """Test that 'HWAVE' returns an HWaveWriter."""
-        writer = get_solver_writer("HWAVE")
-        assert isinstance(writer, HWaveWriter)
-        assert writer.name == "HWAVE"
+    def test_returns_hwave_plugin(self):
+        """Test that 'HWAVE' returns an HWavePlugin."""
+        plugin = get_plugin("HWAVE")
+        assert isinstance(plugin, HWavePlugin)
+        assert plugin.name == "HWAVE"
 
     def test_raises_on_unknown_solver(self):
-        """Test that an unknown solver raises ValueError."""
-        with pytest.raises(ValueError, match="Unknown solver"):
-            get_solver_writer("unknown")
+        """Test that an unknown solver raises KeyError."""
+        with pytest.raises(KeyError, match="No solver plugin"):
+            get_plugin("unknown")
 
 
 # =====================================================================
-#  Tests for SolverWriter subclasses
+#  Tests for SolverPlugin subclasses
 # =====================================================================
 
 
-class TestSolverWriterIsAbstract:
+class TestSolverPluginIsAbstract:
     """Tests for the abstract base class."""
 
     def test_cannot_instantiate_directly(self):
-        """Test that SolverWriter cannot be instantiated directly."""
+        """Test that SolverPlugin cannot be instantiated directly."""
         with pytest.raises(TypeError):
-            SolverWriter("test")
+            SolverPlugin()
 
 
-class TestHPhiWriter:
-    """Tests for the HPhiWriter class."""
+class TestHPhiPlugin:
+    """Tests for the HPhiPlugin class."""
 
     def test_writes_namelist_def(self):
-        """Test that HPhiWriter creates namelist.def."""
+        """Test that HPhiPlugin creates namelist.def."""
         StdI = _make_stdi_for_hphi(nsite=4)
-        writer = HPhiWriter()
+        plugin = get_plugin("HPhi")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                writer.write(StdI)
+                plugin.write(StdI)
                 assert os.path.exists("namelist.def")
                 assert os.path.exists("calcmod.def")
                 assert os.path.exists("modpara.def")
@@ -175,50 +171,50 @@ class TestHPhiWriter:
                 os.chdir(orig)
 
     def test_writes_trans_def(self):
-        """Test that HPhiWriter creates trans.def."""
+        """Test that HPhiPlugin creates trans.def."""
         StdI = _make_stdi_for_hphi(nsite=4)
-        writer = HPhiWriter()
+        plugin = get_plugin("HPhi")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                writer.write(StdI)
+                plugin.write(StdI)
                 assert os.path.exists("trans.def")
             finally:
                 os.chdir(orig)
 
     def test_writes_green_files(self):
-        """Test that HPhiWriter creates greenone.def and greentwo.def."""
+        """Test that HPhiPlugin creates greenone.def and greentwo.def."""
         StdI = _make_stdi_for_hphi(nsite=4)
-        writer = HPhiWriter()
+        plugin = get_plugin("HPhi")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                writer.write(StdI)
+                plugin.write(StdI)
                 assert os.path.exists("greenone.def")
                 assert os.path.exists("greentwo.def")
             finally:
                 os.chdir(orig)
 
 
-class TestUHFWriter:
-    """Tests for the UHFWriter class."""
+class TestUHFPlugin:
+    """Tests for the UHFPlugin class."""
 
     def test_writes_expected_files(self):
-        """Test that UHFWriter creates the expected set of files."""
+        """Test that UHFPlugin creates the expected set of files."""
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.solver = "UHF"
         StdI.outputmode = "****"
-        writer = UHFWriter()
+        plugin = get_plugin("UHF")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                writer.write(StdI)
+                plugin.write(StdI)
                 assert os.path.exists("locspn.def")
                 assert os.path.exists("trans.def")
                 assert os.path.exists("modpara.def")
@@ -228,8 +224,8 @@ class TestUHFWriter:
                 os.chdir(orig)
 
 
-class TestHWaveWriter:
-    """Tests for the HWaveWriter class."""
+class TestHWavePlugin:
+    """Tests for the HWavePlugin class."""
 
     def test_uhfr_mode_writes_trans(self):
         """Test that HWAVE in uhfr mode writes trans.def."""
@@ -237,13 +233,13 @@ class TestHWaveWriter:
         StdI.solver = "HWAVE"
         StdI.calcmode = "uhfr"
         StdI.outputmode = "****"
-        writer = HWaveWriter()
+        plugin = get_plugin("HWAVE")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                writer.write(StdI)
+                plugin.write(StdI)
                 assert os.path.exists("trans.def")
                 assert os.path.exists("greenone.def")
             finally:

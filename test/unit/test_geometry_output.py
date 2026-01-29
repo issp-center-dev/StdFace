@@ -11,8 +11,8 @@ import tempfile
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from lattice.geometry_output import print_xsf, print_geometry, _cell_diff
+from stdface.core.stdface_vals import StdIntList
+from stdface.lattice.geometry_output import print_xsf, print_geometry, _cell_diff
 
 
 def _make_stdi(
@@ -301,10 +301,10 @@ class TestBackwardCompatibility:
 
     def test_import_from_stdface_model_util(self):
         """Test that both functions are re-exported."""
-        from stdface_model_util import (
+        from stdface.core.stdface_model_util import (
             print_xsf as pxsf,
             print_geometry as pg,
         )
-        from lattice.geometry_output import print_xsf, print_geometry
+        from stdface.lattice.geometry_output import print_xsf, print_geometry
         assert pxsf is print_xsf
         assert pg is print_geometry

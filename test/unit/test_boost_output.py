@@ -11,8 +11,8 @@ import io
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from lattice.boost_output import (
+from stdface.core.stdface_vals import StdIntList
+from stdface.lattice.boost_output import (
     write_boost_mag_field,
     write_boost_j_full,
     write_boost_j_symmetric,
