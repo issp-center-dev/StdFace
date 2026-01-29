@@ -7943,3 +7943,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 172 — 2026-01-29
+
+**Files**: `python/lattice/wannier90.py`
+**Change**: Replaced the three repetitive `_read_w90_with_cutoff` calls (hopping, Coulomb, Hund) in `wannier90()` with a data-driven loop. Introduced `_W90Channel(NamedTuple)` to hold per-channel config (label, keys, file suffix, cutoff defaults, itUJ index, lambda), `_W90_FIELD_MAP` dict mapping channel key to StdI attribute names, and `_read_w90_channels()` helper that iterates over channels. Reduces ~36 lines of repetitive code to ~10 lines at the call site.
+**Phase**: 2 — Introduce classes/NamedTuples + Phase 1 extraction
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

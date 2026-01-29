@@ -22,7 +22,7 @@ import itertools
 import math
 import sys
 from enum import IntEnum
-from typing import TextIO
+from typing import NamedTuple, TextIO
 
 import numpy as np
 
@@ -1181,6 +1181,64 @@ def _validate_interaction_params(StdI: StdIntList) -> None:
 # ---------------------------------------------------------------------------
 
 
+class _W90Channel(NamedTuple):
+    """Configuration for one Wannier90 interaction channel (hopping/Coulomb/Hund)."""
+
+    label: str
+    key_lower: str
+    key_upper: str
+    file_suffix: str
+    cutoff_length_default: float
+    cutoff_R_defaults: tuple[int | None, ...]
+    itUJ: int
+    lam: float
+
+
+# Mapping from channel key_lower to (cutoff_attr, cutoff_length_attr, cutoffR_attr, cutoffVec_attr)
+_W90_FIELD_MAP: dict[str, tuple[str, str, str, str]] = {
+    "t": ("cutoff_t", "cutoff_length_t", "cutoff_tR", "cutoff_tVec"),
+    "u": ("cutoff_u", "cutoff_length_U", "cutoff_UR", "cutoff_UVec"),
+    "j": ("cutoff_j", "cutoff_length_J", "cutoff_JR", "cutoff_JVec"),
+}
+
+
+def _read_w90_channels(
+    StdI: StdIntList,
+    channels: tuple[_W90Channel, ...],
+    NtUJ: int,
+    tUJindx: np.ndarray,
+    tUJ: np.ndarray,
+) -> None:
+    """Read Wannier90 interaction files for all channels.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Standard interface data; cutoff fields are updated in place.
+    channels : tuple of _W90Channel
+        Channel configurations (hopping, Coulomb, Hund).
+    NtUJ : int
+        Number of interaction entries.
+    tUJindx : numpy.ndarray
+        Interaction index array.
+    tUJ : numpy.ndarray
+        Interaction value array.
+    """
+    for ch in channels:
+        print(f"\n  @ Wannier90 {ch.label} \n")
+        co_attr, cl_attr, cr_attr, cv_attr = _W90_FIELD_MAP[ch.key_lower]
+        cutoff, cutoff_length = _read_w90_with_cutoff(
+            StdI, ch.key_lower, ch.key_upper, ch.file_suffix,
+            getattr(StdI, co_attr), getattr(StdI, cl_attr),
+            getattr(StdI, cr_attr), getattr(StdI, cv_attr),
+            cutoff_length_default=ch.cutoff_length_default,
+            cutoff_R_defaults=ch.cutoff_R_defaults,
+            itUJ=ch.itUJ, NtUJ=NtUJ, tUJindx=tUJindx, lam=ch.lam, tUJ=tUJ,
+        )
+        setattr(StdI, co_attr, cutoff)
+        setattr(StdI, cl_attr, cutoff_length)
+
+
 def wannier90(StdI: StdIntList) -> None:
     """Set up a Hamiltonian for the Wannier90 ``*_hr.dat``.
 
@@ -1219,43 +1277,18 @@ def wannier90(StdI: StdIntList) -> None:
     _validate_interaction_params(StdI)
     idcmode = _parse_double_counting_mode(StdI.double_counting_mode)
 
-    # Read Hopping
-    print("\n  @ Wannier90 hopping \n")
+    # Read hopping, Coulomb, and Hund interaction files
     hopping_R_defaults = (
         (StdI.W - 1) // 2 if StdI.W != NaN_i else None,
         (StdI.L - 1) // 2 if StdI.L != NaN_i else None,
         (StdI.Height - 1) // 2 if StdI.Height != NaN_i else None,
     )
-    StdI.cutoff_t, StdI.cutoff_length_t = _read_w90_with_cutoff(
-        StdI, "t", "t", "_hr.dat",
-        StdI.cutoff_t, StdI.cutoff_length_t,
-        StdI.cutoff_tR, StdI.cutoff_tVec,
-        cutoff_length_default=-1.0,
-        cutoff_R_defaults=hopping_R_defaults,
-        itUJ=0, NtUJ=NtUJ, tUJindx=tUJindx, lam=1.0, tUJ=tUJ,
+    _W90_CHANNELS = (
+        _W90Channel("hopping", "t", "t", "_hr.dat", -1.0, hopping_R_defaults, 0, 1.0),
+        _W90Channel("Coulomb", "u", "U", "_ur.dat", 0.3, (0, 0, 0), 1, StdI.lambda_U),
+        _W90Channel("Hund", "j", "J", "_jr.dat", 0.3, (0, 0, 0), 2, StdI.lambda_J),
     )
-
-    # Read Coulomb
-    print("\n  @ Wannier90 Coulomb \n")
-    StdI.cutoff_u, StdI.cutoff_length_U = _read_w90_with_cutoff(
-        StdI, "u", "U", "_ur.dat",
-        StdI.cutoff_u, StdI.cutoff_length_U,
-        StdI.cutoff_UR, StdI.cutoff_UVec,
-        cutoff_length_default=0.3,
-        cutoff_R_defaults=(0, 0, 0),
-        itUJ=1, NtUJ=NtUJ, tUJindx=tUJindx, lam=StdI.lambda_U, tUJ=tUJ,
-    )
-
-    # Read Hund
-    print("\n  @ Wannier90 Hund \n")
-    StdI.cutoff_j, StdI.cutoff_length_J = _read_w90_with_cutoff(
-        StdI, "j", "J", "_jr.dat",
-        StdI.cutoff_j, StdI.cutoff_length_J,
-        StdI.cutoff_JR, StdI.cutoff_JVec,
-        cutoff_length_default=0.3,
-        cutoff_R_defaults=(0, 0, 0),
-        itUJ=2, NtUJ=NtUJ, tUJindx=tUJindx, lam=StdI.lambda_J, tUJ=tUJ,
-    )
+    _read_w90_channels(StdI, _W90_CHANNELS, NtUJ, tUJindx, tUJ)
 
     # Read Density matrix
     DenMat = None
