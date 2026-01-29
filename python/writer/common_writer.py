@@ -121,7 +121,7 @@ def _merge_duplicate_terms(indx, vals, n: int) -> int:
     # Merge duplicates: first occurrence absorbs all later ones with same key
     seen: dict[tuple, int] = {}
     for k in range(n):
-        key = (indx[k][0], indx[k][1], indx[k][2], indx[k][3])
+        key = tuple(indx[k])
         if key in seen:
             vals[seen[key]] += vals[k]
             vals[k] = 0.0

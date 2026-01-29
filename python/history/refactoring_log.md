@@ -7590,3 +7590,19 @@ while preserving identical output.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+## Step 144 — Simplify tuple key in `_merge_duplicate_terms`
+
+**Date**: 2026-01-29
+**File(s)**: `python/writer/common_writer.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Replaced `(indx[k][0], indx[k][1], indx[k][2], indx[k][3])` with
+`tuple(indx[k])` in `_merge_duplicate_terms()`.
+
+**Why**: `tuple()` on a numpy row produces the same key without verbose
+element-by-element indexing.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
