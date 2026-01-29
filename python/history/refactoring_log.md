@@ -7157,3 +7157,29 @@ condensed the conditional returns using ternary expressions.
 
 **Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
 class or a `SolverWriter` hierarchy.
+
+---
+
+## Step 123 — Replace O(n²) merge loops with dict in `_merge_1idx` and `_merge_2idx`
+
+**Date**: 2026-01-29
+**File**: `python/writer/interaction_writer.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_merge_1idx()` and `_merge_2idx()` used O(n²) nested loops
+to find duplicate interaction terms. Replaced with dict-based O(n) lookups:
+`_merge_1idx` uses `dict[int, int]` keyed by site index; `_merge_2idx` uses
+`dict[tuple[int, int], int]` keyed by canonicalized (min, max) pair.
+
+**Changes**:
+
+- `_merge_1idx`: replaced O(n²) double loop with single-pass dict lookup
+- `_merge_2idx`: replaced O(n²) double loop with single-pass dict lookup
+  using `(min(i0, i1), max(i0, i1))` as canonical key
+
+**Test results**:
+- Unit tests: 1256 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Replace the O(n) `_count_nonzero` loop with
+`sum(1 for ...)` or continue to Phase 2 class introduction.

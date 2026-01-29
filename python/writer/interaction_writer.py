@@ -36,7 +36,7 @@ def _merge_1idx(nterms: int, indx: list, coeff: list) -> None:
 
     Two terms are duplicates if they share the same single site index.
     The coefficient of the first occurrence is updated and the duplicate
-    is zeroed.
+    is zeroed.  Uses dict-based O(n) lookup instead of O(n²) pairwise scan.
 
     Parameters
     ----------
@@ -48,18 +48,22 @@ def _merge_1idx(nterms: int, indx: list, coeff: list) -> None:
     coeff : list
         Coefficient array, modified in place.
     """
+    seen: dict[int, int] = {}  # site index -> first occurrence position
     for k in range(nterms):
-        for j in range(k + 1, nterms):
-            if indx[j][0] == indx[k][0]:
-                coeff[k] += coeff[j]
-                coeff[j] = 0.0
+        key = indx[k][0]
+        if key in seen:
+            coeff[seen[key]] += coeff[k]
+            coeff[k] = 0.0
+        else:
+            seen[key] = k
 
 
 def _merge_2idx(nterms: int, indx: list, coeff: list) -> None:
     """Merge duplicate terms for a 2-index interaction.
 
     Two terms are duplicates if they share the same pair of site indices
-    (in either order, i.e. symmetric).
+    (in either order, i.e. symmetric).  Uses dict-based O(n) lookup
+    instead of O(n²) pairwise scan.
 
     Parameters
     ----------
@@ -70,13 +74,15 @@ def _merge_2idx(nterms: int, indx: list, coeff: list) -> None:
     coeff : list
         Coefficient array, modified in place.
     """
+    seen: dict[tuple[int, int], int] = {}  # canonical pair -> first occurrence
     for k in range(nterms):
-        for j in range(k + 1, nterms):
-            j0, j1 = indx[j][0], indx[j][1]
-            k0, k1 = indx[k][0], indx[k][1]
-            if (j0 == k0 and j1 == k1) or (j0 == k1 and j1 == k0):
-                coeff[k] += coeff[j]
-                coeff[j] = 0.0
+        i0, i1 = indx[k][0], indx[k][1]
+        key = (min(i0, i1), max(i0, i1))
+        if key in seen:
+            coeff[seen[key]] += coeff[k]
+            coeff[k] = 0.0
+        else:
+            seen[key] = k
 
 
 def _count_nonzero(nterms: int, coeff: list) -> int:
