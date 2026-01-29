@@ -10,8 +10,8 @@ import os
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from lattice import chain_lattice as cl
+from stdface.core.stdface_vals import StdIntList
+from stdface.lattice import chain_lattice as cl
 
 
 # ---------------------------------------------------------------------------

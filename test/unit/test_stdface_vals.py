@@ -7,7 +7,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from stdface_vals import (
+from stdface.core.stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
     NaN_i, NaN_d, NaN_c, UNSET_STRING,
     AMPLITUDE_EPS, ZERO_BODY_EPS,

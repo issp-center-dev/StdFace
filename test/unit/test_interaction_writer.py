@@ -8,8 +8,8 @@ from __future__ import annotations
 import os
 import tempfile
 
-from stdface_vals import StdIntList
-from writer.interaction_writer import (
+from stdface.core.stdface_vals import StdIntList
+from stdface.writer.interaction_writer import (
     print_interactions,
     _merge_1idx,
     _merge_2idx,

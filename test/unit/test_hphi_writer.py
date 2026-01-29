@@ -11,9 +11,9 @@ import tempfile
 
 import pytest
 
-from stdface_vals import StdIntList, MethodType, ModelType
-from stdface_vals import UNSET_STRING
-from writer.hphi_writer import (
+from stdface.core.stdface_vals import StdIntList, MethodType, ModelType
+from stdface.core.stdface_vals import UNSET_STRING
+from stdface.solvers.hphi.writer import (
     large_value,
     print_calc_mod,
     print_excitation,

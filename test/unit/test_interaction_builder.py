@@ -10,8 +10,8 @@ import math
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from lattice.interaction_builder import (
+from stdface.core.stdface_vals import StdIntList
+from stdface.lattice.interaction_builder import (
     trans,
     hopping,
     hubbard_local,
@@ -379,7 +379,7 @@ class TestBackwardCompatibility:
 
     def test_import_from_stdface_model_util(self):
         """Test that all 8 functions are re-exported."""
-        from stdface_model_util import (
+        from stdface.core.stdface_model_util import (
             trans as t,
             hopping as h,
             hubbard_local as hl,
@@ -389,7 +389,7 @@ class TestBackwardCompatibility:
             coulomb as c,
             malloc_interactions as mi,
         )
-        from lattice.interaction_builder import (
+        from stdface.lattice.interaction_builder import (
             trans,
             hopping,
             hubbard_local,

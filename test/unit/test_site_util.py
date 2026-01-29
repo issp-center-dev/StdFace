@@ -12,8 +12,8 @@ import math
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from lattice.site_util import (
+from stdface.core.stdface_vals import StdIntList
+from stdface.lattice.site_util import (
     _cell_vector,
     _fold_to_cell, _fold_site, _find_cell_index, _write_gnuplot_header,
     _write_gnuplot_bond,
@@ -24,7 +24,7 @@ from lattice.site_util import (
     init_site, find_site, set_label,
     set_local_spin_flags,
 )
-from stdface_vals import ModelType, SolverType, NaN_i
+from stdface.core.stdface_vals import ModelType, SolverType, NaN_i
 
 
 def _make_stdi_chain(L: int = 4) -> StdIntList:
@@ -764,17 +764,17 @@ class TestSetLabel:
 
 
 class TestBackwardCompatibility:
-    """Test that functions are still importable from stdface_model_util."""
+    """Test that functions are importable from stdface.core.stdface_model_util."""
 
     def test_import_from_stdface_model_util(self):
         """Test that all 4 functions are re-exported."""
-        from stdface_model_util import (
+        from stdface.core.stdface_model_util import (
             _fold_site as fs,
             init_site as iis,
             find_site as fis,
             set_label as sl,
         )
-        from lattice.site_util import _fold_site, init_site, find_site, set_label
+        from stdface.lattice.site_util import _fold_site, init_site, find_site, set_label
         assert fs is _fold_site
         assert iis is init_site
         assert fis is find_site

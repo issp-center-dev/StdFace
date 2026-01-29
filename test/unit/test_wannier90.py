@@ -11,8 +11,8 @@ import textwrap
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-from lattice import wannier90 as w90
+from stdface.core.stdface_vals import StdIntList
+from stdface.lattice import wannier90 as w90
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +227,7 @@ class TestModuleStructure:
 
     def test_import(self):
         """wannier90 module should import without error."""
-        from lattice import wannier90
+        from stdface.lattice import wannier90
         assert wannier90 is not None
 
     def test_wannier90_function_exists(self):
@@ -750,7 +750,7 @@ class TestParseDoubleCountingMode:
 
     def test_unset_string_returns_notcorrect(self):
         """UNSET_STRING sentinel should map to NOTCORRECT."""
-        from stdface_vals import UNSET_STRING
+        from stdface.core.stdface_vals import UNSET_STRING
         assert w90._parse_double_counting_mode(UNSET_STRING) == w90._DCMode.NOTCORRECT
 
     def test_hartree_returns_hartree(self):
@@ -777,7 +777,7 @@ class TestParseDoubleCountingMode:
 
     def test_dc_mode_map_keys(self):
         """_DC_MODE_MAP should contain exactly the expected keys."""
-        from stdface_vals import UNSET_STRING
+        from stdface.core.stdface_vals import UNSET_STRING
         expected_keys = {"none", UNSET_STRING, "hartree", "hartree_u", "full"}
         assert set(w90._DC_MODE_MAP.keys()) == expected_keys
 

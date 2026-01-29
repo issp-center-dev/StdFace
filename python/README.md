@@ -9,45 +9,83 @@ for HPhi, mVMC, UHF, and H-wave.
 - Python 3.10 or later
 - NumPy
 
+## Installation
+
+```bash
+cd python
+pip install -e .          # install with runtime dependencies (numpy)
+pip install -e ".[dev]"   # also install dev dependencies (pytest, pytest-cov)
+```
+
+After installation, the `stdface` command becomes available:
+
+```bash
+stdface stan.in
+stdface stan.in --solver mVMC
+stdface -v
+```
+
+The editable install (`-e`) is recommended for development. Source changes take effect immediately without reinstalling.
+
+## Architecture
+
+StdFace uses a **plugin architecture** for both solvers and lattices.
+New solvers and lattices can be added without modifying any existing dispatch logic.
+
+### Plugin System Overview
+
+```
+stdface/
+  plugin.py              # SolverPlugin ABC + solver registry
+  lattice/__init__.py    # LatticePlugin ABC + lattice registry
+```
+
+- **SolverPlugin** (`plugin.py`): Defines how a solver parses keywords, resets fields, and writes output files. Each solver (HPhi, mVMC, UHF, H-wave) is a plugin registered at import time.
+- **LatticePlugin** (`lattice/__init__.py`): Defines lattice geometry, aliases, and the setup/boost methods. Each lattice (chain, square, kagome, etc.) is a plugin registered at import time.
+
+See [docs/tutorial_plugin.md](../docs/tutorial_plugin.md) for a step-by-step guide on adding new solvers and lattices.
+
 ## Directory Structure
 
 ```
 python/
   __main__.py              # CLI entry point (port of dry.c)
-  stdface_main.py          # Main logic (port of StdFace_main.c)
-  stdface_vals.py          # StdIntList dataclass (port of StdFace_vals.h)
-  stdface_model_util.py    # Shared utilities (port of StdFace_ModelUtil.c)
-  version.py               # Version information
-  keyword_parser.py        # Keyword parsing subsystem
-  param_check.py           # Parameter validation utilities
+  stdface/
+    plugin.py              # SolverPlugin ABC + solver registry
+    core/
+      stdface_main.py      # Main logic (port of StdFace_main.c)
+      stdface_vals.py      # StdIntList dataclass (port of StdFace_vals.h)
+      keyword_parser.py    # Keyword parsing subsystem
+      param_check.py       # Parameter validation utilities
+    lattice/               # Lattice plugins
+      __init__.py          # LatticePlugin ABC + lattice registry
+      chain_lattice.py     # 1D chain (ChainPlugin)
+      square_lattice.py    # 2D square (SquarePlugin)
+      ladder.py            # 2-leg ladder (LadderPlugin)
+      triangular_lattice.py # 2D triangular (TriangularPlugin)
+      honeycomb_lattice.py # 2D honeycomb (HoneycombPlugin)
+      kagome.py            # 2D kagome (KagomePlugin)
+      orthorhombic.py      # 3D orthorhombic (OrthorhombicPlugin)
+      fc_ortho.py          # 3D face-centered orthorhombic (FCOrthoPlugin)
+      pyrochlore.py        # 3D pyrochlore (PyrochlorePlugin)
+      wannier90.py         # Wannier90 interface (Wannier90Plugin)
+      boost_output.py      # Boost output utilities
+      geometry_output.py   # Geometry output functions
+      input_params.py      # Input parameter resolution
+      interaction_builder.py # Interaction building utilities
+      site_util.py         # Site utility functions
+    solvers/               # Solver plugins
+      __init__.py          # Auto-imports all solver plugins
+      hphi/_plugin.py      # HPhi plugin (HPhiPlugin)
+      mvmc/_plugin.py      # mVMC plugin (MVMCPlugin)
+      uhf/_plugin.py       # UHF plugin (UHFPlugin)
+      hwave/_plugin.py     # H-wave plugin (HWavePlugin)
+    writer/                # Output writers (shared)
+      common_writer.py     # Common output functions
+      interaction_writer.py # Interaction file writer
+      export_wannier90.py  # Wannier90 format export
   history/
     refactoring_log.md     # Refactoring change log
-  lattice/                 # Lattice implementations
-    __init__.py
-    chain_lattice.py       # 1D chain lattice
-    square_lattice.py      # 2D square lattice
-    ladder.py              # 2-leg ladder lattice
-    triangular_lattice.py  # 2D triangular lattice
-    honeycomb_lattice.py   # 2D honeycomb lattice
-    kagome.py              # 2D kagome lattice
-    orthorhombic.py        # 3D orthorhombic lattice
-    fc_ortho.py            # Face-centered orthorhombic lattice
-    pyrochlore.py          # Pyrochlore lattice
-    wannier90.py           # Wannier90 input reader
-    boost_output.py        # Boost output utilities
-    geometry_output.py     # Geometry output functions
-    input_params.py        # Input parameter resolution
-    interaction_builder.py # Interaction building utilities
-    site_util.py           # Site utility functions
-  writer/                  # Solver-specific writers
-    __init__.py
-    common_writer.py       # Common output functions
-    hphi_writer.py         # HPhi-specific writer
-    mvmc_writer.py         # mVMC-specific writer
-    mvmc_variational.py    # mVMC variational functions
-    interaction_writer.py  # Interaction file writer
-    solver_writer.py       # Solver writer base classes
-    export_wannier90.py    # Wannier90 format export
 ```
 
 ## Usage
@@ -57,15 +95,15 @@ python/
 From the project root:
 
 ```bash
-PYTHONPATH=python python3 python/__main__.py stan.in
+./stdface stan.in
 ```
 
 To select a solver:
 
 ```bash
-PYTHONPATH=python python3 python/__main__.py stan.in --solver mVMC
-PYTHONPATH=python python3 python/__main__.py stan.in --solver UHF
-PYTHONPATH=python python3 python/__main__.py stan.in --solver HWAVE
+./stdface stan.in --solver mVMC
+./stdface stan.in --solver UHF
+./stdface stan.in --solver HWAVE
 ```
 
 The default solver is HPhi.
@@ -73,7 +111,7 @@ The default solver is HPhi.
 ### Print Version
 
 ```bash
-PYTHONPATH=python python3 python/__main__.py -v
+./stdface -v
 ```
 
 ### Calling from Python
@@ -82,7 +120,7 @@ PYTHONPATH=python python3 python/__main__.py -v
 import sys
 sys.path.insert(0, "python")
 
-from stdface_main import stdface_main
+from stdface.core.stdface_main import stdface_main
 
 stdface_main("stan.in", solver="HPhi")
 ```
@@ -142,8 +180,8 @@ python3 -m pytest test/unit/ --cov=python --cov-report=html
 ```
 
 **Test Coverage:**
-- 1,252 unit tests covering all modules
-- Tests for lattice implementations, writers, parsers, and utilities
+- 1,268 unit tests covering all modules
+- Tests for lattice implementations, writers, parsers, plugin registries, and utilities
 - All tests maintain byte-identical output with C version
 
 ### Integration Tests
@@ -158,8 +196,7 @@ bash test/run_all_integration.sh
 # Copy test input to a working directory and run
 cp test/hphi/lanczos_hubbard_square/stan.in /tmp/work/
 cd /tmp/work
-PYTHONPATH=/path/to/StdFace/python python3 -c \
-  "from stdface_main import stdface_main; stdface_main('stan.in', solver='HPhi')"
+/path/to/StdFace/stdface stan.in
 
 # Compare outputs against reference
 diff /path/to/StdFace/test/hphi/lanczos_hubbard_square/ref/modpara.def modpara.def
@@ -174,34 +211,35 @@ diff /path/to/StdFace/test/hphi/lanczos_hubbard_square/ref/modpara.def modpara.d
 
 The Python implementation has been refactored from a direct C translation into idiomatic Python:
 
-- **Modular design**: Code organized into logical subpackages (`lattice/`, `writer/`)
-- **Python idioms**: Enums, dict dispatch, context managers, type hints
+- **Plugin architecture**: Solvers and lattices are self-registering plugins
+- **Modular design**: Code organized into logical subpackages (`lattice/`, `solvers/`, `writer/`)
+- **Python idioms**: Enums, ABC, context managers, type hints
 - **Reduced duplication**: Helper functions extracted to eliminate code duplication
-- **Comprehensive testing**: 1,252 unit tests with full coverage
+- **Comprehensive testing**: 1,268 unit tests with full coverage
 - **Documentation**: NumPy-style docstrings throughout
 
-See `history/refactoring_log.md` for detailed refactoring history (Steps 1-77).
+See `history/refactoring_log.md` for detailed refactoring history.
 
 ## Mapping to C Sources
 
-| C Source File | Python File |
+| C Source File | Python Module |
 |---|---|
 | `dry.c` | `__main__.py` |
-| `StdFace_main.c` | `stdface_main.py` (refactored into multiple modules) |
-| `StdFace_vals.h` | `stdface_vals.py` |
-| `StdFace_ModelUtil.c/h` | `stdface_model_util.py` |
-| `version.h` | `version.py` |
-| `ChainLattice.c` | `lattice/chain_lattice.py` |
-| `SquareLattice.c` | `lattice/square_lattice.py` |
-| `Ladder.c` | `lattice/ladder.py` |
-| `TriangularLattice.c` | `lattice/triangular_lattice.py` |
-| `HoneycombLattice.c` | `lattice/honeycomb_lattice.py` |
-| `Kagome.c` | `lattice/kagome.py` |
-| `Orthorhombic.c` | `lattice/orthorhombic.py` |
-| `FCOrtho.c` | `lattice/fc_ortho.py` |
-| `Pyrochlore.c` | `lattice/pyrochlore.py` |
-| `Wannier90.c` | `lattice/wannier90.py` |
-| `export_wannier90.c` | `writer/export_wannier90.py` |
+| `StdFace_main.c` | `stdface/core/stdface_main.py` |
+| `StdFace_vals.h` | `stdface/core/stdface_vals.py` |
+| `StdFace_ModelUtil.c/h` | `stdface/core/stdface_model_util.py` |
+| `version.h` | `stdface/version.py` |
+| `ChainLattice.c` | `stdface/lattice/chain_lattice.py` |
+| `SquareLattice.c` | `stdface/lattice/square_lattice.py` |
+| `Ladder.c` | `stdface/lattice/ladder.py` |
+| `TriangularLattice.c` | `stdface/lattice/triangular_lattice.py` |
+| `HoneycombLattice.c` | `stdface/lattice/honeycomb_lattice.py` |
+| `Kagome.c` | `stdface/lattice/kagome.py` |
+| `Orthorhombic.c` | `stdface/lattice/orthorhombic.py` |
+| `FCOrtho.c` | `stdface/lattice/fc_ortho.py` |
+| `Pyrochlore.c` | `stdface/lattice/pyrochlore.py` |
+| `Wannier90.c` | `stdface/lattice/wannier90.py` |
+| `export_wannier90.c` | `stdface/writer/export_wannier90.py` |
 
 Note: The Python implementation has been significantly refactored beyond the original C structure for better maintainability and Pythonic code style.
 

@@ -10,8 +10,8 @@ import io
 import numpy as np
 import pytest
 
-from stdface_vals import StdIntList
-import stdface_model_util as smu
+from stdface.core.stdface_vals import StdIntList
+import stdface.core.stdface_model_util as smu
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-from lattice.input_params import (
+from stdface.lattice.input_params import (
     input_spin_nn,
     input_spin,
     input_coulomb_v,
@@ -214,13 +214,13 @@ class TestBackwardCompatibility:
 
     def test_import_from_stdface_model_util(self):
         """Test that all 4 functions are re-exported."""
-        from stdface_model_util import (
+        from stdface.core.stdface_model_util import (
             input_spin_nn as isn,
             input_spin as isp,
             input_coulomb_v as icv,
             input_hopp as ih,
         )
-        from lattice.input_params import (
+        from stdface.lattice.input_params import (
             input_spin_nn,
             input_spin,
             input_coulomb_v,

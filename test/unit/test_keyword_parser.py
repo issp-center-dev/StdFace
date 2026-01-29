@@ -10,7 +10,7 @@ import cmath
 
 import pytest
 
-from keyword_parser import (
+from stdface.core.keyword_parser import (
     trim_space_quote,
     store_with_check_dup_s,
     store_with_check_dup_sl,
@@ -32,7 +32,7 @@ from keyword_parser import (
     _grid3x3_keywords,
     NaN_i,
 )
-from stdface_vals import StdIntList, SolverType
+from stdface.core.stdface_vals import StdIntList, SolverType
 
 import numpy as np
 

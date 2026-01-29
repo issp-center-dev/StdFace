@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-from param_check import (
+from stdface.core.param_check import (
     exit_program,
     print_val_d,
     print_val_dd,
@@ -21,7 +21,7 @@ from param_check import (
     not_used_i,
     required_val_i,
 )
-from stdface_vals import NaN_i, NaN_d
+from stdface.core.stdface_vals import NaN_i, NaN_d
 
 
 class TestExitProgram:
@@ -198,11 +198,11 @@ class TestRequiredValI:
 
 
 class TestBackwardCompatibility:
-    """Test that functions are still importable from stdface_model_util."""
+    """Test that functions are importable from stdface.core.stdface_model_util."""
 
     def test_import_from_stdface_model_util(self):
         """Test that all extracted functions are re-exported."""
-        from stdface_model_util import (
+        from stdface.core.stdface_model_util import (
             exit_program as ep,
             print_val_d as pvd,
             print_val_dd as pvdd,
@@ -213,8 +213,7 @@ class TestBackwardCompatibility:
             not_used_i as nui,
             required_val_i as rvi,
         )
-        # Verify they are the same objects as param_check
-        from param_check import (
+        from stdface.core.param_check import (
             exit_program,
             print_val_d,
             print_val_dd,

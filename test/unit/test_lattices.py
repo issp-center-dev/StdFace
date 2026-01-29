@@ -16,15 +16,15 @@ import pytest
 
 # Each entry is (module_name, list_of_expected_functions).
 LATTICE_MODULES = [
-    ("lattice.square_lattice", ["tetragonal"]),
-    ("lattice.ladder", ["ladder", "ladder_boost"]),
-    ("lattice.triangular_lattice", ["triangular"]),
-    ("lattice.honeycomb_lattice", ["honeycomb", "honeycomb_boost"]),
-    ("lattice.kagome", ["kagome", "kagome_boost"]),
-    ("lattice.orthorhombic", ["orthorhombic"]),
-    ("lattice.fc_ortho", ["fc_ortho"]),
-    ("lattice.pyrochlore", ["pyrochlore"]),
-    ("lattice.chain_lattice", ["chain", "chain_boost"]),
+    ("stdface.lattice.square_lattice", ["tetragonal"]),
+    ("stdface.lattice.ladder", ["ladder", "ladder_boost"]),
+    ("stdface.lattice.triangular_lattice", ["triangular"]),
+    ("stdface.lattice.honeycomb_lattice", ["honeycomb", "honeycomb_boost"]),
+    ("stdface.lattice.kagome", ["kagome", "kagome_boost"]),
+    ("stdface.lattice.orthorhombic", ["orthorhombic"]),
+    ("stdface.lattice.fc_ortho", ["fc_ortho"]),
+    ("stdface.lattice.pyrochlore", ["pyrochlore"]),
+    ("stdface.lattice.chain_lattice", ["chain", "chain_boost"]),
 ]
 
 # Flat list of (module_name, function_name) for parametrized tests.

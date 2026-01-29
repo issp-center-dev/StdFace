@@ -63,6 +63,11 @@ cmake-build-debug/
 __pycache__/
 *.pyc
 
+# Python package metadata
+*.egg-info/
+dist/
+*.egg
+
 # Build Output
 build/
 

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stdface"
+version = "0.5.0"
+description = "Standard-mode input generator for HPhi / mVMC / UHF / H-wave"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.10"
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
+
+[project.scripts]
+stdface = "stdface.__main__:main"
+
+[project.entry-points."stdface.solvers"]
+hphi = "stdface.solvers.hphi:HPhiPlugin"
+mvmc = "stdface.solvers.mvmc:MVMCPlugin"
+uhf = "stdface.solvers.uhf:UHFPlugin"
+hwave = "stdface.solvers.hwave:HWavePlugin"
+
+[project.entry-points."stdface.lattices"]
+chain = "stdface.lattice.chain_lattice:ChainPlugin"
+square = "stdface.lattice.square_lattice:SquarePlugin"
+triangular = "stdface.lattice.triangular_lattice:TriangularPlugin"
+honeycomb = "stdface.lattice.honeycomb_lattice:HoneycombPlugin"
+kagome = "stdface.lattice.kagome:KagomePlugin"
+ladder = "stdface.lattice.ladder:LadderPlugin"
+orthorhombic = "stdface.lattice.orthorhombic:OrthorhombicPlugin"
+fc_ortho = "stdface.lattice.fc_ortho:FCOrthoPlugin"
+pyrochlore = "stdface.lattice.pyrochlore:PyrochlorePlugin"
+wannier90 = "stdface.lattice.wannier90:Wannier90Plugin"
+
+[tool.setuptools.packages.find]
+include = ["stdface*"]
