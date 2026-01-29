@@ -452,6 +452,65 @@ def _reset_vals(StdI: StdIntList) -> None:
 
 
 # ===================================================================
+#  Input file parsing
+# ===================================================================
+
+
+def _parse_input_file(fname: str, StdI: StdIntList, solver: str) -> None:
+    """Open and parse a Standard-mode input file into *StdI*.
+
+    Each non-blank, non-comment line must contain ``keyword = value``.
+    Common keywords are tried first, then solver-specific keywords.
+    The program exits on duplicate keywords, missing ``=``, or
+    unrecognised keywords.
+
+    Parameters
+    ----------
+    fname : str
+        Path to the Standard-mode input file.
+    StdI : StdIntList
+        Parameter structure to populate (modified in place).
+    solver : str
+        Solver name (``"HPhi"``, ``"mVMC"``, ``"UHF"``, or ``"HWAVE"``).
+
+    Raises
+    ------
+    SystemExit
+        If the file cannot be opened, a line lacks ``=``, or a keyword
+        is unrecognised.
+    """
+    try:
+        fp_in = open(fname, "r")
+    except OSError:
+        print(f"\n  ERROR !  Cannot open input file {fname} !\n")
+        exit_program(-1)
+
+    print(f"\n  Open Standard-Mode Inputfile {fname} \n")
+
+    with fp_in:
+        for raw_line in fp_in:
+            line = _trim_space_quote(raw_line)
+
+            if line.startswith("//") or line == "":
+                print("  Skipping a line.")
+                continue
+
+            parts = line.split("=", 1)
+            if len(parts) < 2:
+                print('\n  ERROR !  "=" is NOT found !\n')
+                exit_program(-1)
+
+            keyword = parts[0].lower()
+            value = parts[1]
+            print(f"  KEYWORD : {keyword:<20s} | VALUE : {value} ")
+
+            if not _parse_common_keyword(keyword, value, StdI):
+                if not _parse_solver_keyword(keyword, value, StdI, solver):
+                    print("ERROR ! Unsupported Keyword in Standard mode!")
+                    exit_program(-1)
+
+
+# ===================================================================
 #  stdface_main -- top-level entry point
 # ===================================================================
 
@@ -494,43 +553,8 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     print("\n######  Input Parameter of Standard Intarface  ######")
 
-    try:
-        fp_in = open(fname, "r")
-    except OSError:
-        print(f"\n  ERROR !  Cannot open input file {fname} !\n")
-        exit_program(-1)
-
-    print(f"\n  Open Standard-Mode Inputfile {fname} \n")
-
     _reset_vals(StdI)
-
-    # ------------------------------------------------------------------
-    #  Parse input file
-    # ------------------------------------------------------------------
-    with fp_in:
-        for raw_line in fp_in:
-            line = _trim_space_quote(raw_line)
-
-            if line.startswith("//"):
-                print("  Skipping a line.")
-                continue
-            if line == "":
-                print("  Skipping a line.")
-                continue
-
-            parts = line.split("=", 1)
-            if len(parts) < 2:
-                print('\n  ERROR !  "=" is NOT found !\n')
-                exit_program(-1)
-
-            keyword = parts[0].lower()
-            value = parts[1]
-            print(f"  KEYWORD : {keyword:<20s} | VALUE : {value} ")
-
-            if not _parse_common_keyword(keyword, value, StdI):
-                if not _parse_solver_keyword(keyword, value, StdI, solver):
-                    print("ERROR ! Unsupported Keyword in Standard mode!")
-                    exit_program(-1)
+    _parse_input_file(fname, StdI, solver)
 
     # ------------------------------------------------------------------
     #  Construct Model

@@ -7871,3 +7871,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 166 — 2026-01-29
+
+**Files**: `python/stdface_main.py`
+**Change**: Extracted the input file open-parse-validate loop from `stdface_main()` into a new `_parse_input_file(fname, StdI, solver)` function. Reduces `stdface_main` from 151 to ~115 lines and isolates file I/O + parsing into a testable unit. Also merged the two separate `if` checks for blank/comment lines into a single `if line.startswith("//") or line == ""` guard.
+**Phase**: 1 — Extract modules (function extraction from stdface_main)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed
