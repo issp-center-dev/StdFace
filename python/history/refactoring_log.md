@@ -7005,3 +7005,29 @@ loop was also replaced with a single forward-pass filter.
 **Suggested next step**: Replace `_is_equal_key` (now unused for accumulation)
 or refactor `_build_inter_table` / `_build_transfer_table` which also have O(n²)
 linear scans for deduplication.
+
+---
+
+## Step 117 — Replace O(n²) dedup in `_build_inter_table` and `_build_transfer_table`
+
+**Date**: 2026-01-29
+**File**: `python/writer/export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: Both `_build_inter_table()` and `_build_transfer_table()`
+used O(n²) linear scans to check for duplicate `(rr, a, b [, s, t])` keys.
+Replaced with dict-based O(1) lookups using tuple keys.
+
+**Changes**:
+
+- `_build_inter_table`: replaced linear scan with `seen: dict[tuple, int]`
+  keyed by `(tuple(rr), isite, jsite)`
+- `_build_transfer_table`: replaced linear scan with `seen: dict[tuple, int]`
+  keyed by `(tuple(rr), isite, jsite, ispin, jspin)`
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Remove now-unused `_is_equal_key` and `_to_string_key`
+helper functions, or begin Phase 2 work on introducing solver writer classes.

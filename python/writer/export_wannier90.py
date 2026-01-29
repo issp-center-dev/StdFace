@@ -558,6 +558,7 @@ def _build_inter_table(
         Deduplicated interaction entries in relative coordinates.
     """
     intr_table: List[_IntrItem] = []
+    seen: dict[tuple, int] = {}  # key -> index in intr_table
 
     for k in range(nintr):
         idx_i = intr_index[k][0]
@@ -573,23 +574,19 @@ def _build_inter_table(
         rr = [j - i for j, i in zip(jCV, iCV)]
         rr = _unfold_site(StdI, rr)
 
-        # Check consistency
-        is_found = False
-        for item in intr_table:
-            if item.r == rr and item.a == isite and item.b == jsite:
-                is_found = True
-                if abs(item.v - intr_value[k]) > _EPS:
-                    print(f"WARNING: not uniform. "
-                          f"expected=({item.v.real},{item.v.imag}), "
-                          f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                          f"for index {idx_i},{idx_j}")
-                break
-
-        if not is_found:
-            item = _IntrItem(
+        lookup_key = (tuple(rr), isite, jsite)
+        if lookup_key in seen:
+            existing = intr_table[seen[lookup_key]]
+            if abs(existing.v - intr_value[k]) > _EPS:
+                print(f"WARNING: not uniform. "
+                      f"expected=({existing.v.real},{existing.v.imag}), "
+                      f"found=({intr_value[k].real},{intr_value[k].imag}) "
+                      f"for index {idx_i},{idx_j}")
+        else:
+            seen[lookup_key] = len(intr_table)
+            intr_table.append(_IntrItem(
                 r=list(rr), a=isite, b=jsite,
-                s=0, t=0, v=intr_value[k])
-            intr_table.append(item)
+                s=0, t=0, v=intr_value[k]))
 
     return intr_table
 
@@ -711,6 +708,7 @@ def _build_transfer_table(
         Deduplicated transfer entries in relative coordinates.
     """
     intr_table: List[_IntrItem] = []
+    seen: dict[tuple, int] = {}  # key -> index in intr_table
 
     for k in range(nintr):
         idx_i = intr_index[k][0]
@@ -730,27 +728,22 @@ def _build_transfer_table(
 
         intr_value[k] *= -1  # by convention
 
-        # Check consistency
-        is_found = False
-        for item in intr_table:
-            if (item.r == rr and item.a == isite and item.b == jsite
-                    and item.s == ispin and item.t == jspin):
-                is_found = True
-                if abs(item.v - intr_value[k]) > _EPS:
-                    print(f"WARNING: not uniform. "
-                          f"expected=({item.v.real},{item.v.imag}), "
-                          f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                          f"for index {idx_i},{idx_j}")
-                break
-
-        if not is_found:
+        lookup_key = (tuple(rr), isite, jsite, ispin, jspin)
+        if lookup_key in seen:
+            existing = intr_table[seen[lookup_key]]
+            if abs(existing.v - intr_value[k]) > _EPS:
+                print(f"WARNING: not uniform. "
+                      f"expected=({existing.v.real},{existing.v.imag}), "
+                      f"found=({intr_value[k].real},{intr_value[k].imag}) "
+                      f"for index {idx_i},{idx_j}")
+        else:
             if spin_dep == 0 and not (ispin == 0 and jspin == 0):
                 continue  # skip
 
-            item = _IntrItem(
+            seen[lookup_key] = len(intr_table)
+            intr_table.append(_IntrItem(
                 r=list(rr), a=isite, b=jsite,
-                s=ispin, t=jspin, v=intr_value[k])
-            intr_table.append(item)
+                s=ispin, t=jspin, v=intr_value[k]))
 
     return intr_table
 
