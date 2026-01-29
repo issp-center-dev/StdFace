@@ -7329,3 +7329,26 @@ the parsing to 3 lines.
 
 **Suggested next step**: Begin Phase 2 class introduction work, or continue
 cleaning up remaining C-style patterns.
+
+---
+
+## Step 130 — Extract `_fail_not_used` helper from `not_used_d` and `not_used_i`
+
+**Date**: 2026-01-29
+**File**: `python/param_check.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `not_used_d()` and `not_used_i()` shared identical 3-line
+error messages (print + exit_program). Extracted into `_fail_not_used(valname)`
+to eliminate duplication.
+
+**Changes**:
+
+- Added `_fail_not_used(valname)` helper
+- Replaced 3-line error blocks in `not_used_d` and `not_used_i`
+
+**Test results**:
+- Unit tests: 1253 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Continue Phase 3 cleanup or begin Phase 2 class work.

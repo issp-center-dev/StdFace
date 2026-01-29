@@ -191,6 +191,20 @@ def print_val_i(valname: str, val: int, val0: int) -> int:
     return val
 
 
+def _fail_not_used(valname: str) -> None:
+    """Print "specified but not used" error and terminate.
+
+    Parameters
+    ----------
+    valname : str
+        Name of the unused parameter.
+    """
+    print(f"\n Check !  {valname} is SPECIFIED but will NOT be USED. ")
+    print("            Please COMMENT-OUT this line ")
+    print("            or check this input is REALLY APPROPRIATE for your purpose !\n")
+    exit_program(-1)
+
+
 def not_used_d(valname: str, val: float | complex) -> None:
     """Abort if a real parameter is specified but will not be used.
 
@@ -205,10 +219,7 @@ def not_used_d(valname: str, val: float | complex) -> None:
     """
     check = val.real if isinstance(val, complex) else val
     if not math.isnan(check):
-        print(f"\n Check !  {valname} is SPECIFIED but will NOT be USED. ")
-        print("            Please COMMENT-OUT this line ")
-        print("            or check this input is REALLY APPROPRIATE for your purpose !\n")
-        exit_program(-1)
+        _fail_not_used(valname)
 
 
 # Spin-interaction suffix matrix for 3x3 J-coupling tensors.
@@ -249,10 +260,7 @@ def not_used_i(valname: str, val: int) -> None:
         Value to check (abort if not the sentinel 2147483647).
     """
     if val != NaN_i:
-        print(f"\n Check !  {valname} is SPECIFIED but will NOT be USED. ")
-        print("            Please COMMENT-OUT this line ")
-        print("            or check this input is REALLY APPROPRIATE for your purpose !\n")
-        exit_program(-1)
+        _fail_not_used(valname)
 
 
 def required_val_i(valname: str, val: int) -> None:
