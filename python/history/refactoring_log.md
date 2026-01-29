@@ -7983,3 +7983,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 176 — 2026-01-29
+
+**Files**: `python/lattice/triangular_lattice.py`
+**Change**: Replaced 9 repetitive `add_neighbor_interaction` calls in `triangular()` with a data-driven `_BONDS` tuple and loop. Covers nn (3), nnn (3), and nnnn (3) bonds. Reduces 35 lines to 16 lines.
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

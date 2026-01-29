@@ -172,38 +172,21 @@ def triangular(StdI: StdIntList) -> None:
                 isite += StdI.NCell
             add_local_terms(StdI, isite, kCell)
 
-            # Nearest neighbor along W
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0)
-
-            # Nearest neighbor along L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 0, 0, 1, StdI.J1, StdI.t1, StdI.V1)
-
-            # Nearest neighbor along W - L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, -1, 0, 0, 1, StdI.J2, StdI.t2, StdI.V2)
-
-            # Second nearest neighbor 2W - L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 2, -1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p)
-
-            # Second nearest neighbor W+L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 1, 0, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p)
-
-            # Second nearest neighbor -W+2L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, -1, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-
-            # Third neighbor along 2W
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 2, 0, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp)
-
-            # Third neighbor along 2L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 2, 0, 0, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp)
-
-            # Third neighbor along 2W - 2L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 2, -2, 0, 0, 3, StdI.J2pp, StdI.t2pp, StdI.V2pp)
+            # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
+            _BONDS = (
+                # Nearest neighbor (nn=1)
+                (1, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # along W
+                (0, 1, 0, 0, 1, StdI.J1, StdI.t1, StdI.V1),       # along L
+                (1, -1, 0, 0, 1, StdI.J2, StdI.t2, StdI.V2),      # along W-L
+                # Second nearest neighbor (nn=2)
+                (2, -1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),   # 2W-L
+                (1, 1, 0, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p),    # W+L
+                (-1, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),   # -W+2L
+                # Third nearest neighbor (nn=3)
+                (2, 0, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # 2W
+                (0, 2, 0, 0, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp), # 2L
+                (2, -2, 0, 0, 3, StdI.J2pp, StdI.t2pp, StdI.V2pp),# 2W-2L
+            )
+            for dW, dL, si, sj, nn, J, t, V in _BONDS:
+                add_neighbor_interaction(
+                    StdI, fp, iW, iL, dW, dL, si, sj, nn, J, t, V)
