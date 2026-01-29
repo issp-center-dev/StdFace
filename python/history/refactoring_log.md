@@ -8043,3 +8043,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 182 — 2026-01-29
+
+**Files**: `python/keyword_parser.py`, `test/unit/test_keyword_parser.py`, `python/stdface_main.py`
+**Change**: Removed 4 redundant solver-specific parser functions (`parse_hphi_keyword`, `parse_mvmc_keyword`, `parse_uhf_keyword`, `parse_hwave_keyword`) that were thin wrappers around `_apply_keyword_table`. The generic `parse_solver_keyword(keyword, value, StdI, solver)` already provides this functionality. Updated 15 test call sites to use `parse_solver_keyword` with explicit solver argument. Updated comment in `stdface_main.py`.
+**Phase**: 3 — Python idioms (remove dead code)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

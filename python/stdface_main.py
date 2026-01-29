@@ -446,8 +446,7 @@ def _reset_vals(StdI: StdIntList) -> None:
 
 # Keyword parsing helpers (_trim_space_quote,
 # _store_with_check_dup_s/sl/i/d/c) and keyword parsers
-# (_parse_common_keyword, _parse_solver_keyword, _parse_hphi_keyword,
-# _parse_mvmc_keyword, _parse_uhf_keyword, _parse_hwave_keyword)
+# (_parse_common_keyword, _parse_solver_keyword)
 # have been moved to keyword_parser.py
 
 

@@ -19,10 +19,6 @@ from keyword_parser import (
     store_with_check_dup_c,
     parse_common_keyword,
     parse_solver_keyword,
-    parse_hphi_keyword,
-    parse_mvmc_keyword,
-    parse_uhf_keyword,
-    parse_hwave_keyword,
     _COMMON_KEYWORDS,
     _HPHI_KEYWORDS,
     _MVMC_KEYWORDS,
@@ -538,30 +534,30 @@ class TestParseSolverKeyword:
 
 
 class TestParseHPhiKeyword:
-    """Tests for the HPhi-specific keyword parser."""
+    """Tests for the HPhi-specific keyword parser via parse_solver_keyword."""
 
     def test_method(self):
         """Test 'method' keyword."""
         StdI = _make_stdi("HPhi")
-        assert parse_hphi_keyword("method", "Lanczos", StdI) is True
+        assert parse_solver_keyword("method", "Lanczos", StdI, "HPhi") is True
         assert StdI.method == "lanczos"
 
     def test_exct(self):
         """Test 'exct' keyword."""
         StdI = _make_stdi("HPhi")
-        assert parse_hphi_keyword("exct", "2", StdI) is True
+        assert parse_solver_keyword("exct", "2", StdI, "HPhi") is True
         assert StdI.exct == 2
 
     def test_dt(self):
         """Test 'dt' keyword."""
         StdI = _make_stdi("HPhi")
-        assert parse_hphi_keyword("dt", "0.01", StdI) is True
+        assert parse_solver_keyword("dt", "0.01", StdI, "HPhi") is True
         assert StdI.dt == 0.01
 
     def test_unrecognised(self):
         """Test that unknown HPhi keyword returns False."""
         StdI = _make_stdi("HPhi")
-        assert parse_hphi_keyword("notahphikey", "1", StdI) is False
+        assert parse_solver_keyword("notahphikey", "1", StdI, "HPhi") is False
 
 
 # =====================================================================
@@ -570,30 +566,30 @@ class TestParseHPhiKeyword:
 
 
 class TestParseMVMCKeyword:
-    """Tests for the mVMC-specific keyword parser."""
+    """Tests for the mVMC-specific keyword parser via parse_solver_keyword."""
 
     def test_nvmcsample(self):
         """Test 'nvmcsample' keyword."""
         StdI = _make_stdi("mVMC")
-        assert parse_mvmc_keyword("nvmcsample", "5000", StdI) is True
+        assert parse_solver_keyword("nvmcsample", "5000", StdI, "mVMC") is True
         assert StdI.NVMCSample == 5000
 
     def test_complextype(self):
         """Test 'complextype' keyword."""
         StdI = _make_stdi("mVMC")
-        assert parse_mvmc_keyword("complextype", "1", StdI) is True
+        assert parse_solver_keyword("complextype", "1", StdI, "mVMC") is True
         assert StdI.ComplexType == 1
 
     def test_boxsub(self):
         """Test 'a0wsub' keyword sets boxsub."""
         StdI = _make_stdi("mVMC")
-        assert parse_mvmc_keyword("a0wsub", "3", StdI) is True
+        assert parse_solver_keyword("a0wsub", "3", StdI, "mVMC") is True
         assert int(StdI.boxsub[0, 0]) == 3
 
     def test_unrecognised(self):
         """Test that unknown mVMC keyword returns False."""
         StdI = _make_stdi("mVMC")
-        assert parse_mvmc_keyword("notamvmckey", "1", StdI) is False
+        assert parse_solver_keyword("notamvmckey", "1", StdI, "mVMC") is False
 
 
 # =====================================================================
@@ -602,24 +598,24 @@ class TestParseMVMCKeyword:
 
 
 class TestParseUHFKeyword:
-    """Tests for the UHF-specific keyword parser."""
+    """Tests for the UHF-specific keyword parser via parse_solver_keyword."""
 
     def test_iteration_max(self):
         """Test 'iteration_max' keyword."""
         StdI = _make_stdi("UHF")
-        assert parse_uhf_keyword("iteration_max", "200", StdI) is True
+        assert parse_solver_keyword("iteration_max", "200", StdI, "UHF") is True
         assert StdI.Iteration_max == 200
 
     def test_mix(self):
         """Test 'mix' keyword."""
         StdI = _make_stdi("UHF")
-        assert parse_uhf_keyword("mix", "0.5", StdI) is True
+        assert parse_solver_keyword("mix", "0.5", StdI, "UHF") is True
         assert StdI.mix == 0.5
 
     def test_unrecognised(self):
         """Test that unknown UHF keyword returns False."""
         StdI = _make_stdi("UHF")
-        assert parse_uhf_keyword("notauhfkey", "1", StdI) is False
+        assert parse_solver_keyword("notauhfkey", "1", StdI, "UHF") is False
 
 
 # =====================================================================
@@ -628,30 +624,30 @@ class TestParseUHFKeyword:
 
 
 class TestParseHWAVEKeyword:
-    """Tests for the HWAVE-specific keyword parser."""
+    """Tests for the HWAVE-specific keyword parser via parse_solver_keyword."""
 
     def test_calcmode(self):
         """Test 'calcmode' keyword."""
         StdI = _make_stdi("HWAVE")
-        assert parse_hwave_keyword("calcmode", "UHFR", StdI) is True
+        assert parse_solver_keyword("calcmode", "UHFR", StdI, "HWAVE") is True
         assert StdI.calcmode == "uhfr"
 
     def test_fileprefix(self):
         """Test 'fileprefix' keyword."""
         StdI = _make_stdi("HWAVE")
-        assert parse_hwave_keyword("fileprefix", "output", StdI) is True
+        assert parse_solver_keyword("fileprefix", "output", StdI, "HWAVE") is True
         assert StdI.fileprefix == "output"
 
     def test_export_all(self):
         """Test 'exportall' keyword."""
         StdI = _make_stdi("HWAVE")
-        assert parse_hwave_keyword("exportall", "1", StdI) is True
+        assert parse_solver_keyword("exportall", "1", StdI, "HWAVE") is True
         assert StdI.export_all == 1
 
     def test_unrecognised(self):
         """Test that unknown HWAVE keyword returns False."""
         StdI = _make_stdi("HWAVE")
-        assert parse_hwave_keyword("notahwavekey", "1", StdI) is False
+        assert parse_solver_keyword("notahwavekey", "1", StdI, "HWAVE") is False
 
 
 # =====================================================================
