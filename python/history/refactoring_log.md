@@ -7626,3 +7626,20 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+## Step 146 — Replace element-by-element pump index writes with slice assignment in `hopping()`
+
+**Date**: 2026-01-29
+**File(s)**: `python/lattice/interaction_builder.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: In the pump branch of `hopping()`, replaced 8 lines of
+`StdI.pumpindx[it][n][0..3] = ...` with 2 slice assignments
+`StdI.pumpindx[it][n] = [isite, ispin, jsite, ispin]`. Cached
+`StdI.npump[it]` in a local variable `n`.
+
+**Why**: Same pattern as Step 145 — cleaner, more Pythonic array assignment.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

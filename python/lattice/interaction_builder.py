@@ -122,19 +122,14 @@ def hopping(
             Cphase = np.dot(StdI.At[it], dR)
             coef = np.exp(-1j * Cphase)
             for ispin in range(2):
-                StdI.pump[it][StdI.npump[it]] = coef * trans0
-                StdI.pumpindx[it][StdI.npump[it]][0] = isite
-                StdI.pumpindx[it][StdI.npump[it]][1] = ispin
-                StdI.pumpindx[it][StdI.npump[it]][2] = jsite
-                StdI.pumpindx[it][StdI.npump[it]][3] = ispin
-                StdI.npump[it] += 1
+                n = StdI.npump[it]
+                StdI.pump[it][n] = coef * trans0
+                StdI.pumpindx[it][n] = [isite, ispin, jsite, ispin]
+                n += 1
 
-                StdI.pump[it][StdI.npump[it]] = np.conj(coef * trans0)
-                StdI.pumpindx[it][StdI.npump[it]][0] = jsite
-                StdI.pumpindx[it][StdI.npump[it]][1] = ispin
-                StdI.pumpindx[it][StdI.npump[it]][2] = isite
-                StdI.pumpindx[it][StdI.npump[it]][3] = ispin
-                StdI.npump[it] += 1
+                StdI.pump[it][n] = np.conj(coef * trans0)
+                StdI.pumpindx[it][n] = [jsite, ispin, isite, ispin]
+                StdI.npump[it] = n + 1
     else:
         for ispin in range(2):
             trans(StdI, trans0, jsite, ispin, isite, ispin)
