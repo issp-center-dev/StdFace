@@ -7691,3 +7691,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 151 — 2026-01-29
+
+**Files**: `python/writer/export_wannier90.py`
+**Change**: De-duplicated nspin conditional branches in `_write_wannier_body` by using `itertools.product(range(nspin), repeat=2)` for spin pairs and a conditional format string fragment. Reduced 22 lines of duplicated logic to 12 unified lines.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

@@ -21,6 +21,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import itertools
 import sys
 from dataclasses import dataclass, field
 
@@ -266,6 +267,7 @@ def _write_wannier_body(
     matrix : numpy.ndarray
         Flat complex interaction matrix.
     """
+    spin_pairs = list(itertools.product(range(nspin), repeat=2))
     for r in range(nvol):
         rz = r % (rr[2] * 2 + 1) - rr[2]
         ry = (r // (rr[2] * 2 + 1)) % (rr[1] * 2 + 1) - rr[1]
@@ -273,29 +275,15 @@ def _write_wannier_body(
 
         for a in range(nsiteuc):
             for b in range(nsiteuc):
-
-                if nspin > 1:
-                    # Extended format
-                    for s in range(nspin):
-                        for t in range(nspin):
-                            idx = _compute_index(rx, ry, rz, a, b, s, t,
-                                                 rr, nsiteuc, nspin)
-                            if _is_export_all or abs(matrix[idx]) > _EPS:
-                                fp.write(
-                                    f"{rx:4d} {ry:4d} {rz:4d} "
-                                    f"{a + 1:4d} {b + 1:4d} "
-                                    f"{s:4d} {t:4d} "
-                                    f"{matrix[idx].real:16.12f} "
-                                    f"{matrix[idx].imag:16.12f}\n")
-                else:
-                    s = 0
-                    t = 0
+                for s, t in spin_pairs:
                     idx = _compute_index(rx, ry, rz, a, b, s, t,
                                          rr, nsiteuc, nspin)
                     if _is_export_all or abs(matrix[idx]) > _EPS:
+                        spin_part = f"{s:4d} {t:4d} " if nspin > 1 else ""
                         fp.write(
                             f"{rx:4d} {ry:4d} {rz:4d} "
                             f"{a + 1:4d} {b + 1:4d} "
+                            f"{spin_part}"
                             f"{matrix[idx].real:16.12f} "
                             f"{matrix[idx].imag:16.12f}\n")
 
