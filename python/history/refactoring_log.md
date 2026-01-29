@@ -8063,3 +8063,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 184 — 2026-01-29
+
+**Files**: `python/lattice/interaction_builder.py`
+**Change**: Replaced 6 repetitive allocation blocks (sections 3-8) in `malloc_interactions` with a data-driven `_SHORTCUT_ARRAYS` tuple and loop. Each block allocated `(IndxArray, ValueArray, Counter)` for Cintra, Cinter, Hund, Ex, PairLift, PairHopp — all following the same 3-line pattern with only attribute names and column counts differing. Reduces 18 lines to 7.
+**Phase**: 3 — Python idioms (DRY)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

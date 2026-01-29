@@ -521,35 +521,19 @@ def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None
     StdI.intr = np.zeros(nintrMax, dtype=complex)
     StdI.nintr = 0
 
-    # (3) Coulomb intra
-    StdI.CintraIndx = np.zeros((nintrMax, 1), dtype=int)
-    StdI.Cintra = np.zeros(nintrMax)
-    StdI.NCintra = 0
-
-    # (4) Coulomb inter
-    StdI.CinterIndx = np.zeros((nintrMax, 2), dtype=int)
-    StdI.Cinter = np.zeros(nintrMax)
-    StdI.NCinter = 0
-
-    # (5) Hund
-    StdI.HundIndx = np.zeros((nintrMax, 2), dtype=int)
-    StdI.Hund = np.zeros(nintrMax)
-    StdI.NHund = 0
-
-    # (6) Exchange
-    StdI.ExIndx = np.zeros((nintrMax, 2), dtype=int)
-    StdI.Ex = np.zeros(nintrMax)
-    StdI.NEx = 0
-
-    # (7) PairLift
-    StdI.PLIndx = np.zeros((nintrMax, 2), dtype=int)
-    StdI.PairLift = np.zeros(nintrMax)
-    StdI.NPairLift = 0
-
-    # (8) PairHopp
-    StdI.PHIndx = np.zeros((nintrMax, 2), dtype=int)
-    StdI.PairHopp = np.zeros(nintrMax)
-    StdI.NPairHopp = 0
+    # (3)-(8) Two-body shortcut arrays: (indx_attr, val_attr, count_attr, ncols)
+    _SHORTCUT_ARRAYS = (
+        ("CintraIndx", "Cintra",   "NCintra",    1),
+        ("CinterIndx", "Cinter",   "NCinter",    2),
+        ("HundIndx",   "Hund",     "NHund",      2),
+        ("ExIndx",     "Ex",       "NEx",        2),
+        ("PLIndx",     "PairLift", "NPairLift",  2),
+        ("PHIndx",     "PairHopp", "NPairHopp",  2),
+    )
+    for indx_attr, val_attr, count_attr, ncols in _SHORTCUT_ARRAYS:
+        setattr(StdI, indx_attr, np.zeros((nintrMax, ncols), dtype=int))
+        setattr(StdI, val_attr, np.zeros(nintrMax))
+        setattr(StdI, count_attr, 0)
 
 
 def add_neighbor_interaction(
