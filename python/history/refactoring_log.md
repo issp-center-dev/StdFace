@@ -7429,3 +7429,20 @@ C-ism.
 **Tests**:
 - Unit: 1253 passed
 - Integration: 83/83 passed
+
+## Step 135 — Replace `math.acos(-1.0)` with `math.pi` in `stdface_main.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/stdface_main.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Replaced `StdI.pi = math.acos(-1.0)` with `StdI.pi = math.pi` and
+`StdI.pi180 = StdI.pi / 180.0` with `StdI.pi180 = math.pi / 180.0` in
+`_reset_vals()`. The C idiom `acos(-1.0)` to compute π is unnecessary in
+Python where `math.pi` is a built-in constant.
+
+**Why**: Use Python standard library constant instead of C-style computation.
+
+**Tests**:
+- Unit: 1253 passed
+- Integration: 83/83 passed

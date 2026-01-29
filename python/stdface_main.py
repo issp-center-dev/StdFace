@@ -403,8 +403,8 @@ def _reset_vals(StdI: StdIntList) -> None:
         place**.
     """
     # Mathematical constants
-    StdI.pi = math.acos(-1.0)
-    StdI.pi180 = StdI.pi / 180.0
+    StdI.pi = math.pi
+    StdI.pi180 = math.pi / 180.0
 
     # --- Common scalar fields (table-driven) --------------------------------
     for name, value in _COMMON_RESET_SCALARS:
