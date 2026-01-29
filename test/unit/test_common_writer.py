@@ -21,7 +21,6 @@ from writer.common_writer import (
     unsupported_system,
     check_output_mode,
     check_mod_para,
-    print_interactions,
     OUTPUT_MODE_TO_INT,
     MODEL_GC_TO_EX_UPDATE_PATH,
     _SOLVER_DEFAULTS_DISPATCH,
@@ -42,6 +41,7 @@ from writer.common_writer import (
     GreenFunctionIndices,
     _merge_duplicate_terms,
 )
+from writer.interaction_writer import print_interactions
 
 # Sentinel values matching what _reset_vals sets at runtime
 NaN_i = 2147483647

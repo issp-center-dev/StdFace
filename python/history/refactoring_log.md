@@ -8073,3 +8073,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 185 — 2026-01-29
+
+**Files**: `python/writer/common_writer.py`, `test/unit/test_common_writer.py`, `test/unit/test_interaction_writer.py`
+**Change**: Removed the backward-compat re-export of `print_interactions` from `common_writer.py`. This import was added during Step 15 when `print_interactions` was extracted to `interaction_writer.py`. All production code already imports from `interaction_writer` directly (via `solver_writer.py` and `__init__.py`). Updated test imports to use the canonical source. Removed the `TestReExportFromCommonWriter` test class (now obsolete).
+**Phase**: 3 — Python idioms (remove dead code)
+
+**Tests**:
+- Unit: 1260 passed (1 removed)
+- Integration: 83/83 passed

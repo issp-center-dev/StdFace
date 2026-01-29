@@ -30,9 +30,6 @@ check_output_mode
 check_mod_para
     Validate and set default values for solver-specific model parameters.
 
-Note: ``print_interactions`` has been moved to :mod:`interaction_writer`
-and is re-exported here for backward compatibility.
-
 License
 -------
 HPhi-mVMC-StdFace - Common input generator
@@ -56,7 +53,7 @@ from stdface_vals import (
     AMPLITUDE_EPS,
 )
 from param_check import exit_program, print_val_i, print_val_d, required_val_i, not_used_i
-from .interaction_writer import print_interactions  # re-exported for backward compat
+
 
 # ---------------------------------------------------------------------------
 #  String → integer dispatch tables

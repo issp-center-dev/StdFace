@@ -182,13 +182,6 @@ class TestInterAllWritten:
                 os.chdir(orig)
 
 
-class TestReExportFromCommonWriter:
-    """Verify backward-compatible re-export from common_writer."""
-
-    def test_import_from_common_writer_still_works(self):
-        from writer.common_writer import print_interactions as pi
-        assert pi is print_interactions
-
 
 class TestMerge1Idx:
     """Tests for the _merge_1idx helper."""
