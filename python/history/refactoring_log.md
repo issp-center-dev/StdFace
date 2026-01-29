@@ -7907,3 +7907,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed (+15 new)
 - Integration: 83/83 passed
+
+---
+
+## Step 169 — 2026-01-29
+
+**Files**: `python/stdface_main.py`
+**Change**: Extracted lattice dispatch + HPhi LargeValue/Boost block from `stdface_main()` into `_build_lattice_and_boost(StdI, solver)`. This is the third extraction from `stdface_main` (after `_parse_input_file` in step 166 and `_resolve_model_and_method` in step 167). `stdface_main` is now ~75 lines — a high-level orchestrator with clear sequential steps.
+**Phase**: 1 — Extract modules (function extraction from stdface_main)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

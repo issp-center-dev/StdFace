@@ -498,6 +498,48 @@ def _resolve_model_and_method(StdI: StdIntList, solver: str) -> None:
 
 
 # ===================================================================
+#  Lattice construction and Boost
+# ===================================================================
+
+
+def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> None:
+    """Dispatch to the lattice builder and, for HPhi, apply LargeValue and Boost.
+
+    Looks up ``StdI.lattice`` in :data:`LATTICE_DISPATCH` to generate
+    the Hamiltonian definition files.  For the HPhi solver, also
+    computes the large value and optionally runs the Boost builder.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Parameter structure (modified in place).
+    solver : str
+        Solver name.
+
+    Raises
+    ------
+    SystemExit
+        If the lattice is not recognised.
+    """
+    lattice = StdI.lattice
+    lattice_builder = LATTICE_DISPATCH.get(lattice)
+    if lattice_builder is not None:
+        lattice_builder(StdI)
+    else:
+        _unsupported_system(StdI.model, StdI.lattice)
+
+    if solver == SolverType.HPhi:
+        _large_value(StdI)
+
+        if StdI.lBoost == 1:
+            boost_builder = BOOST_DISPATCH.get(lattice)
+            if boost_builder is not None:
+                boost_builder(StdI)
+            else:
+                _unsupported_system(StdI.model, StdI.lattice)
+
+
+# ===================================================================
 #  Input file parsing
 # ===================================================================
 
@@ -618,28 +660,7 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     _resolve_model_and_method(StdI, solver)
 
-    # ------------------------------------------------------------------
-    #  Generate Hamiltonian definition files -- lattice dispatch
-    # ------------------------------------------------------------------
-    lattice = StdI.lattice
-    lattice_builder = LATTICE_DISPATCH.get(lattice)
-    if lattice_builder is not None:
-        lattice_builder(StdI)
-    else:
-        _unsupported_system(StdI.model, StdI.lattice)
-
-    # ------------------------------------------------------------------
-    #  HPhi extras: LargeValue and Boost
-    # ------------------------------------------------------------------
-    if solver == SolverType.HPhi:
-        _large_value(StdI)
-
-        if StdI.lBoost == 1:
-            boost_builder = BOOST_DISPATCH.get(lattice)
-            if boost_builder is not None:
-                boost_builder(StdI)
-            else:
-                _unsupported_system(StdI.model, StdI.lattice)
+    _build_lattice_and_boost(StdI, solver)
 
     # ------------------------------------------------------------------
     #  Print Expert input files
