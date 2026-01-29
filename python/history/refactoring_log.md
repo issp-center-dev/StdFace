@@ -6950,3 +6950,31 @@ counting loop was also replaced with a generator expression.
 **Suggested next step**: Vectorize `_print_uhf_initial()` loops in
 `wannier90.py`, or target the `cos`/`sin` patterns remaining in
 `interaction_builder.py`.
+
+---
+
+## Step 115 — Vectorize and deduplicate `_print_uhf_initial()` in `wannier90.py`
+
+**Date**: 2026-01-29
+**File**: `python/lattice/wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_print_uhf_initial()` had three issues: (1) an O(n²) Python
+loop for counting nonzero entries, replaced with `np.count_nonzero`; (2) a
+second O(n²) loop for writing, replaced with `np.nonzero` iteration; (3)
+near-identical Coulomb (U) and Exchange (J) loop blocks, merged into a single
+loop over `idx in (1, 2)`.
+
+**Changes**:
+
+- Replaced double counting loop with `np.abs(IniGuess) > AMPLITUDE_EPS` mask + `np.count_nonzero`
+- Replaced double output loop with `np.nonzero(mask)` iteration
+- Merged duplicate U/J loops into single parameterized loop
+- Precomputed `0.5 * IniGuess[isite, jsite]` to avoid repeated multiplication
+
+**Test results**:
+- Unit tests: 1262 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Vectorize remaining `cos`/`sin` patterns in
+`hphi_writer.py` or `interaction_builder.py`.

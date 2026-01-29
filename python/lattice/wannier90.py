@@ -510,37 +510,22 @@ def _print_uhf_initial(
             jsite = isite_uc + StdI.NsiteUC * kCell
             IniGuess[jsite, jsite] = DenMat[(0, 0, 0)][isite_uc, isite_uc]
 
-        # Coulomb integral (U)
-        for it in range(NtUJ[1]):
-            isite, jsite, Cphase, dR = find_site(
-                StdI, iW, iL, iH,
-                int(tUJindx[1][it, 0]), int(tUJindx[1][it, 1]), int(tUJindx[1][it, 2]),
-                int(tUJindx[1][it, 3]), int(tUJindx[1][it, 4]),
-            )
-            key = (int(tUJindx[1][it, 0]), int(tUJindx[1][it, 1]), int(tUJindx[1][it, 2]))
-            IniGuess[isite, jsite] = DenMat[key][int(tUJindx[1][it, 3]), int(tUJindx[1][it, 4])]
-            IniGuess[jsite, isite] = np.conj(
-                DenMat[key][int(tUJindx[1][it, 3]), int(tUJindx[1][it, 4])]
-            )
+        # Coulomb integral (U) and Exchange integral (J)
+        for idx in (1, 2):
+            for it in range(NtUJ[idx]):
+                row = tUJindx[idx][it]
+                isite, jsite, Cphase, dR = find_site(
+                    StdI, iW, iL, iH,
+                    int(row[0]), int(row[1]), int(row[2]),
+                    int(row[3]), int(row[4]),
+                )
+                key = (int(row[0]), int(row[1]), int(row[2]))
+                dm_val = DenMat[key][int(row[3]), int(row[4])]
+                IniGuess[isite, jsite] = dm_val
+                IniGuess[jsite, isite] = np.conj(dm_val)
 
-        # Exchange integral (J)
-        for it in range(NtUJ[2]):
-            isite, jsite, Cphase, dR = find_site(
-                StdI, iW, iL, iH,
-                int(tUJindx[2][it, 0]), int(tUJindx[2][it, 1]), int(tUJindx[2][it, 2]),
-                int(tUJindx[2][it, 3]), int(tUJindx[2][it, 4]),
-            )
-            key = (int(tUJindx[2][it, 0]), int(tUJindx[2][it, 1]), int(tUJindx[2][it, 2]))
-            IniGuess[isite, jsite] = DenMat[key][int(tUJindx[2][it, 3]), int(tUJindx[2][it, 4])]
-            IniGuess[jsite, isite] = np.conj(
-                DenMat[key][int(tUJindx[2][it, 3]), int(tUJindx[2][it, 4])]
-            )
-
-    NIniGuess = 0
-    for isite in range(StdI.nsite):
-        for jsite in range(StdI.nsite):
-            if abs(IniGuess[isite, jsite]) > AMPLITUDE_EPS:
-                NIniGuess += 1
+    mask = np.abs(IniGuess) > AMPLITUDE_EPS
+    NIniGuess = int(np.count_nonzero(mask))
 
     with open("initial.def", "w") as fp:
         fp.write("======================== \n")
@@ -549,15 +534,15 @@ def _print_uhf_initial(
         fp.write("========i_j_s_tijs====== \n")
         fp.write("======================== \n")
 
-        for isite in range(StdI.nsite):
-            for jsite in range(StdI.nsite):
-                if abs(IniGuess[isite, jsite]) > AMPLITUDE_EPS:
-                    for ispin in range(2):
-                        fp.write(
-                            f"{jsite:5d} {ispin:5d} {isite:5d} {ispin:5d} "
-                            f"{0.5 * IniGuess[isite, jsite].real:25.15f} "
-                            f"{0.5 * IniGuess[isite, jsite].imag:25.15f}\n"
-                        )
+        rows, cols = np.nonzero(mask)
+        for isite, jsite in zip(rows, cols):
+            val = 0.5 * IniGuess[isite, jsite]
+            for ispin in range(2):
+                fp.write(
+                    f"{jsite:5d} {ispin:5d} {isite:5d} {ispin:5d} "
+                    f"{val.real:25.15f} "
+                    f"{val.imag:25.15f}\n"
+                )
 
     print("      initial.def is written.")
 
