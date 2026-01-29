@@ -7895,3 +7895,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 168 — 2026-01-29
+
+**Files**: `test/unit/test_stdface_main_helpers.py` (new)
+**Change**: Added 15 unit tests for the two functions extracted in steps 166-167: `_parse_input_file` (6 tests: keyword parsing, comment/blank skipping, missing file, missing `=`, unknown keyword, case insensitivity) and `_resolve_model_and_method` (9 tests: hubbard/spingc/spingcboost/kondogc resolution, HPhi-only boost, unknown model exit, method alias normalisation, non-HPhi method passthrough).
+**Phase**: Testing — cover newly extracted APIs
+
+**Tests**:
+- Unit: 1261 passed (+15 new)
+- Integration: 83/83 passed
