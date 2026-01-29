@@ -7205,3 +7205,29 @@ a single-line `sum(1 for ...)` generator expression — idiomatic Python.
 
 **Suggested next step**: Begin Phase 2 work on introducing a `KeywordParser`
 class or `SolverWriter` hierarchy.
+
+---
+
+## Step 125 — Remove C-ism `text2lower` wrapper, inline `.lower()` calls
+
+**Date**: 2026-01-29
+**File**: `python/keyword_parser.py`, `python/stdface_main.py`, `test/unit/test_keyword_parser.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `text2lower()` was a trivial wrapper around `str.lower()`,
+a leftover from the C→Python translation. Removed the function and replaced
+all call sites with direct `.lower()` calls.
+
+**Changes**:
+
+- Deleted `text2lower()` from `keyword_parser.py`
+- Replaced `text2lower(value[:maxlen])` with `value[:maxlen].lower()` in `store_with_check_dup_sl`
+- Replaced `_text2lower(parts[0])` with `parts[0].lower()` in `stdface_main.py`
+- Removed import and 3 unit tests for `text2lower`
+
+**Test results**:
+- Unit tests: 1253 passed (3 removed with deleted function)
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Remove similar C-ism wrappers (e.g. consider whether
+`trim_space_quote` could be simplified), or begin Phase 2 class introduction.

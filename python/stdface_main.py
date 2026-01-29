@@ -46,7 +46,6 @@ from writer.common_writer import (
 )
 from writer.solver_writer import get_solver_writer
 from keyword_parser import (
-    text2lower as _text2lower,
     trim_space_quote as _trim_space_quote,
     parse_common_keyword as _parse_common_keyword,
     parse_solver_keyword as _parse_solver_keyword,
@@ -426,7 +425,7 @@ def _reset_vals(StdI: StdIntList) -> None:
     StdI.lBoost = 0
 
 
-# Keyword parsing helpers (_text2lower, _trim_space_quote,
+# Keyword parsing helpers (_trim_space_quote,
 # _store_with_check_dup_s/sl/i/d/c) and keyword parsers
 # (_parse_common_keyword, _parse_solver_keyword, _parse_hphi_keyword,
 # _parse_mvmc_keyword, _parse_uhf_keyword, _parse_hwave_keyword)
@@ -505,7 +504,7 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
                 print('\n  ERROR !  "=" is NOT found !\n')
                 exit_program(-1)
 
-            keyword = _text2lower(parts[0])
+            keyword = parts[0].lower()
             value = parts[1]
             print(f"  KEYWORD : {keyword:<20s} | VALUE : {value} ")
 

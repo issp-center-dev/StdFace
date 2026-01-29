@@ -11,7 +11,6 @@ import cmath
 import pytest
 
 from keyword_parser import (
-    text2lower,
     trim_space_quote,
     store_with_check_dup_s,
     store_with_check_dup_sl,
@@ -252,27 +251,6 @@ def _make_stdi(solver: str = "HPhi") -> StdIntList:
         StdI.lattice_gp = NaN_i
 
     return StdI
-
-
-# =====================================================================
-#  Tests for text2lower
-# =====================================================================
-
-
-class TestText2Lower:
-    """Tests for the text2lower helper."""
-
-    def test_lowercase(self):
-        """Test that uppercase text is converted."""
-        assert text2lower("HELLO") == "hello"
-
-    def test_mixed_case(self):
-        """Test mixed-case conversion."""
-        assert text2lower("LaTtIcE") == "lattice"
-
-    def test_already_lower(self):
-        """Test that lowercase text is unchanged."""
-        assert text2lower("chain") == "chain"
 
 
 # =====================================================================

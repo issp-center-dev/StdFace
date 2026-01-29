@@ -13,24 +13,6 @@ from stdface_vals import StdIntList, SolverType, NaN_i, UNSET_STRING
 from param_check import exit_program
 
 
-def text2lower(text: str) -> str:
-    """Convert *text* to lower case.
-
-    This is the Python translation of the C helper ``Text2Lower()``.
-
-    Parameters
-    ----------
-    text : str
-        Keyword or value string.
-
-    Returns
-    -------
-    str
-        The input converted to lower case.
-    """
-    return text.lower()
-
-
 def trim_space_quote(text: str) -> str:
     """Remove whitespace, colons, semicolons, quotes and backslashes from *text*.
 
@@ -117,7 +99,7 @@ def store_with_check_dup_sl(
     if current != UNSET_STRING:
         print(f"ERROR !  Keyword {keyword} is duplicated ! ")
         exit_program(-1)
-    return text2lower(value[:maxlen])
+    return value[:maxlen].lower()
 
 
 def store_with_check_dup_i(keyword: str, value: str, current: int) -> int:
