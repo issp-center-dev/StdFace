@@ -99,6 +99,25 @@ def _check_in_box(rvec: np.ndarray, inverse_matrix: np.ndarray) -> bool:
     return bool(np.all(np.abs(judge_vec) <= 1))
 
 
+def _skip_degeneracy_weights(fp: TextIO, n_wigner_seitz: int) -> None:
+    """Skip the degeneracy-weight lines in a Wannier90 ``*_hr.dat`` file.
+
+    The weights are written as whitespace-separated integers, potentially
+    spanning multiple lines.  This helper reads and discards exactly
+    *n_wigner_seitz* values.
+
+    Parameters
+    ----------
+    fp : TextIO
+        Open file positioned just after the ``nWSC`` header line.
+    n_wigner_seitz : int
+        Total number of Wigner-Seitz cells (degeneracy entries to skip).
+    """
+    count = 0
+    while count < n_wigner_seitz:
+        count += len(fp.readline().split())
+
+
 def _geometry_w90(StdI: StdIntList) -> None:
     """Read Wannier90 geometry file.
 
@@ -327,11 +346,8 @@ def _read_w90(
         nWan = int(fp_hr.readline().split()[0])
         nWSC = int(fp_hr.readline().split()[0])
 
-        # Read degeneracy weights (skip them, only needed for count)
-        count = 0
-        while count < nWSC:
-            line = fp_hr.readline().split()
-            count += len(line)
+        # Skip degeneracy weights
+        _skip_degeneracy_weights(fp_hr, nWSC)
 
         # Allocate arrays
         Weight_tot = np.ones(nWSC)
@@ -426,10 +442,7 @@ def _read_density_matrix(
         nWan = int(fp_dr.readline().split()[0])
         nWSC = int(fp_dr.readline().split()[0])
 
-        count = 0
-        while count < nWSC:
-            line = fp_dr.readline().split()
-            count += len(line)
+        _skip_degeneracy_weights(fp_dr, nWSC)
 
         # Allocate
         Mat_tot = np.zeros((nWSC, nWan, nWan), dtype=complex)

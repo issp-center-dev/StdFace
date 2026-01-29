@@ -7468,3 +7468,22 @@ library constants that should be used directly.
 **Tests**:
 - Unit: 1250 passed (3 removed)
 - Integration: 83/83 passed
+
+## Step 137 — Extract `_skip_degeneracy_weights` helper in `wannier90.py`
+
+**Date**: 2026-01-29
+**File(s)**: `python/lattice/wannier90.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Extracted a 4-line duplicated `while count < nWSC` loop into a
+named helper `_skip_degeneracy_weights(fp, n_wigner_seitz)`. This loop
+appeared identically in `_read_w90_hr_dat()` and `_read_w90_dr_dat()`,
+reading and discarding degeneracy weight lines from Wannier90 `*_hr.dat`
+files.
+
+**Why**: DRY — eliminate duplicated code block; the helper name also makes
+the intent clearer than the raw while-loop.
+
+**Tests**:
+- Unit: 1250 passed
+- Integration: 83/83 passed
