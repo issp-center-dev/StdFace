@@ -182,17 +182,15 @@ def chain(StdI: StdIntList) -> None:
             # Local term
             add_local_terms(StdI, isite, iL)
 
-            # Nearest neighbor
-            add_neighbor_interaction(
-                StdI, fp, 0, iL, 0, 1, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0)
-
-            # Second nearest neighbor
-            add_neighbor_interaction(
-                StdI, fp, 0, iL, 0, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-
-            # Third nearest neighbor
-            add_neighbor_interaction(
-                StdI, fp, 0, iL, 0, 3, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp)
+            # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
+            _BONDS = (
+                (0, 1, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn
+                (0, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn
+                (0, 3, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn
+            )
+            for dW, dL, si, sj, nn, J, t, V in _BONDS:
+                add_neighbor_interaction(
+                    StdI, fp, 0, iL, dW, dL, si, sj, nn, J, t, V)
 
 
 def chain_boost(StdI: StdIntList) -> None:

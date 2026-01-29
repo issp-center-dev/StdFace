@@ -8033,3 +8033,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 181 — 2026-01-29
+
+**Files**: `python/lattice/chain_lattice.py`
+**Change**: Replaced 3 repetitive `add_neighbor_interaction` calls in `chain()` with a data-driven `_BONDS` tuple and loop. Covers nn, nnn, and nnnn bonds. Completes bond-table refactoring across all 9 lattice modules (steps 173-181).
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed
