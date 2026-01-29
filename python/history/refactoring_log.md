@@ -8053,3 +8053,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 183 — 2026-01-29
+
+**Files**: `python/keyword_parser.py`, `test/unit/test_keyword_parser.py`
+**Change**: Unified three duplicate 3×3 grid keyword generators (`_box_keywords`, `_cutoff_vec_keywords`, and inline `_BOXSUB_KEYWORDS`) into a single generic `_grid3x3_keywords(fmt, field, store_func, cast)` function. The format string uses `{a}` and `{c}` placeholders for row/col names. Eliminates two functions and one 9-line dict literal. Updated 4 call sites in the keyword table and all test references.
+**Phase**: 3 — Python idioms (DRY)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

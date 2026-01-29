@@ -29,8 +29,7 @@ from keyword_parser import (
     _SOLVER_KEYWORD_TABLES,
     _apply_keyword_table,
     _j_matrix_keywords,
-    _cutoff_vec_keywords,
-    _box_keywords,
+    _grid3x3_keywords,
     NaN_i,
 )
 from stdface_vals import StdIntList, SolverType
@@ -916,16 +915,16 @@ class TestJMatrixKeywords:
 
 
 class TestCutoffVecKeywords:
-    """Tests for the _cutoff_vec_keywords generator function."""
+    """Tests for the _grid3x3_keywords generator (cutoff vec variant)."""
 
     def test_returns_9_entries(self):
         """Test that generator produces exactly 9 entries."""
-        d = _cutoff_vec_keywords("cutoff_j", "cutoff_JVec")
+        d = _grid3x3_keywords("cutoff_j_{a}{c}", "cutoff_JVec", store_with_check_dup_d, float)
         assert len(d) == 9
 
     def test_has_all_9_keys(self):
         """Test that all a{0,1,2}{w,l,h} combos are present."""
-        d = _cutoff_vec_keywords("cutoff_t", "cutoff_tVec")
+        d = _grid3x3_keywords("cutoff_t_{a}{c}", "cutoff_tVec", store_with_check_dup_d, float)
         for row, aname in enumerate(("a0", "a1", "a2")):
             for col, comp in enumerate(("w", "l", "h")):
                 key = f"cutoff_t_{aname}{comp}"
@@ -933,7 +932,7 @@ class TestCutoffVecKeywords:
 
     def test_index_mapping(self):
         """Test that indices map to correct (row, col)."""
-        d = _cutoff_vec_keywords("cutoff_u", "cutoff_UVec")
+        d = _grid3x3_keywords("cutoff_u_{a}{c}", "cutoff_UVec", store_with_check_dup_d, float)
         assert d["cutoff_u_a0w"][2] == (0, 0)
         assert d["cutoff_u_a1l"][2] == (1, 1)
         assert d["cutoff_u_a2h"][2] == (2, 2)
@@ -942,7 +941,7 @@ class TestCutoffVecKeywords:
 
     def test_entries_are_4_tuples(self):
         """Test that all entries have length 4."""
-        d = _cutoff_vec_keywords("cutoff_j", "cutoff_JVec")
+        d = _grid3x3_keywords("cutoff_j_{a}{c}", "cutoff_JVec", store_with_check_dup_d, float)
         for key, entry in d.items():
             assert len(entry) == 4, f"{key}: len={len(entry)}"
             assert entry[1] == "cutoff_JVec"
@@ -954,35 +953,35 @@ class TestCutoffVecKeywords:
 
 
 class TestBoxKeywords:
-    """Tests for the _box_keywords generator function."""
+    """Tests for the _grid3x3_keywords generator (box variant)."""
+
+    def _box(self):
+        return _grid3x3_keywords("{a}{c}", "box", store_with_check_dup_i, int)
 
     def test_returns_9_entries(self):
         """Test that generator produces exactly 9 entries."""
-        d = _box_keywords()
-        assert len(d) == 9
+        assert len(self._box()) == 9
 
     def test_has_all_9_keys(self):
         """Test that all a{0,1,2}{w,l,h} combos are present."""
-        d = _box_keywords()
+        d = self._box()
         for a in ("a0", "a1", "a2"):
             for c in ("w", "l", "h"):
                 assert f"{a}{c}" in d
 
     def test_index_mapping(self):
         """Test that indices map to correct (row, col)."""
-        d = _box_keywords()
+        d = self._box()
         assert d["a0w"][2] == (0, 0)
         assert d["a1l"][2] == (1, 1)
         assert d["a2h"][2] == (2, 2)
 
     def test_entries_use_int_cast(self):
         """Test that box entries use int as cast function."""
-        d = _box_keywords()
-        for key, entry in d.items():
+        for key, entry in self._box().items():
             assert entry[3] is int, f"{key}: cast is not int"
 
     def test_entries_target_box_field(self):
         """Test that all entries target the 'box' array."""
-        d = _box_keywords()
-        for key, entry in d.items():
+        for key, entry in self._box().items():
             assert entry[1] == "box", f"{key}: field is {entry[1]}"

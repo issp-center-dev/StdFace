@@ -282,37 +282,35 @@ def _j_matrix_keywords(prefix: str, scalar_field: str,
     return d
 
 
-def _cutoff_vec_keywords(prefix: str, vec_field: str) -> dict[str, tuple]:
-    """Generate keyword entries for a 3x3 cutoff vector array.
+def _grid3x3_keywords(
+    fmt: str, field: str, store_func: object, cast: type,
+) -> dict[str, tuple]:
+    """Generate 9 keyword entries for a 3x3 array indexed by (a0/a1/a2) × (w/l/h).
 
     Parameters
     ----------
-    prefix : str
-        Lowered keyword prefix (e.g. ``"cutoff_j"``).
-    vec_field : str
-        StdIntList attribute for the 3x3 array (e.g. ``"cutoff_JVec"``).
+    fmt : str
+        Format string with ``{a}`` and ``{c}`` placeholders for the row name
+        and column name, e.g. ``"{a}{c}"`` → ``"a0w"``, ``"a1l"``, etc.
+        or ``"cutoff_j_{a}{c}"`` → ``"cutoff_j_a0w"``, etc.
+    field : str
+        StdIntList attribute name for the 3x3 array (e.g. ``"box"``).
+    store_func : callable
+        Store-with-duplicate-check function (e.g. ``store_with_check_dup_i``).
+    cast : type
+        Type cast for the stored value (``int`` or ``float``).
 
     Returns
     -------
     dict[str, tuple]
-        9 keyword entries for ``prefix_a{0,1,2}{w,l,h}``.
+        9 keyword entries mapping ``fmt.format(a=..., c=...)`` to
+        ``(store_func, field, (row, col), cast)``.
     """
     d: dict[str, tuple] = {}
     for row, aname in enumerate(("a0", "a1", "a2")):
         for col, comp in enumerate(("w", "l", "h")):
-            d[f"{prefix}_{aname}{comp}"] = (
-                store_with_check_dup_d, vec_field, (row, col), float
-            )
-    return d
-
-
-def _box_keywords() -> dict[str, tuple]:
-    """Generate keyword entries for the 3x3 supercell box array."""
-    d: dict[str, tuple] = {}
-    for row, aname in enumerate(("a0", "a1", "a2")):
-        for col, comp in enumerate(("w", "l", "h")):
-            d[f"{aname}{comp}"] = (
-                store_with_check_dup_i, "box", (row, col), int
+            d[fmt.format(a=aname, c=comp)] = (
+                store_func, field, (row, col), cast
             )
     return d
 
@@ -321,13 +319,13 @@ _COMMON_KEYWORDS: dict[str, tuple] = {
     # --- scalar a --------------------------------------------------------
     "a": (store_with_check_dup_d, "a"),
     # --- box (supercell) -------------------------------------------------
-    **_box_keywords(),
+    **_grid3x3_keywords("{a}{c}", "box", store_with_check_dup_i, int),
     # --- cutoff J --------------------------------------------------------
     "cutoff_j":        (store_with_check_dup_d, "cutoff_j"),
     "cutoff_jw":       (store_with_check_dup_i, "cutoff_JR", 0, int),
     "cutoff_jl":       (store_with_check_dup_i, "cutoff_JR", 1, int),
     "cutoff_jh":       (store_with_check_dup_i, "cutoff_JR", 2, int),
-    **_cutoff_vec_keywords("cutoff_j", "cutoff_JVec"),
+    **_grid3x3_keywords("cutoff_j_{a}{c}", "cutoff_JVec", store_with_check_dup_d, float),
     "cutoff_length_j": (store_with_check_dup_d, "cutoff_length_J"),
     "cutoff_length_u": (store_with_check_dup_d, "cutoff_length_U"),
     "cutoff_length_t": (store_with_check_dup_d, "cutoff_length_t"),
@@ -336,13 +334,13 @@ _COMMON_KEYWORDS: dict[str, tuple] = {
     "cutoff_tw":       (store_with_check_dup_i, "cutoff_tR", 0, int),
     "cutoff_tl":       (store_with_check_dup_i, "cutoff_tR", 1, int),
     "cutoff_th":       (store_with_check_dup_i, "cutoff_tR", 2, int),
-    **_cutoff_vec_keywords("cutoff_t", "cutoff_tVec"),
+    **_grid3x3_keywords("cutoff_t_{a}{c}", "cutoff_tVec", store_with_check_dup_d, float),
     # --- cutoff U --------------------------------------------------------
     "cutoff_u":        (store_with_check_dup_d, "cutoff_u"),
     "cutoff_uw":       (store_with_check_dup_i, "cutoff_UR", 0, int),
     "cutoff_ul":       (store_with_check_dup_i, "cutoff_UR", 1, int),
     "cutoff_uh":       (store_with_check_dup_i, "cutoff_UR", 2, int),
-    **_cutoff_vec_keywords("cutoff_u", "cutoff_UVec"),
+    **_grid3x3_keywords("cutoff_u_{a}{c}", "cutoff_UVec", store_with_check_dup_d, float),
     # --- lambda, alpha, D ------------------------------------------------
     "lambda":          (store_with_check_dup_d, "lambda_"),
     "lambda_u":        (store_with_check_dup_d, "lambda_U"),
@@ -463,17 +461,9 @@ def parse_common_keyword(keyword: str, value: str, StdI: StdIntList) -> bool:
 # ``_apply_keyword_table`` applies the matching entry generically.
 
 # Shared boxsub keywords (mVMC, UHF, HWAVE all accept these).
-_BOXSUB_KEYWORDS: dict[str, tuple] = {
-    "a0wsub": (store_with_check_dup_i, "boxsub", (0, 0), int),
-    "a0lsub": (store_with_check_dup_i, "boxsub", (0, 1), int),
-    "a0hsub": (store_with_check_dup_i, "boxsub", (0, 2), int),
-    "a1wsub": (store_with_check_dup_i, "boxsub", (1, 0), int),
-    "a1lsub": (store_with_check_dup_i, "boxsub", (1, 1), int),
-    "a1hsub": (store_with_check_dup_i, "boxsub", (1, 2), int),
-    "a2wsub": (store_with_check_dup_i, "boxsub", (2, 0), int),
-    "a2lsub": (store_with_check_dup_i, "boxsub", (2, 1), int),
-    "a2hsub": (store_with_check_dup_i, "boxsub", (2, 2), int),
-}
+_BOXSUB_KEYWORDS: dict[str, tuple] = _grid3x3_keywords(
+    "{a}{c}sub", "boxsub", store_with_check_dup_i, int
+)
 
 # Shared UHF base keywords (UHF and HWAVE both accept these).
 _UHF_BASE_KEYWORDS: dict[str, tuple] = {
