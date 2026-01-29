@@ -262,4 +262,7 @@ def _discover_plugins() -> None:
     try:
         import stdface.solvers  # noqa: F401 — triggers auto-registration
     except ImportError:
+        # Solvers package not available (e.g., minimal install, missing
+        # dependencies, or corrupted package). Plugin lookup will fail
+        # with a helpful KeyError listing available plugins.
         pass
