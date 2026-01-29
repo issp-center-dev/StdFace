@@ -7775,3 +7775,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 158 — 2026-01-29
+
+**Files**: `python/lattice/boost_output.py`
+**Change**: Replaced inner `for isite in range(7): fp.write(...)` loops in `write_boost_6spin_star` and `write_boost_6spin_pair` with numpy row slicing + `" ".join(...)` single-write pattern.
+**Phase**: 3 — Leverage Python idioms
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

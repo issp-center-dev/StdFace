@@ -120,9 +120,8 @@ def write_boost_6spin_star(fp: TextIO, StdI: StdIntList) -> None:
     fp.write("# StdI->list_6spin_star\n")
     for ipivot in range(StdI.num_pivot):
         fp.write(f"# pivot {ipivot}\n")
-        for isite in range(7):
-            fp.write(f"{StdI.list_6spin_star[ipivot, isite]} ")
-        fp.write("\n")
+        row = StdI.list_6spin_star[ipivot, :7]
+        fp.write(" ".join(str(x) for x in row) + " \n")
 
 
 def write_boost_6spin_pair(fp: TextIO, StdI: StdIntList) -> None:
@@ -144,6 +143,5 @@ def write_boost_6spin_pair(fp: TextIO, StdI: StdIntList) -> None:
     for ipivot in range(StdI.num_pivot):
         fp.write(f"# pivot {ipivot}\n")
         for kintr in range(StdI.list_6spin_star[ipivot, 0]):
-            for isite in range(7):
-                fp.write(f"{StdI.list_6spin_pair[ipivot, isite, kintr]} ")
-            fp.write("\n")
+            row = StdI.list_6spin_pair[ipivot, :7, kintr]
+            fp.write(" ".join(str(x) for x in row) + " \n")
