@@ -179,32 +179,25 @@ def ladder(StdI: StdIntList) -> None:
                 # Local terms
                 add_local_terms(StdI, isite, isiteUC + iL * StdI.NsiteUC)
 
-                # Nearest neighbor along the ladder
-                add_neighbor_interaction(
-                    StdI, fp, 0, iL, 0, 1, isiteUC, isiteUC, 1,
-                    StdI.J1, StdI.t1, StdI.V1)
+                # Leg bonds: (dW, dL, sj_offset, nn, J, t, V)
+                _LEG_BONDS = (
+                    (0, 1, 0, 1, StdI.J1, StdI.t1, StdI.V1),   # nn along ladder
+                    (0, 2, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p), # nnn along ladder
+                )
+                for dW, dL, sj_off, nn, J, t, V in _LEG_BONDS:
+                    add_neighbor_interaction(
+                        StdI, fp, 0, iL, dW, dL, isiteUC, isiteUC + sj_off, nn, J, t, V)
 
-                # Second nearest neighbor along the ladder
-                add_neighbor_interaction(
-                    StdI, fp, 0, iL, 0, 2, isiteUC, isiteUC, 2,
-                    StdI.J1p, StdI.t1p, StdI.V1p)
-
-                # Interactions across rungs
+                # Rung/diagonal bonds (only between adjacent legs)
                 if isiteUC < StdI.NsiteUC - 1:
-                    # Vertical
-                    add_neighbor_interaction(
-                        StdI, fp, 0, iL, 0, 0, isiteUC, isiteUC + 1, 1,
-                        StdI.J0, StdI.t0, StdI.V0)
-
-                    # Diagonal 1
-                    add_neighbor_interaction(
-                        StdI, fp, 0, iL, 0, 1, isiteUC, isiteUC + 1, 1,
-                        StdI.J2, StdI.t2, StdI.V2)
-
-                    # Diagonal 2
-                    add_neighbor_interaction(
-                        StdI, fp, 0, iL, 0, -1, isiteUC, isiteUC + 1, 1,
-                        StdI.J2p, StdI.t2p, StdI.V2p)
+                    _RUNG_BONDS = (
+                        (0, 0, 1, StdI.J0, StdI.t0, StdI.V0),    # vertical
+                        (0, 1, 1, StdI.J2, StdI.t2, StdI.V2),    # diagonal 1
+                        (0, -1, 1, StdI.J2p, StdI.t2p, StdI.V2p), # diagonal 2
+                    )
+                    for dW, dL, nn, J, t, V in _RUNG_BONDS:
+                        add_neighbor_interaction(
+                            StdI, fp, 0, iL, dW, dL, isiteUC, isiteUC + 1, nn, J, t, V)
 
 
 def ladder_boost(StdI: StdIntList) -> None:

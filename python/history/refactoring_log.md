@@ -7993,3 +7993,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 177 — 2026-01-29
+
+**Files**: `python/lattice/ladder.py`
+**Change**: Replaced 5 repetitive `add_neighbor_interaction` calls in `ladder()` with two data-driven bond tables: `_LEG_BONDS` (2 leg bonds) and `_RUNG_BONDS` (3 rung/diagonal bonds, conditional on `isiteUC < NsiteUC - 1`). Reduces 25 lines to 16 lines.
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed
