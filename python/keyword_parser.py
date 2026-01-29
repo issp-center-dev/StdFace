@@ -13,13 +13,19 @@ from stdface_vals import StdIntList, SolverType, NaN_i, UNSET_STRING
 from param_check import exit_program
 
 
+_TRIM_TABLE = str.maketrans("", "", " :;\"\\\b\v\n\0")
+"""Translation table for :func:`trim_space_quote`.
+
+Removes: space, colon, semicolon, double-quote, backslash,
+backspace (``\\b``), vertical-tab (``\\v``), newline, and null.
+"""
+
+
 def trim_space_quote(text: str) -> str:
     """Remove whitespace, colons, semicolons, quotes and backslashes from *text*.
 
-    This is the Python translation of the C helper ``TrimSpaceQuote()``.
-    The original C code strips the characters: space, colon, semicolon,
-    double-quote, backspace (``\\b``), backslash, vertical-tab (``\\v``),
-    newline, and null.
+    Uses a precomputed :func:`str.maketrans` table for efficient
+    character deletion.
 
     Parameters
     ----------
@@ -31,8 +37,7 @@ def trim_space_quote(text: str) -> str:
     str
         The cleaned string with the above characters removed.
     """
-    remove_chars = set(" :;\"\\\b\v\n\0")
-    return "".join(ch for ch in text if ch not in remove_chars)
+    return text.translate(_TRIM_TABLE)
 
 
 def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:

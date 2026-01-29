@@ -7231,3 +7231,28 @@ all call sites with direct `.lower()` calls.
 
 **Suggested next step**: Remove similar C-ism wrappers (e.g. consider whether
 `trim_space_quote` could be simplified), or begin Phase 2 class introduction.
+
+---
+
+## Step 126 — Replace `trim_space_quote` set-based loop with `str.translate`
+
+**Date**: 2026-01-29
+**File**: `python/keyword_parser.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `trim_space_quote()` created a `set` of characters on every
+call and iterated character-by-character with a generator. Replaced with a
+precomputed `str.maketrans` table and `str.translate()` — idiomatic Python
+and more efficient (C-level loop instead of Python generator).
+
+**Changes**:
+
+- Added module-level `_TRIM_TABLE = str.maketrans("", "", ...)` constant
+- Replaced function body with `return text.translate(_TRIM_TABLE)`
+
+**Test results**:
+- Unit tests: 1253 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Begin Phase 2 class introduction work (e.g.
+`KeywordParser` class or `SolverWriter` hierarchy).
