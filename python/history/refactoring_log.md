@@ -8023,3 +8023,13 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1261 passed
 - Integration: 83/83 passed
+
+## Step 180 — 2026-01-29
+
+**Files**: `python/lattice/square_lattice.py`
+**Change**: Replaced 6 repetitive `add_neighbor_interaction` calls in `tetragonal()` with a data-driven `_BONDS` tuple and loop. Covers nn (2), nnn (2), and nnnn (2) bonds. Reduces 23 lines to 12 lines.
+**Phase**: 3 — Python idioms (data-driven dispatch)
+
+**Tests**:
+- Unit: 1261 passed
+- Integration: 83/83 passed

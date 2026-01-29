@@ -157,26 +157,15 @@ def tetragonal(StdI: StdIntList) -> None:
                 isite += StdI.NCell
             add_local_terms(StdI, isite, kCell)
 
-            # Nearest neighbor along W
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0)
-
-            # Nearest neighbor along L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 1, 0, 0, 1, StdI.J1, StdI.t1, StdI.V1)
-
-            # Second nearest neighbor W+L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, 1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p)
-
-            # Second nearest neighbor W-L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 1, -1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p)
-
-            # Third nearest neighbor along 2W
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 2, 0, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp)
-
-            # Third nearest neighbor along 2L
-            add_neighbor_interaction(
-                StdI, fp, iW, iL, 0, 2, 0, 0, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp)
+            # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
+            _BONDS = (
+                (1, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn along W
+                (0, 1, 0, 0, 1, StdI.J1, StdI.t1, StdI.V1),       # nn along L
+                (1, 1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn W+L
+                (1, -1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),   # nnn W-L
+                (2, 0, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn 2W
+                (0, 2, 0, 0, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp), # nnnn 2L
+            )
+            for dW, dL, si, sj, nn, J, t, V in _BONDS:
+                add_neighbor_interaction(
+                    StdI, fp, iW, iL, dW, dL, si, sj, nn, J, t, V)
