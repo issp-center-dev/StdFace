@@ -7081,3 +7081,26 @@ removed the import.
 (`site_util.py`, `wannier90.py`, `interaction_builder.py`, `boost_output.py`)
 which still use `from typing import TextIO`, or begin Phase 2 class
 introduction.
+
+---
+
+## Step 120 — Replace O(n²) dedup in `_build_coulomb_intra_table` with dict lookup
+
+**Date**: 2026-01-29
+**File**: `python/writer/export_wannier90.py`
+**Phase**: 3 — Leverage Python idioms
+
+**Motivation**: `_build_coulomb_intra_table()` used an O(n²) linear scan to
+find duplicate `isite` keys, same pattern fixed in steps 116-117 for the other
+two `_build_*_table` functions. Replaced with `dict[int, int]` for O(1) lookup.
+
+**Changes**:
+
+- Replaced linear scan with `seen: dict[int, int]` keyed by `isite`
+
+**Test results**:
+- Unit tests: 1256 passed
+- Integration tests: 83/83 passed
+
+**Suggested next step**: Simplify the `try/open + with` patterns in
+`export_wannier90.py` to plain `with open(...)`, or begin Phase 2 class work.

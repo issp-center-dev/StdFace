@@ -794,27 +794,24 @@ def _build_coulomb_intra_table(
         Deduplicated on-site Coulomb entries.
     """
     intr_table: list[_IntrItem] = []
+    seen: dict[int, int] = {}  # isite -> index in intr_table
 
     for k in range(nintr):
         idx_i = intr_index[k][0]
         isite = idx_i % StdI.NsiteUC
 
-        is_found = False
-        for item in intr_table:
-            if item.a == isite:
-                is_found = True
-                if abs(item.v - intr_value[k]) > _EPS:
-                    print(f"WARNING: not uniform. "
-                          f"expected=({item.v.real},{item.v.imag}), "
-                          f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                          f"for index {idx_i}")
-                break
-
-        if not is_found:
-            item = _IntrItem(
+        if isite in seen:
+            existing = intr_table[seen[isite]]
+            if abs(existing.v - intr_value[k]) > _EPS:
+                print(f"WARNING: not uniform. "
+                      f"expected=({existing.v.real},{existing.v.imag}), "
+                      f"found=({intr_value[k].real},{intr_value[k].imag}) "
+                      f"for index {idx_i}")
+        else:
+            seen[isite] = len(intr_table)
+            intr_table.append(_IntrItem(
                 r=[0, 0, 0], a=isite, b=isite,
-                s=0, t=0, v=intr_value[k])
-            intr_table.append(item)
+                s=0, t=0, v=intr_value[k]))
 
     return intr_table
 
