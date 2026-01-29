@@ -88,14 +88,30 @@ cmake --build build
 
 ### Python Implementation
 
-The Python implementation requires no installation. Simply ensure Python 3.10+ and NumPy are available:
+Requires Python 3.10+ and NumPy.
+
+**Install with pip (recommended):**
 
 ```bash
-# Check Python version
-python3 --version  # Should be 3.10 or later
+cd python
+pip install -e .          # runtime dependencies (numpy) are installed automatically
+pip install -e ".[dev]"   # also install development dependencies (pytest, pytest-cov)
+```
 
-# Install NumPy if needed
-pip install numpy
+After installation, the `stdface` command becomes available:
+
+```bash
+stdface stan.in
+stdface stan.in --solver mVMC
+stdface -v
+```
+
+**Run without installing:**
+
+Use the wrapper script at the project root:
+
+```bash
+./stdface stan.in
 ```
 
 ## Quick Start
@@ -120,16 +136,21 @@ nelec = 4
 ./hphi_dry.out stan.in
 ```
 
-**Python Implementation:**
+**Python Implementation (after pip install):**
 ```bash
-PYTHONPATH=python python3 python/__main__.py stan.in
+stdface stan.in
 ```
 
-To select a solver (Python):
+**Python Implementation (without installation):**
 ```bash
-PYTHONPATH=python python3 python/__main__.py stan.in --solver mVMC
-PYTHONPATH=python python3 python/__main__.py stan.in --solver UHF
-PYTHONPATH=python python3 python/__main__.py stan.in --solver HWAVE
+./stdface stan.in
+```
+
+To select a solver:
+```bash
+stdface stan.in --solver mVMC
+stdface stan.in --solver UHF
+stdface stan.in --solver HWAVE
 ```
 
 3. Input files for the target solver are generated in the current directory.
@@ -140,9 +161,10 @@ Both implementations produce identical output files.
 
 The `python/` directory contains a fully-featured Python port of StdFace that produces byte-identical output to the C implementation. The Python codebase has been refactored into idiomatic Python with:
 
-- **Modular architecture**: Organized into `lattice/` and `writer/` subpackages
-- **Comprehensive testing**: 1,252 unit tests and 83 integration tests
-- **Python idioms**: Enums, dict dispatch, context managers, and helper functions
+- **Plugin architecture**: Solvers and lattices are self-registering plugins -- new ones can be added without modifying dispatch logic
+- **Modular architecture**: Organized into `lattice/`, `solvers/`, and `writer/` subpackages
+- **Comprehensive testing**: 1,268 unit tests and 83 integration tests
+- **Python idioms**: Enums, ABC, context managers, type hints, and helper functions
 - **Full feature parity**: Supports all lattices, models, and solvers
 
 ### Python Project Structure
@@ -150,24 +172,34 @@ The `python/` directory contains a fully-featured Python port of StdFace that pr
 ```
 python/
   __main__.py              # CLI entry point
-  stdface_main.py          # Main logic
-  stdface_vals.py          # Data structures
-  stdface_model_util.py    # Shared utilities
-  keyword_parser.py        # Keyword parsing
-  param_check.py           # Parameter validation
-  lattice/                 # Lattice implementations
-    chain_lattice.py
-    square_lattice.py
-    honeycomb_lattice.py
-    kagome.py
-    wannier90.py
-    ...
-  writer/                  # Solver-specific writers
-    common_writer.py
-    hphi_writer.py
-    mvmc_writer.py
-    ...
+  stdface/
+    plugin.py              # SolverPlugin ABC + registry
+    core/
+      stdface_main.py      # Main logic
+      stdface_vals.py      # Data structures
+      keyword_parser.py    # Keyword parsing
+      param_check.py       # Parameter validation
+    lattice/               # Lattice plugins
+      __init__.py          # LatticePlugin ABC + registry
+      chain_lattice.py     # ChainPlugin
+      square_lattice.py    # SquarePlugin
+      kagome.py            # KagomePlugin
+      wannier90.py         # Wannier90Plugin
+      ...
+    solvers/               # Solver plugins
+      hphi/_plugin.py      # HPhiPlugin
+      mvmc/_plugin.py      # MVMCPlugin
+      uhf/_plugin.py       # UHFPlugin
+      hwave/_plugin.py     # HWavePlugin
+    writer/                # Shared output writers
+      common_writer.py
+      interaction_writer.py
+      ...
 ```
+
+### Adding New Solvers or Lattices
+
+See [docs/tutorial_plugin.md](docs/tutorial_plugin.md) for a step-by-step guide with examples.
 
 ### Running Python Tests
 
