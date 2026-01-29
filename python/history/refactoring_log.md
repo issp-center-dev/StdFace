@@ -7574,3 +7574,19 @@ while preserving identical output.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+## Step 143 — Replace counting loop with `np.count_nonzero` in `print_loc_spin`
+
+**Date**: 2026-01-29
+**File(s)**: `python/writer/common_writer.py`
+**Phase**: 3 (Leverage Python idioms)
+
+**What**: Replaced 4-line manual counting loop in `print_loc_spin()` with
+`int(np.count_nonzero(StdI.locspinflag[:StdI.nsite]))`. Added
+`import numpy as np` to the module.
+
+**Why**: Use NumPy vectorized counting instead of a manual loop.
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

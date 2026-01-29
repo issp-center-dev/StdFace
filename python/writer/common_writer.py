@@ -48,6 +48,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import numpy as np
+
 from stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType, NaN_i, UNSET_STRING,
     AMPLITUDE_EPS,
@@ -143,10 +145,7 @@ def print_loc_spin(StdI: StdIntList) -> None:
         - ``locspinflag`` : list of int -- per-site flag (0 = itinerant
           electron, nonzero = local spin with :math:`S` given by the value).
     """
-    nlocspin = 0
-    for isite in range(StdI.nsite):
-        if StdI.locspinflag[isite] != 0:
-            nlocspin += 1
+    nlocspin = int(np.count_nonzero(StdI.locspinflag[:StdI.nsite]))
 
     with open("locspn.def", "w") as fp:
         fp.write("================================ \n")
