@@ -7715,3 +7715,15 @@ Each function body is now 2-3 lines shorter.
 **Tests**:
 - Unit: 1246 passed
 - Integration: 83/83 passed
+
+---
+
+## Step 153 — 2026-01-29
+
+**Files**: `python/writer/export_wannier90.py`
+**Change**: Replaced 9-line manual min/max scan over `intr_table` coordinates with 2-line numpy vectorized computation: `all_r = np.array([entry.r for entry in intr_table]); rr = list(np.max(np.abs(all_r), axis=0))`.
+**Phase**: 3 — Leverage Python idioms (numpy vectorization)
+
+**Tests**:
+- Unit: 1246 passed
+- Integration: 83/83 passed

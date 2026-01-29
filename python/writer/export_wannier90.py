@@ -203,17 +203,8 @@ def _build_wannier_matrix(
     matrix : numpy.ndarray
         Flat complex array of length ``nvol * nsiteuc**2 * nspin**2``.
     """
-    rmin = list(intr_table[0].r)
-    rmax = list(intr_table[0].r)
-
-    for item in intr_table[1:]:
-        for i, r in enumerate(item.r):
-            if r < rmin[i]:
-                rmin[i] = r
-            if r > rmax[i]:
-                rmax[i] = r
-
-    rr = [max(abs(lo), abs(hi)) for lo, hi in zip(rmin, rmax)]
+    all_r = np.array([entry.r for entry in intr_table])
+    rr = list(np.max(np.abs(all_r), axis=0))
 
     dims = [rr[i] * 2 + 1 for i in range(3)]
     nvol = dims[0] * dims[1] * dims[2]
