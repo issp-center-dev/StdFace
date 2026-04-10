@@ -30,37 +30,3 @@ add_test(
   NAME rpa_sample
   COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh rpa_sample ${CMAKE_SOURCE_DIR}/test/hwave
 )
-
-# check python version
-add_test(
-  NAME python_uhfr_first_step
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh uhfr_first_step ${CMAKE_SOURCE_DIR}/test/hwave python
-)
-add_test(
-  NAME python_uhfk_cdwsdw_input_1_cdw
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh uhfk_cdwsdw_input_1_cdw ${CMAKE_SOURCE_DIR}/test/hwave python
-)
-add_test(
-  NAME python_uhfk_cdwsdw_input_1_sdw
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh uhfk_cdwsdw_input_1_sdw ${CMAKE_SOURCE_DIR}/test/hwave python
-)
-add_test(
-  NAME python_uhfk_dos_plot
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh uhfk_dos_plot ${CMAKE_SOURCE_DIR}/test/hwave python
-)
-add_test(
-  NAME python_uhfk_finite_t
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh uhfk_finite_t ${CMAKE_SOURCE_DIR}/test/hwave python
-)
-add_test(
-  NAME python_uhfk_first_step
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh uhfk_first_step ${CMAKE_SOURCE_DIR}/test/hwave python
-)
-add_test(
-  NAME python_rpa_kobayashi_2004_coulomb
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh rpa_kobayashi_2004_coulomb ${CMAKE_SOURCE_DIR}/test/hwave python
-)
-add_test(
-  NAME python_rpa_sample
-  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh rpa_sample ${CMAKE_SOURCE_DIR}/test/hwave python
-)
