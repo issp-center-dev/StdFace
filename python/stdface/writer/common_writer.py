@@ -657,11 +657,12 @@ class GreenFunctionIndices:
             site1k = self.kondo_site(site1)
             S1Max = spin_max[site1k]
 
-            for site3 in range(self.nsite):
-                S3Max = spin_max[site3]
+            for spin1 in range(S1Max + 1):
+                for spin2 in range(S1Max + 1):
 
-                for spin1 in range(S1Max + 1):
-                    for spin2 in range(S1Max + 1):
+                    for site3 in range(self.nsite):
+                        S3Max = spin_max[site3]
+
                         # spin4 = spin1 - spin2 + spin3
                         for spin3 in range(S3Max + 1):
                             spin4 = spin1 - spin2 + spin3
