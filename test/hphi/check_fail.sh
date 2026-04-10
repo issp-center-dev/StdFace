@@ -2,8 +2,15 @@
 
 test_item=$1
 base_dir=$2
+mode=${3:-"base"}
 
-DRY_BIN=${DRY_BIN:-../../../src/hphi_dry.out}
+if [ "$mode" = "base" ]; then
+    DRY_BIN=${DRY_BIN:-../../../src/hphi_dry.out}
+elif [ "$mode" = "python" ]; then
+    DRY_BIN=${DRY_BIN:-"stdface --solver HPhi"}
+else
+    DRY_BIN="/usr/bin/false"
+fi
 
 if [ -d ${test_item} ]; then
     mv ${test_item} ${test_item}.bak
