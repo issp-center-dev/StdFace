@@ -548,6 +548,40 @@ class TestPrint2Green:
             finally:
                 os.chdir(orig)
 
+    def test_no_file_when_ioutputmode_off(self):
+        """``ioutputmode`` 0 skips writing ``greentwo.def``."""
+        StdI = _make_stdi_base(nsite=2, model="hubbard", solver="HPhi")
+        StdI.ioutputmode = 0
+        StdI.NsiteUC = 1
+        StdI.locspinflag = [0, 0]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                print_2_green(StdI)
+                assert not os.path.exists("greentwo.def")
+            finally:
+                os.chdir(orig)
+
+    def test_writes_greentwo_raw_mode(self):
+        """Raw / full output mode uses ``green2_raw`` index list."""
+        StdI = _make_stdi_base(nsite=2, model="hubbard", solver="HPhi")
+        StdI.ioutputmode = 2
+        StdI.NsiteUC = 1
+        StdI.locspinflag = [0, 0]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                print_2_green(StdI)
+                assert os.path.exists("greentwo.def")
+                content = open("greentwo.def").read()
+                assert "NCisAjsCktAltDC" in content
+            finally:
+                os.chdir(orig)
+
 
 class TestPrintInteractions:
     """Tests for the print_interactions function."""
@@ -702,6 +736,23 @@ class TestPrintModPara:
                 print_mod_para(StdI)
                 content = open("modpara.def").read()
                 assert "HWAVE_Cal_Parameters" in content
+            finally:
+                os.chdir(orig)
+
+    def test_writes_modpara_unknown_solver_skips_body_writer(self):
+        """Unknown ``solver`` still writes the header; body dispatch is skipped."""
+        StdI = _make_stdi_base(nsite=2)
+        StdI.solver = "NotRegisteredSolver"
+        StdI.CDataFileHead = "zvo"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                print_mod_para(StdI)
+                content = open("modpara.def").read()
+                assert "Model_Parameters" in content
+                assert "HPhi_Cal_Parameters" not in content
             finally:
                 os.chdir(orig)
 
@@ -1033,6 +1084,21 @@ class TestSolverDefaultsDispatch:
         assert StdI.OmegaMax == 40.0
         assert StdI.OmegaMin == -40.0
 
+    def test_hphi_clamps_lanczos_target_when_below_exct(self):
+        """``LanczosTarget`` is raised to at least ``exct`` when smaller."""
+        StdI = _make_stdi_base(solver="HPhi", nsite=4)
+        StdI.LargeValue = 10.0
+        StdI.Lanczos_max = NaN_i
+        StdI.initial_iv = NaN_i
+        StdI.exct = 5
+        StdI.LanczosEps = NaN_i
+        StdI.LanczosTarget = 2
+        StdI.NumAve = NaN_i
+        StdI.ExpecInterval = NaN_i
+        StdI.Nomega = NaN_i
+        _check_mod_para_hphi(StdI)
+        assert StdI.LanczosTarget == 5
+
     # -- mVMC handler sets defaults --
 
     def test_mvmc_sets_cpara_default(self):
@@ -1055,6 +1121,51 @@ class TestSolverDefaultsDispatch:
         StdI.NSRCG = NaN_i
         _check_mod_para_mvmc(StdI)
         assert StdI.CParaFileHead == "zqp"
+
+    def test_mvmc_respects_explicit_cparafilehead(self):
+        """Non-sentinel ``CParaFileHead`` takes the else branch (no default)."""
+        StdI = _make_stdi_base(solver="mVMC", model="hubbard")
+        StdI.CParaFileHead = "my_cpara"
+        StdI.NVMCCalMode = NaN_i
+        StdI.NLanczosMode = NaN_i
+        StdI.NDataIdxStart = NaN_i
+        StdI.NDataQtySmp = NaN_i
+        StdI.NSPGaussLeg = NaN_i
+        StdI.NSPStot = NaN_i
+        StdI.NMPTrans = NaN_i
+        StdI.NSROptItrStep = NaN_i
+        StdI.NSROptItrSmp = NaN_i
+        StdI.NVMCWarmUp = NaN_i
+        StdI.NVMCInterval = NaN_i
+        StdI.NVMCSample = NaN_i
+        StdI.RndSeed = NaN_i
+        StdI.NSplitSize = NaN_i
+        StdI.NStore = NaN_i
+        StdI.NSRCG = NaN_i
+        _check_mod_para_mvmc(StdI)
+        assert StdI.CParaFileHead == "my_cpara"
+
+    def test_mvmc_nvmccalmode_one_marks_nsroptitrsmp_not_used(self):
+        """``NVMCCalMode == 1`` runs the ``not_used_i`` branch for ``NSROptItrSmp``."""
+        StdI = _make_stdi_base(solver="mVMC", model="hubbard")
+        StdI.NVMCCalMode = 1
+        StdI.NLanczosMode = NaN_i
+        StdI.NDataIdxStart = NaN_i
+        StdI.NDataQtySmp = NaN_i
+        StdI.NSPGaussLeg = NaN_i
+        StdI.NSPStot = NaN_i
+        StdI.NMPTrans = NaN_i
+        StdI.NSROptItrStep = 1000
+        StdI.NSROptItrSmp = NaN_i
+        StdI.NVMCWarmUp = NaN_i
+        StdI.NVMCInterval = NaN_i
+        StdI.NVMCSample = NaN_i
+        StdI.RndSeed = NaN_i
+        StdI.NSplitSize = NaN_i
+        StdI.NStore = NaN_i
+        StdI.NSRCG = NaN_i
+        _check_mod_para_mvmc(StdI)
+        assert StdI.NSROptItrSmp == 100
 
     def test_mvmc_sets_nvmccalmode(self):
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
@@ -1228,6 +1339,22 @@ class TestCheckConservedQuantities:
         StdI.ncond = NaN_i
         StdI.Sz2 = NaN_i
         _check_conserved_quantities(StdI)  # should not exit
+
+    def test_invalid_lgc_has_no_rule_returns_early(self):
+        """``(model, is_hphi, lGC)`` not in the table → no validation."""
+        StdI = _make_stdi_base(model="hubbard", solver="HPhi")
+        StdI.lGC = 2
+        _check_conserved_quantities(StdI)
+
+
+class TestCheckModParaUnknownSolver:
+    """``check_mod_para`` when ``solver`` is not in defaults dispatch."""
+
+    def test_unknown_solver_skips_defaults_handler(self):
+        StdI = _make_stdi_base(nsite=2)
+        StdI.solver = "UnknownSolver"
+        StdI.lGC = 2
+        check_mod_para(StdI)
 
 
 class TestConservedQtyRulesTable:

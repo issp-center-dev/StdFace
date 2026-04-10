@@ -386,6 +386,16 @@ class TestStoreWithCheckDupC:
         result = store_with_check_dup_c("t", ",2.0", NaN_c)
         assert result == complex(0.0, 2.0)
 
+    def test_invalid_real_part_yields_zero_real(self):
+        """Non-numeric real token is treated as 0.0 via _safe_float."""
+        result = store_with_check_dup_c("t", "bad,1.0", NaN_c)
+        assert result == complex(0.0, 1.0)
+
+    def test_invalid_imag_part_yields_zero_imag(self):
+        """Non-numeric imaginary token is treated as 0.0 via _safe_float."""
+        result = store_with_check_dup_c("t", "1.0,bad", NaN_c)
+        assert result == complex(1.0, 0.0)
+
     def test_exits_on_duplicate(self):
         """Test that duplicate assignment causes exit."""
         with pytest.raises(SystemExit):

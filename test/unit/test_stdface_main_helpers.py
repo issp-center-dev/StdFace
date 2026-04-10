@@ -4,12 +4,24 @@ Tests for ``_parse_input_file`` and ``_resolve_model_and_method``.
 """
 from __future__ import annotations
 
-import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from stdface.core.stdface_vals import StdIntList, ModelType, SolverType, MethodType
-from stdface.core.stdface_main import _parse_input_file, _resolve_model_and_method
+from stdface.core.stdface_vals import (
+    StdIntList,
+    ModelType,
+    SolverType,
+    MethodType,
+)
+from stdface.core.stdface_main import (
+    BOOST_DISPATCH,
+    _build_lattice_and_boost,
+    _parse_input_file,
+    _parse_solver_keyword_via_plugin,
+    _resolve_model_and_method,
+    stdface_main,
+)
 
 
 class TestParseInputFile:
@@ -148,3 +160,100 @@ class TestResolveModelAndMethod:
         _resolve_model_and_method(StdI, SolverType.HPhi)
         assert StdI.model == ModelType.KONDO
         assert StdI.lGC == 1
+
+    def test_time_evolution_calls_vector_potential(self):
+        """HPhi + timeevolution triggers vector_potential (Boost / gauge prep)."""
+        StdI = StdIntList()
+        StdI.model = "hubbard"
+        StdI.lattice = "chain"
+        StdI.method = MethodType.TIME_EVOLUTION
+        with patch("stdface.core.stdface_main._vector_potential") as vp:
+            _resolve_model_and_method(StdI, SolverType.HPhi)
+            vp.assert_called_once_with(StdI)
+
+
+class TestParseSolverKeywordViaPlugin:
+    """Tests for _parse_solver_keyword_via_plugin plugin / legacy fallback."""
+
+    def test_fallback_when_solver_plugin_missing(self):
+        """KeyError from get_plugin falls back to parse_solver_keyword."""
+        StdI = StdIntList()
+        result = _parse_solver_keyword_via_plugin(
+            "lanczos_max", "100", StdI, "__no_such_solver__"
+        )
+        assert result is False
+
+
+class TestStdfaceMainIntegration:
+    """Light integration test for stdface_main (parse → lattice → plugin.write)."""
+
+    def test_minimal_hubbard_chain_hphi_writes_namelist(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        infile = tmp_path / "stan.in"
+        infile.write_text(
+            "model = hubbard\n"
+            "lattice = chain\n"
+            "L = 4\n"
+            "nelec = 4\n"
+            "method = lanczos\n"
+        )
+        stdface_main(str(infile), SolverType.HPhi)
+        assert (tmp_path / "namelist.def").is_file()
+
+    def test_cdatafilehead_set_skips_default_branch(self, tmp_path, monkeypatch):
+        """When CDataFileHead is set, the default ``zvo`` branch is not taken."""
+        monkeypatch.chdir(tmp_path)
+        infile = tmp_path / "stan.in"
+        infile.write_text(
+            "model = hubbard\n"
+            "lattice = chain\n"
+            "L = 4\n"
+            "nelec = 4\n"
+            "method = lanczos\n"
+            "cdatafilehead = myrun\n"
+        )
+        stdface_main(str(infile), SolverType.HPhi)
+        nml = (tmp_path / "namelist.def").read_text()
+        assert "myrun" in nml
+
+
+class TestBuildLatticeAndBoost:
+    """Tests for ``_build_lattice_and_boost`` error and plugin edge paths."""
+
+    def test_unknown_lattice_exits(self):
+        StdI = StdIntList()
+        StdI.model = "hubbard"
+        StdI.lattice = "__not_a_registered_lattice__"
+        with pytest.raises(SystemExit):
+            _build_lattice_and_boost(StdI, SolverType.HPhi)
+
+    def test_unknown_solver_skips_post_lattice(self):
+        """``get_plugin`` KeyError is swallowed (no post_lattice hook)."""
+        StdI = StdIntList()
+        StdI.model = ModelType.HUBBARD
+        StdI.lattice = "chain"
+        lattice_plugin = MagicMock()
+        with patch(
+            "stdface.core.stdface_main._get_lattice",
+            return_value=lattice_plugin,
+        ):
+            _build_lattice_and_boost(StdI, "__no_solver_plugin__")
+        lattice_plugin.setup.assert_called_once_with(StdI)
+
+
+class TestBoostDispatchItemsDefensive:
+    """Cover ``except KeyError: pass`` inside ``BOOST_DISPATCH.items()``."""
+
+    def test_items_skips_alias_when_get_lattice_raises(self):
+        import stdface.core.stdface_main as sm
+
+        real = sm._get_lattice
+
+        def _flaky(name: str):
+            if name == "chain":
+                raise KeyError(name)
+            return real(name)
+
+        with patch.object(sm, "_get_lattice", side_effect=_flaky):
+            entries = list(BOOST_DISPATCH.items())
+        assert isinstance(entries, list)

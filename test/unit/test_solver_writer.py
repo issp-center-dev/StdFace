@@ -8,6 +8,7 @@ import os
 import math
 import tempfile
 
+import numpy as np
 import pytest
 
 from stdface.plugin import SolverPlugin, get_plugin
@@ -16,6 +17,7 @@ from stdface.solvers.mvmc import MVMCPlugin
 from stdface.solvers.uhf import UHFPlugin
 from stdface.solvers.hwave import HWavePlugin
 from stdface.core.stdface_vals import StdIntList
+from stdface.lattice import chain_lattice as cl
 
 # Sentinel values matching the C code
 NaN_i = 2147483647
@@ -96,6 +98,169 @@ def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
     StdI.outputmode = "****"
 
     return StdI
+
+
+def _make_spin_chain(L: int = 16) -> StdIntList:
+    """Return a spin-chain StdIntList (aligned with ``test_chain_lattice``)."""
+    s = StdIntList()
+    s.pi = math.acos(-1.0)
+    s.pi180 = s.pi / 180.0
+    s.model = "spin"
+    s.solver = "HPhi"
+    s.lattice = "chain"
+    s.a = NaN_d
+    s.length[0] = NaN_d
+    s.length[1] = NaN_d
+    s.direct[0, 0] = NaN_d
+    s.direct[0, 1] = NaN_d
+    s.direct[1, 0] = NaN_d
+    s.direct[1, 1] = NaN_d
+    s.phase[0] = NaN_d
+    s.phase[1] = NaN_d
+    s.L = L
+    s.W = NaN_i
+    s.Height = NaN_i
+    s.box[:, :] = NaN_i
+    s.S2 = NaN_i
+    s.h = NaN_d
+    s.Gamma = NaN_d
+    s.Gamma_y = NaN_d
+    s.D[2, 2] = NaN_d
+    s.JAll = NaN_d
+    s.JpAll = NaN_d
+    s.JppAll = NaN_d
+    s.J0All = NaN_d
+    s.J0pAll = NaN_d
+    s.J0ppAll = NaN_d
+    s.J1All = NaN_d
+    s.J1pAll = NaN_d
+    s.J2All = NaN_d
+    s.J2pAll = NaN_d
+    s.J[:, :] = NaN_d
+    s.Jp[:, :] = NaN_d
+    s.Jpp[:, :] = NaN_d
+    s.J0[:, :] = NaN_d
+    s.J0p[:, :] = NaN_d
+    s.J0pp[:, :] = NaN_d
+    s.J1[:, :] = NaN_d
+    s.J1p[:, :] = NaN_d
+    s.J2[:, :] = NaN_d
+    s.J2p[:, :] = NaN_d
+    s.mu = NaN_d
+    s.U = NaN_d
+    s.t = NaN_c
+    s.t0 = NaN_c
+    s.tp = NaN_c
+    s.t1 = NaN_c
+    s.t2 = NaN_c
+    s.t1p = NaN_d
+    s.t2p = NaN_d
+    s.V = NaN_d
+    s.V0 = NaN_d
+    s.Vp = NaN_d
+    s.V1 = NaN_d
+    s.V2 = NaN_d
+    s.V1p = NaN_d
+    s.V2p = NaN_d
+    s.K = NaN_d
+    s.JAll = 1.0
+    return s
+
+
+def _make_stdi_for_mvmc_write(
+    nsite: int = 4,
+    *,
+    lgc_orb_para: bool = False,
+) -> StdIntList:
+    """Build StdIntList for :meth:`MVMCPlugin.write` (1D Hubbard chain + subcell)."""
+    StdI = _make_stdi_for_hphi(nsite=nsite)
+    StdI.solver = "mVMC"
+    StdI.lattice = "chain"
+    StdI.model = "hubbard"
+    L = nsite
+    StdI.box[:, :] = 0
+    StdI.box[0, 0] = L
+    StdI.box[1, 1] = 1
+    StdI.box[2, 2] = 1
+    StdI.NCell = L
+    StdI.NsiteUC = 1
+    StdI.nsite = nsite
+    StdI.rbox = np.zeros((3, 3), dtype=float)
+    StdI.rbox[0, 0] = 1
+    StdI.rbox[1, 1] = L
+    StdI.rbox[2, 2] = L
+    StdI.Cell = np.zeros((L, 3), dtype=float)
+    for i in range(L):
+        StdI.Cell[i, 0] = float(i)
+    StdI.tau = np.zeros((1, 3))
+    StdI.phase[:] = 0.0
+    StdI.pi180 = StdI.pi / 180.0
+    StdI.ExpPhase = np.ones(3, dtype=complex)
+    StdI.AntiPeriod = np.zeros(3, dtype=int)
+    StdI.locspinflag = [0] * nsite
+    StdI.boxsub[:, :] = NaN_i
+    StdI.Hsub = NaN_i
+    StdI.Lsub = NaN_i
+    StdI.Wsub = 2
+    StdI.NMPTrans = NaN_i
+    if lgc_orb_para:
+        StdI.lGC = 1
+        StdI.Sz2 = NaN_i
+    else:
+        StdI.lGC = 0
+        StdI.Sz2 = 0
+    # ``_check_mod_para_mvmc``: when ``NVMCCalMode == 0``, ``NDataQtySmp`` must stay unset
+    StdI.NDataQtySmp = NaN_i
+    StdI.NSPGaussLeg = NaN_i
+    StdI.NSPStot = NaN_i
+    return StdI
+
+
+def _make_hwave_wannier_export_stdi(nsiteUC: int = 2, ncell: int = 2) -> StdIntList:
+    """StdIntList for HWave Wannier export (geometry + empty interactions)."""
+    s = StdIntList()
+    s.solver = "HWAVE"
+    s.NsiteUC = nsiteUC
+    s.NCell = ncell
+    s.fileprefix = ""
+    s.export_all = NaN_i
+    s.box = np.array([
+        [ncell, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+    ], dtype=int)
+    s.rbox = np.array([
+        [1, 0, 0],
+        [0, ncell, 0],
+        [0, 0, ncell],
+    ], dtype=int)
+    s.Cell = np.zeros((ncell, 3), dtype=int)
+    for i in range(ncell):
+        s.Cell[i, 0] = i
+    s.direct = np.eye(3)
+    s.tau = np.zeros((nsiteUC, 3))
+    s.ntrans = 0
+    s.transindx = None
+    s.trans = None
+    s.NCintra = 0
+    s.CintraIndx = None
+    s.Cintra = None
+    s.NCinter = 0
+    s.CinterIndx = None
+    s.Cinter = None
+    s.NHund = 0
+    s.HundIndx = None
+    s.Hund = None
+    s.NEx = 0
+    s.ExIndx = None
+    s.Ex = None
+    s.NPairLift = 0
+    s.PLIndx = None
+    s.PairLift = None
+    s.NPairHopp = 0
+    s.PHIndx = None
+    s.PairHopp = None
+    return s
 
 
 # =====================================================================
@@ -199,6 +364,61 @@ class TestHPhiPlugin:
             finally:
                 os.chdir(orig)
 
+    def test_post_lattice_chain_boost(self, tmp_path, monkeypatch):
+        """``post_lattice`` runs lattice Boost when ``lBoost == 1``."""
+        monkeypatch.chdir(tmp_path)
+        s = _make_spin_chain(L=16)
+        cl.chain(s)
+        s.lBoost = 1
+        plugin = get_plugin("HPhi")
+        plugin.post_lattice(s)
+        assert (tmp_path / "boost.def").exists()
+
+    def test_write_solver_specific_time_evolution_pump(self, tmp_path, monkeypatch):
+        """``write_solver_specific`` writes ``teone.def`` for time evolution + pump."""
+        monkeypatch.chdir(tmp_path)
+        StdI = _make_stdi_for_hphi(nsite=4)
+        StdI.method = "timeevolution"
+        StdI.PumpBody = 1
+        StdI.Lanczos_max = 2
+        StdI.dt = 0.1
+        StdI.npump = [1, 1]
+        StdI.pumpindx = [
+            [[0, 0, 1, 0]],
+            [[0, 0, 1, 0]],
+        ]
+        StdI.pump = [
+            [complex(1.0, 0.0)],
+            [complex(0.5, 0.0)],
+        ]
+        plugin = get_plugin("HPhi")
+        plugin.write_solver_specific(StdI)
+        assert os.path.exists("teone.def")
+
+
+class TestMVMCPlugin:
+    """Tests for :class:`MVMCPlugin` full :meth:`~MVMCPlugin.write` path."""
+
+    def test_write_creates_variational_files(self, tmp_path, monkeypatch):
+        """mVMC ``write`` runs ``write_solver_specific`` (orbital / Jastrow / Gutzwiller)."""
+        monkeypatch.chdir(tmp_path)
+        StdI = _make_stdi_for_mvmc_write(nsite=4, lgc_orb_para=False)
+        plugin = get_plugin("mVMC")
+        plugin.write(StdI)
+        assert os.path.exists("orbitalidx.def")
+        assert os.path.exists("jastrowidx.def")
+        assert os.path.exists("gutzwilleridx.def")
+        assert os.path.exists("qptransidx.def")
+
+    def test_write_lgc_prints_orb_para(self, tmp_path, monkeypatch):
+        """``lGC == 1`` triggers ``print_orb_para`` (orbitalidxpara / gen)."""
+        monkeypatch.chdir(tmp_path)
+        StdI = _make_stdi_for_mvmc_write(nsite=4, lgc_orb_para=True)
+        plugin = get_plugin("mVMC")
+        plugin.write(StdI)
+        assert os.path.exists("orbitalidxpara.def")
+        assert os.path.exists("orbitalidxgen.def")
+
 
 class TestUHFPlugin:
     """Tests for the UHFPlugin class."""
@@ -244,3 +464,13 @@ class TestHWavePlugin:
                 assert os.path.exists("greenone.def")
             finally:
                 os.chdir(orig)
+
+    def test_wannier90_export_writes_geom(self, tmp_path, monkeypatch):
+        """Non-``uhfr`` ``calcmode`` runs ``export_geometry`` / ``export_interaction``."""
+        monkeypatch.chdir(tmp_path)
+        StdI = _make_hwave_wannier_export_stdi(nsiteUC=2, ncell=2)
+        StdI.calcmode = "wannier90"
+        plugin = get_plugin("HWAVE")
+        plugin.write(StdI)
+        assert os.path.exists("geom.dat")
+        # ``ntrans == 0`` → transfer export is skipped (no ``transfer.dat``)

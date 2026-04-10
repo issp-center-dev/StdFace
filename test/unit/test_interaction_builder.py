@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-from stdface.core.stdface_vals import StdIntList
+from stdface.core.stdface_vals import StdIntList, MethodType, SolverType
 from stdface.lattice.interaction_builder import (
     trans,
     hopping,
@@ -158,8 +158,31 @@ class TestTrans:
         assert StdI.trans[0] == pytest.approx(1.0 + 0.5j)
 
 
+class TestHoppingPump:
+    """Covers ``hopping`` when pump arrays are used instead of ``trans``."""
+
+    def test_pump_mode_populates_pump_arrays(self):
+        """``interaction_builder.hopping`` pump branch (time evolution + PumpBody)."""
+        StdI = StdIntList()
+        StdI.solver = SolverType.HPhi
+        StdI.model = "hubbard"
+        StdI.method = MethodType.TIME_EVOLUTION
+        StdI.PumpBody = 1
+        StdI.Lanczos_max = 1
+        StdI.At = np.array([[0.1, 0.0, 0.0]], dtype=float)
+        malloc_interactions(StdI, 50, 80)
+        StdI.npump[:] = 0
+        dR = np.array([1.0, 0.0, 0.0])
+        hopping(StdI, 0.5 + 0.25j, 0, 1, dR)
+        # Two spins × two entries (forward + conjugate) per time slice
+        assert StdI.npump[0] == 4
+        assert StdI.pump[0][0] != 0.0
+        assert list(StdI.pumpindx[0][0]) == [0, 0, 1, 0]
+        assert list(StdI.pumpindx[0][1]) == [1, 0, 0, 0]
+
+
 # ===================================================================
-#  hopping
+#  hopping (default branch)
 # ===================================================================
 
 

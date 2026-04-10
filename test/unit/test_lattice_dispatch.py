@@ -141,3 +141,29 @@ class TestBoostDispatchProxy:
     def test_all_entries_callable(self):
         for name, func in BOOST_DISPATCH.items():
             assert callable(func), f"BOOST_DISPATCH[{name!r}] is not callable"
+
+    def test_getitem_unknown_raises_keyerror(self):
+        with pytest.raises(KeyError):
+            _ = BOOST_DISPATCH["square"]
+
+    def test_get_unknown_returns_default(self):
+        sentinel = object()
+        assert BOOST_DISPATCH.get("square", sentinel) is sentinel
+
+    def test_get_known_returns_callable(self):
+        fn = BOOST_DISPATCH.get("chain")
+        assert callable(fn)
+
+
+class TestTriangularPluginSetup:
+    """``TriangularPlugin.setup`` delegates to :func:`triangular`."""
+
+    def test_setup_calls_triangular_function(self):
+        from unittest.mock import patch
+
+        from stdface.lattice import get_lattice
+
+        StdI = object()
+        with patch("stdface.lattice.triangular_lattice.triangular") as fn:
+            get_lattice("triangular").setup(StdI)
+        fn.assert_called_once_with(StdI)
