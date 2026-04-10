@@ -106,6 +106,39 @@ def _write_hr_file(path, NsiteUC=2, nWSC=1, prefix="test"):
     return filename
 
 
+def _write_hr_file_split_degeneracy_weights(
+    path, NsiteUC=2, nWSC=4, prefix="test",
+):
+    """Write *_hr.dat with several WSC blocks and degeneracy integers on multiple lines.
+
+    Exercises :func:`wannier90._skip_degeneracy_weights` when one line does not
+    hold all ``nWSC`` weight values.
+    """
+    filename = os.path.join(path, f"{prefix}_hr.dat")
+    nWan = NsiteUC
+    first = nWSC // 2
+    second = nWSC - first
+    with open(filename, "w") as f:
+        f.write("  written by test\n")
+        f.write(f"  {nWan}\n")
+        f.write(f"  {nWSC}\n")
+        f.write("".join("  1" for _ in range(first)) + "\n")
+        f.write("".join("  1" for _ in range(second)) + "\n")
+        for iWSC in range(nWSC):
+            for iWan in range(nWan):
+                for jWan in range(nWan):
+                    re_val = 0.0
+                    im_val = 0.0
+                    if iWan == jWan:
+                        re_val = -1.0
+                    elif abs(iWan - jWan) == 1:
+                        re_val = -0.5
+                    f.write(
+                        f"  0  0  0  {iWan + 1}  {jWan + 1}  {re_val:12.6f}  {im_val:12.6f}\n"
+                    )
+    return filename
+
+
 def _write_ur_file(path, NsiteUC=2, prefix="test"):
     """Write a minimal Wannier90 Coulomb file (*_ur.dat)."""
     filename = os.path.join(path, f"{prefix}_ur.dat")
@@ -977,6 +1010,49 @@ class TestWannier90DoubleCountingModeError:
 
         with pytest.raises(SystemExit):
             w90.wannier90(s)
+
+
+class TestWannier90DoubleCountingIntegration:
+    """Full :func:`wannier90.wannier90` with ``*_dr.dat`` and DC corrections."""
+
+    @pytest.mark.parametrize("dc_mode", ["hartree", "full"])
+    def test_hubbard_with_density_matrix(self, tmp_path, dc_mode):
+        """Read density matrix, apply DC mode, and write ``initial.def``."""
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        prefix = "test"
+        _write_geom_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_hr_file(str(tmp_path), NsiteUC=NsiteUC, nWSC=1, prefix=prefix)
+        _write_ur_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_jr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_dr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+
+        s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
+        s.double_counting_mode = dc_mode
+        w90.wannier90(s)
+
+        assert s.NsiteUC == NsiteUC
+        assert (tmp_path / "initial.def").exists()
+        assert s.ntrans >= 0
+
+
+class TestWannier90HrMultilineDegeneracy:
+    """``*_hr.dat`` with ``nWSC > 1`` and degeneracy weights split across lines."""
+
+    def test_hubbard_runs_with_split_weights(self, tmp_path):
+        os.chdir(tmp_path)
+        NsiteUC = 2
+        prefix = "test"
+        _write_geom_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_hr_file_split_degeneracy_weights(
+            str(tmp_path), NsiteUC=NsiteUC, nWSC=4, prefix=prefix,
+        )
+        _write_ur_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+        _write_jr_file(str(tmp_path), NsiteUC=NsiteUC, prefix=prefix)
+
+        s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
+        w90.wannier90(s)
+        assert s.ntrans >= 0
 
 
 # ---------------------------------------------------------------------------
