@@ -240,7 +240,7 @@ def chain_boost(StdI: StdIntList) -> None:
         fp.write("# J 1\n")
         write_boost_j_full(fp, StdI.J0)
         fp.write("# J 2\n")
-        write_boost_j_full(fp, StdI.Jp)
+        write_boost_j_full(fp, StdI.J0p)
 
         # Topology
         if StdI.S2 != 1:
