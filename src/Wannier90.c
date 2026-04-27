@@ -617,6 +617,10 @@ void StdFace_Wannier90(
   }
   tUJ = (double complex **)malloc(sizeof(double complex*) * 3);
   tUJindx = (int ***)malloc(sizeof(int**) * 3);
+  for (ii = 0; ii < 3; ii++) {
+    tUJ[ii] = NULL;
+    tUJindx[ii] = NULL;
+  }
 
   /*
   Read Hopping
