@@ -1,0 +1,8 @@
+L = 4
+model = "KondoGC"
+lattice = "chain"
+t = 1.0
+J = 1.0
+U = 4.0
+calcmode = "uhfr"
+ncond = 4

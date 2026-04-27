@@ -1,0 +1,8 @@
+L = 1
+W = 1
+H = 1
+model = "Spin"
+lattice = "pyrochlore"
+J = 1.0
+calcmode = "uhfr"
+2Sz = 0
