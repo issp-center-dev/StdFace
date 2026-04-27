@@ -1,0 +1,9 @@
+CDataFileHead = "zvo"
+model = "FermionHubbard"
+lattice = "wannier90"
+W = 2
+L = 2
+Height = 1
+method = "FullDiag"
+nelec = 4
+2Sz = 0

@@ -272,3 +272,21 @@ add_test(
   NAME matrix_fco_kondogc
   COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check.sh matrix_fco_kondogc ${CMAKE_SOURCE_DIR}/test/mvmc
 )
+
+# --- wannier90 tests (auto-generated) ---
+add_test(
+  NAME wannier90_hubbard
+  COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check.sh wannier90_hubbard ${CMAKE_SOURCE_DIR}/test/mvmc
+)
+add_test(
+  NAME wannier90_hubbardgc
+  COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check.sh wannier90_hubbardgc ${CMAKE_SOURCE_DIR}/test/mvmc
+)
+add_test(
+  NAME wannier90_spin
+  COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check.sh wannier90_spin ${CMAKE_SOURCE_DIR}/test/mvmc
+)
+add_test(
+  NAME wannier90_spingc
+  COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check.sh wannier90_spingc ${CMAKE_SOURCE_DIR}/test/mvmc
+)
