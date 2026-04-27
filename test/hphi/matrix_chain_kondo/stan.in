@@ -1,0 +1,9 @@
+L = 4
+model = "Kondo"
+lattice = "chain"
+t = 1.0
+J = 1.0
+U = 4.0
+method = "FullDiag"
+ncond = 4
+2Sz = 0

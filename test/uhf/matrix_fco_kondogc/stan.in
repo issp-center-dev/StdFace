@@ -1,0 +1,9 @@
+L = 2
+W = 2
+H = 2
+model = "KondoGC"
+lattice = "fco"
+t = 1.0
+J = 1.0
+U = 4.0
+ncond = 8

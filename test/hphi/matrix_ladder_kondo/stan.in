@@ -1,0 +1,10 @@
+L = 4
+W = 2
+model = "Kondo"
+lattice = "ladder"
+t0 = 1.0
+t1 = 1.0
+U = 4.0
+method = "FullDiag"
+ncond = 8
+2Sz = 0

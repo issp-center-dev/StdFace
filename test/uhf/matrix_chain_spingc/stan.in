@@ -1,0 +1,4 @@
+L = 4
+model = "SpinGC"
+lattice = "chain"
+J = 1.0

@@ -1,0 +1,7 @@
+L = 1
+W = 1
+H = 1
+model = "SpinGC"
+lattice = "pyrochlore"
+J = 1.0
+RndSeed = 1

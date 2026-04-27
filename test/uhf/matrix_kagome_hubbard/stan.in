@@ -1,0 +1,8 @@
+L = 2
+W = 2
+model = "FermionHubbard"
+lattice = "kagome"
+t = 1.0
+U = 4.0
+nelec = 12
+2Sz = 0

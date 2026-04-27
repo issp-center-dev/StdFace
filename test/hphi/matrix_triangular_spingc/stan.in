@@ -1,0 +1,6 @@
+L = 2
+W = 2
+model = "SpinGC"
+lattice = "triangular"
+J = 1.0
+method = "FullDiag"

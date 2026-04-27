@@ -1,0 +1,8 @@
+L = 4
+W = 2
+model = "Spin"
+lattice = "ladder"
+J0 = 1.0
+J1 = 1.0
+calcmode = "uhfk"
+2Sz = 0
