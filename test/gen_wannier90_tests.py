@@ -31,7 +31,7 @@ BUILD_DIR  = SCRIPT_DIR.parent / "build" / "src"
 DATA_DIR   = SCRIPT_DIR / "wannier90_data"
 
 # Data file names (prefix = CDataFileHead = "zvo")
-DATA_FILES = ["zvo_geom.dat", "zvo_hr.dat"]
+DATA_FILES = ["zvo_geom.dat", "zvo_hr.dat", "zvo_ur.dat"]
 
 # Supercell: W=2, L=2, Height=1  → nsite = W*L*Height*NsiteUC = 4
 NSITE = 4
