@@ -185,8 +185,3 @@ Use Wannier90-based input when:
 For simple models with standard lattice geometries, the default approach
 (built-in lattice constructors) is recommended.
 
-Lattice Types Reference
------------------------
-
-See :ref:`Lattice Types <lattice-types>` in :doc:`input_output` for a full
-list of supported lattice geometries.
