@@ -6,30 +6,30 @@ High-Level Flow
 
 The execution flow of StdFace follows a linear pipeline:
 
-.. graphviz::
+::
 
-   digraph execution_flow {
-     graph [rankdir=TB, fontname="Helvetica", splines=ortho]
-     node  [fontname="Helvetica", fontsize=11, shape=box,
-            style="rounded,filled", fillcolor="#e8f4f8", margin="0.3,0.15"]
-     edge  [fontname="Helvetica", fontsize=10]
-
-     cli   [label="CLI Invocation"]
-     main  [label="main()\nsrc/dry.c", fillcolor="#cce5f0"]
-     core  [label="StdFace_main()\nsrc/StdFace_main.c", fillcolor="#cce5f0"]
-     parse [label="Input file parsing"]
-     lat   [label="Lattice construction"]
-     out   [label="Output file generation"]
-     files [label="Configuration files\nfor target solver",
-            shape=note, fillcolor="#fffacd"]
-
-     cli   -> main  [label="argv[1]"]
-     main  -> core  [label="fname"]
-     core  -> parse
-     parse -> lat
-     lat   -> out
-     out   -> files
-   }
+   CLI Invocation
+        │
+        ▼
+   ┌─────────────────────┐
+   │ main() in dry.c     │ ─── Argument parsing
+   └─────────┬───────────┘
+             │
+             ▼
+   ┌─────────────────────┐
+   │ StdFace_main()      │ ─── Core processing
+   │ in StdFace_main.c   │
+   └─────────┬───────────┘
+             │
+             ├──► Input file parsing
+             │
+             ├──► Lattice construction
+             │
+             └──► Output file generation
+                        │
+                        ▼
+                  Configuration files
+                  for target solver
 
 **Source reference**: ``src/dry.c``, ``src/StdFace_main.c``
 
