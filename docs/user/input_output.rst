@@ -101,6 +101,30 @@ Key          Example        Description
    - ``pyrochlore``
    - ``wannier90``
 
+.. _lattice-types:
+
+Lattice Types
+^^^^^^^^^^^^^
+
+==================  ===========  ============================================
+Lattice             Dimensions   Description
+==================  ===========  ============================================
+``chain``           1D           Linear chain
+``ladder``          1D           Two-leg or multi-leg ladder
+``square``          2D           Square lattice
+``triangular``      2D           Triangular lattice
+``honeycomb``       2D           Honeycomb (hexagonal) lattice
+``kagome``          2D           Kagome lattice
+``tetragonal``      3D           Tetragonal lattice
+``orthorhombic``    3D           Orthorhombic/cubic lattice
+``fcortho``         3D           Face-centered orthorhombic lattice
+``pyrochlore``      3D           Pyrochlore lattice
+``wannier90``       Any          Import from Wannier90 format files
+==================  ===========  ============================================
+
+See the developer documentation for implementation details of each lattice
+constructor.
+
 ``W``, ``L``
    Lattice dimensions.  Interpretation depends on lattice type.
 

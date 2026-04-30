@@ -188,23 +188,5 @@ For simple models with standard lattice geometries, the default approach
 Lattice Types Reference
 -----------------------
 
-StdFace supports the following built-in lattice types:
-
-==================  ===========  ============================================
-Lattice             Dimensions   Description
-==================  ===========  ============================================
-``chain``           1D           Linear chain
-``ladder``          1D           Two-leg or multi-leg ladder
-``square``          2D           Square lattice
-``triangular``      2D           Triangular lattice
-``honeycomb``       2D           Honeycomb (hexagonal) lattice
-``kagome``          2D           Kagome lattice
-``tetragonal``      3D           Tetragonal lattice
-``orthorhombic``    3D           Orthorhombic/cubic lattice
-``fcortho``         3D           Face-centered orthorhombic lattice
-``pyrochlore``      3D           Pyrochlore lattice
-``wannier90``       Any          Import from Wannier90 format files
-==================  ===========  ============================================
-
-See the developer documentation for implementation details of each lattice
-constructor.
+See :ref:`Lattice Types <lattice-types>` in :doc:`input_output` for a full
+list of supported lattice geometries.
