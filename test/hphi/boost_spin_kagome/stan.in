@@ -1,0 +1,10 @@
+W = 3
+L = 2
+model = "SpinGCBoost"
+method = "Lanczos"
+lattice = "kagome"
+J0 = 1.0
+J1 = 0.5
+J2 = 0.3
+2S = 1
+outputmode = "all"

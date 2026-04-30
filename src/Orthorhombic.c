@@ -1,23 +1,32 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
+/**
+ * @file Orthorhombic.c
+ * @brief Standard mode for the orthorhombic lattice
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * This file implements the standard interface for constructing Hamiltonians
+ * on a simple orthorhombic lattice. It supports spin, Hubbard, and Kondo
+ * models with nearest-neighbor, next-nearest-neighbor, and third-nearest-neighbor
+ * interactions along the three orthogonal lattice directions (W, L, H).
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Standard mode for the orthorhombic lattice
-*/
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -27,11 +36,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-@brief Setup a Hamiltonian for the Simple Orthorhombic lattice
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the Simple Orthorhombic lattice
+ *
+ * This function sets up the Hamiltonian for a simple orthorhombic lattice.
+ * It handles the following:
+ * - Computes super-cell shape and sites
+ * - Stores Hamiltonian parameters
+ * - Sets local spin flags
+ * - Computes transfer and interaction terms
+ * - Handles different model types (spin, Hubbard, Kondo)
+ * - Sets up nearest neighbor, next-nearest neighbor and third-nearest neighbor interactions
+ *
+ * @param[in,out] StdI Pointer to the StdIntList structure containing model parameters
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Orthorhombic(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI
 )
 {
   int isite, jsite, ntransMax, nintrMax;
@@ -40,9 +60,14 @@ void StdFace_Orthorhombic(
   double complex Cphase;
   double dR[3];
 
-  /**@brief
-  (1) Compute the shape of the super-cell and sites in the super-cell
-  */
+  /**
+   * @brief Step 1: Compute super-cell shape and sites
+   *
+   * - Opens lattice visualization file
+   * - Sets number of sites per unit cell
+   * - Prints lattice parameters and dimensions
+   * - Initializes site coordinates
+   */
   fp = fopen("lattice.xsf", "w");
   /**/
   StdI->NsiteUC = 1;
@@ -69,9 +94,15 @@ void StdFace_Orthorhombic(
   /**/
   StdFace_InitSite(StdI, fp, 3);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; ; StdI->tau[0][2] = 0.0;
-  /**@brief
-  (2) check & store parameters of Hamiltonian
-  */
+
+  /**
+   * @brief Step 2: Check and store Hamiltonian parameters
+   *
+   * Handles different parameter sets depending on model type:
+   * - Spin model: J couplings, magnetic field, anisotropy
+   * - Hubbard model: hopping terms, Coulomb interactions
+   * - Kondo model: combination of both
+   */
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
@@ -145,10 +176,14 @@ void StdFace_Orthorhombic(
  
   }/*if (model != "spin")*/
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /**@brief
-  (3) Set local spin flag (StdIntList::locspinflag) and
-  the number of sites (StdIntList::nsite)
-  */
+
+  /**
+   * @brief Step 3: Set local spin flags and number of sites
+   *
+   * - Calculates total number of sites
+   * - Allocates and initializes local spin flags array
+   * - Handles different models (spin, Hubbard, Kondo)
+   */
   StdI->nsite = StdI->NsiteUC * StdI->NCell;
   if (strcmp(StdI->model, "kondo") == 0 ) StdI->nsite *= 2;
   StdI->locspinflag = (int *)malloc(sizeof(int) * StdI->nsite);
@@ -162,9 +197,15 @@ void StdFace_Orthorhombic(
       StdI->locspinflag[iL] = StdI->S2;
       StdI->locspinflag[iL + StdI->nsite / 2] = 0;
     }
-  /**@brief
-  (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
-  */
+
+  /**
+   * @brief Step 4: Calculate maximum number of interactions
+   *
+   * Computes upper limits for:
+   * - Number of transfer terms
+   * - Number of interaction terms
+   * Then allocates memory for interactions
+   */
   if (strcmp(StdI->model, "spin") == 0 ) {
     ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 3/*J*/ + 6/*J'*/ + 4/*J''*/)
@@ -181,17 +222,23 @@ void StdFace_Orthorhombic(
   }
   /**/
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
-  /**@brief
-  (5) Set Transfer & Interaction
-  */
+
+  /**
+   * @brief Step 5: Set up all interactions
+   *
+   * Loops through cells setting up:
+   * - Local terms
+   * - Nearest neighbor interactions
+   * - Next-nearest neighbor interactions  
+   * - Third-nearest neighbor interactions
+   */
   for (kCell = 0; kCell < StdI->NCell; kCell++){
     /**/
     iW = StdI->Cell[kCell][0];
     iL = StdI->Cell[kCell][1];
     iH = StdI->Cell[kCell][2];
-    /*
-     (1) Local term
-    */
+
+    /* Local terms */
     isite = kCell;
     if (strcmp(StdI->model, "kondo") == 0 ) isite += StdI->NCell;
     /**/
@@ -207,9 +254,8 @@ void StdFace_Orthorhombic(
         StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, jsite);
       }/*if (strcmp(StdI->model, "kondo") == 0 )*/
     }
-    /*
-     (2) Nearest neighbor along W
-    */
+
+    /* Nearest neighbor along W */
     StdFace_FindSite(StdI, iW, iL, iH, 1, 0, 0, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
@@ -219,9 +265,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t0, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V0, isite, jsite);
     }
-    /*
-     (3) Nearest neighbor along L
-    */
+
+    /* Nearest neighbor along L */
     StdFace_FindSite(StdI, iW, iL, iH, 0, 1, 0, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -231,9 +276,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t1, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V1, isite, jsite);
     }
-    /*
-     (4) Nearest neighbor along H
-    */
+
+    /* Nearest neighbor along H */
     StdFace_FindSite(StdI, iW, iL, iH, 0, 0, 1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -243,9 +287,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t2, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V2, isite, jsite);
     }
-    /*
-     (5) Second nearest neighbor along +L+H
-    */
+
+    /* Second nearest neighbor along +L+H */
     StdFace_FindSite(StdI, iW, iL, iH, 0, 1, 1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
@@ -255,9 +298,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t0p, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V0p, isite, jsite);
     }
-    /*
-     (6) Second nearest neighbor along +L-H
-    */
+
+    /* Second nearest neighbor along +L-H */
     StdFace_FindSite(StdI, iW, iL, iH, 0, 1, -1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -267,9 +309,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t0p, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V0p, isite, jsite);
     }
-    /*
-     (7) Second nearest neighbor along +H+W
-    */
+
+    /* Second nearest neighbor along +H+W */
     StdFace_FindSite(StdI, iW, iL, iH, 1, 0, 1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -279,9 +320,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t1p, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V1p, isite, jsite);
     }
-    /*
-     (8) Second nearest neighbor along +H-W
-    */
+
+    /* Second nearest neighbor along +H-W */
     StdFace_FindSite(StdI, iW, iL, iH, -1, 0, 1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -291,9 +331,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t1p, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V1p, isite, jsite);
     }
-    /*
-     (9) Second nearest neighbor along +W+L
-    */
+
+    /* Second nearest neighbor along +W+L */
     StdFace_FindSite(StdI, iW, iL, iH, 1, 1, 0, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -303,9 +342,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t2p, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V2p, isite, jsite);
     }
-    /*
-     (10) Second nearest neighbor along +W-L
-    */
+
+    /* Second nearest neighbor along +W-L */
     StdFace_FindSite(StdI, iW, iL, iH, 1, -1, 0, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -315,9 +353,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->t2p, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V2p, isite, jsite);
     }
-    /*
-     (11) Third nearest neighbor along +W+L+H
-    */
+
+    /* Third nearest neighbor along +W+L+H */
     StdFace_FindSite(StdI, iW, iL, iH, 1, 1, 1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -327,9 +364,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->tpp, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->Vpp, isite, jsite);
     }
-    /*
-     (12) Third nearest neighbor along -W+L+H
-    */
+
+    /* Third nearest neighbor along -W+L+H */
     StdFace_FindSite(StdI, iW, iL, iH, -1, 1, 1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -339,9 +375,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->tpp, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->Vpp, isite, jsite);
     }
-    /*
-     (13) Third nearest neighbor along +W-L+H
-    */
+
+    /* Third nearest neighbor along +W-L+H */
     StdFace_FindSite(StdI, iW, iL, iH, 1, -1, 1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
@@ -351,9 +386,8 @@ void StdFace_Orthorhombic(
       StdFace_Hopping(StdI, Cphase * StdI->tpp, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->Vpp, isite, jsite);
     }
-    /*
-     (14) Third nearest neighbor along +W+L-H
-    */
+
+    /* Third nearest neighbor along +W+L-H */
     StdFace_FindSite(StdI, iW, iL, iH, 1, 1, -1, 0, 0, &isite, &jsite, &Cphase, dR);
     /**/
     if (strcmp(StdI->model, "spin") == 0) {

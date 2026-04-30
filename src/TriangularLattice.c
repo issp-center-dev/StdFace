@@ -1,23 +1,30 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Standard mode for the triangular lattice
-*/
+/**
+ * @file TriangularLattice.c
+ * @brief Standard mode for the triangular lattice
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * This file implements the Hamiltonian setup for the triangular lattice
+ * in standard mode, including nearest-neighbor, second-nearest-neighbor,
+ * and third-nearest-neighbor interactions for spin, Hubbard, and Kondo models.
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -27,9 +34,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-@brief Setup a Hamiltonian for the Triangular lattice
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the Triangular lattice
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @param[in,out] StdI Standard interface list containing lattice parameters,
+ *                     model type, and interaction definitions. On output,
+ *                     transfer integrals and interaction terms are populated.
+ */
 void StdFace_Triangular(struct StdIntList *StdI)
 {
   int isite, jsite, kCell, ntransMax, nintrMax;
@@ -38,9 +49,9 @@ void StdFace_Triangular(struct StdIntList *StdI)
   double complex Cphase;
   double dR[3];
 
-  /**@brief
-  (1) Compute the shape of the super-cell and sites in the super-cell
-  */
+  /**
+   * @brief (1) Compute the shape of the super-cell and sites in the super-cell
+   */
 #ifdef _HWAVE
   if (StdI->lattice_gp == 1)
 #endif
@@ -62,9 +73,9 @@ void StdFace_Triangular(struct StdIntList *StdI)
   /**/
   StdFace_InitSite(StdI, fp, 2);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; StdI->tau[0][2] = 0.0;
-  /**@brief
-  (2) check & store parameters of Hamiltonian
-  */
+  /**
+   * @brief (2) Check and store parameters of the Hamiltonian
+   */
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
@@ -80,9 +91,9 @@ void StdFace_Triangular(struct StdIntList *StdI)
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J0p, StdI->J0pAll, "J0'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J1p, StdI->J1pAll, "J1'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J2p, StdI->J2pAll, "J2'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J1pp, StdI->J1ppAll, "J1'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J2pp, StdI->J2ppAll, "J2'");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0''");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J1pp, StdI->J1ppAll, "J1''");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J2pp, StdI->J2ppAll, "J2''");
     /**/
     StdFace_NotUsed_d("mu", StdI->mu);
     StdFace_NotUsed_d("U", StdI->U);
@@ -155,10 +166,9 @@ void StdFace_Triangular(struct StdIntList *StdI)
 
   }/*if (model != "spin")*/
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /**@brief
-  (3) Set local spin flag (StdIntList::locspinflag) and
-  the number of sites (StdIntList::nsite)
-  */
+  /**
+   * @brief (3) Set local spin flag (StdIntList::locspinflag) and the number of sites (StdIntList::nsite)
+   */
   StdI->nsite = StdI->NsiteUC * StdI->NCell;
   if (strcmp(StdI->model, "kondo") == 0 ) StdI->nsite *= 2;
   StdI->locspinflag = (int *)malloc(sizeof(int) * StdI->nsite);
@@ -172,9 +182,9 @@ void StdFace_Triangular(struct StdIntList *StdI)
       StdI->locspinflag[iL] = StdI->S2;
       StdI->locspinflag[iL + StdI->nsite / 2] = 0;
     }
-  /**@brief
-  (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
-  */
+  /**
+   * @brief (4) Compute the upper limit of the number of Transfer and Interaction terms and allocate them
+   */
   if (strcmp(StdI->model, "spin") == 0 ) {
     ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 3/*J*/ + 3/*J'*/ + 3/*J''*/)
@@ -191,9 +201,9 @@ void StdFace_Triangular(struct StdIntList *StdI)
   }
   /**/
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
-  /**@brief
-  (5) Set Transfer & Interaction
-  */
+  /**
+   * @brief (5) Set Transfer and Interaction terms
+   */
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     /**/
     iW = StdI->Cell[kCell][0];

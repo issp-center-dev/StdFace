@@ -43,6 +43,50 @@ add_test(
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh fulldiag_spingc_tri ${CMAKE_SOURCE_DIR}/test/hphi
 )
 add_test(
+  NAME fulldiag_hubbard_orthorhombic
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh fulldiag_hubbard_orthorhombic ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME fulldiag_spin_ladder_extended
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh fulldiag_spin_ladder_extended ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME boundary_hubbard_chain_antip
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh boundary_hubbard_chain_antip ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME boundary_spin_ladder_twist
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh boundary_spin_ladder_twist ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME boost_spin_chain
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh boost_spin_chain ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME boost_spin_kagome
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh boost_spin_kagome ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME fail_unsupported_keyword
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_unsupported_keyword ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME fail_unsupported_lattice
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_unsupported_lattice ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME fail_kagome_boost_jprime
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_kagome_boost_jprime ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME fail_ladder_boost_s2
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_ladder_boost_s2 ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
+  NAME fail_ladder_boost_Lmod8
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_ladder_boost_Lmod8 ${CMAKE_SOURCE_DIR}/test/hphi
+)
+add_test(
   NAME lanczos_genspin_ladder
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh lanczos_genspin_ladder ${CMAKE_SOURCE_DIR}/test/hphi
 )

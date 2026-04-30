@@ -54,6 +54,20 @@ dkms.conf
 # Machine-specific Configuration File
 make.sys
 
+.idea/
+.vscode/
+cmake-build-debug/
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Python package metadata
+*.egg-info/
+dist/
+*.egg
+
 # Build Output
 build/
 

@@ -1,23 +1,31 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
+/**
+ * @file Pyrochlore.c
+ * @brief Standard mode for the pyrochlore lattice
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * Provides the Hamiltonian setup for a pyrochlore lattice, which consists
+ * of corner-sharing tetrahedra in a 3D structure with 4 sites per unit cell.
+ * Supports spin, Hubbard, and Kondo models with nearest-neighbor interactions.
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Standard mode for the pyrochlore lattice
-*/
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -27,11 +35,42 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-@brief Setup a Hamiltonian for the Pyrochlore structure
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the Pyrochlore structure
+ * @details This function sets up the Hamiltonian for a pyrochlore lattice structure.
+ *          It handles both spin and electronic models (Hubbard, Kondo).
+ *          The function:
+ *          1. Computes super-cell shape and sites
+ *          2. Checks and stores Hamiltonian parameters
+ *          3. Sets local spin flags
+ *          4. Computes transfer and interaction limits
+ *          5. Sets up transfers and interactions between sites
+ *
+ *          The pyrochlore lattice consists of corner-sharing tetrahedra in a 3D structure.
+ *          Each unit cell contains 4 sites forming a tetrahedron.
+ *          
+ *          The lattice parameters are:
+ *          - a: Lattice constant
+ *          - W,L,H: Cell dimensions along each direction
+ *          - tau[4][3]: Positions of the 4 sites within unit cell
+ *          
+ *          Supported models:
+ *          - Spin model: Heisenberg interactions between spins
+ *          - Hubbard model: Electron hopping and on-site interactions
+ *          - Kondo model: Coupling between localized spins and conduction electrons
+ *          
+ *          Key parameters:
+ *          - J0,J1,J2: Nearest neighbor spin couplings
+ *          - t0,t1,t2: Nearest neighbor hoppings
+ *          - U: On-site Coulomb interaction
+ *          - V: Inter-site Coulomb interaction
+ *          - h: Magnetic field
+ *          - Gamma: Transverse field
+ *
+ * @param[in,out] StdI Pointer to structure containing model parameters and lattice info
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Pyrochlore(
-  struct StdIntList *StdI//!<[inout]
+  struct StdIntList *StdI//!<[inout] Structure containing model parameters and lattice info
 )
 {
   int isite, jsite, isiteUC, ntransMax, nintrMax;

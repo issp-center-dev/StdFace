@@ -1,7 +1,9 @@
+import math
 import sys
 
+# Allow small platform-dependent floating-point drift (Linux vs macOS/Clang).
 #EPS = 0.0
-EPS = 1.0e-12
+EPS = 1.0e-8
 
 if len(sys.argv) < 3:
     print("usage: {} file1 file2".format(sys.argv[0]))
@@ -38,6 +40,9 @@ for idx, (ta, tb) in enumerate(zip(lines_a, lines_b)):
         try:
             fva = float(va)
             fvb = float(vb)
+            # NaN on both sides is acceptable (nan vs -nan across platforms)
+            if math.isnan(fva) and math.isnan(fvb):
+                continue
             if abs(fva) < EPS and abs(fvb) < EPS:
                 r = abs(fva - fvb)
             else:

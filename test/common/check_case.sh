@@ -20,7 +20,7 @@ default_cmd=${4:?}
 # Allow caller override (may include args)
 DRY_CMD="${DRY_CMD:-$default_cmd}"
 
-almost_diff_py="${base_dir}/../almost_diff.py"
+almost_diff_py="${base_dir}/../common/almost_diff.py"
 
 # Avoid collisions across repeated runs
 if [ -d "${test_item}.bak" ]; then

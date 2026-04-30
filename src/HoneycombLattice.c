@@ -1,23 +1,34 @@
-/*
-HPhi-mVMC-StdFace - Common input generator
-Copyright (C) 2015 The University of Tokyo
+/**
+ * @file HoneycombLattice.c
+ * @brief Implementation of the honeycomb lattice model for Hubbard, Heisenberg, and Kondo systems
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ *
+ * @details
+ * This file implements the honeycomb lattice model with various interactions:
+ * - Hubbard model
+ * - Heisenberg model
+ * - Kondo lattice model
+ *
+ * The lattice has 2 sites per unit cell and supports:
+ * - Nearest neighbor hopping/exchange (J0, J1, J2 / t0, t1, t2)
+ * - Next nearest neighbor hopping/exchange (J0', J1', J2' / t0', t1', t2')
+ * - Third nearest neighbor hopping/exchange (J0'', J1'', J2'' / t0'', t1'', t2'')
+ * - On-site Coulomb interaction (U)
+ * - Inter-site Coulomb interaction (V, V', V'')
+ * - Magnetic field (h, Gamma, Gamma_y)
+ *
+ * Also provides a Boost method for the generalized Heisenberg model (HPhi only).
+ *
+ * @copyright
+ * HPhi-mVMC-StdFace - Common input generator
+ * Copyright (C) 2015 The University of Tokyo
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/**@file
-@brief Standard mode for the honeycomb lattice
-*/
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -27,9 +38,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-@brief Setup a Hamiltonian for the Hubbard model on a Honeycomb lattice
-@author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the Hubbard/Heisenberg/Kondo model on a Honeycomb lattice
+ * @details This function:
+ * 1. Computes the shape of the super-cell and sites in the super-cell
+ * 2. Checks & stores parameters of the Hamiltonian
+ * 3. Sets local spin flags and number of sites
+ * 4. Computes upper limits for transfers and interactions
+ * 5. Sets up transfers and interactions between sites
+ *
+ * @param[in,out] StdI Pointer to structure containing model parameters
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Honeycomb(struct StdIntList *StdI)
 {
   int isite, jsite, kCell, ntransMax, nintrMax;
@@ -38,9 +57,13 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
   double complex Cphase;
   double dR[3];
 
-  /**@brief
-  (1) Compute the shape of the super-cell and sites in the super-cell
-  */
+  /**
+   * @brief (1) Compute the shape of the super-cell and sites in the super-cell
+   * @details Sets up:
+   * - Lattice vectors
+   * - Unit cell with 2 sites
+   * - Site positions within unit cell
+   */
 #ifdef _HWAVE
   if (StdI->lattice_gp == 1)
 #endif
@@ -64,9 +87,16 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
   StdFace_InitSite(StdI, fp, 2);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; StdI->tau[0][2] = 0.0;
   StdI->tau[1][0] = 1.0 / 3.0; StdI->tau[1][1] = 1.0 / 3.0; StdI->tau[1][2] = 0.0;
-  /**@brief
-  (2) check & store parameters of Hamiltonian
-  */
+  
+  /**
+   * @brief (2) Check & store parameters of Hamiltonian
+   * @details Handles parameters for:
+   * - Magnetic field
+   * - Exchange couplings (spin model)
+   * - Hopping terms (Hubbard model)
+   * - On-site Coulomb U
+   * - Inter-site Coulomb V
+   */
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_d("K", StdI->K);
   StdFace_PrintVal_d("h", &StdI->h, 0.0);
@@ -82,9 +112,9 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J0p, StdI->J0pAll, "J0'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J1p, StdI->J1pAll, "J1'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J2p, StdI->J2pAll, "J2'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J1pp, StdI->J1ppAll, "J1'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J2pp, StdI->J2ppAll, "J2'");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0''");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J1pp, StdI->J1ppAll, "J1''");
+    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J2pp, StdI->J2ppAll, "J2''");
     /**/
     StdFace_NotUsed_d("mu", StdI->mu);
     StdFace_NotUsed_d("U", StdI->U);
@@ -145,10 +175,13 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
 
   }/*if (model != "spin")*/
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /**@brief
-  (3) Set local spin flag (StdIntList::locspinflag) and
-  the number of sites (StdIntList::nsite)
-  */
+  
+  /**
+   * @brief (3) Set local spin flag and number of sites
+   * @details Sets:
+   * - Total number of sites
+   * - Local spin flags for each site
+   */
   StdI->nsite = StdI->NsiteUC * StdI->NCell;
   if (strcmp(StdI->model, "kondo") == 0 ) StdI->nsite *= 2;
   StdI->locspinflag = (int *)malloc(sizeof(int) * StdI->nsite);
@@ -162,9 +195,14 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
       StdI->locspinflag[iL] = StdI->S2;
       StdI->locspinflag[iL + StdI->nsite / 2] = 0;
     }
-  /**@brief
-  (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
-  */
+    
+  /**
+   * @brief (4) Compute upper limit of Transfer & Interaction and malloc them
+   * @details Calculates maximum number of:
+   * - Transfers (hopping/exchange)
+   * - Interactions (Coulomb/exchange)
+   * And allocates memory accordingly
+   */
   if (strcmp(StdI->model, "spin") == 0 ) {
     ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 3/*J*/ + 6/*J'*/ + 3/*J''*/)
@@ -182,9 +220,15 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
   }
   /**/
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
-  /**@brief
-  (5) Set Transfer & Interaction
-  */
+  
+  /**
+   * @brief (5) Set Transfer & Interaction
+   * @details For each unit cell:
+   * - Sets local terms (chemical potential, magnetic field)
+   * - Sets nearest neighbor terms
+   * - Sets next-nearest neighbor terms  
+   * - Sets third-nearest neighbor terms
+   */
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     /**/
     iW = StdI->Cell[kCell][0];
@@ -372,11 +416,25 @@ void StdFace_Honeycomb(struct StdIntList *StdI)
 
 #if defined(_HPhi)
 /**
-*
-* Setup a Hamiltonian for the generalized Heisenberg model on a Heisenberg lattice
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
-*/
+ * @brief Setup a Hamiltonian for the generalized Heisenberg model on a honeycomb lattice using the Boost method
+ *
+ * @details This function sets up the SpinGCBoost representation for the honeycomb lattice.
+ * It writes the "boost.def" file containing:
+ * - Magnetic field parameters
+ * - Exchange coupling matrices (J0, J1, J2)
+ * - Topology information (pivot sites and 6-spin pair lists)
+ *
+ * Constraints:
+ * - Only supports @f$ S = 1/2 @f$ (S2 = 1)
+ * - Requires @f$ L \geq 2 @f$
+ * - Requires @f$ W = 3 @f$ (internally doubled to 6)
+ * - Does not support tilted lattices (a0W, a0L, a1W, a1L)
+ * - Does not support next-nearest neighbor couplings (J')
+ *
+ * @param[in,out] StdI Pointer to the standard interface structure containing model parameters
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
 void StdFace_Honeycomb_Boost(struct StdIntList *StdI)
 {
   int isite, ipivot, i1, i2;

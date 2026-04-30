@@ -1,0 +1,7 @@
+L = 8
+model = "SpinGCBoost"
+method = "Lanczos"
+lattice = "chain"
+J0 = 1.0
+2S = 1
+outputmode = "all"
