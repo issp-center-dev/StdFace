@@ -5,6 +5,6 @@ User Documentation
    :maxdepth: 2
 
    quickstart
-   input_output
+   reference/index
    examples
    troubleshooting
