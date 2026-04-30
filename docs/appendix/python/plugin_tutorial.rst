@@ -1,9 +1,9 @@
-Plugin Tutorial (Python Implementation)
-========================================
+Plugin Tutorial
+===============
 
 .. note::
 
-   This appendix describes the **Python reimplementation** of StdFace
+   This section describes the **Python reimplementation** of StdFace
    (``python/stdface/``).  The main manual covers the C implementation.
 
 StdFace's Python implementation uses a plugin architecture where solvers and
