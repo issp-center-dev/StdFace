@@ -6,3 +6,4 @@ StdFace Documentation
 
    dev/index
    user/index
+   appendix/index
