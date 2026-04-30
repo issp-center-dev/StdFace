@@ -1,10 +1,16 @@
-/* Force all tables to wrap within the viewport */
-table {
+/* Prevent horizontal scrollbars on tables in sphinx_rtd_theme */
+.wy-table-responsive {
+    overflow: visible !important;
+}
+
+.wy-table-responsive table {
     table-layout: fixed;
     width: 100%;
 }
 
-td, th {
+.wy-table-responsive table td,
+.wy-table-responsive table th {
     word-wrap: break-word;
     overflow-wrap: break-word;
+    white-space: normal !important;
 }
