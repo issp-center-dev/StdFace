@@ -1,8 +1,11 @@
 project = "StdFace Documentation"
 author = "ISSP Center"
+version = '0.5.0'
+release = '0.5.0'
 extensions = []
 templates_path = ['_templates']
 exclude_patterns = ['_meta', '._*', '_build']
-html_theme = 'alabaster'
-html_static_path = []
+html_theme = 'sphinx_rtd_theme'
+html_static_path = ['_static']
+html_css_files = ['custom.css']
 master_doc = 'index'

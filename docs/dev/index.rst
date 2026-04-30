@@ -12,3 +12,4 @@ Developer Documentation
    internals/error_handling
    internals/memory_management
    internals/build_and_options
+   testing

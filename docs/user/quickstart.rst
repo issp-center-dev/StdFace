@@ -100,17 +100,7 @@ Sample input file (from ``samples/hubbard/default_model/stan.in``):
    t=1
    U=1
 
-Keys used in the sample:
-
-- ``model``: Physical model type
-- ``lattice``: Lattice geometry
-- ``W``, ``L``: Lattice dimensions
-- ``method``: Solver method (solver-specific)
-- ``2Sz``: Total spin (2 * Sz)
-- ``nelec``: Number of electrons
-- ``exct``: Number of excited states (solver-specific)
-- ``t``: Hopping parameter
-- ``U``: On-site Coulomb interaction
+See :doc:`input_output` for a full parameter reference.
 
 Output Files
 ^^^^^^^^^^^^
@@ -123,73 +113,11 @@ files after running StdFace.
 Your First Run
 --------------
 
-1. Create an input file named ``stan.in`` with the following content
-   (from ``samples/hubbard/default_model/stan.in``):
-
-   .. code-block:: text
-
-      model = "Hubbard"
-      lattice = square
-      W=2
-      L=2
-      method = "CG"
-      2Sz = 0
-      nelec = 4
-      exct = 1
-      t=1
-      U=1
-
-2. Run StdFace:
-
-   .. code-block:: bash
-
-      ./hphi_dry.out stan.in
-
-3. Check the generated output files in the current directory.
-
-Troubleshooting
----------------
-
-Build Errors
-^^^^^^^^^^^^
-
-**No solver enabled**
-
-If you run ``cmake ..`` without enabling any solver option, no executable will
-be built. Make sure to specify at least one solver:
+See :doc:`examples` for complete working examples including input files and
+expected behaviour.  A minimal run looks like:
 
 .. code-block:: bash
 
-   cmake .. -DHPHI=ON
-
-**CMake version too old**
-
-StdFace requires CMake 2.8.12 or later. Check your version:
-
-.. code-block:: bash
-
-   cmake --version
-
-Runtime Errors
-^^^^^^^^^^^^^^
-
-**ERROR ! <parameter> is NOT specified !**
-
-A parameter expected by StdFace is missing from your input file. Add the
-parameter indicated in the error message to your input file.
-
-**Check ! <parameter> is SPECIFIED but will NOT be USED.**
-
-A parameter was specified that does not apply to the current model/lattice
-combination. Remove or comment out the unused parameter.
-
-**File not found**
-
-Ensure the input file path is correct and the file exists:
-
-.. code-block:: bash
-
-   ls -la stan.in
    ./hphi_dry.out stan.in
 
 Next Steps
@@ -197,3 +125,4 @@ Next Steps
 
 - See :doc:`examples` for complete working examples
 - See :doc:`input_output` for detailed parameter reference
+- See :doc:`troubleshooting` for build and runtime error resolution

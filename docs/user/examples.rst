@@ -29,23 +29,7 @@ Create ``stan.in``:
    t = 1
    U = 1
 
-Parameter Explanation
-^^^^^^^^^^^^^^^^^^^^^
-
-============  =========  =====================================================
-Parameter     Value      Description
-============  =========  =====================================================
-``model``     Hubbard    Hubbard model with hopping and on-site interaction
-``lattice``   square     2D square lattice
-``W``         2          Width: 2 sites in the W direction
-``L``         2          Length: 2 sites in the L direction
-``method``    CG         Conjugate gradient method (solver-specific)
-``2Sz``       0          Total spin projection (2 * Sz = 0)
-``nelec``     4          Number of electrons (half-filling for 4 sites)
-``exct``      1          Number of excited states (solver-specific)
-``t``         1          Nearest-neighbor hopping amplitude
-``U``         1          On-site Coulomb interaction strength
-============  =========  =====================================================
+See :doc:`input_output` for a full description of each parameter.
 
 Running the Example
 ^^^^^^^^^^^^^^^^^^^
@@ -201,26 +185,3 @@ Use Wannier90-based input when:
 For simple models with standard lattice geometries, the default approach
 (built-in lattice constructors) is recommended.
 
-Lattice Types Reference
------------------------
-
-StdFace supports the following built-in lattice types:
-
-==================  ===========  ============================================
-Lattice             Dimensions   Description
-==================  ===========  ============================================
-``chain``           1D           Linear chain
-``ladder``          1D           Two-leg or multi-leg ladder
-``square``          2D           Square lattice
-``triangular``      2D           Triangular lattice
-``honeycomb``       2D           Honeycomb (hexagonal) lattice
-``kagome``          2D           Kagome lattice
-``tetragonal``      3D           Tetragonal lattice
-``orthorhombic``    3D           Orthorhombic/cubic lattice
-``fcortho``         3D           Face-centered orthorhombic lattice
-``pyrochlore``      3D           Pyrochlore lattice
-``wannier90``       Any          Import from Wannier90 format files
-==================  ===========  ============================================
-
-See the developer documentation for implementation details of each lattice
-constructor.
