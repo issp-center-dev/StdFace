@@ -1,0 +1,6 @@
+L = 4
+W = 2
+model = "SpinGC"
+lattice = "ladder"
+J0 = 1.0
+J1 = 1.0

@@ -1,0 +1,9 @@
+L = 1
+W = 1
+H = 1
+model = "FermionHubbard"
+lattice = "pyrochlore"
+t = 1.0
+U = 4.0
+nelec = 4
+2Sz = 0

@@ -1,0 +1,9 @@
+L = 2
+W = 2
+model = "FermionHubbard"
+lattice = "square"
+t = 1.0
+U = 4.0
+calcmode = "uhfk"
+nelec = 4
+2Sz = 0

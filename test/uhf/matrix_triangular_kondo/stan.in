@@ -1,0 +1,9 @@
+L = 2
+W = 2
+model = "Kondo"
+lattice = "triangular"
+t = 1.0
+J = 1.0
+U = 4.0
+ncond = 4
+2Sz = 0

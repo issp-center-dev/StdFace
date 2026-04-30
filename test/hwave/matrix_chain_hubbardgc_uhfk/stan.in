@@ -1,0 +1,7 @@
+L = 4
+model = "FermionHubbardGC"
+lattice = "chain"
+t = 1.0
+U = 4.0
+calcmode = "uhfk"
+nelec = 4

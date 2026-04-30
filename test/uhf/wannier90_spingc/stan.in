@@ -1,0 +1,5 @@
+model = "SpinGC"
+lattice = "wannier90"
+W = 2
+L = 2
+Height = 1

@@ -1,0 +1,7 @@
+model = "Spin"
+lattice = "wannier90"
+W = 2
+L = 2
+Height = 1
+calcmode = "uhfr"
+2Sz = 0

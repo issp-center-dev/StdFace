@@ -696,6 +696,10 @@ void StdFace_Wannier90(
   }
   tUJ = (double complex **)malloc(sizeof(double complex*) * 3);
   tUJindx = (int ***)malloc(sizeof(int**) * 3);
+  for (ii = 0; ii < 3; ii++) {
+    tUJ[ii] = NULL;
+    tUJindx[ii] = NULL;
+  }
 
   /*
   Read Hopping
@@ -821,10 +825,15 @@ void StdFace_Wannier90(
   (4.5) For spin system, compute super exchange interaction.
   */
   if (strcmp(StdI->model, "spin") == 0) {
+    if (NtUJ[1] == 0) {
+      fprintf(stderr, "\n  Error: _ur.dat is required for the spin model.\n");
+      fprintf(stderr, "         On-site U values are needed to compute superexchange J = 4t^2/U.\n\n");
+      StdFace_exit(-1);
+    }
     Uspin = (double *)malloc(sizeof(double) * StdI->NsiteUC);
     for (it = 0; it < NtUJ[1]; it++)
       if (tUJindx[1][it][0] == 0 && tUJindx[1][it][1] == 0 && tUJindx[1][it][2] == 0
-        && tUJindx[1][it][3] == tUJindx[1][it][4])     
+        && tUJindx[1][it][3] == tUJindx[1][it][4])
         Uspin[tUJindx[1][it][3]] = creal(tUJ[1][it]);
   }/*if (strcmp(StdI->model, "spin") == 0)*/
   /**@brief

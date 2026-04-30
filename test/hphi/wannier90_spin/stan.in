@@ -1,0 +1,8 @@
+CDataFileHead = "zvo"
+model = "Spin"
+lattice = "wannier90"
+W = 2
+L = 2
+Height = 1
+method = "FullDiag"
+2Sz = 0

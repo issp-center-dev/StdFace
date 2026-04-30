@@ -1,0 +1,9 @@
+L = 2
+W = 2
+model = "FermionHubbard"
+lattice = "honeycomb"
+t = 1.0
+U = 4.0
+nelec = 8
+2Sz = 0
+RndSeed = 1

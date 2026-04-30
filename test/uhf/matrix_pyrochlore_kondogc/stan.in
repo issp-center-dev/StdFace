@@ -1,0 +1,9 @@
+L = 1
+W = 1
+H = 1
+model = "KondoGC"
+lattice = "pyrochlore"
+t = 1.0
+J = 1.0
+U = 4.0
+ncond = 4

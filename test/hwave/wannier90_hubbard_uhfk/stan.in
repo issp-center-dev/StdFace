@@ -1,0 +1,8 @@
+model = "FermionHubbard"
+lattice = "wannier90"
+W = 2
+L = 2
+Height = 1
+calcmode = "uhfk"
+nelec = 4
+2Sz = 0

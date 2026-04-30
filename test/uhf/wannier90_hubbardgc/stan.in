@@ -1,0 +1,6 @@
+model = "FermionHubbardGC"
+lattice = "wannier90"
+W = 2
+L = 2
+Height = 1
+nelec = 4
