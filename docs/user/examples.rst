@@ -29,7 +29,7 @@ Create ``stan.in``:
    t = 1
    U = 1
 
-See :doc:`input_output` for a full description of each parameter.
+See :doc:`reference/index` for a full description of each parameter.
 
 Running the Example
 ^^^^^^^^^^^^^^^^^^^

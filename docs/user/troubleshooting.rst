@@ -48,7 +48,7 @@ allow duplicate keys and exits immediately.
 A parameter required for the current model/lattice combination is missing from
 the input file.
 
-*Resolution*: Add the indicated parameter.  Refer to :doc:`input_output` for
+*Resolution*: Add the indicated parameter.  Refer to :doc:`reference/index` for
 which parameters are required for each solver.
 
 **Check ! <x> is SPECIFIED but will NOT be USED.**
@@ -63,7 +63,7 @@ file clean.
 
 The input file contains an unrecognised keyword.
 
-*Resolution*: Check for typos.  Refer to :doc:`input_output` for the list of
+*Resolution*: Check for typos.  Refer to :doc:`reference/index` for the list of
 supported keywords.
 
 Runtime Errors — File Access
@@ -92,7 +92,7 @@ The value given for the ``method`` keyword is not recognised by the current
 solver.  This error is HPhi-specific.
 
 *Resolution*: Use one of the supported values.  See :ref:`method-hphi` in
-:doc:`input_output`.
+:doc:`reference/input/hphi`.
 
 **ERROR! (L, W, Height) and (a0W, ..., a2H) conflict !**
 

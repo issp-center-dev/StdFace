@@ -100,7 +100,7 @@ Sample input file (from ``samples/hubbard/default_model/stan.in``):
    t=1
    U=1
 
-See :doc:`input_output` for a full parameter reference.
+See :doc:`reference/index` for a full parameter reference.
 
 Output Files
 ^^^^^^^^^^^^
@@ -124,5 +124,5 @@ Next Steps
 ----------
 
 - See :doc:`examples` for complete working examples
-- See :doc:`input_output` for detailed parameter reference
+- See :doc:`reference/index` for detailed parameter reference
 - See :doc:`troubleshooting` for build and runtime error resolution
