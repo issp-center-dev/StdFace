@@ -91,3 +91,39 @@ File                    Contents
 
 Each index file maps variational parameters to lattice sites or site pairs and
 records an optimisation flag (1 = optimised, 0 = fixed).
+
+H-wave-Specific Files
+----------------------
+
+H-wave has two sub-modes controlled by the ``calcmode`` input keyword.
+
+uhfr mode (real-space)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``calcmode = "uhfr"`` uses the same ``.def`` format as UHF.  No H-wave-specific
+files are generated beyond those listed in `Files Common to All Solvers`_.
+
+uhfk / rpa mode (k-space)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When ``calcmode`` is set to ``"uhfk"``, ``"rpa"``, or any value other than
+``"uhfr"``, H-wave generates Wannier90-format ``.dat`` files instead of
+``.def`` files.
+
+=========================  =========================================================
+File                       Contents
+=========================  =========================================================
+``geom.dat``               Lattice primitive vectors and orbital positions
+``transfer.dat``           Hopping parameters in Wannier90 format
+``coulombintra.dat``       On-site Coulomb interaction
+``coulombinter.dat``       Inter-site Coulomb interaction
+``hund.dat``               Hund coupling
+``exchange.dat``           Exchange interaction
+``pairlift.dat``           Pair-lift interaction
+``pairhopp.dat``           Pair-hopping interaction
+=========================  =========================================================
+
+Each file is written only when the corresponding interaction is non-zero.
+
+**File prefix**: If the ``fileprefix`` keyword is set, all output files are
+named ``{fileprefix}_{filename}`` (e.g., ``myrun_geom.dat``).
