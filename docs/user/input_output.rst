@@ -118,6 +118,8 @@ Solver-Specific Parameters
 The following parameters are interpreted differently — or only apply — for
 particular solver modes.
 
+.. _method-hphi:
+
 ``method`` — HPhi only
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -184,6 +186,51 @@ Specifies 2×Sz (twice the z-component of total spin).  For example,
      - Optional.
    * - H-wave
      - Optional.
+
+HPhi Boost Mode
+^^^^^^^^^^^^^^^
+
+Boost mode is a high-performance algorithm for S=1/2 spin models that
+exploits a 6-spin interaction structure to accelerate the Lanczos
+diagonalisation.  Internally, HPhi reorganises the Hilbert space around
+*pivot sites* and applies quantum-number projection, achieving better cache
+efficiency than the standard algorithm on supported lattices.
+
+**Enabling Boost mode**
+
+Set ``model`` to one of:
+
+- ``"spingcboost"`` — grand-canonical spin with Boost
+- ``"spingccma"`` — grand-canonical spin with CMA variant
+
+.. code-block:: text
+
+   model   = "spingcboost"
+   lattice = chain
+   L       = 16
+
+**Supported lattices and constraints**
+
++---------------+--------------------------------------------------+
+| Lattice       | Constraints                                      |
++===============+==================================================+
+| ``chain``     | ``S2 = 1`` (S=1/2); ``L`` must be a multiple of 8|
++---------------+--------------------------------------------------+
+| ``ladder``    | ``S2 = 1``; ``W = 2``; ``L`` even and ≥ 4        |
++---------------+--------------------------------------------------+
+| ``honeycomb`` | ``S2 = 1``                                       |
++---------------+--------------------------------------------------+
+| ``kagome``    | ``S2 = 1``                                       |
++---------------+--------------------------------------------------+
+
+Other lattices do not support Boost mode and will produce an error.
+
+**Additional output file**
+
+When Boost mode is active, ``boost.def`` is generated in addition to the
+standard HPhi files.  It contains the magnetic field values, exchange
+interaction matrices, and the pivot-site topology (pivot count, 6-spin
+pair lists, spin-shift information) required by HPhi's Boost kernel.
 
 Mode-Specific Inputs
 --------------------
@@ -359,14 +406,70 @@ mVMC-Specific Files
 ======================  =========================================================
 File                    Contents
 ======================  =========================================================
-``gutzwilleridx.def``   Gutzwiller variational parameter indices
-``jastrowidx.def``      Jastrow variational parameter indices
-``orbitalidx.def``      Orbital (pairing function) parameter indices
-                        (used when ``2Sz = 0`` or unspecified)
-``orbitalidxpara.def``  Orbital parameter indices for spin-polarised case
-                        (used when ``2Sz != 0`` or grand-canonical ensemble)
-``qptransidx.def``      Quantum-number projection parameter indices
+``gutzwilleridx.def``   Gutzwiller factor index table (one entry per site)
+``jastrowidx.def``      Jastrow factor index table (one entry per site pair)
+``orbitalidx.def``      Pairing-function (orbital) index table — used when
+                        ``2Sz = 0`` or unspecified
+``orbitalidxpara.def``  Spin-polarised orbital index table — used when
+                        ``2Sz != 0`` or grand-canonical ensemble
+``qptransidx.def``      Quantum-number projection / translation symmetry table
 ======================  =========================================================
+
+Each index file maps variational parameters to lattice sites or site pairs and
+records an optimisation flag (1 = optimised, 0 = fixed).
+
+mVMC-Specific Input Parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following keywords are written to ``modpara.def`` for mVMC and are ignored
+by all other solvers.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Keyword
+     - Description
+   * - ``NVMCCalMode``
+     - Calculation mode: ``0`` = variational optimisation,
+       ``1`` = compute correlation functions with fixed wavefunction.
+   * - ``NLanczosMode``
+     - Power Lanczos correction: ``0`` = off, ``1`` = on.
+   * - ``NDataIdxStart``
+     - Start index of independent trial runs.
+   * - ``NDataQtySmp``
+     - Number of independent trial runs.
+   * - ``NSPGaussLeg``
+     - Number of Gauss-Legendre points for spin-quantum-number projection.
+       Required when ``NSPStot`` is set.
+   * - ``NSPStot``
+     - Target total spin quantum number S for spin projection.
+   * - ``NMPTrans``
+     - Number of momentum/translation symmetry operations to project onto.
+   * - ``NSROptItrStep``
+     - Total number of stochastic reconfiguration (SR) optimisation steps.
+   * - ``NSROptItrSmp``
+     - Number of Monte Carlo samples per SR step.
+   * - ``DSROptRedCut``
+     - SR regularisation: eigenvalue cutoff (relative).
+   * - ``DSROptStaDel``
+     - SR regularisation: diagonal shift (stabiliser).
+   * - ``DSROptStepDt``
+     - SR optimisation step size (learning rate).
+   * - ``NVMCWarmUp``
+     - Number of Monte Carlo warm-up steps before sampling begins.
+   * - ``NVMCInterval``
+     - Interval (in MC steps) between successive samples.
+   * - ``NVMCSample``
+     - Total number of Monte Carlo samples per optimisation step.
+   * - ``RndSeed``
+     - Seed for the random number generator.
+   * - ``NSplitSize``
+     - Number of MPI groups for parallel trial splitting.
+   * - ``NStore``
+     - Flag to store intermediate wavefunction data to disk (``1`` = on).
+   * - ``NSRCG``
+     - Flag to use conjugate-gradient solver inside SR (``1`` = on).
 
 Validation and Errors
 ---------------------
