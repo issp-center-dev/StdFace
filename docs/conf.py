@@ -1,5 +1,7 @@
 project = "StdFace Documentation"
 author = "ISSP Center"
+version = '0.5.0'
+release = '0.5.0'
 extensions = []
 templates_path = ['_templates']
 exclude_patterns = ['_meta', '._*', '_build']
