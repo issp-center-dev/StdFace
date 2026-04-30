@@ -120,53 +120,9 @@ expected behaviour.  A minimal run looks like:
 
    ./hphi_dry.out stan.in
 
-Troubleshooting
----------------
-
-Build Errors
-^^^^^^^^^^^^
-
-**No solver enabled**
-
-If you run ``cmake ..`` without enabling any solver option, no executable will
-be built. Make sure to specify at least one solver:
-
-.. code-block:: bash
-
-   cmake .. -DHPHI=ON
-
-**CMake version too old**
-
-StdFace requires CMake 2.8.12 or later. Check your version:
-
-.. code-block:: bash
-
-   cmake --version
-
-Runtime Errors
-^^^^^^^^^^^^^^
-
-**ERROR ! <parameter> is NOT specified !**
-
-A parameter expected by StdFace is missing from your input file. Add the
-parameter indicated in the error message to your input file.
-
-**Check ! <parameter> is SPECIFIED but will NOT be USED.**
-
-A parameter was specified that does not apply to the current model/lattice
-combination. Remove or comment out the unused parameter.
-
-**File not found**
-
-Ensure the input file path is correct and the file exists:
-
-.. code-block:: bash
-
-   ls -la stan.in
-   ./hphi_dry.out stan.in
-
 Next Steps
 ----------
 
 - See :doc:`examples` for complete working examples
 - See :doc:`input_output` for detailed parameter reference
+- See :doc:`troubleshooting` for build and runtime error resolution

@@ -7,3 +7,4 @@ User Documentation
    quickstart
    input_output
    examples
+   troubleshooting
