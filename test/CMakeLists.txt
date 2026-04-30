@@ -1,3 +1,6 @@
+#set(TEST_MODE "base")
+set(TEST_MODE "python")
+
 if (HPHI)
     add_subdirectory(hphi)
 endif()
