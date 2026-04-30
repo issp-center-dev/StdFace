@@ -35,6 +35,7 @@ After installation, the ``stdface`` command is available:
 .. code-block:: bash
 
    stdface stan.in                  # default solver (HPhi)
+   stdface stan.in --solver HPhi
    stdface stan.in --solver mVMC
    stdface stan.in --solver UHF
    stdface stan.in --solver HWAVE

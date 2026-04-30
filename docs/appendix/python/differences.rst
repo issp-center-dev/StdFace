@@ -13,18 +13,13 @@ invocation and extensibility.
 Comment Character
 -----------------
 
-In the C version, comments in ``stan.in`` are introduced with ``//``:
+Both versions use ``//`` to introduce comments.  Inline comments are not
+supported: everything after ``=`` is taken as the value, so
+``t = 1.0 // comment`` would produce a parse error.
 
 .. code-block:: text
 
-   // C version comment
-   model = Hubbard
-
-In the Python version, comments use ``#``:
-
-.. code-block:: text
-
-   # Python version comment
+   // this line is skipped
    model = Hubbard
 
 Solver Selection
