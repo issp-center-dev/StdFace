@@ -385,6 +385,13 @@ was not found in the input file. Add the indicated parameter to your input.
 *Cause*: Integer parameters are initialized to a sentinel value (2147483647).
 If unchanged after parsing, the parameter is considered missing.
 
+**ERROR ! Keyword <parameter> is duplicated !**
+
+The same keyword appears more than once in the input file.  StdFace does not
+accept duplicate keys — it exits immediately with status ``-1``.
+
+*Resolution*: Remove the duplicate entry, keeping only one occurrence.
+
 **Check ! <parameter> is SPECIFIED but will NOT be USED.**
 
 A parameter was specified in the input file that does not apply to the current
@@ -402,6 +409,7 @@ Based on the error handling documentation:
 
 - Presence of expected parameters (via sentinel value detection)
 - Absence of inapplicable parameters (via NaN detection for doubles)
+- Uniqueness of each keyword (duplicate keys are a fatal error)
 
 What StdFace Does NOT Validate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
