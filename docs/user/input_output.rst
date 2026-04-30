@@ -18,8 +18,8 @@ generates solver-specific input files.
 - **Output**: StdFace writes one or more input files for the target solver
   (HPhi, mVMC, UHF, or H-wave) in the current working directory.
 
-The specific output files depend on the solver mode (determined at compile time)
-and are unspecified in the current code documentation.
+The specific output files depend on the solver mode, which is determined at
+compile time.  See `Output Files`_ for a complete list.
 
 Input File Format
 -----------------
@@ -49,8 +49,17 @@ Observed formatting rules (from sample files):
 Comment Syntax
 ^^^^^^^^^^^^^^
 
-Comment syntax is unspecified in the current code documentation. The sample
-files do not contain comments.
+Lines beginning with ``//`` are treated as comments and ignored:
+
+.. code-block:: text
+
+   // This is a comment line
+   model = "Hubbard"
+   lattice = square
+
+Empty lines are also skipped.  **Inline comments are not supported** — the
+parser splits each line on the first ``=`` sign, so a trailing ``// comment``
+would be included in the value and cause a parse error.
 
 Ordering
 ^^^^^^^^
@@ -58,69 +67,123 @@ Ordering
 Key ordering within the input file is unspecified. The sample files do not
 suggest any required ordering.
 
-Common Keys (Observed in Samples)
----------------------------------
+Common Parameters
+-----------------
 
-The following keys are observed in ``samples/hubbard/default_model/stan.in``:
+The following keys are shared across solvers.
 
 ===========  =============  ================================================
-Key          Sample Value   Description
+Key          Example        Description
 ===========  =============  ================================================
-``model``    ``"Hubbard"``  Physical model type (observed in sample)
-``lattice``  ``square``     Lattice geometry (observed in sample)
-``W``        ``2``          Lattice dimension in W direction (observed)
-``L``        ``2``          Lattice dimension in L direction (observed)
-``method``   ``"CG"``       Solver method (solver-specific, observed)
-``2Sz``      ``0``          Total spin projection 2*Sz (observed in sample)
-``nelec``    ``4``          Number of electrons (observed in sample)
-``exct``     ``1``          Number of excited states (solver-specific)
-``t``        ``1``          Hopping parameter (observed in sample)
-``U``        ``1``          On-site Coulomb interaction (observed in sample)
+``model``    ``"Hubbard"``  Physical model type
+``lattice``  ``square``     Lattice geometry
+``W``        ``2``          Lattice dimension in W direction
+``L``        ``2``          Lattice dimension in L direction
+``t``        ``1.0``        Nearest-neighbor hopping amplitude
+``U``        ``1.0``        On-site Coulomb interaction strength
 ===========  =============  ================================================
-
-**Evidence**: ``samples/hubbard/default_model/stan.in``
-
-Key Details
-^^^^^^^^^^^
 
 ``model``
-   Physical model type. Observed value: ``"Hubbard"``. Other model types
-   (e.g., spin, Kondo) are referenced in dev docs but not observed in samples.
+   Physical model type.  Supported values include ``"Hubbard"``, ``"Spin"``,
+   and ``"Kondo"``.
 
 ``lattice``
-   Lattice geometry. Observed values:
+   Lattice geometry.  Supported values:
 
-   - ``square`` - 2D square lattice (default_model sample)
-   - ``"wannier90"`` - Import from Wannier90 files (wannier sample)
-
-   Other lattice types documented in dev docs: ``chain``, ``ladder``,
-   ``triangular``, ``honeycomb``, ``kagome``, ``tetragonal``, ``orthorhombic``,
-   ``fcortho``, ``pyrochlore``.
+   - ``chain`` / ``chainlattice``
+   - ``ladder`` / ``ladderlattice``
+   - ``square`` / ``squarelattice`` / ``tetragonal``
+   - ``triangular`` / ``triangularlattice``
+   - ``honeycomb`` / ``honeycomblattice``
+   - ``kagome`` / ``kagomelattice``
+   - ``orthorhombic`` / ``simplecubic``
+   - ``fco`` / ``fcc``
+   - ``pyrochlore``
+   - ``wannier90``
 
 ``W``, ``L``
-   Lattice dimensions. Interpretation depends on lattice type.
-
-``method``
-   Solver method. Observed value: ``"CG"`` (Conjugate Gradient). This key
-   appears solver-specific; its valid values depend on the target solver.
-
-``2Sz``
-   Total spin projection (2 times Sz). Used in quantum number specification.
-
-``nelec``
-   Number of electrons in the system.
-
-``exct``
-   Number of excited states to compute. Appears solver-specific (e.g., for
-   exact diagonalization).
+   Lattice dimensions.  Interpretation depends on lattice type.
 
 ``t``
-   Nearest-neighbor hopping amplitude. Present in default_model sample but
-   absent in wannier sample (hopping comes from external files).
+   Nearest-neighbor hopping amplitude.  Not used when
+   ``lattice = "wannier90"`` (hopping comes from ``zvo_hr.dat``).
 
 ``U``
-   On-site Coulomb interaction strength. Present in default_model sample but
-   absent in wannier sample (interaction comes from external files).
+   On-site Coulomb interaction strength.  Not used when
+   ``lattice = "wannier90"`` (interaction comes from ``zvo_ur.dat``).
+
+Solver-Specific Parameters
+--------------------------
+
+The following parameters are interpreted differently — or only apply — for
+particular solver modes.
+
+``method`` — HPhi only
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Specifies the diagonalisation algorithm.  Ignored by mVMC, UHF, and H-wave.
+
+====================  =========================================================
+Value                 Algorithm
+====================  =========================================================
+``"lanczos"``         Lanczos method
+``"lanczosenergy"``   Lanczos with eigenvector output
+``"tpq"``             Thermal Pure Quantum states
+``"fulldiag"``        Full (exact) diagonalisation (aliases: ``"direct"``,
+                      ``"alldiag"``)
+``"cg"``              Conjugate Gradient
+``"timeevolution"``   Real-time evolution (aliases: ``"te"``,
+                      ``"time-evolution"``)
+``"ctpq"``            Canonical TPQ
+====================  =========================================================
+
+``exct`` — HPhi only
+^^^^^^^^^^^^^^^^^^^^^
+
+Number of eigenvalues/eigenvectors to compute (ground state + excited states).
+Default: ``1`` (ground state only).  Ignored by mVMC, UHF, and H-wave.
+
+``nelec`` — number of electrons
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 85
+
+   * - Solver
+     - Behaviour
+   * - HPhi
+     - Required for Hubbard and Kondo models in canonical ensemble
+       (``lGC = 0``, the default).  Not needed for spin models.
+   * - mVMC
+     - Always required.
+   * - UHF
+     - Always required.
+   * - H-wave
+     - Always required.
+
+``2Sz`` — total spin projection
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Specifies 2×Sz (twice the z-component of total spin).  For example,
+``2Sz = 0`` is the Sz = 0 sector; ``2Sz = 1`` is Sz = 1/2.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 85
+
+   * - Solver
+     - Behaviour
+   * - HPhi
+     - Required for spin models.  Optional for Hubbard/Kondo models (defaults
+       to 0).  Ignored when grand-canonical ensemble (``lGC = 1``) is used.
+   * - mVMC
+     - Optional.  When set (and non-zero), ``orbitalidxpara.def`` is generated
+       instead of ``orbitalidx.def``.
+   * - UHF
+     - Optional.
+   * - H-wave
+     - Optional.
 
 Mode-Specific Inputs
 --------------------
@@ -221,23 +284,89 @@ All files must be present in the same directory when running StdFace with
 Output Files
 ------------
 
-StdFace generates input files for the target solver in the current working
-directory.
-
-**Important**: The specific output file names, formats, and contents are
-solver-dependent and unspecified in the current code documentation. Users
-should consult the generated files after running StdFace.
-
-The solver mode is determined at compile time:
+StdFace writes input files for the target solver into the current working
+directory.  The solver mode is fixed at compile time:
 
 ==============  ===================  =====================================
 Build Option    Executable           Target Solver
 ==============  ===================  =====================================
-``-DUHF=ON``    ``uhf_dry.out``      UHF (Unrestricted Hartree-Fock)
+``-DHPHI=ON``   ``hphi_dry.out``     HPhi (Exact Diagonalisation)
 ``-DMVMC=ON``   ``mvmc_dry.out``     mVMC (Variational Monte Carlo)
-``-DHPHI=ON``   ``hphi_dry.out``     HPhi (Exact Diagonalization)
+``-DUHF=ON``    ``uhf_dry.out``      UHF (Unrestricted Hartree-Fock)
 ``-DHWAVE=ON``  ``hwave_dry.out``    H-wave
 ==============  ===================  =====================================
+
+Files Common to All Solvers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following files are always generated regardless of solver:
+
+==================  =========================================================
+File                Contents
+==================  =========================================================
+``namelist.def``    List of all generated definition files
+``modpara.def``     Model parameters (system size, electron count, etc.)
+``locspn.def``      Local spin configuration for each site
+``trans.def``       One-body transfer terms
+``lattice.gp``      Gnuplot script for visualising the lattice
+``lattice.xsf``     XCrySDen structure file for the lattice
+==================  =========================================================
+
+Interaction files are generated only when the corresponding interaction
+is non-zero:
+
+======================  ===========================================
+File                    Interaction
+======================  ===========================================
+``coulombintra.def``    On-site Coulomb (intra-orbital)
+``coulombinter.def``    Inter-site / inter-orbital Coulomb
+``hund.def``            Hund coupling
+``exchange.def``        Exchange interaction
+``pairlift.def``        Pair-lift interaction
+``pairhopp.def``        Pair-hopping interaction
+``interall.def``        All remaining two-body interactions
+======================  ===========================================
+
+Green's function files are written when ``ioutputmode != 0``:
+
+==================  =========================================================
+File                Contents
+==================  =========================================================
+``greenone.def``    One-body Green's function measurement list
+``greentwo.def``    Two-body Green's function measurement list
+                    (not generated for UHF and H-wave)
+==================  =========================================================
+
+HPhi-Specific Files
+^^^^^^^^^^^^^^^^^^^^
+
+====================  =========================================================
+File                  Contents
+====================  =========================================================
+``calcmod.def``       Calculation mode flags
+``single.def``        Single-site observable list (non-pair output mode)
+``pair.def``          Pair observable list (pair output mode)
+``boost.def``         HPhi Boost-mode parameters (only when Boost is enabled)
+``teone.def``         One-body time-evolution operators
+                      (only when ``method = "timeevolution"``)
+``tetwo.def``         Two-body time-evolution operators
+                      (only when ``method = "timeevolution"``)
+====================  =========================================================
+
+mVMC-Specific Files
+^^^^^^^^^^^^^^^^^^^^
+
+======================  =========================================================
+File                    Contents
+======================  =========================================================
+``gutzwilleridx.def``   Gutzwiller variational parameter indices
+``jastrowidx.def``      Jastrow variational parameter indices
+``orbitalidx.def``      Orbital (pairing function) parameter indices
+                        (used when ``2Sz = 0`` or unspecified)
+``orbitalidxpara.def``  Orbital parameter indices for spin-polarised case
+                        (used when ``2Sz != 0`` or grand-canonical ensemble)
+``qptransidx.def``      Quantum-number projection parameter indices
+======================  =========================================================
 
 Validation and Errors
 ---------------------
@@ -315,6 +444,6 @@ or consult solver-specific documentation.
 Output File Formats
 ^^^^^^^^^^^^^^^^^^^
 
-The format and content of output files are determined by the solver mode and
-are unspecified in StdFace's documentation. Users should refer to the
-documentation of the target solver (HPhi, mVMC, UHF, or H-wave) for details.
+The format and content of output files follow the input specifications of
+each target solver.  For details of each file's internal format, refer to
+the documentation of HPhi, mVMC, UHF, or H-wave respectively.
