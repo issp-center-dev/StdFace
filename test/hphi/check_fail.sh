@@ -7,7 +7,7 @@ mode=${3:-"base"}
 if [ "$mode" = "base" ]; then
     DRY_BIN=${DRY_BIN:-../../../src/hphi_dry.out}
 elif [ "$mode" = "python" ]; then
-    DRY_BIN=${DRY_BIN:-"python3 -mstdface --solver HPhi"}
+    DRY_BIN=${DRY_BIN:-"stdface --solver HPhi"}
 else
     DRY_BIN="/usr/bin/false"
 fi
