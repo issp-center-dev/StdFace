@@ -9,7 +9,7 @@ if [ "$mode" = "base" ]; then
 	 "$test_item" "$base_dir" "stan.in" "../../../src/hwave_dry.out"
 elif [ "$mode" = "python" ]; then
     exec "${base_dir}/../common/check_case.sh" \
-	 "$test_item" "$base_dir" "stan.in" "python3 -mstdface --solver HWAVE"
+	 "$test_item" "$base_dir" "stan.in" "stdface --solver HWAVE"
 else
     /usr/bin/false
 fi

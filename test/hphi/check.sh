@@ -9,7 +9,7 @@ if [ "$mode" = "base" ]; then
 	 "$test_item" "$base_dir" "stan.in" "../../../src/hphi_dry.out"
 elif [ "$mode" = "python" ]; then
     exec "${base_dir}/../common/check_case.sh" \
-	 "$test_item" "$base_dir" "stan.in" "python3 -mstdface --solver HPhi"
+	 "$test_item" "$base_dir" "stan.in" "stdface --solver HPhi"
 else
     /usr/bin/false
 fi
