@@ -48,7 +48,21 @@ File                    Interaction
 ``interall.def``        All remaining two-body interactions
 ======================  ===========================================
 
-Green's function files are written when ``ioutputmode != 0``:
+Green's function files are generated according to the ``outputmode`` input
+keyword (default: ``"corr"``):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - ``outputmode`` value
+     - Effect
+   * - ``"none"`` / ``"non"`` / ``"off"``
+     - No Green's function files generated
+   * - ``"corr"`` / ``"correlation"`` (default)
+     - Standard Green's function measurement list
+   * - ``"all"`` / ``"raw"`` / ``"full"``
+     - Full (all-pair) measurement list
 
 ==================  =========================================================
 File                Contents

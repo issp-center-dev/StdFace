@@ -3,6 +3,13 @@ Face-Centered Orthorhombic Lattice
 
 Three-dimensional face-centered orthorhombic (FCC) lattice.
 
+.. note::
+
+   In StdFace, ``fco`` is the general face-centered 3D lattice.  The alias
+   ``fcc`` is accepted for convenience but does **not** enforce W = L = Height
+   — all three dimensions may be set independently.  This differs from the
+   standard crystallographic usage where "FCC" implies a cubic unit cell.
+
 ==============  ================================================
 Property        Value
 ==============  ================================================

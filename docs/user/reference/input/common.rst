@@ -25,10 +25,16 @@ The following parameters are accepted by all solvers.
      - Lattice geometry (see :doc:`../lattice/index`)
    * - ``W``
      - ``2``
-     - Lattice dimension in W direction
+     - Lattice extent in the W direction (interpretation depends on lattice type;
+       see :doc:`../lattice/index`)
    * - ``L``
      - ``2``
-     - Lattice dimension in L direction
+     - Lattice extent in the L direction (interpretation depends on lattice type;
+       see :doc:`../lattice/index`)
+   * - ``Height``
+     - ``2``
+     - Lattice extent in the height direction (3D lattices only: ``orthorhombic``,
+       ``fco``, ``pyrochlore``; ignored for 1D/2D lattices)
    * - ``t``
      - ``1.0``
      - Nearest-neighbor hopping amplitude

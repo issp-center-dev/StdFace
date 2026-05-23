@@ -9,7 +9,8 @@ Property        Value
 ==============  =====================================
 Canonical name  ``wannier90``
 Aliases         —
-Dimensions      Any
+Dimensions      3 (geometry file always requires 3D lattice vectors; lower-
+                dimensional systems can be represented with degenerate vectors)
 Boost mode      Not supported
 ==============  =====================================
 

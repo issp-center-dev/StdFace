@@ -54,3 +54,7 @@ Boost Mode Constraints
 ----------------------
 
 - ``S2 = 1`` (S = 1/2 only)
+- ``W = 3`` (required by the 6-spin pivot structure; W is internally tripled to 9)
+- ``L ≥ 2``
+- Tilted lattices (``a0W``, ``a0L``, ``a1W``, ``a1L``) are not supported
+- Next-nearest-neighbor coupling (``J'``) is not supported

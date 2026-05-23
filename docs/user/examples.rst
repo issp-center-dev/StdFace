@@ -34,12 +34,23 @@ See :doc:`reference/index` for a full description of each parameter.
 Running the Example
 ^^^^^^^^^^^^^^^^^^^
 
+The command below assumes you built StdFace following the Quickstart
+instructions so that ``<repo>/build/hphi_dry.out`` exists.  Adjust the path
+if you used a different build directory or ran ``make install``.
+
 .. code-block:: bash
 
    cd samples/hubbard/default_model
    ../../../build/hphi_dry.out stan.in
 
-Replace ``hphi_dry.out`` with the appropriate executable for your target solver.
+Alternatively, if you installed the Python package:
+
+.. code-block:: bash
+
+   cd samples/hubbard/default_model
+   stdface stan.in --solver HPhi
+
+Replace the solver name/executable as appropriate for your target solver.
 
 Expected Behavior
 ^^^^^^^^^^^^^^^^^
@@ -165,6 +176,9 @@ these Wannier90 format files in the same directory as the input file.
 Running the Example
 ^^^^^^^^^^^^^^^^^^^
 
+The path ``../../../build/hphi_dry.out`` assumes you built from
+``<repo>/build/``.  Adjust as needed, or use the Python CLI:
+
 .. code-block:: bash
 
    cd samples/hubbard/wannier
@@ -184,4 +198,37 @@ Use Wannier90-based input when:
 
 For simple models with standard lattice geometries, the default approach
 (built-in lattice constructors) is recommended.
+
+Spin Model on Square Lattice
+-----------------------------
+
+Minimal example for the S = 1/2 Heisenberg model (HPhi).  ``2Sz`` replaces
+``nelec``; ``t`` and ``U`` are not used.
+
+.. code-block:: text
+
+   model   = "Spin"
+   lattice = square
+   W       = 2
+   L       = 2
+   method  = "Lanczos"
+   2Sz     = 0
+   J       = 1.0
+
+Grand-Canonical Hubbard Model
+-------------------------------
+
+Minimal example for the grand-canonical Hubbard model (HPhi).  The
+``"HubbardGC"`` model value sets the grand-canonical flag; ``nelec`` and
+``2Sz`` are not required.
+
+.. code-block:: text
+
+   model   = "HubbardGC"
+   lattice = square
+   W       = 2
+   L       = 2
+   method  = "CG"
+   t       = 1.0
+   U       = 4.0
 

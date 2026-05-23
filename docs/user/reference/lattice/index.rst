@@ -50,7 +50,7 @@ StdFace supports the following built-in lattice types.
      - Pyrochlore lattice
      -
    * - :doc:`wannier90`
-     - Any
+     - 3D
      - Import from Wannier90 format files
      -
 

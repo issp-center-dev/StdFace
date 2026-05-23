@@ -133,5 +133,8 @@ All options default to ``OFF``. One or more may be enabled simultaneously.
 Thread and MPI Safety
 ---------------------
 
-Unspecified in the current code. The codebase does not appear to use explicit
-threading or MPI constructs in the ``src/`` files examined.
+The StdFace API does not initialise or coordinate with MPI.  MPI usage is
+limited to abort/finalize on fatal exit in ``StdFace_exit()`` (guarded by
+``#ifdef MPI`` in ``src/StdFace_ModelUtil.c``).  No threading constructs are
+used.  To enable MPI support at build time, pass ``-DMPI=ON`` (or equivalent)
+to CMake.

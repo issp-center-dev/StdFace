@@ -3,6 +3,14 @@ Orthorhombic Lattice
 
 Three-dimensional orthorhombic (simple cubic) lattice.
 
+.. note::
+
+   In StdFace, ``orthorhombic`` is the general axis-aligned 3D lattice.  The
+   alias ``cubic`` is accepted for convenience but does **not** enforce
+   W = L = Height — all three dimensions may be set independently.  This
+   differs from the standard crystallographic usage where "orthorhombic" and
+   "cubic" denote distinct crystal systems.
+
 ==============  =====================================
 Property        Value
 ==============  =====================================

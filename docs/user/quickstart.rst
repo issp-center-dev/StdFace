@@ -106,9 +106,9 @@ Output Files
 ^^^^^^^^^^^^
 
 StdFace generates input files for the target solver in the current working
-directory. The specific output file names and formats depend on the solver mode
-and are unspecified in the current code documentation. Consult the generated
-files after running StdFace.
+directory.  The output files depend on the solver mode; see
+:doc:`reference/output` for the complete list (e.g., ``namelist.def``,
+``modpara.def``, ``trans.def``, and solver-specific files).
 
 Your First Run
 --------------

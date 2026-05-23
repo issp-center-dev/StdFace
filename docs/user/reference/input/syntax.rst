@@ -22,6 +22,9 @@ Formatting rules:
 - Whitespace around ``=`` is optional (both ``W=2`` and ``W = 2`` are accepted)
 - String values may be quoted (``"Hubbard"``) or unquoted (``square``)
 - Numeric values are written without quotes
+- Keywords and most string values are case-insensitive; they are normalised to
+  lowercase internally (e.g., ``model = "Hubbard"`` and ``model = "hubbard"``
+  are equivalent)
 
 Comment Syntax
 --------------

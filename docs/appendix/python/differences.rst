@@ -6,9 +6,12 @@ Differences from the C Version
    This section describes the **Python reimplementation** of StdFace
    (``python/stdface/``).  The main manual covers the C implementation.
 
-The Python implementation produces byte-identical output to the C version for
-all supported solvers and lattices.  The differences below are limited to
-invocation and extensibility.
+The Python implementation produces output that matches the C version for all
+supported solvers and lattices.  Exact text files (e.g. ``namelist.def``) are
+byte-identical; files containing floating-point numbers are compared with a
+relative tolerance of 1 × 10\ :sup:`-8` (``NaN``/``-NaN`` differences are
+also tolerated).  The differences below are limited to invocation and
+extensibility.
 
 Comment Character
 -----------------

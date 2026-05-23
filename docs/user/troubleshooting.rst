@@ -54,10 +54,11 @@ which parameters are required for each solver.
 **Check ! <x> is SPECIFIED but will NOT be USED.**
 
 A parameter was given that does not apply to the current model/lattice
-combination.  StdFace continues but prints this warning.
+combination.  Despite the "Check !" prefix suggesting a warning, **this is a
+fatal error**: StdFace exits immediately with code ``-1`` after printing the
+message.
 
-*Resolution*: Remove or comment out the unused parameter to keep the input
-file clean.
+*Resolution*: Remove or comment out the unused parameter from the input file.
 
 **ERROR ! Unsupported Keyword in Standard mode!**
 

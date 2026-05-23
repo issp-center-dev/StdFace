@@ -142,8 +142,8 @@ only available when ``_HWAVE`` is defined:
 .. code-block:: c
 
    #if defined(_HWAVE)
-   void ExportGeometry(struct StdIntList *StdI, FILE *fp);
-   void ExportInteraction(struct StdIntList *StdI, FILE *fp);
+   void ExportGeometry(struct StdIntList *StdI);
+   void ExportInteraction(struct StdIntList *StdI);
    #endif
 
 **Source reference**: ``src/export_wannier90.h``
@@ -178,12 +178,12 @@ File                        Description
 ``ChainLattice.c``          1D chain lattice
 ``Ladder.c``                Ladder lattice
 ``FCOrtho.c``               Face-centered orthorhombic lattice
-``Honeycomb.c``             Honeycomb lattice
+``HoneycombLattice.c``      Honeycomb lattice
 ``Kagome.c``                Kagome lattice
 ``Orthorhombic.c``          Orthorhombic/cubic lattice
 ``Pyrochlore.c``            Pyrochlore lattice
 ``SquareLattice.c``         Square lattice
-``Triangular.c``            Triangular lattice
+``TriangularLattice.c``     Triangular lattice
 ``Wannier90.c``             Wannier90 import
 ``export_wannier90.c``      Wannier90 export (HWAVE)
 ``version.c``               Version information

@@ -50,7 +50,11 @@ Enabling Boost Mode
 Set ``model`` to one of:
 
 - ``"spingcboost"`` — grand-canonical spin with Boost
-- ``"spingccma"`` — grand-canonical spin with CMA variant
+- ``"spingccma"`` — grand-canonical spin with Boost, CMA (Checkerboard
+  Matrix-vector Accelerated) variant.  StdFace generates identical output for
+  both ``"spingcboost"`` and ``"spingccma"`` (SpinGC model with Boost enabled);
+  the distinction controls HPhi's internal Lanczos kernel algorithm.  See the
+  HPhi documentation for the algorithmic difference between the two variants.
 
 .. code-block:: text
 
@@ -68,9 +72,9 @@ Supported Lattices and Constraints
 +---------------+--------------------------------------------------+
 | ``ladder``    | ``S2 = 1``; ``W = 2``; ``L`` even and ≥ 4        |
 +---------------+--------------------------------------------------+
-| ``honeycomb`` | ``S2 = 1``                                       |
+| ``honeycomb`` | ``S2 = 1``; ``W = 3``; ``L ≥ 2``; no ``J'``      |
 +---------------+--------------------------------------------------+
-| ``kagome``    | ``S2 = 1``                                       |
+| ``kagome``    | ``S2 = 1``; ``W = 3``; ``L ≥ 2``; no ``J'``      |
 +---------------+--------------------------------------------------+
 
 Other lattices do not support Boost mode and will produce an error.

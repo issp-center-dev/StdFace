@@ -222,24 +222,33 @@ approximately 125 fields organized into categories below.
    Header for output files.
 
 ``int Sz2``
-   Total Sz.
+   Stores the value of the ``2Sz`` input keyword (twice the z-component of
+   total spin).  The internal name uses ``Sz2`` because C identifiers cannot
+   start with a digit.  For example, ``2Sz = 1`` sets ``Sz2 = 1``, which
+   corresponds to S\ :sub:`z` = 1/2.
 
 **Wannier90 Mode Parameters**
 
+These fields are populated from user-supplied keywords in ``stan.in`` when
+``lattice = "wannier90"`` is set.  See the Wannier90 lattice reference for
+the corresponding input keyword names and their meaning.
+
 ``double cutoff_t``, ``cutoff_u``, ``cutoff_j``
-   Cutoff values for hopping, Coulomb, and Hund terms.
+   Cutoff values (energy threshold) for hopping, Coulomb, and Hund terms.
+   Matrix elements with absolute value below the threshold are discarded.
 
 ``double cutoff_length_t``, ``cutoff_length_U``, ``cutoff_length_J``
-   Cutoff lengths for R vectors.
+   Cutoff lengths for R-vector range: R vectors beyond this distance are
+   ignored.
 
 ``double lambda``, ``lambda_U``, ``lambda_J``
-   Tuning parameters for U and J.
+   Scaling (tuning) parameters applied to hopping, U, and J terms respectively.
 
 ``char double_counting_mode[256]``
-   Mode for double counting correction.
+   Double-counting correction scheme (e.g., ``"sFull"``, ``"cFull"``).
 
 ``double alpha``
-   Chemical potential correction parameter.
+   Chemical potential correction parameter (rigid-band shift).
 
 **Mode-Specific Fields**
 
@@ -280,7 +289,9 @@ No error handling in this header (structure definition only).
 Thread / MPI Safety
 -------------------
 
-Unspecified in the current code.
+The structure itself carries no thread or MPI state.  MPI usage in the library
+is limited to abort/finalize on fatal exit (see ``StdFace_exit()`` in
+``StdFace_ModelUtil.c``).  No threading constructs are used.
 
 Source Reference
 ----------------

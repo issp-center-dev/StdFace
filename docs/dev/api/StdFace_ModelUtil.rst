@@ -398,7 +398,8 @@ Error Handling
 Thread / MPI Safety
 -------------------
 
-Unspecified in the current code. No explicit threading or MPI constructs are present.
+No threading constructs are present.  MPI usage is limited to abort/finalize
+on fatal exit in ``StdFace_exit()`` (guarded by ``#ifdef MPI``).
 
 Source Reference
 ----------------
