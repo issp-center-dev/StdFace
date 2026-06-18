@@ -20,10 +20,28 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 
 from .core.version import print_version
 from .core.stdface_main import stdface_main
+
+logger = logging.getLogger(__name__)
+
+
+def _setup_logging(verbose: bool = False) -> None:
+    """Configure logging for command-line use.
+
+    Library users do not call this; they configure logging themselves
+    (the package only attaches a :class:`logging.NullHandler`).
+
+    Parameters
+    ----------
+    verbose : bool
+        Emit DEBUG-level messages when True, otherwise INFO and above.
+    """
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,7 +90,15 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_usage()
         return 1
 
-    stdface_main(args.input_file, solver=args.solver)
+    _setup_logging()
+    try:
+        stdface_main(args.input_file, solver=args.solver)
+    except FileNotFoundError as exc:
+        logger.error("%s", exc)
+        return 1
+    except ValueError as exc:
+        logger.error("%s", exc)
+        return 1
     return 0
 
 

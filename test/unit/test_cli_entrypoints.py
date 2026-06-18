@@ -82,6 +82,20 @@ class TestStdfaceMainModule:
 
         assert main([str(stan)]) == 0
 
+    def test_main_function_invalid_input_returns_one(self, tmp_path, caplog):
+        """ValueError from the run is caught and reported (exit code 1)."""
+        stan = tmp_path / "stan.in"
+        stan.write_text(
+            "model = hubbard\n"
+            "lattice = __no_such_lattice__\n"
+            "L = 4\n"
+            "nelec = 4\n"
+            "method = lanczos\n"
+        )
+        from stdface.__main__ import main
+
+        assert main([str(stan)]) == 1
+
 
 class TestPythonPackageMainShim:
     """``python python/__main__.py`` delegates to ``stdface.__main__.main``."""
