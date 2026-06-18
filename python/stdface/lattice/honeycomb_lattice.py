@@ -163,8 +163,8 @@ def honeycomb(StdI: StdIntList) -> None:
 
         # (5) Set Transfer & Interaction
         for kCell in range(StdI.NCell):
-            iW = StdI.Cell[kCell, 0]
-            iL = StdI.Cell[kCell, 1]
+            cell_w = StdI.Cell[kCell, 0]
+            cell_l = StdI.Cell[kCell, 1]
 
             # Local term
             isite = StdI.NsiteUC * kCell
@@ -194,7 +194,7 @@ def honeycomb(StdI: StdIntList) -> None:
             )
             for dW, dL, si, sj, nn, J, t, V in _BONDS:
                 add_neighbor_interaction(
-                    StdI, fp, iW, iL, dW, dL, si, sj, nn, J, t, V)
+                    StdI, fp, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
 
 
 def honeycomb_boost(StdI: StdIntList) -> None:

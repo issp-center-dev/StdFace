@@ -584,8 +584,8 @@ def _dispatch_bond_interaction(
 def add_neighbor_interaction(
     StdI: StdIntList,
     fp: TextIO | None,
-    iW: int, iL: int,
-    diW: int, diL: int,
+    cell_w: int, cell_l: int,
+    delta_w: int, delta_l: int,
     isiteUC: int, jsiteUC: int,
     connect: int,
     J: np.ndarray,
@@ -604,9 +604,9 @@ def add_neighbor_interaction(
         Model parameter structure (modified in-place).
     fp : TextIO or None
         Gnuplot file handle (may be ``None``).
-    iW, iL : int
+    cell_w, cell_l : int
         Cell position of the initial site.
-    diW, diL : int
+    delta_w, delta_l : int
         Translation to the neighbor.
     isiteUC, jsiteUC : int
         Unit-cell site indices for initial and final sites.
@@ -633,15 +633,15 @@ def add_neighbor_interaction(
     from .site_util import set_label  # local import to avoid circular dependency
 
     isite, jsite, Cphase, dR = set_label(
-        StdI, fp, iW, iL, diW, diL, isiteUC, jsiteUC, connect)
+        StdI, fp, cell_w, cell_l, delta_w, delta_l, isiteUC, jsiteUC, connect)
     _dispatch_bond_interaction(StdI, isite, jsite, Cphase, dR, J, t, V)
     return isite, jsite, Cphase, dR
 
 
 def add_neighbor_interaction_3d(
     StdI: StdIntList,
-    iW: int, iL: int, iH: int,
-    diW: int, diL: int, diH: int,
+    cell_w: int, cell_l: int, iH: int,
+    delta_w: int, delta_l: int, diH: int,
     isiteUC: int, jsiteUC: int,
     J: np.ndarray,
     t: complex,
@@ -658,9 +658,9 @@ def add_neighbor_interaction_3d(
     ----------
     StdI : StdIntList
         Model parameter structure (modified in-place).
-    iW, iL, iH : int
+    cell_w, cell_l, iH : int
         Cell position of the initial site.
-    diW, diL, diH : int
+    delta_w, delta_l, diH : int
         Translation to the neighbor.
     isiteUC, jsiteUC : int
         Unit-cell site indices for initial and final sites.
@@ -685,7 +685,7 @@ def add_neighbor_interaction_3d(
     from .site_util import find_site  # local import to avoid circular dependency
 
     isite, jsite, Cphase, dR = find_site(
-        StdI, iW, iL, iH, diW, diL, diH, isiteUC, jsiteUC)
+        StdI, cell_w, cell_l, iH, delta_w, delta_l, diH, isiteUC, jsiteUC)
     _dispatch_bond_interaction(StdI, isite, jsite, Cphase, dR, J, t, V)
     return isite, jsite, Cphase, dR
 

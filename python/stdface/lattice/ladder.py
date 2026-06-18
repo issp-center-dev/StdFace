@@ -174,14 +174,14 @@ def ladder(StdI: StdIntList) -> None:
         malloc_interactions(StdI, ntransMax, nintrMax)
 
         # 5. Set all interactions
-        for iL in range(StdI.L):
+        for cell_l in range(StdI.L):
             for isiteUC in range(StdI.NsiteUC):
-                isite = isiteUC + iL * StdI.NsiteUC
+                isite = isiteUC + cell_l * StdI.NsiteUC
                 if StdI.model == ModelType.KONDO:
                     isite += StdI.L * StdI.NsiteUC
 
                 # Local terms
-                add_local_terms(StdI, isite, isiteUC + iL * StdI.NsiteUC)
+                add_local_terms(StdI, isite, isiteUC + cell_l * StdI.NsiteUC)
 
                 # Leg bonds: (dW, dL, sj_offset, nn, J, t, V)
                 _LEG_BONDS = (
@@ -190,7 +190,7 @@ def ladder(StdI: StdIntList) -> None:
                 )
                 for dW, dL, sj_off, nn, J, t, V in _LEG_BONDS:
                     add_neighbor_interaction(
-                        StdI, fp, 0, iL, dW, dL, isiteUC, isiteUC + sj_off, nn, J, t, V)
+                        StdI, fp, 0, cell_l, dW, dL, isiteUC, isiteUC + sj_off, nn, J, t, V)
 
                 # Rung/diagonal bonds (only between adjacent legs)
                 if isiteUC < StdI.NsiteUC - 1:
@@ -201,7 +201,7 @@ def ladder(StdI: StdIntList) -> None:
                     )
                     for dW, dL, nn, J, t, V in _RUNG_BONDS:
                         add_neighbor_interaction(
-                            StdI, fp, 0, iL, dW, dL, isiteUC, isiteUC + 1, nn, J, t, V)
+                            StdI, fp, 0, cell_l, dW, dL, isiteUC, isiteUC + 1, nn, J, t, V)
 
 
 def ladder_boost(StdI: StdIntList) -> None:

@@ -156,8 +156,8 @@ def pyrochlore(StdI: StdIntList) -> None:
 
     # (5) Set Transfer & Interaction
     for kCell in range(StdI.NCell):
-        iW = StdI.Cell[kCell, 0]
-        iL = StdI.Cell[kCell, 1]
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
         iH = StdI.Cell[kCell, 2]
 
         # Local term
@@ -197,7 +197,7 @@ def pyrochlore(StdI: StdIntList) -> None:
         )
         for dW, dL, dH, si, sj, J, t, V in _BONDS:
             add_neighbor_interaction_3d(
-                StdI, iW, iL, iH, dW, dL, dH, si, sj, J, t, V)
+                StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
 
     close_lattice_xsf(StdI)
 
