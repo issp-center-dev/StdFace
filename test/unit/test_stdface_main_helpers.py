@@ -122,15 +122,15 @@ class TestResolveModelAndMethod:
         StdI = StdIntList()
         StdI.model = "spingcboost"
         StdI.lattice = "chain"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _resolve_model_and_method(StdI, SolverType.mVMC)
 
     def test_unknown_model_exits(self):
-        """Test unknown model name causes SystemExit."""
+        """Test unknown model name causes ValueError."""
         StdI = StdIntList()
         StdI.model = "nosuchmodel"
         StdI.lattice = "chain"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _resolve_model_and_method(StdI, SolverType.HPhi)
 
     def test_method_alias_direct(self):
@@ -224,7 +224,7 @@ class TestBuildLatticeAndBoost:
         StdI = StdIntList()
         StdI.model = "hubbard"
         StdI.lattice = "__not_a_registered_lattice__"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _build_lattice_and_boost(StdI, SolverType.HPhi)
 
     def test_unknown_solver_skips_post_lattice(self):

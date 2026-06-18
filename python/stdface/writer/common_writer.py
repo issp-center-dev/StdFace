@@ -43,6 +43,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from itertools import product
 from typing import NamedTuple
@@ -54,6 +55,8 @@ from ..core.stdface_vals import (
     AMPLITUDE_EPS,
 )
 from ..core.param_check import exit_program, print_val_i, print_val_d, required_val_i, not_used_i
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -828,15 +831,16 @@ def unsupported_system(model: str, lattice: str) -> None:
 
     Raises
     ------
-    SystemExit
-        Always raised after printing the error message.
+    ValueError
+        Always raised after logging the error message.
     """
-    print("\nSorry, specified combination, ")
-    print(f"    MODEL : {model}  ")
-    print(f"  LATTICE : {lattice}, ")
-    print("is unsupported in the STANDARD MODE...")
-    print("Please use the EXPART MODE, or write a NEW FUNCTION and post us.")
-    exit_program(-1)
+    msg = (
+        f"Unsupported combination in the STANDARD MODE: MODEL = {model}, "
+        f"LATTICE = {lattice}. "
+        "Please use the EXPERT MODE, or write a NEW FUNCTION and post us."
+    )
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 def check_output_mode(StdI: StdIntList) -> None:

@@ -313,8 +313,8 @@ class TestNotUsed:
         smu.not_used_d("x", float("nan"))
 
     def test_not_used_d_specified_exits(self):
-        """Specified value should trigger exit."""
-        with pytest.raises(SystemExit):
+        """Specified value should raise ValueError."""
+        with pytest.raises(ValueError):
             smu.not_used_d("x", 1.0)
 
     def test_not_used_d_complex_nan_ok(self):
@@ -322,8 +322,8 @@ class TestNotUsed:
         smu.not_used_d("t", complex(float("nan"), 0))
 
     def test_not_used_d_complex_specified_exits(self):
-        """Complex specified value should trigger exit via not_used_d."""
-        with pytest.raises(SystemExit):
+        """Complex specified value should raise ValueError via not_used_d."""
+        with pytest.raises(ValueError):
             smu.not_used_d("t", 1.0 + 0j)
 
     def test_not_used_i_sentinel_ok(self):
@@ -331,8 +331,8 @@ class TestNotUsed:
         smu.not_used_i("W", 2147483647)
 
     def test_not_used_i_specified_exits(self):
-        """Specified value should trigger exit."""
-        with pytest.raises(SystemExit):
+        """Specified value should raise ValueError."""
+        with pytest.raises(ValueError):
             smu.not_used_i("W", 5)
 
     def test_not_used_j_all_nan_ok(self):
@@ -341,9 +341,9 @@ class TestNotUsed:
         smu.not_used_j("J", float("nan"), J)
 
     def test_not_used_j_specified_exits(self):
-        """Specified scalar should trigger exit."""
+        """Specified scalar should raise ValueError."""
         J = np.full((3, 3), float("nan"))
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             smu.not_used_j("J", 1.0, J)
 
 
@@ -356,15 +356,17 @@ class TestRequiredValI:
     """Tests for required_val_i."""
 
     def test_missing_exits(self):
-        """Sentinel value should trigger exit."""
-        with pytest.raises(SystemExit):
+        """Sentinel value should raise ValueError."""
+        with pytest.raises(ValueError):
             smu.required_val_i("nsite", 2147483647)
 
-    def test_specified_ok(self, capsys):
-        """Non-sentinel should just print the value."""
-        smu.required_val_i("nsite", 16)
-        captured = capsys.readouterr()
-        assert "16" in captured.out
+    def test_specified_ok(self, caplog):
+        """Non-sentinel should just log the value."""
+        import logging
+
+        with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
+            smu.required_val_i("nsite", 16)
+        assert "16" in caplog.text
 
 
 # ---------------------------------------------------------------------------

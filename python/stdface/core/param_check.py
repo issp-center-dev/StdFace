@@ -40,12 +40,15 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import itertools
+import logging
 import math
 import sys
 
 import numpy as np
 
 from .stdface_vals import NaN_i
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -186,17 +189,25 @@ def print_val_i(valname: str, val: int, val0: int) -> int:
 
 
 def _fail_not_used(valname: str) -> None:
-    """Print "specified but not used" error and terminate.
+    """Log a "specified but not used" error and raise.
 
     Parameters
     ----------
     valname : str
         Name of the unused parameter.
+
+    Raises
+    ------
+    ValueError
+        Always raised after logging the error message.
     """
-    print(f"\n Check !  {valname} is SPECIFIED but will NOT be USED. ")
-    print("            Please COMMENT-OUT this line ")
-    print("            or check this input is REALLY APPROPRIATE for your purpose !\n")
-    exit_program(-1)
+    msg = (
+        f"{valname} is SPECIFIED but will NOT be USED. "
+        "Please COMMENT-OUT this line, "
+        "or check this input is REALLY APPROPRIATE for your purpose."
+    )
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 def not_used_d(valname: str, val: float | complex) -> None:
@@ -266,9 +277,14 @@ def required_val_i(valname: str, val: int) -> None:
         Name of the variable.
     val : int
         Value to check (abort if equals the sentinel 2147483647).
+
+    Raises
+    ------
+    ValueError
+        If ``val`` equals the sentinel (i.e. the parameter is unset).
     """
     if val == NaN_i:
-        print(f"ERROR ! {valname} is NOT specified !")
-        exit_program(-1)
-    else:
-        print(f"  {valname:>15s} = {val:<3d}")
+        msg = f"{valname} is NOT specified."
+        logger.error(msg)
+        raise ValueError(msg)
+    logger.info("  %s = %d", valname, val)

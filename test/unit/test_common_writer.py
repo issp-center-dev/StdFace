@@ -207,8 +207,8 @@ class TestUnsupportedSystem:
     """Tests for the unsupported_system function."""
 
     def test_exits(self):
-        """Test that unsupported_system always exits."""
-        with pytest.raises(SystemExit):
+        """Test that unsupported_system always raises ValueError."""
+        with pytest.raises(ValueError):
             unsupported_system("hubbard", "dodecahedron")
 
 

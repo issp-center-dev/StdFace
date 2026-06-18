@@ -128,8 +128,8 @@ class TestNotUsedD:
         not_used_d("test", NaN_d)  # should not raise
 
     def test_exits_when_set(self):
-        """Test that a set value triggers SystemExit."""
-        with pytest.raises(SystemExit):
+        """Test that a set value raises ValueError."""
+        with pytest.raises(ValueError):
             not_used_d("test", 1.0)
 
     def test_handles_complex_nan(self):
@@ -137,8 +137,8 @@ class TestNotUsedD:
         not_used_d("test", complex(NaN_d, 0.0))  # should not raise
 
     def test_exits_for_complex_set(self):
-        """Test that a set complex value (real part set) triggers exit."""
-        with pytest.raises(SystemExit):
+        """Test that a set complex value (real part set) raises ValueError."""
+        with pytest.raises(ValueError):
             not_used_d("test", complex(1.0, 0.0))
 
 
@@ -151,16 +151,16 @@ class TestNotUsedJ:
         not_used_j("J0", NaN_d, J)  # should not raise
 
     def test_exits_when_scalar_set(self):
-        """Test that a set scalar JAll triggers SystemExit."""
+        """Test that a set scalar JAll raises ValueError."""
         J = np.full((3, 3), NaN_d)
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             not_used_j("J0", 1.0, J)
 
     def test_exits_when_matrix_element_set(self):
-        """Test that a set matrix element triggers SystemExit."""
+        """Test that a set matrix element raises ValueError."""
         J = np.full((3, 3), NaN_d)
         J[1, 1] = 0.5
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             not_used_j("J0", NaN_d, J)
 
 
@@ -172,8 +172,8 @@ class TestNotUsedI:
         not_used_i("test", NaN_i)  # should not raise
 
     def test_exits_when_set(self):
-        """Test that a set value triggers SystemExit."""
-        with pytest.raises(SystemExit):
+        """Test that a set value raises ValueError."""
+        with pytest.raises(ValueError):
             not_used_i("test", 5)
 
 
@@ -181,20 +181,22 @@ class TestRequiredValI:
     """Tests for required_val_i."""
 
     def test_exits_when_missing(self):
-        """Test that missing (sentinel) value triggers SystemExit."""
-        with pytest.raises(SystemExit):
+        """Test that missing (sentinel) value raises ValueError."""
+        with pytest.raises(ValueError):
             required_val_i("test", NaN_i)
 
     def test_no_exit_when_present(self):
-        """Test that a present value does not trigger exit."""
+        """Test that a present value does not raise."""
         required_val_i("test", 5)  # should not raise
 
-    def test_prints_value(self, capsys):
-        """Test that the value is printed when present."""
-        required_val_i("myvar", 42)
-        output = capsys.readouterr().out
-        assert "myvar" in output
-        assert "42" in output
+    def test_prints_value(self, caplog):
+        """Test that the value is logged when present."""
+        import logging
+
+        with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
+            required_val_i("myvar", 42)
+        assert "myvar" in caplog.text
+        assert "42" in caplog.text
 
 
 class TestBackwardCompatibility:
