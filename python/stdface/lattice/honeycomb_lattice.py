@@ -171,8 +171,8 @@ def honeycomb(StdI: StdIntList) -> None:
             if StdI.model == ModelType.KONDO:
                 isite += StdI.NsiteUC * StdI.NCell
             jsite_base = StdI.NsiteUC * kCell
-            for isiteUC in range(StdI.NsiteUC):
-                add_local_terms(StdI, isite + isiteUC, jsite_base + isiteUC)
+            for uc_i in range(StdI.NsiteUC):
+                add_local_terms(StdI, isite + uc_i, jsite_base + uc_i)
 
             # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
             _BONDS = (

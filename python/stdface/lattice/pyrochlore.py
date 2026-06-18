@@ -166,17 +166,17 @@ def pyrochlore(StdI: StdIntList) -> None:
             isite += StdI.nsite // 2
 
         if StdI.model == ModelType.SPIN:
-            for isiteUC in range(StdI.NsiteUC):
-                mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, isite + isiteUC)
-                general_j(StdI, StdI.D, StdI.S2, StdI.S2, isite + isiteUC, isite + isiteUC)
+            for uc_i in range(StdI.NsiteUC):
+                mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, isite + uc_i)
+                general_j(StdI, StdI.D, StdI.S2, StdI.S2, isite + uc_i, isite + uc_i)
         else:
-            for isiteUC in range(StdI.NsiteUC):
-                hubbard_local(StdI, StdI.mu, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, StdI.U, isite + isiteUC)
+            for uc_i in range(StdI.NsiteUC):
+                hubbard_local(StdI, StdI.mu, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, StdI.U, isite + uc_i)
             if StdI.model == ModelType.KONDO:
                 jsite = StdI.NsiteUC * kCell
-                for isiteUC in range(StdI.NsiteUC):
-                    general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + isiteUC)
-                    mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite + isiteUC)
+                for uc_i in range(StdI.NsiteUC):
+                    general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + uc_i)
+                    mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite + uc_i)
 
         # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
         _BONDS = (

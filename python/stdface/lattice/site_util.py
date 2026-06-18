@@ -511,7 +511,7 @@ def find_site(
     StdI: StdIntList,
     cell_w: int, cell_l: int, iH: int,
     delta_w: int, delta_l: int, diH: int,
-    isiteUC: int, jsiteUC: int,
+    uc_i: int, uc_j: int,
 ) -> tuple[int, int, complex, np.ndarray]:
     """Find the site indices and boundary phase for a pair of sites.
 
@@ -523,9 +523,9 @@ def find_site(
         Position of the initial site.
     delta_w, delta_l, diH : int
         Translation from the initial site.
-    isiteUC : int
+    uc_i : int
         Intrinsic site index of the initial site in the unit cell.
-    jsiteUC : int
+    uc_j : int
         Intrinsic site index of the final site in the unit cell.
 
     Returns
@@ -540,7 +540,7 @@ def find_site(
         Distance vector R_i - R_j in fractional coordinates (shape ``(3,)``).
     """
     di = np.array([delta_w, delta_l, diH], dtype=float)
-    dR = -di + StdI.tau[isiteUC, :] - StdI.tau[jsiteUC, :]
+    dR = -di + StdI.tau[uc_i, :] - StdI.tau[uc_j, :]
 
     jCellV = [cell_w + delta_w, cell_l + delta_l, iH + diH]
     nBox, jCellV = _fold_site(StdI, jCellV)
@@ -549,8 +549,8 @@ def find_site(
     jCell = _find_cell_index(StdI, jCellV)
     iCell = _find_cell_index(StdI, [cell_w, cell_l, iH])
 
-    isite = iCell * StdI.NsiteUC + isiteUC
-    jsite = jCell * StdI.NsiteUC + jsiteUC
+    isite = iCell * StdI.NsiteUC + uc_i
+    jsite = jCell * StdI.NsiteUC + uc_j
     if StdI.model == ModelType.KONDO:
         isite += StdI.NCell * StdI.NsiteUC
         jsite += StdI.NCell * StdI.NsiteUC
@@ -596,7 +596,7 @@ def set_label(
     fp: TextIO | None,
     cell_w: int, cell_l: int,
     delta_w: int, delta_l: int,
-    isiteUC: int, jsiteUC: int,
+    uc_i: int, uc_j: int,
     connect: int,
 ) -> tuple[int, int, complex, np.ndarray]:
     """Set label in the gnuplot display (2D systems only).
@@ -611,9 +611,9 @@ def set_label(
         Position of the initial site.
     delta_w, delta_l : int
         Translation from the initial site.
-    isiteUC : int
+    uc_i : int
         Intrinsic site index of the initial site.
-    jsiteUC : int
+    uc_j : int
         Intrinsic site index of the final site.
     connect : int
         Connection type (1 for nearest, 2 for 2nd nearest).
@@ -631,12 +631,12 @@ def set_label(
     """
     # First print the reversed one
     isite, jsite, Cphase, dR = find_site(
-        StdI, cell_w, cell_l, 0, -delta_w, -delta_l, 0, jsiteUC, isiteUC)
+        StdI, cell_w, cell_l, 0, -delta_w, -delta_l, 0, uc_j, uc_i)
 
     # Compute 2D positions via direct[:2,:2].T @ fractional_coords
     D = StdI.direct[:2, :2]
-    frac_i = np.array([cell_w + StdI.tau[jsiteUC, 0], cell_l + StdI.tau[jsiteUC, 1]])
-    frac_j = np.array([cell_w - delta_w + StdI.tau[isiteUC, 0], cell_l - delta_l + StdI.tau[isiteUC, 1]])
+    frac_i = np.array([cell_w + StdI.tau[uc_j, 0], cell_l + StdI.tau[uc_j, 1]])
+    frac_j = np.array([cell_w - delta_w + StdI.tau[uc_i, 0], cell_l - delta_l + StdI.tau[uc_i, 1]])
     xi, yi = frac_i @ D
     xj, yj = frac_j @ D
 
@@ -645,10 +645,10 @@ def set_label(
 
     # Then print the normal one
     isite, jsite, Cphase, dR = find_site(
-        StdI, cell_w, cell_l, 0, delta_w, delta_l, 0, isiteUC, jsiteUC)
+        StdI, cell_w, cell_l, 0, delta_w, delta_l, 0, uc_i, uc_j)
 
-    frac_i = np.array([cell_w + StdI.tau[isiteUC, 0], cell_l + StdI.tau[isiteUC, 1]])
-    frac_j = np.array([cell_w + delta_w + StdI.tau[jsiteUC, 0], cell_l + delta_l + StdI.tau[jsiteUC, 1]])
+    frac_i = np.array([cell_w + StdI.tau[uc_i, 0], cell_l + StdI.tau[uc_i, 1]])
+    frac_j = np.array([cell_w + delta_w + StdI.tau[uc_j, 0], cell_l + delta_l + StdI.tau[uc_j, 1]])
     xi, yi = frac_i @ D
     xj, yj = frac_j @ D
 

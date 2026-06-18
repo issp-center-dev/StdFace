@@ -586,7 +586,7 @@ def add_neighbor_interaction(
     fp: TextIO | None,
     cell_w: int, cell_l: int,
     delta_w: int, delta_l: int,
-    isiteUC: int, jsiteUC: int,
+    uc_i: int, uc_j: int,
     connect: int,
     J: np.ndarray,
     t: complex,
@@ -608,7 +608,7 @@ def add_neighbor_interaction(
         Cell position of the initial site.
     delta_w, delta_l : int
         Translation to the neighbor.
-    isiteUC, jsiteUC : int
+    uc_i, uc_j : int
         Unit-cell site indices for initial and final sites.
     connect : int
         Connection type for gnuplot (1 = nearest, 2 = 2nd, 3+ = no arrow).
@@ -633,7 +633,7 @@ def add_neighbor_interaction(
     from .site_util import set_label  # local import to avoid circular dependency
 
     isite, jsite, Cphase, dR = set_label(
-        StdI, fp, cell_w, cell_l, delta_w, delta_l, isiteUC, jsiteUC, connect)
+        StdI, fp, cell_w, cell_l, delta_w, delta_l, uc_i, uc_j, connect)
     _dispatch_bond_interaction(StdI, isite, jsite, Cphase, dR, J, t, V)
     return isite, jsite, Cphase, dR
 
@@ -642,7 +642,7 @@ def add_neighbor_interaction_3d(
     StdI: StdIntList,
     cell_w: int, cell_l: int, iH: int,
     delta_w: int, delta_l: int, diH: int,
-    isiteUC: int, jsiteUC: int,
+    uc_i: int, uc_j: int,
     J: np.ndarray,
     t: complex,
     V: float,
@@ -662,7 +662,7 @@ def add_neighbor_interaction_3d(
         Cell position of the initial site.
     delta_w, delta_l, diH : int
         Translation to the neighbor.
-    isiteUC, jsiteUC : int
+    uc_i, uc_j : int
         Unit-cell site indices for initial and final sites.
     J : numpy.ndarray
         3×3 spin-coupling matrix (used when model is SPIN).
@@ -685,7 +685,7 @@ def add_neighbor_interaction_3d(
     from .site_util import find_site  # local import to avoid circular dependency
 
     isite, jsite, Cphase, dR = find_site(
-        StdI, cell_w, cell_l, iH, delta_w, delta_l, diH, isiteUC, jsiteUC)
+        StdI, cell_w, cell_l, iH, delta_w, delta_l, diH, uc_i, uc_j)
     _dispatch_bond_interaction(StdI, isite, jsite, Cphase, dR, J, t, V)
     return isite, jsite, Cphase, dR
 
