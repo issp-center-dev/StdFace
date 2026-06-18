@@ -28,7 +28,12 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
+
 from ...core.stdface_vals import StdIntList, ModelType, NaN_i
+
+
+logger = logging.getLogger(__name__)
 
 
 def _has_anti_period(StdI: StdIntList) -> bool:
@@ -94,7 +99,7 @@ def print_orb(StdI: StdIntList) -> None:
             lines.append(f"{iOrb:5d}  {1:5d}\n")
         fp.write("".join(lines))
 
-    print("    orbitalidx.def is written.")
+    logger.info("    orbitalidx.def is written.")
 
 
 def _compute_parallel_orbitals(
@@ -313,10 +318,10 @@ def print_orb_para(StdI: StdIntList) -> None:
 
     _write_orbitalidxpara(
         StdI.nsite, StdI.ComplexType, OrbGC, reverse, NOrbGC)
-    print("    orbitalidxpara.def is written.")
+    logger.info("    orbitalidxpara.def is written.")
 
     _write_orbitalidxgen(StdI, OrbGC, reverse, NOrbGC)
-    print("    orbitalidxgen.def is written.")
+    logger.info("    orbitalidxgen.def is written.")
 
 
 def _gutzwiller_momentum_projected(
@@ -480,4 +485,4 @@ def print_gutzwiller(StdI: StdIntList) -> None:
         NGutzwiller = _gutzwiller_global_optimization(StdI, Gutz)
 
     _write_gutzwiller_file(StdI, NGutzwiller, Gutz)
-    print("    gutzwilleridx.def is written.")
+    logger.info("    gutzwilleridx.def is written.")

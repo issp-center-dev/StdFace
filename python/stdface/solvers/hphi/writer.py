@@ -29,6 +29,7 @@ the Free Software Foundation, either version 3 of the License, or
 """
 from __future__ import annotations
 
+import logging
 import math
 from collections.abc import Callable
 from typing import NamedTuple
@@ -36,7 +37,7 @@ from typing import NamedTuple
 import numpy as np
 
 from ...core.stdface_vals import StdIntList, ModelType, MethodType, NaN_i, UNSET_STRING, AMPLITUDE_EPS
-from ...core.param_check import exit_program, print_val_d, print_val_i
+from ...core.param_check import print_val_d, print_val_i
 from ...writer.common_writer import _merge_duplicate_terms
 
 # ---------------------------------------------------------------------------
@@ -91,6 +92,9 @@ INITIAL_VEC_TYPE_TO_INT: dict[str, int] = {
 }
 """Maps the ``InitialVecType`` string to its integer code."""
 
+logger = logging.getLogger(__name__)
+
+
 class _IOFlags(NamedTuple):
     """Pair of input/output flag integers for I/O dispatch tables.
 
@@ -140,7 +144,7 @@ def _resolve_string_param(
 
     If the field on *StdI* is ``UNSET_STRING``, it is set to *default*
     and *default_value* is returned.  Otherwise the field value is looked
-    up in *dispatch*; a missing key causes ``exit_program(-1)``.
+    up in *dispatch*; a missing key raises ``ValueError``.
 
     Parameters
     ----------
@@ -165,13 +169,14 @@ def _resolve_string_param(
     field_val = getattr(StdI, field)
     if field_val == UNSET_STRING:
         setattr(StdI, field, default)
-        print(f"  {label:>20s} = {default:<12s}######  DEFAULT VALUE IS USED  ######")
+        logger.info(f"  {label:>20s} = {default:<12s}######  DEFAULT VALUE IS USED  ######")
         return default_value
-    print(f"  {label:>20s} = {field_val}")
+    logger.info(f"  {label:>20s} = {field_val}")
     result = dispatch.get(field_val)
     if result is None:
-        print(f"\n ERROR ! {label} : {field_val}")
-        exit_program(-1)
+        msg = f"\n ERROR ! {label} : {field_val}"
+        logger.error(msg)
+        raise ValueError(msg)
     return result
 
 
@@ -218,7 +223,7 @@ def large_value(StdI: StdIntList) -> None:
 def _validate_ngpu_scalapack(StdI: StdIntList) -> None:
     """Validate ``NGPU`` and ``Scalapack`` parameters if set.
 
-    Prints the parameter values and calls :func:`exit_program` if
+    Logs the parameter values and raises ``ValueError`` if
     they are out of range.
 
     Parameters
@@ -227,18 +232,20 @@ def _validate_ngpu_scalapack(StdI: StdIntList) -> None:
         The global parameter structure.  Reads ``NGPU`` and ``Scalapack``.
     """
     if StdI.NGPU != NaN_i:
-        print(f"         NGPU = {StdI.NGPU}")
+        logger.info(f"         NGPU = {StdI.NGPU}")
         if StdI.NGPU < 1:
-            print(f"\n ERROR ! NGPU : {StdI.NGPU}")
-            print("         NGPU should be a positive integer.")
-            exit_program(-1)
+            logger.info(f"\n ERROR ! NGPU : {StdI.NGPU}")
+            msg = "         NGPU should be a positive integer."
+            logger.error(msg)
+            raise ValueError(msg)
 
     if StdI.Scalapack != NaN_i:
-        print(f"         Scalapack = {StdI.Scalapack}")
+        logger.info(f"         Scalapack = {StdI.Scalapack}")
         if StdI.Scalapack < 0 or StdI.Scalapack > 1:
-            print(f"\n ERROR ! Scalapack : {StdI.Scalapack}")
-            print("         Scalapack should be 0 or 1.")
-            exit_program(-1)
+            logger.info(f"\n ERROR ! Scalapack : {StdI.Scalapack}")
+            msg = "         Scalapack should be 0 or 1."
+            logger.error(msg)
+            raise ValueError(msg)
 
 
 class _CalcModParams(NamedTuple):
@@ -337,7 +344,7 @@ def print_calc_mod(StdI: StdIntList) -> None:
         overwritten with default values).  ``NGPU`` and ``Scalapack``
         are validated if set.
     """
-    print("\n  @ CalcMod\n")
+    logger.info("\n  @ CalcMod\n")
 
     # ------------------------------------------------------------------
     #  Method  →  CalcType integer
@@ -345,13 +352,15 @@ def print_calc_mod(StdI: StdIntList) -> None:
     iCalcEigenvec = 0
 
     if StdI.method == UNSET_STRING:
-        print("ERROR ! Method is NOT specified !")
-        exit_program(-1)
+        msg = "ERROR ! Method is NOT specified !"
+        logger.error(msg)
+        raise ValueError(msg)
 
     iCalcType = METHOD_TO_CALC_TYPE.get(StdI.method)
     if iCalcType is None:
-        print(f"\n ERROR ! Unsupported Solver : {StdI.method}")
-        exit_program(-1)
+        msg = f"\n ERROR ! Unsupported Solver : {StdI.method}"
+        logger.error(msg)
+        raise ValueError(msg)
 
     if StdI.method == MethodType.LANCZOS_ENERGY:
         iCalcEigenvec = 1
@@ -364,9 +373,10 @@ def print_calc_mod(StdI: StdIntList) -> None:
     # ------------------------------------------------------------------
     iCalcModel = MODEL_GC_TO_CALC_MODEL.get((StdI.model, StdI.lGC))
     if iCalcModel is None:
-        print(f"\n ERROR ! Unsupported Model / GC combination : "
-              f"{StdI.model}, lGC={StdI.lGC}")
-        exit_program(-1)
+        msg = (f"Unsupported Model / GC combination : "
+               f"{StdI.model}, lGC={StdI.lGC}")
+        logger.error(msg)
+        raise ValueError(msg)
 
     # ------------------------------------------------------------------
     #  Resolve string parameters to integer codes
@@ -408,7 +418,7 @@ def print_calc_mod(StdI: StdIntList) -> None:
         ),
     )
 
-    print("     calcmod.def is written.\n")
+    logger.info("     calcmod.def is written.\n")
 
 
 # ---------------------------------------------------------------------------
@@ -632,15 +642,16 @@ def _configure_spectrum_ops(
 
     Raises
     ------
-    SystemExit
+    ValueError
         If *spectrum_type* is not recognized.
     """
     handler = _SPECTRUM_HANDLERS.get(spectrum_type)
     if handler is not None:
         return handler(model, S2, coef, spin)
 
-    print(f"\n ERROR ! SpectrumType : {spectrum_type}")
-    exit_program(-1)
+    msg = f"\n ERROR ! SpectrumType : {spectrum_type}"
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 def _compute_fourier_coefficients(StdI: StdIntList) -> tuple[list[float], list[float]]:
@@ -735,7 +746,7 @@ def _write_excitation_file(
                              f"{fourier_i[isite] * coef[0]:25.15f}\n")
         with open("single.def", "w") as fp:
             fp.write("".join(lines))
-        print("      single.def is written.\n")
+        logger.info("      single.def is written.\n")
     else:
         lines = ["=============================================\n",
                  f"NPair {StdI.nsite * NumOp}\n",
@@ -749,7 +760,7 @@ def _write_excitation_file(
                              f"{fourier_i[isite] * coef[ispin]:25.15f}\n")
         with open("pair.def", "w") as fp:
             fp.write("".join(lines))
-        print("        pair.def is written.\n")
+        logger.info("        pair.def is written.\n")
 
 
 def print_excitation(StdI: StdIntList) -> None:
@@ -798,7 +809,7 @@ def print_excitation(StdI: StdIntList) -> None:
     coef = [0.0] * n_alloc
     spin = [[0, 0] for _ in range(n_alloc)]
 
-    print("\n  @ Spectrum\n")
+    logger.info("\n  @ Spectrum\n")
 
     StdI.SpectrumQ[0] = print_val_d("SpectrumQW", StdI.SpectrumQ[0], 0.0)
     StdI.SpectrumQ[1] = print_val_d("SpectrumQL", StdI.SpectrumQ[1], 0.0)
@@ -809,9 +820,9 @@ def print_excitation(StdI: StdIntList) -> None:
     # ------------------------------------------------------------------
     if StdI.SpectrumType == UNSET_STRING:
         StdI.SpectrumType = "szsz"
-        print("     SpectrumType = szsz        ######  DEFAULT VALUE IS USED  ######")
+        logger.info("     SpectrumType = szsz        ######  DEFAULT VALUE IS USED  ######")
     else:
-        print(f"     SpectrumType = {StdI.SpectrumType}")
+        logger.info(f"     SpectrumType = {StdI.SpectrumType}")
 
     NumOp, StdI.SpectrumBody = _configure_spectrum_ops(
         StdI.SpectrumType, StdI.model, StdI.S2, coef, spin)
@@ -979,7 +990,7 @@ def vector_potential(StdI: StdIntList) -> None:
         - ``PumpBody`` -- set to 1 (one-body) or 2 (two-body).
         - ``At`` -- allocated as ``Lanczos_max x 3`` list of floats.
     """
-    print("\n  @ Time-evolution\n")
+    logger.info("\n  @ Time-evolution\n")
 
     StdI.VecPot[0] = print_val_d("VecPotW", StdI.VecPot[0], 0.0)
     StdI.VecPot[1] = print_val_d("VecPotL", StdI.VecPot[1], 0.0)
@@ -999,15 +1010,16 @@ def vector_potential(StdI: StdIntList) -> None:
     # Resolve PumpType default
     if StdI.PumpType == UNSET_STRING:
         StdI.PumpType = "quench"
-        print("     PumpType = quench        ######  DEFAULT VALUE IS USED  ######")
+        logger.info("     PumpType = quench        ######  DEFAULT VALUE IS USED  ######")
     else:
-        print(f"     PumpType = {StdI.PumpType}")
+        logger.info(f"     PumpType = {StdI.PumpType}")
 
     # Dispatch on PumpType
     handler_entry = _PUMP_TYPE_HANDLERS.get(StdI.PumpType)
     if handler_entry is None:
-        print(f"\n ERROR ! PumpType : {StdI.PumpType}")
-        exit_program(-1)
+        msg = f"\n ERROR ! PumpType : {StdI.PumpType}"
+        logger.error(msg)
+        raise ValueError(msg)
 
     StdI.PumpBody, handler_fn = handler_entry
 
@@ -1084,7 +1096,7 @@ def print_pump(StdI: StdIntList) -> None:
 
         with open("teone.def", "w") as fp:
             fp.write("".join(lines))
-        print("      teone.def is written.\n")
+        logger.info("      teone.def is written.\n")
 
     else:
         lines = ["=============================================\n",
@@ -1102,4 +1114,4 @@ def print_pump(StdI: StdIntList) -> None:
 
         with open("tetwo.def", "w") as fp:
             fp.write("".join(lines))
-        print("        tetwo.def is written.\n")
+        logger.info("        tetwo.def is written.\n")
