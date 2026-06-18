@@ -45,11 +45,11 @@ from ..writer.common_writer import (
     unsupported_system as _unsupported_system,
 )
 from .keyword_parser import (
-    trim_space_quote as _trim_space_quote,
     parse_common_keyword as _parse_common_keyword,
     parse_solver_keyword as _parse_solver_keyword,
     _apply_keyword_table,
 )
+from .input_source import StanFileSource
 from ..lattice import get_lattice as _get_lattice
 
 logger = logging.getLogger(__name__)
@@ -599,13 +599,41 @@ def _parse_solver_keyword_via_plugin(
         return _parse_solver_keyword(keyword, value, StdI, solver)
 
 
+def _apply_keywords(data: dict, StdI: StdIntList, solver: str) -> None:
+    """Apply a ``{keyword: value}`` dict to *StdI*.
+
+    Common keywords are tried first, then solver-specific keywords.
+    Alias collisions (two keywords mapping to the same field) are caught
+    by the duplicate-checking store helpers.
+
+    Parameters
+    ----------
+    data : dict
+        Keyword/value pairs (keywords already lower-cased).
+    StdI : StdIntList
+        Parameter structure to populate (modified in place).
+    solver : str
+        Solver name (``"HPhi"``, ``"mVMC"``, ``"UHF"``, or ``"HWAVE"``).
+
+    Raises
+    ------
+    ValueError
+        If a keyword is unrecognised.
+    """
+    for keyword, value in data.items():
+        logger.info("  KEYWORD : %-20s | VALUE : %s ", keyword, value)
+        if not _parse_common_keyword(keyword, value, StdI):
+            if not _parse_solver_keyword_via_plugin(keyword, value, StdI, solver):
+                msg = f"Unsupported Keyword in Standard mode: {keyword}"
+                logger.error(msg)
+                raise ValueError(msg)
+
+
 def _parse_input_file(fname: str, StdI: StdIntList, solver: str) -> None:
     """Open and parse a Standard-mode input file into *StdI*.
 
-    Each non-blank, non-comment line must contain ``keyword = value``.
-    Common keywords are tried first, then solver-specific keywords.
-    The program exits on duplicate keywords, missing ``=``, or
-    unrecognised keywords.
+    Delegates file reading to :class:`StanFileSource` and applies the
+    resulting keyword/value dict to *StdI*.
 
     Parameters
     ----------
@@ -621,39 +649,12 @@ def _parse_input_file(fname: str, StdI: StdIntList, solver: str) -> None:
     FileNotFoundError
         If the input file cannot be opened.
     ValueError
-        If a line lacks ``=`` or a keyword is unrecognised.
+        If a line lacks ``=``, a keyword is duplicated, or a keyword is
+        unrecognised.
     """
-    try:
-        fp_in = open(fname, "r")
-    except OSError as exc:
-        logger.error("Cannot open input file: %s", fname)
-        raise FileNotFoundError(fname) from exc
-
     logger.info("Open Standard-Mode Inputfile %s", fname)
-
-    with fp_in:
-        for raw_line in fp_in:
-            line = _trim_space_quote(raw_line)
-
-            if line.startswith("//") or line == "":
-                logger.info("  Skipping a line.")
-                continue
-
-            parts = line.split("=", 1)
-            if len(parts) < 2:
-                msg = '"=" is NOT found.'
-                logger.error(msg)
-                raise ValueError(msg)
-
-            keyword = parts[0].lower()
-            value = parts[1]
-            logger.info("  KEYWORD : %-20s | VALUE : %s ", keyword, value)
-
-            if not _parse_common_keyword(keyword, value, StdI):
-                if not _parse_solver_keyword_via_plugin(keyword, value, StdI, solver):
-                    msg = f"Unsupported Keyword in Standard mode: {keyword}"
-                    logger.error(msg)
-                    raise ValueError(msg)
+    data = StanFileSource(fname).load()
+    _apply_keywords(data, StdI, solver)
 
 
 # ===================================================================
