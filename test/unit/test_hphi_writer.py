@@ -444,10 +444,10 @@ class TestResolveStringParam:
         assert StdI.Restart == "save"
 
     def test_unknown_value_raises_exit(self):
-        """Test that an unknown value causes SystemExit."""
+        """Test that an unknown value raises ValueError."""
         StdI = StdIntList()
         StdI.Restart = "bogus_value"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _resolve_string_param(
                 StdI, "Restart", "Restart", "none", 0, RESTART_TO_INT)
 
@@ -469,25 +469,29 @@ class TestResolveStringParam:
             (0, 0), EIGENVEC_IO_TO_FLAGS)
         assert result == (0, 0)
 
-    def test_prints_default_message(self, capsys):
+    def test_prints_default_message(self, caplog):
         """Test that unset fields produce a DEFAULT VALUE message."""
+        import logging
+
         StdI = StdIntList()
         StdI.CalcSpec = UNSET_STRING
-        _resolve_string_param(
-            StdI, "CalcSpec", "CalcSpec", "none", 0, CALC_SPEC_TO_INT)
-        captured = capsys.readouterr().out
-        assert "DEFAULT VALUE IS USED" in captured
-        assert "CalcSpec" in captured
+        with caplog.at_level(logging.INFO, logger="stdface.solvers.hphi.writer"):
+            _resolve_string_param(
+                StdI, "CalcSpec", "CalcSpec", "none", 0, CALC_SPEC_TO_INT)
+        assert "DEFAULT VALUE IS USED" in caplog.text
+        assert "CalcSpec" in caplog.text
 
-    def test_prints_set_value(self, capsys):
-        """Test that set fields print their value without DEFAULT."""
+    def test_prints_set_value(self, caplog):
+        """Test that set fields log their value without DEFAULT."""
+        import logging
+
         StdI = StdIntList()
         StdI.CalcSpec = "normal"
-        _resolve_string_param(
-            StdI, "CalcSpec", "CalcSpec", "none", 0, CALC_SPEC_TO_INT)
-        captured = capsys.readouterr().out
-        assert "normal" in captured
-        assert "DEFAULT VALUE IS USED" not in captured
+        with caplog.at_level(logging.INFO, logger="stdface.solvers.hphi.writer"):
+            _resolve_string_param(
+                StdI, "CalcSpec", "CalcSpec", "none", 0, CALC_SPEC_TO_INT)
+        assert "normal" in caplog.text
+        assert "DEFAULT VALUE IS USED" not in caplog.text
 
 
 # -------------------------------------------------------------------
@@ -644,9 +648,9 @@ class TestConfigureSpectrumOps:
     # -- unknown --
 
     def test_unknown_spectrum_type_exits(self):
-        """Test that an unknown spectrum type causes SystemExit."""
+        """Test that an unknown spectrum type raises ValueError."""
         coef, spin = self._make_arrays(2)
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _configure_spectrum_ops("bogus", ModelType.HUBBARD, 1, coef, spin)
 
 
@@ -898,7 +902,7 @@ class TestPumpTypeHandlers:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                with pytest.raises(SystemExit):
+                with pytest.raises(ValueError):
                     vector_potential(StdI)
             finally:
                 os.chdir(orig)
@@ -1087,7 +1091,7 @@ class TestValidateNGPUScalapack:
         StdI = StdIntList()
         StdI.NGPU = 0
         StdI.Scalapack = NaN_i
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _validate_ngpu_scalapack(StdI)
 
     def test_valid_scalapack(self):
@@ -1102,7 +1106,7 @@ class TestValidateNGPUScalapack:
         StdI = StdIntList()
         StdI.NGPU = NaN_i
         StdI.Scalapack = 2
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _validate_ngpu_scalapack(StdI)
 
     def test_negative_scalapack_exits(self):
@@ -1110,7 +1114,7 @@ class TestValidateNGPUScalapack:
         StdI = StdIntList()
         StdI.NGPU = NaN_i
         StdI.Scalapack = -1
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _validate_ngpu_scalapack(StdI)
 
 

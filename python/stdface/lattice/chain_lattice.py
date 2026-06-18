@@ -17,11 +17,12 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType
 from ..core.param_check import (
-    exit_program, print_val_d, print_val_i,
+    print_val_d, print_val_i,
     not_used_d, not_used_i, not_used_j, required_val_i,
 )
 from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
@@ -37,6 +38,9 @@ from .boost_output import (
     write_boost_mag_field, write_boost_j_full,
     write_boost_6spin_star, write_boost_6spin_pair,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def chain(StdI: StdIntList) -> None:
@@ -73,7 +77,7 @@ def chain(StdI: StdIntList) -> None:
 
         StdI.NsiteUC = 1
 
-        print("  @ Lattice Size & Shape\n")
+        logger.info("  @ Lattice Size & Shape\n")
 
         StdI.a = print_val_d("a", StdI.a, 1.0)
         StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
@@ -97,7 +101,7 @@ def chain(StdI: StdIntList) -> None:
         StdI.tau[0, 2] = 0.0
 
         # (2) Check & store parameters of Hamiltonian
-        print("\n  @ Hamiltonian \n")
+        logger.info("\n  @ Hamiltonian \n")
         not_used_j("J1", StdI.J1All, StdI.J1)
         not_used_j("J2", StdI.J2All, StdI.J2)
         not_used_j("J1'", StdI.J1pAll, StdI.J1p)
@@ -152,7 +156,7 @@ def chain(StdI: StdIntList) -> None:
                 StdI.S2 = print_val_i("2S", StdI.S2, 1)
                 input_spin(StdI.J, StdI.JAll, "J")
 
-        print("\n  @ Numerical conditions\n")
+        logger.info("\n  @ Numerical conditions\n")
 
         # (3) Set local spin flag and the number of sites
         set_local_spin_flags(StdI, StdI.L)
@@ -244,12 +248,14 @@ def chain_boost(StdI: StdIntList) -> None:
 
         # Topology
         if StdI.S2 != 1:
-            print("\n ERROR! S2 must be 1 in Boost. \n")
-            exit_program(-1)
+            msg = "\n ERROR! S2 must be 1 in Boost. \n"
+            logger.error(msg)
+            raise ValueError(msg)
         StdI.ishift_nspin = 4
         if StdI.L % 8 != 0:
-            print("\n ERROR! L % 8 != 0 \n")
-            exit_program(-1)
+            msg = "\n ERROR! L % 8 != 0 \n"
+            logger.error(msg)
+            raise ValueError(msg)
         StdI.W = StdI.L // 2
         StdI.L = 2
         StdI.num_pivot = StdI.W // 4

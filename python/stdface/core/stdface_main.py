@@ -30,6 +30,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import NamedTuple
 
@@ -37,7 +38,6 @@ from .stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
     NaN_i, NaN_d, NaN_c, UNSET_STRING,
 )
-from .param_check import exit_program
 from ..solvers.hphi.writer import (
     vector_potential as _vector_potential,
 )
@@ -51,6 +51,8 @@ from .keyword_parser import (
     _apply_keyword_table,
 )
 from ..lattice import get_lattice as _get_lattice
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 #  Lattice dispatch (via plugin registry)
@@ -500,7 +502,7 @@ def _resolve_model_and_method(StdI: StdIntList, solver: str) -> None:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If the model name is not recognised.
     """
     StdI.lGC = 0
@@ -542,7 +544,7 @@ def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> None:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If the lattice is not recognised.
     """
     lattice = StdI.lattice
@@ -616,39 +618,42 @@ def _parse_input_file(fname: str, StdI: StdIntList, solver: str) -> None:
 
     Raises
     ------
-    SystemExit
-        If the file cannot be opened, a line lacks ``=``, or a keyword
-        is unrecognised.
+    FileNotFoundError
+        If the input file cannot be opened.
+    ValueError
+        If a line lacks ``=`` or a keyword is unrecognised.
     """
     try:
         fp_in = open(fname, "r")
-    except OSError:
-        print(f"\n  ERROR !  Cannot open input file {fname} !\n")
-        exit_program(-1)
+    except OSError as exc:
+        logger.error("Cannot open input file: %s", fname)
+        raise FileNotFoundError(fname) from exc
 
-    print(f"\n  Open Standard-Mode Inputfile {fname} \n")
+    logger.info("Open Standard-Mode Inputfile %s", fname)
 
     with fp_in:
         for raw_line in fp_in:
             line = _trim_space_quote(raw_line)
 
             if line.startswith("//") or line == "":
-                print("  Skipping a line.")
+                logger.info("  Skipping a line.")
                 continue
 
             parts = line.split("=", 1)
             if len(parts) < 2:
-                print('\n  ERROR !  "=" is NOT found !\n')
-                exit_program(-1)
+                msg = '"=" is NOT found.'
+                logger.error(msg)
+                raise ValueError(msg)
 
             keyword = parts[0].lower()
             value = parts[1]
-            print(f"  KEYWORD : {keyword:<20s} | VALUE : {value} ")
+            logger.info("  KEYWORD : %-20s | VALUE : %s ", keyword, value)
 
             if not _parse_common_keyword(keyword, value, StdI):
                 if not _parse_solver_keyword_via_plugin(keyword, value, StdI, solver):
-                    print("ERROR ! Unsupported Keyword in Standard mode!")
-                    exit_program(-1)
+                    msg = f"Unsupported Keyword in Standard mode: {keyword}"
+                    logger.error(msg)
+                    raise ValueError(msg)
 
 
 # ===================================================================
@@ -682,9 +687,11 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     Raises
     ------
-    SystemExit
-        If the input file cannot be opened, a keyword is duplicated or
-        unrecognised, or a required parameter is missing.
+    FileNotFoundError
+        If the input file cannot be opened.
+    ValueError
+        If a keyword is duplicated or unrecognised, or a required
+        parameter is missing.
     """
     # ------------------------------------------------------------------
     #  Initialise
@@ -692,7 +699,7 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     StdI = StdIntList()
     StdI.solver = solver
 
-    print("\n######  Input Parameter of Standard Intarface  ######")
+    logger.info("######  Input Parameter of Standard Intarface  ######")
 
     _reset_vals(StdI)
     _parse_input_file(fname, StdI, solver)
@@ -700,16 +707,14 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     # ------------------------------------------------------------------
     #  Construct Model
     # ------------------------------------------------------------------
-    print("")
-    print("#######  Construct Model  #######")
-    print("")
+    logger.info("#######  Construct Model  #######")
 
     # CDataFileHead default
     if StdI.CDataFileHead == UNSET_STRING:
         StdI.CDataFileHead = "zvo"
-        print(f"    CDataFileHead = {'zvo':<12s}######  DEFAULT VALUE IS USED  ######")
+        logger.info("    CDataFileHead = %-12s######  DEFAULT VALUE IS USED  ######", "zvo")
     else:
-        print(f"    CDataFileHead = {StdI.CDataFileHead}")
+        logger.info("    CDataFileHead = %s", StdI.CDataFileHead)
 
     _resolve_model_and_method(StdI, solver)
 
@@ -718,9 +723,7 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     # ------------------------------------------------------------------
     #  Print Expert input files
     # ------------------------------------------------------------------
-    print("")
-    print("######  Print Expert input files  ######")
-    print("")
+    logger.info("######  Print Expert input files  ######")
 
     from ..plugin import get_plugin
     plugin = get_plugin(solver)
@@ -729,4 +732,4 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     # ------------------------------------------------------------------
     #  Finalise
     # ------------------------------------------------------------------
-    print("\n######  Input files are generated.  ######\n")
+    logger.info("######  Input files are generated.  ######")

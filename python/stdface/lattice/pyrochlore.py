@@ -14,6 +14,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType
@@ -30,6 +31,9 @@ from .interaction_builder import (
 from .site_util import init_site, set_local_spin_flags, close_lattice_xsf
 
 
+logger = logging.getLogger(__name__)
+
+
 def pyrochlore(StdI: StdIntList) -> None:
     """Setup a Hamiltonian for the pyrochlore lattice.
 
@@ -42,7 +46,7 @@ def pyrochlore(StdI: StdIntList) -> None:
     # (1) Compute the shape of the super-cell and sites in the super-cell
     StdI.NsiteUC = 4
 
-    print("  @ Lattice Size & Shape\n")
+    logger.info("  @ Lattice Size & Shape\n")
 
     StdI.a = print_val_d("a", StdI.a, 1.0)
     StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
@@ -77,7 +81,7 @@ def pyrochlore(StdI: StdIntList) -> None:
     StdI.tau[3, 2] = 0.5
 
     # (2) check & store parameters of Hamiltonian
-    print("\n  @ Hamiltonian \n")
+    logger.info("\n  @ Hamiltonian \n")
     not_used_d("K", StdI.K)
     StdI.h = print_val_d("h", StdI.h, 0.0)
     StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
@@ -140,7 +144,7 @@ def pyrochlore(StdI: StdIntList) -> None:
             StdI.S2 = print_val_i("2S", StdI.S2, 1)
             input_spin(StdI.J, StdI.JAll, "J")
 
-    print("\n  @ Numerical conditions\n")
+    logger.info("\n  @ Numerical conditions\n")
 
     # (3) Set local spin flag and number of sites
     set_local_spin_flags(StdI, StdI.NsiteUC * StdI.NCell)

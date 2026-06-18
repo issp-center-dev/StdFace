@@ -14,13 +14,14 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import math
 
 import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType
 from ..core.param_check import (
-    exit_program, print_val_d, print_val_i,
+    print_val_d, print_val_i,
     not_used_j, not_used_d, not_used_i,
 )
 from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
@@ -38,6 +39,9 @@ from .boost_output import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def kagome(StdI: StdIntList) -> None:
     """Setup a Hamiltonian for the kagome lattice.
 
@@ -52,7 +56,7 @@ def kagome(StdI: StdIntList) -> None:
 
         StdI.NsiteUC = 3
 
-        print("  @ Lattice Size & Shape\n")
+        logger.info("  @ Lattice Size & Shape\n")
 
         StdI.a = print_val_d("a", StdI.a, 1.0)
         StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
@@ -77,7 +81,7 @@ def kagome(StdI: StdIntList) -> None:
         StdI.tau[2, 2] = 0.0
 
         # (2) check & store parameters of Hamiltonian
-        print("\n  @ Hamiltonian \n")
+        logger.info("\n  @ Hamiltonian \n")
         not_used_d("K", StdI.K)
         StdI.h = print_val_d("h", StdI.h, 0.0)
         StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
@@ -144,7 +148,7 @@ def kagome(StdI: StdIntList) -> None:
                 StdI.S2 = print_val_i("2S", StdI.S2, 1)
                 input_spin(StdI.J, StdI.JAll, "J")
 
-        print("\n  @ Numerical conditions\n")
+        logger.info("\n  @ Numerical conditions\n")
 
         # (3) Set local spin flag and number of sites
         set_local_spin_flags(StdI, StdI.NsiteUC * StdI.NCell)
@@ -199,12 +203,14 @@ def kagome_boost(StdI: StdIntList) -> None:
         Modified in-place.
     """
     if StdI.box[0, 1] != 0 or StdI.box[1, 0] != 0:
-        print("\nERROR ! (a0W, a0L, a1W, a1L) can not be used with SpinGCBoost.\n")
-        exit_program(-1)
+        msg = "\nERROR ! (a0W, a0L, a1W, a1L) can not be used with SpinGCBoost.\n"
+        logger.error(msg)
+        raise ValueError(msg)
 
     if np.any(np.abs(StdI.Jp) > 1.0e-8):
-        print("\nERROR ! J' can not be used with SpinGCBoost.\n")
-        exit_program(-1)
+        msg = "\nERROR ! J' can not be used with SpinGCBoost.\n"
+        logger.error(msg)
+        raise ValueError(msg)
 
     # Magnetic field
     with open("boost.def", "w") as fp:
@@ -221,19 +227,23 @@ def kagome_boost(StdI: StdIntList) -> None:
 
         # Topology
         if StdI.S2 != 1:
-            print("\n ERROR! S2 must be 1 in Boost. \n")
-            exit_program(-1)
+            msg = "\n ERROR! S2 must be 1 in Boost. \n"
+            logger.error(msg)
+            raise ValueError(msg)
         StdI.ishift_nspin = 3
         if StdI.L < 2:
-            print("\n ERROR! L < 2 \n")
-            exit_program(-1)
+            msg = "\n ERROR! L < 2 \n"
+            logger.error(msg)
+            raise ValueError(msg)
         if StdI.W % StdI.ishift_nspin != 0:
-            print(f"\n ERROR! W %% {StdI.ishift_nspin} != 0 \n")
-            exit_program(-1)
+            msg = f"\n ERROR! W %% {StdI.ishift_nspin} != 0 \n"
+            logger.error(msg)
+            raise ValueError(msg)
         StdI.num_pivot = 4
         if StdI.W != 3:
-            print("DEBUG: W != 3")
-            exit_program(-1)
+            msg = "DEBUG: W != 3"
+            logger.error(msg)
+            raise ValueError(msg)
         StdI.W = 9
         fp.write("# W0  R0  StdI->num_pivot  StdI->ishift_nspin\n")
         fp.write(f"{StdI.W} {StdI.L} {StdI.num_pivot} {StdI.ishift_nspin}\n")

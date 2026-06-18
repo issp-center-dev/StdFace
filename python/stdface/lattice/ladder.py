@@ -14,11 +14,12 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType
 from ..core.param_check import (
-    exit_program, print_val_d, print_val_i,
+    print_val_d, print_val_i,
     not_used_j, not_used_d, not_used_i, required_val_i,
 )
 from .input_params import input_spin, input_hopp, input_coulomb_v
@@ -36,6 +37,9 @@ from .boost_output import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def ladder(StdI: StdIntList) -> None:
     """Setup a Hamiltonian for the ladder lattice.
 
@@ -48,7 +52,7 @@ def ladder(StdI: StdIntList) -> None:
     with lattice_gp(StdI) as fp:
 
         # 1. Set lattice size and shape parameters
-        print("  @ Lattice Size & Shape\n")
+        logger.info("  @ Lattice Size & Shape\n")
 
         StdI.a = print_val_d("a", StdI.a, 1.0)
         StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
@@ -82,7 +86,7 @@ def ladder(StdI: StdIntList) -> None:
             StdI.tau[isite, 2] = 0.0
 
         # 2. Set Hamiltonian parameters
-        print("\n  @ Hamiltonian \n")
+        logger.info("\n  @ Hamiltonian \n")
 
         not_used_j("J", StdI.JAll, StdI.J)
         not_used_j("J'", StdI.JpAll, StdI.Jp)
@@ -145,7 +149,7 @@ def ladder(StdI: StdIntList) -> None:
                 StdI.S2 = print_val_i("2S", StdI.S2, 1)
                 input_spin(StdI.J, StdI.JAll, "J")
 
-        print("\n  @ Numerical conditions\n")
+        logger.info("\n  @ Numerical conditions\n")
 
         # 3. Set local spin flags and number of sites
         set_local_spin_flags(StdI, StdI.L * StdI.NsiteUC)
@@ -241,18 +245,22 @@ def ladder_boost(StdI: StdIntList) -> None:
 
         # Validate parameters
         if StdI.S2 != 1:
-            print("\n ERROR! S2 must be 1 in Boost. \n")
-            exit_program(-1)
+            msg = "\n ERROR! S2 must be 1 in Boost. \n"
+            logger.error(msg)
+            raise ValueError(msg)
         StdI.ishift_nspin = 2
         if StdI.W != 2:
-            print("\n ERROR! W != 2 \n")
-            exit_program(-1)
+            msg = "\n ERROR! W != 2 \n"
+            logger.error(msg)
+            raise ValueError(msg)
         if StdI.L % 2 != 0:
-            print("\n ERROR! L %% 2 != 0 \n")
-            exit_program(-1)
+            msg = "\n ERROR! L %% 2 != 0 \n"
+            logger.error(msg)
+            raise ValueError(msg)
         if StdI.L < 4:
-            print("\n ERROR! L < 4 \n")
-            exit_program(-1)
+            msg = "\n ERROR! L < 4 \n"
+            logger.error(msg)
+            raise ValueError(msg)
 
         StdI.W = StdI.L
         StdI.L = 2

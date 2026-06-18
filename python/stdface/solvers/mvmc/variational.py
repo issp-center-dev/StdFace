@@ -23,14 +23,17 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import numpy as np
 
 from ...core.stdface_vals import StdIntList, ModelType, NaN_i
-from ...core.param_check import exit_program
 from ...lattice.site_util import (
     _cell_vector, _fold_to_cell, _fold_site, _find_cell_index,
     _validate_box_params, _det_and_cofactor, find_site,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _anti_period_dot(AntiPeriod: np.ndarray, nBox: list[int]) -> int:
@@ -175,7 +178,7 @@ def proj(StdI: StdIntList) -> None:
                 a = _parity_sign(Anti[iSym][jsite])
                 lines.append(f"{iSym:5d}  {jsite:5d}  {Sym[iSym][jsite]:5d}  {a:5d}\n")
         fp.write("".join(lines))
-    print("    qptransidx.def is written.")
+    logger.info("    qptransidx.def is written.")
 
 
 def _init_site_sub(StdI: StdIntList) -> None:
@@ -192,14 +195,17 @@ def _init_site_sub(StdI: StdIntList) -> None:
 
     # Calculate reciprocal lattice vectors
     StdI.NCellsub, StdI.rboxsub = _det_and_cofactor(StdI.boxsub)
-    print(f"         Number of Cell in the sublattice: {abs(StdI.NCellsub)}")
+    logger.info(f"         Number of Cell in the sublattice: {abs(StdI.NCellsub)}")
     if StdI.NCellsub == 0:
-        exit_program(-1)
+        msg = "Sub-lattice super-cell is degenerate (det(boxsub) = 0)."
+        logger.error(msg)
+        raise ValueError(msg)
 
     # Check commensurate
     if not _check_commensurate(StdI.rboxsub, StdI.box, StdI.NCellsub):
-        print("\n ERROR ! Sublattice is INCOMMENSURATE !\n")
-        exit_program(-1)
+        msg = "\n ERROR ! Sublattice is INCOMMENSURATE !\n"
+        logger.error(msg)
+        raise ValueError(msg)
 
 
 def _assign_orb_sector(
@@ -499,4 +505,4 @@ def print_jastrow(StdI: StdIntList) -> None:
             else:
                 lines.append(f"{iJastrow:5d}  {0:5d}\n")
         fp.write("".join(lines))
-    print("    jastrowidx.def is written.")
+    logger.info("    jastrowidx.def is written.")

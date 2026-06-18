@@ -53,25 +53,25 @@ class TestParseInputFile:
         assert StdI.model == "kondo"
 
     def test_exits_on_missing_file(self, tmp_path):
-        """Test that missing file causes SystemExit."""
+        """Test that a missing file raises FileNotFoundError."""
         StdI = StdIntList()
-        with pytest.raises(SystemExit):
+        with pytest.raises(FileNotFoundError):
             _parse_input_file(str(tmp_path / "nonexistent.in"), StdI, SolverType.HPhi)
 
     def test_exits_on_missing_equals(self, tmp_path):
-        """Test that a line without '=' causes SystemExit."""
+        """Test that a line without '=' raises ValueError."""
         infile = tmp_path / "stan.in"
         infile.write_text("model hubbard\n")
         StdI = StdIntList()
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _parse_input_file(str(infile), StdI, SolverType.HPhi)
 
     def test_exits_on_unknown_keyword(self, tmp_path):
-        """Test that an unrecognised keyword causes SystemExit."""
+        """Test that an unrecognised keyword raises ValueError."""
         infile = tmp_path / "stan.in"
         infile.write_text("totally_fake_keyword = 42\n")
         StdI = StdIntList()
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _parse_input_file(str(infile), StdI, SolverType.HPhi)
 
     def test_case_insensitive_keywords(self, tmp_path):
@@ -122,15 +122,15 @@ class TestResolveModelAndMethod:
         StdI = StdIntList()
         StdI.model = "spingcboost"
         StdI.lattice = "chain"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _resolve_model_and_method(StdI, SolverType.mVMC)
 
     def test_unknown_model_exits(self):
-        """Test unknown model name causes SystemExit."""
+        """Test unknown model name causes ValueError."""
         StdI = StdIntList()
         StdI.model = "nosuchmodel"
         StdI.lattice = "chain"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _resolve_model_and_method(StdI, SolverType.HPhi)
 
     def test_method_alias_direct(self):
@@ -224,7 +224,7 @@ class TestBuildLatticeAndBoost:
         StdI = StdIntList()
         StdI.model = "hubbard"
         StdI.lattice = "__not_a_registered_lattice__"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _build_lattice_and_boost(StdI, SolverType.HPhi)
 
     def test_unknown_solver_skips_post_lattice(self):

@@ -7,8 +7,6 @@ implementations, solver writers, and the main entry point.
 
 Functions
 ---------
-exit_program
-    Terminate the program with a given error code.
 print_val_d
     Print / default a real-valued parameter.
 print_val_dd
@@ -40,36 +38,14 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import itertools
+import logging
 import math
-import sys
 
 import numpy as np
 
 from .stdface_vals import NaN_i
 
-
-# ---------------------------------------------------------------------------
-#  Exit wrapper
-# ---------------------------------------------------------------------------
-
-
-def exit_program(errorcode: int) -> None:
-    """Terminate the program with the given error code.
-
-    Parameters
-    ----------
-    errorcode : int
-        Exit code passed to ``sys.exit``.
-
-    Notes
-    -----
-    In the original C code this was ``StdFace_exit`` which wrapped
-    ``MPI_Abort`` / ``MPI_Finalize``.  The Python version simply calls
-    ``sys.exit``.
-    """
-    sys.stdout.flush()
-    sys.stderr.flush()
-    sys.exit(errorcode)
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -99,9 +75,9 @@ def print_val_d(valname: str, val: float, val0: float) -> float:
     """
     if math.isnan(val):
         val = val0
-        print(f"  {valname:>15s} = {val:<10.5f}  ######  DEFAULT VALUE IS USED  ######")
+        logger.info("  %15s = %-10.5f  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
-        print(f"  {valname:>15s} = {val:<10.5f}")
+        logger.info("  %15s = %-10.5f", valname, val)
     return val
 
 
@@ -151,10 +127,12 @@ def print_val_c(valname: str, val: complex, val0: complex) -> complex:
     """
     if math.isnan(val.real):
         val = val0
-        print(f"  {valname:>15s} = {val.real:<10.5f} {val.imag:<10.5f}"
-              f"  ######  DEFAULT VALUE IS USED  ######")
+        logger.info(
+            "  %15s = %-10.5f %-10.5f  ######  DEFAULT VALUE IS USED  ######",
+            valname, val.real, val.imag,
+        )
     else:
-        print(f"  {valname:>15s} = {val.real:<10.5f} {val.imag:<10.5f}")
+        logger.info("  %15s = %-10.5f %-10.5f", valname, val.real, val.imag)
     return val
 
 
@@ -179,24 +157,32 @@ def print_val_i(valname: str, val: int, val0: int) -> int:
     """
     if val == NaN_i:
         val = val0
-        print(f"  {valname:>15s} = {val:<10d}  ######  DEFAULT VALUE IS USED  ######")
+        logger.info("  %15s = %-10d  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
-        print(f"  {valname:>15s} = {val:<10d}")
+        logger.info("  %15s = %-10d", valname, val)
     return val
 
 
 def _fail_not_used(valname: str) -> None:
-    """Print "specified but not used" error and terminate.
+    """Log a "specified but not used" error and raise.
 
     Parameters
     ----------
     valname : str
         Name of the unused parameter.
+
+    Raises
+    ------
+    ValueError
+        Always raised after logging the error message.
     """
-    print(f"\n Check !  {valname} is SPECIFIED but will NOT be USED. ")
-    print("            Please COMMENT-OUT this line ")
-    print("            or check this input is REALLY APPROPRIATE for your purpose !\n")
-    exit_program(-1)
+    msg = (
+        f"{valname} is SPECIFIED but will NOT be USED. "
+        "Please COMMENT-OUT this line, "
+        "or check this input is REALLY APPROPRIATE for your purpose."
+    )
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 def not_used_d(valname: str, val: float | complex) -> None:
@@ -266,9 +252,14 @@ def required_val_i(valname: str, val: int) -> None:
         Name of the variable.
     val : int
         Value to check (abort if equals the sentinel 2147483647).
+
+    Raises
+    ------
+    ValueError
+        If ``val`` equals the sentinel (i.e. the parameter is unset).
     """
     if val == NaN_i:
-        print(f"ERROR ! {valname} is NOT specified !")
-        exit_program(-1)
-    else:
-        print(f"  {valname:>15s} = {val:<3d}")
+        msg = f"{valname} is NOT specified."
+        logger.error(msg)
+        raise ValueError(msg)
+    logger.info("  %s = %d", valname, val)

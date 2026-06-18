@@ -5,6 +5,7 @@ Tests for the Python translation of export_wannier90.c.
 from __future__ import annotations
 
 import io
+import logging
 import math
 import os
 import tempfile
@@ -511,12 +512,12 @@ class TestWriteWannierBody:
 class TestExportInter:
     """Tests for _export_inter."""
 
-    def test_zero_entries_skipped(self, capsys):
+    def test_zero_entries_skipped(self, caplog):
         """ntbl=0 should print skip message."""
+        caplog.set_level(logging.INFO)
         s = _make_stdI_for_interaction()
         ew._export_inter(s, 0, None, None, "test.dat", "Test")
-        captured = capsys.readouterr()
-        assert "skipped" in captured.out
+        assert "skipped" in caplog.text
 
     def test_basic_export(self, tmp_path):
         """A simple two-site interaction should produce a file."""
@@ -537,12 +538,12 @@ class TestExportInter:
 class TestExportInterReal:
     """Tests for _export_inter_real."""
 
-    def test_zero_entries_skipped(self, capsys):
+    def test_zero_entries_skipped(self, caplog):
+        caplog.set_level(logging.INFO)
         s = _make_stdI_for_interaction()
         ew._export_inter_real(s, 0, None, np.array([], dtype=float),
                               "test.dat", "Test")
-        captured = capsys.readouterr()
-        assert "skipped" in captured.out
+        assert "skipped" in caplog.text
 
     def test_real_to_complex_conversion(self, tmp_path):
         """Real values should be correctly converted to complex."""
@@ -567,11 +568,11 @@ class TestExportInterReal:
 class TestExportTransfer:
     """Tests for _export_transfer."""
 
-    def test_zero_entries_skipped(self, capsys):
+    def test_zero_entries_skipped(self, caplog):
+        caplog.set_level(logging.INFO)
         s = _make_stdI_for_interaction()
         ew._export_transfer(s, 0, None, None, "test.dat", "Test", 0)
-        captured = capsys.readouterr()
-        assert "skipped" in captured.out
+        assert "skipped" in caplog.text
 
     def test_basic_transfer(self, tmp_path):
         """A simple hopping term should produce a file."""
@@ -641,11 +642,11 @@ class TestExportTransfer:
 class TestExportCoulombIntra:
     """Tests for _export_coulomb_intra."""
 
-    def test_zero_entries_skipped(self, capsys):
+    def test_zero_entries_skipped(self, caplog):
+        caplog.set_level(logging.INFO)
         s = _make_stdI_for_interaction()
         ew._export_coulomb_intra(s, 0, None, None, "test.dat", "Test")
-        captured = capsys.readouterr()
-        assert "skipped" in captured.out
+        assert "skipped" in caplog.text
 
     def test_basic_coulomb_intra(self, tmp_path):
         """Simple on-site Coulomb should produce a file."""
@@ -659,8 +660,9 @@ class TestExportCoulombIntra:
                                  "CoulombIntra")
         assert os.path.exists(fname)
 
-    def test_uniform_check(self, tmp_path, capsys):
+    def test_uniform_check(self, tmp_path, caplog):
         """Non-uniform on-site Coulomb should produce a warning."""
+        caplog.set_level(logging.INFO)
         s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
 
         tbl_index = np.array([[0], [1]], dtype=int)
@@ -669,8 +671,7 @@ class TestExportCoulombIntra:
 
         ew._export_coulomb_intra(s, 2, tbl_index, tbl_value, fname,
                                  "CoulombIntra")
-        captured = capsys.readouterr()
-        assert "WARNING" in captured.out
+        assert "WARNING" in caplog.text
 
 
 # ===========================================================================
@@ -680,13 +681,13 @@ class TestExportCoulombIntra:
 class TestExportInteraction:
     """Integration tests for export_interaction."""
 
-    def test_all_skipped_when_empty(self, tmp_path, monkeypatch, capsys):
+    def test_all_skipped_when_empty(self, tmp_path, monkeypatch, caplog):
         """All interactions should be skipped when all counts are zero."""
+        caplog.set_level(logging.INFO)
         monkeypatch.chdir(tmp_path)
         s = _make_stdI_for_interaction()
         ew.export_interaction(s)
-        captured = capsys.readouterr()
-        assert captured.out.count("skipped") == 7  # 7 interaction types
+        assert caplog.text.count("skipped") == 7  # 7 interaction types
 
     def test_with_transfer(self, tmp_path, monkeypatch):
         """export_interaction with a single transfer term."""
@@ -887,8 +888,9 @@ class TestBuildTransferTable:
         # The exact rr depends on _unfold_site; just verify it's set
         assert len(result[0].r) == 3
 
-    def test_inconsistent_values_warns(self, capsys):
+    def test_inconsistent_values_warns(self, caplog):
         """Duplicate entries with different values print a warning."""
+        caplog.set_level(logging.INFO)
         s = self._make_stdi(ncell=4)
         # Two entries mapping to same key but different values
         intr_index = [[0, 0, 1, 0], [4, 0, 5, 0]]  # both → rr=[1,0,0]
@@ -897,8 +899,7 @@ class TestBuildTransferTable:
         intr_index = [[0, 0, 1, 0], [2, 0, 3, 0]]
         intr_value = np.array([1.0 + 0j, 2.0 + 0j])  # different values!
         result = ew._build_transfer_table(s, 2, intr_index, intr_value, 1)
-        captured = capsys.readouterr()
-        assert "WARNING" in captured.out
+        assert "WARNING" in caplog.text
 
 
 # ===================================================================
@@ -993,14 +994,14 @@ class TestBuildInterTable:
         result = ew._build_inter_table(s, 1, intr_index, intr_value)
         assert len(result[0].r) == 3
 
-    def test_inconsistent_values_warns(self, capsys):
+    def test_inconsistent_values_warns(self, caplog):
         """Duplicate entries with different values print a warning."""
+        caplog.set_level(logging.INFO)
         s = self._make_stdi(ncell=4)
         intr_index = [[0, 1], [2, 3]]
         intr_value = np.array([1.0 + 0j, 5.0 + 0j])
         ew._build_inter_table(s, 2, intr_index, intr_value)
-        captured = capsys.readouterr()
-        assert "WARNING" in captured.out
+        assert "WARNING" in caplog.text
 
 
 # ===================================================================
@@ -1074,11 +1075,11 @@ class TestBuildCoulombIntraTable:
         result = ew._build_coulomb_intra_table(s, 1, intr_index, intr_value)
         assert result[0].a == result[0].b == 2
 
-    def test_inconsistent_values_warns(self, capsys):
+    def test_inconsistent_values_warns(self, caplog):
         """Duplicate entries with different values print a warning."""
+        caplog.set_level(logging.INFO)
         s = self._make_stdi(nsiteUC=1)
         intr_index = [[0], [1]]  # both map to uc site 0
         intr_value = np.array([1.0 + 0j, 9.0 + 0j])
         ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
-        captured = capsys.readouterr()
-        assert "WARNING" in captured.out
+        assert "WARNING" in caplog.text

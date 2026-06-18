@@ -53,7 +53,7 @@ class TestHPhiPostLatticeBoostKeyError:
         StdI.lattice = "__no_such_lattice__"
         StdI.lBoost = 1
         with patch("stdface.solvers.hphi._plugin.large_value"):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ValueError):
                 pl.post_lattice(StdI)
 
 

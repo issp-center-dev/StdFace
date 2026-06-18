@@ -376,31 +376,35 @@ class TestValidateBoxParams:
         """Both L/W/Height and box entries specified → exit."""
         box = self._nan_box()
         box[0, 0] = 5  # box entry set
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _validate_box_params(4, NaN_i, NaN_i, box)  # L set too
 
     def test_conflict_with_suffix(self):
         """Conflict error uses suffix in label."""
         box = self._nan_box()
         box[1, 1] = 3
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _validate_box_params(NaN_i, 2, NaN_i, box, suffix="sub")
 
-    def test_suffix_affects_labels(self, capsys):
-        """Suffix parameter changes the printed parameter names."""
-        box = self._nan_box()
-        L, W, H = _validate_box_params(4, 3, 2, box, suffix="sub")
-        captured = capsys.readouterr().out
-        assert "Lsub" in captured
-        assert "Wsub" in captured
-        assert "Hsub" in captured
+    def test_suffix_affects_labels(self, caplog):
+        """Suffix parameter changes the logged parameter names."""
+        import logging
 
-    def test_no_suffix_height_label(self, capsys):
-        """Without suffix, height label is 'Height'."""
         box = self._nan_box()
-        L, W, H = _validate_box_params(NaN_i, NaN_i, 5, box)
-        captured = capsys.readouterr().out
-        assert "Height" in captured
+        with caplog.at_level(logging.INFO):
+            L, W, H = _validate_box_params(4, 3, 2, box, suffix="sub")
+        assert "Lsub" in caplog.text
+        assert "Wsub" in caplog.text
+        assert "Hsub" in caplog.text
+
+    def test_no_suffix_height_label(self, caplog):
+        """Without suffix, height label is 'Height'."""
+        import logging
+
+        box = self._nan_box()
+        with caplog.at_level(logging.INFO):
+            L, W, H = _validate_box_params(NaN_i, NaN_i, 5, box)
+        assert "Height" in caplog.text
 
     def test_box_modified_in_place(self):
         """Box array is modified in-place, not replaced."""
@@ -517,9 +521,9 @@ class TestComputeReciprocalBox:
         assert StdI.NCell == 2
 
     def test_zero_det_exits(self):
-        """Degenerate box (det=0) causes SystemExit."""
+        """Degenerate box (det=0) causes ValueError."""
         StdI = self._make_stdi_with_box([[1, 0, 0], [1, 0, 0], [0, 0, 1]])
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _compute_reciprocal_box(StdI)
 
 

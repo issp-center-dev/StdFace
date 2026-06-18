@@ -21,14 +21,13 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import itertools
-import sys
 from dataclasses import dataclass, field
 
 import numpy as np
 
 from ...core.stdface_vals import StdIntList, NaN_i, UNSET_STRING
-from ...core.param_check import exit_program
 from ...lattice.site_util import _cell_vector
 
 # -----------------------------------------------------------------------
@@ -50,6 +49,9 @@ _is_export_all = 1
 # -----------------------------------------------------------------------
 #  Internal data structures
 # -----------------------------------------------------------------------
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class _IntrItem:
@@ -83,15 +85,20 @@ class _IntrItem:
 # -----------------------------------------------------------------------
 
 def _fatal(msg: str) -> None:
-    """Print an error message and exit.
+    """Log an error message and raise.
 
     Parameters
     ----------
     msg : str
         Error description.
+
+    Raises
+    ------
+    ValueError
+        Always raised after logging the error message.
     """
-    print(f"ERROR: {msg}", file=sys.stderr)
-    exit_program(-1)
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 # -----------------------------------------------------------------------
@@ -128,7 +135,7 @@ def _write_geometry(StdI: StdIntList, fname: str) -> None:
             fp_out.write(f"{tau_row[0]:25.15e} "
                          f"{tau_row[1]:25.15e} "
                          f"{tau_row[2]:25.15e}\n")
-    print(f"{fname:>24s} is written.")
+    logger.info(f"{fname:>24s} is written.")
 
 
 # -----------------------------------------------------------------------
@@ -316,7 +323,7 @@ def _write_wannier90(intr_table: list[_IntrItem],
         fp_out.write("\n")
 
         _write_wannier_body(fp_out, rr, nvol, nsiteuc, nspin, matrix)
-    print(f"{fname:>24s} is written.")
+    logger.info(f"{fname:>24s} is written.")
 
 
 # -----------------------------------------------------------------------
@@ -495,10 +502,11 @@ def _build_inter_table(
         if lookup_key in seen:
             existing = intr_table[seen[lookup_key]]
             if abs(existing.v - intr_value[k]) > _EPS:
-                print(f"WARNING: not uniform. "
-                      f"expected=({existing.v.real},{existing.v.imag}), "
-                      f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                      f"for index {idx_i},{idx_j}")
+                logger.warning(
+                    "not uniform. expected=(%s,%s), found=(%s,%s) for index %s,%s",
+                    existing.v.real, existing.v.imag,
+                    intr_value[k].real, intr_value[k].imag, idx_i, idx_j,
+                )
         else:
             seen[lookup_key] = len(intr_table)
             intr_table.append(_IntrItem(
@@ -531,7 +539,7 @@ def _export_inter(StdI: StdIntList,
         Tag identifying interaction type.
     """
     if ntbl == 0:
-        print(f"{fname:>24s} is skipped.")
+        logger.info(f"{fname:>24s} is skipped.")
         return
 
     nintr, intr_index, intr_value = _accumulate_list(
@@ -543,7 +551,7 @@ def _export_inter(StdI: StdIntList,
     if intr_table:
         _write_wannier90(intr_table, StdI.NsiteUC, 1, fname, tagname)
     else:
-        print(f"{fname:>24s} is skipped.")
+        logger.info(f"{fname:>24s} is skipped.")
 
 
 # -----------------------------------------------------------------------
@@ -640,10 +648,11 @@ def _build_transfer_table(
         if lookup_key in seen:
             existing = intr_table[seen[lookup_key]]
             if abs(existing.v - intr_value[k]) > _EPS:
-                print(f"WARNING: not uniform. "
-                      f"expected=({existing.v.real},{existing.v.imag}), "
-                      f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                      f"for index {idx_i},{idx_j}")
+                logger.warning(
+                    "not uniform. expected=(%s,%s), found=(%s,%s) for index %s,%s",
+                    existing.v.real, existing.v.imag,
+                    intr_value[k].real, intr_value[k].imag, idx_i, idx_j,
+                )
         else:
             if spin_dep == 0 and not (ispin == 0 and jspin == 0):
                 continue  # skip
@@ -682,7 +691,7 @@ def _export_transfer(StdI: StdIntList,
         Whether transfer is spin-dependent (1 = yes, 0 = no).
     """
     if ntbl == 0:
-        print(f"{fname:>24s} is skipped.")
+        logger.info(f"{fname:>24s} is skipped.")
         return
 
     # Accumulate entries of the same index pair
@@ -697,7 +706,7 @@ def _export_transfer(StdI: StdIntList,
         _write_wannier90(intr_table, StdI.NsiteUC,
                          2 if spin_dep == 1 else 1, fname, tagname)
     else:
-        print(f"{fname:>24s} is skipped.")
+        logger.info(f"{fname:>24s} is skipped.")
 
 
 # -----------------------------------------------------------------------
@@ -743,10 +752,11 @@ def _build_coulomb_intra_table(
         if isite in seen:
             existing = intr_table[seen[isite]]
             if abs(existing.v - intr_value[k]) > _EPS:
-                print(f"WARNING: not uniform. "
-                      f"expected=({existing.v.real},{existing.v.imag}), "
-                      f"found=({intr_value[k].real},{intr_value[k].imag}) "
-                      f"for index {idx_i}")
+                logger.warning(
+                    "not uniform. expected=(%s,%s), found=(%s,%s) for index %s",
+                    existing.v.real, existing.v.imag,
+                    intr_value[k].real, intr_value[k].imag, idx_i,
+                )
         else:
             seen[isite] = len(intr_table)
             intr_table.append(_IntrItem(
@@ -779,7 +789,7 @@ def _export_coulomb_intra(StdI: StdIntList,
         Tag identifying the term type.
     """
     if ntbl == 0:
-        print(f"{fname:>24s} is skipped.")
+        logger.info(f"{fname:>24s} is skipped.")
         return
 
     tbl_value_c = tbl_value.astype(complex)
@@ -794,7 +804,7 @@ def _export_coulomb_intra(StdI: StdIntList,
     if intr_table:
         _write_wannier90(intr_table, StdI.NsiteUC, 1, fname, tagname)
     else:
-        print(f"{fname:>24s} is skipped.")
+        logger.info(f"{fname:>24s} is skipped.")
 
 
 # -----------------------------------------------------------------------

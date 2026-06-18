@@ -29,13 +29,15 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import itertools
 import math
 
 import numpy as np
 
-from ..core.param_check import exit_program, SPIN_SUFFIXES
+from ..core.param_check import SPIN_SUFFIXES
 
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -99,8 +101,9 @@ def _check_scalar_vs_matrix(scalar: float, mat: np.ndarray,
     idx = _first_set_index(mat)
     if idx is not None:
         i1, i2 = idx
-        print(f"\n ERROR! {scalar_name} and {mat_name}{SPIN_SUFFIXES[i1][i2]} conflict !\n")
-        exit_program(-1)
+        msg = f"\n ERROR! {scalar_name} and {mat_name}{SPIN_SUFFIXES[i1][i2]} conflict !\n"
+        logger.error(msg)
+        raise ValueError(msg)
 
 
 def _check_matrix_vs_matrix(mat_a: np.ndarray, mat_b: np.ndarray,
@@ -123,9 +126,10 @@ def _check_matrix_vs_matrix(mat_a: np.ndarray, mat_b: np.ndarray,
     if idx_a is not None and idx_b is not None:
         i1, i2 = idx_a
         i3, i4 = idx_b
-        print(f"\n ERROR! {name_a}{SPIN_SUFFIXES[i1][i2]} "
-              f"and {name_b}{SPIN_SUFFIXES[i3][i4]} conflict !\n")
-        exit_program(-1)
+        msg = (f"{name_a}{SPIN_SUFFIXES[i1][i2]} "
+               f"and {name_b}{SPIN_SUFFIXES[i3][i4]} conflict.")
+        logger.error(msg)
+        raise ValueError(msg)
 
 
 def _resolve_spin_matrix(
@@ -176,7 +180,7 @@ def _resolve_spin_matrix(
 
         if resolved:
             label = J0name + SPIN_SUFFIXES[i1][i2]
-            print(f"  {label:>14s} = {J0[i1, i2]:<10.5f}")
+            logger.info(f"  {label:>14s} = {J0[i1, i2]:<10.5f}")
 
 
 def input_spin_nn(
@@ -206,8 +210,9 @@ def input_spin_nn(
     """
     # Scalar-scalar conflict: JAll vs J0All
     if not math.isnan(JAll) and not math.isnan(J0All):
-        print(f"\n ERROR! {J0name} conflict !\n")
-        exit_program(-1)
+        msg = f"\n ERROR! {J0name} conflict !\n"
+        logger.error(msg)
+        raise ValueError(msg)
 
     # Scalar-matrix conflicts
     _check_scalar_vs_matrix(JAll, J, "J", "J")
@@ -259,13 +264,14 @@ def input_coulomb_v(V: float, V0: float, V0name: str) -> float:
         The resolved value of *V0*.
     """
     if not math.isnan(V) and not math.isnan(V0):
-        print(f"\n ERROR! {V0name} conflicts !\n")
-        exit_program(-1)
+        msg = f"\n ERROR! {V0name} conflicts !\n"
+        logger.error(msg)
+        raise ValueError(msg)
     elif not math.isnan(V0):
-        print(f"  {V0name:>15s} = {V0:<10.5f}")
+        logger.info(f"  {V0name:>15s} = {V0:<10.5f}")
     elif not math.isnan(V):
         V0 = V
-        print(f"  {V0name:>15s} = {V0:<10.5f}")
+        logger.info(f"  {V0name:>15s} = {V0:<10.5f}")
     else:
         V0 = 0.0
     return V0
@@ -289,13 +295,14 @@ def input_hopp(t: complex, t0: complex, t0name: str) -> complex:
         The resolved value of *t0*.
     """
     if not math.isnan(t.real) and not math.isnan(t0.real):
-        print(f"\n ERROR! {t0name} conflicts !\n")
-        exit_program(-1)
+        msg = f"\n ERROR! {t0name} conflicts !\n"
+        logger.error(msg)
+        raise ValueError(msg)
     elif not math.isnan(t0.real):
-        print(f"  {t0name:>15s} = {t0.real:<10.5f} {t0.imag:<10.5f}")
+        logger.info(f"  {t0name:>15s} = {t0.real:<10.5f} {t0.imag:<10.5f}")
     elif not math.isnan(t.real):
         t0 = t
-        print(f"  {t0name:>15s} = {t0.real:<10.5f} {t0.imag:<10.5f}")
+        logger.info(f"  {t0name:>15s} = {t0.real:<10.5f} {t0.imag:<10.5f}")
     else:
         t0 = 0.0 + 0j
     return t0

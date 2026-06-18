@@ -291,7 +291,7 @@ class TestInitSiteSub:
         StdI = _make_chain_stdi(L=4)
         StdI.Lsub = 2
         StdI.boxsub[0, 0] = 2  # conflict: both specified
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _init_site_sub(StdI)
 
 

@@ -85,27 +85,27 @@ class TestInputSpinNN:
         assert J0[0, 0] == 5.0
 
     def test_jall_j0all_conflict_raises(self):
-        """Test that both JAll and J0All being set raises SystemExit."""
+        """Test that both JAll and J0All being set raises ValueError."""
         J = _nan_3x3()
         J0 = _nan_3x3()
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             input_spin_nn(J, 1.0, J0, 2.0, "J0")
 
     def test_jall_j_element_conflict_raises(self):
-        """Test that JAll set with J element set raises SystemExit."""
+        """Test that JAll set with J element set raises ValueError."""
         J = _nan_3x3()
         J[0, 0] = 1.0
         J0 = _nan_3x3()
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             input_spin_nn(J, 2.0, J0, NaN_d, "J0")
 
     def test_j0_element_j_element_conflict_raises(self):
-        """Test that J0 element and J element both set raises SystemExit."""
+        """Test that J0 element and J element both set raises ValueError."""
         J = _nan_3x3()
         J[0, 0] = 1.0
         J0 = _nan_3x3()
         J0[1, 1] = 2.0
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             input_spin_nn(J, NaN_d, J0, NaN_d, "J0")
 
 
@@ -139,10 +139,10 @@ class TestInputSpin:
         assert Jp[0, 1] == 0.3
 
     def test_jpall_jp_element_conflict_raises(self):
-        """Test that JpAll and Jp element conflict raises SystemExit."""
+        """Test that JpAll and Jp element conflict raises ValueError."""
         Jp = _nan_3x3()
         Jp[0, 0] = 1.0
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             input_spin(Jp, 2.0, "J'")
 
 
@@ -170,8 +170,8 @@ class TestInputCoulombV:
         assert result == 2.0
 
     def test_conflict_raises(self):
-        """Test that both V and V0 set raises SystemExit."""
-        with pytest.raises(SystemExit):
+        """Test that both V and V0 set raises ValueError."""
+        with pytest.raises(ValueError):
             input_coulomb_v(1.0, 2.0, "V0")
 
 
@@ -199,8 +199,8 @@ class TestInputHopp:
         assert result == complex(2.0, 0.0)
 
     def test_conflict_raises(self):
-        """Test that both t and t0 set raises SystemExit."""
-        with pytest.raises(SystemExit):
+        """Test that both t and t0 set raises ValueError."""
+        with pytest.raises(ValueError):
             input_hopp(complex(1.0, 0.0), complex(2.0, 0.0), "t0")
 
 
@@ -314,7 +314,7 @@ class TestCheckScalarVsMatrix:
         """Test that set scalar with set matrix element aborts."""
         m = _nan_3x3()
         m[0, 0] = 1.0
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _check_scalar_vs_matrix(2.0, m, "J", "J")
 
 
@@ -340,7 +340,7 @@ class TestCheckMatrixVsMatrix:
         """Test that two matrices with set elements aborts."""
         a = _nan_3x3(); a[0, 0] = 1.0
         b = _nan_3x3(); b[1, 1] = 2.0
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _check_matrix_vs_matrix(a, b, "J0", "J")
 
 
