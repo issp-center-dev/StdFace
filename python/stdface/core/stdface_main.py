@@ -566,9 +566,10 @@ def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> None:
     from ..plugin import get_plugin
     try:
         plugin = get_plugin(solver)
-        plugin.post_lattice(StdI)
     except KeyError:
-        pass
+        return
+    plugin.post_lattice(StdI)
+    plugin.validate(StdI)
 
 
 # ===================================================================

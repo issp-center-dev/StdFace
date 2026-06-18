@@ -142,6 +142,19 @@ class SolverPlugin(ABC):
             The parameter structure (modified in place).
         """
 
+    def validate(self, StdI: StdIntList) -> None:
+        """Solver-specific validation after lattice construction (default: no-op).
+
+        Called between ``post_lattice`` and ``write``.  Override to reject
+        unsupported parameter combinations; raise :class:`ValueError` on
+        invalid input.
+
+        Parameters
+        ----------
+        StdI : StdIntList
+            The fully-constructed parameter structure (read-only here).
+        """
+
 
 class ExpertModeSolverPlugin(SolverPlugin):
     """Base class for solvers that emit ``modpara.def`` / ``namelist.def``.

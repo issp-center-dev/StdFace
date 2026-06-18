@@ -11,7 +11,25 @@ from stdface.core.stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
     NaN_i, NaN_d, NaN_c, UNSET_STRING,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
+    is_unset_or_trivial_d,
 )
+
+
+class TestIsUnsetOrTrivialD:
+    """Tests for is_unset_or_trivial_d (helper for SolverPlugin.validate)."""
+
+    def test_nan_is_unset(self):
+        assert is_unset_or_trivial_d(NaN_d) is True
+
+    def test_zero_is_trivial(self):
+        assert is_unset_or_trivial_d(0.0) is True
+
+    def test_nonzero_value(self):
+        assert is_unset_or_trivial_d(0.5) is False
+
+    def test_custom_trivial(self):
+        assert is_unset_or_trivial_d(1.0, trivial=1.0) is True
+        assert is_unset_or_trivial_d(2.0, trivial=1.0) is False
 
 
 class TestStdIntListDefaults:
