@@ -374,8 +374,8 @@ class TestHPhiPlugin:
         plugin.post_lattice(s)
         assert (tmp_path / "boost.def").exists()
 
-    def test_write_solver_specific_time_evolution_pump(self, tmp_path, monkeypatch):
-        """``write_solver_specific`` writes ``teone.def`` for time evolution + pump."""
+    def test_time_evolution_pump_writes_teone(self, tmp_path, monkeypatch):
+        """``print_pump`` writes ``teone.def`` for time evolution + pump."""
         monkeypatch.chdir(tmp_path)
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.method = "timeevolution"
@@ -391,8 +391,8 @@ class TestHPhiPlugin:
             [complex(1.0, 0.0)],
             [complex(0.5, 0.0)],
         ]
-        plugin = get_plugin("HPhi")
-        plugin.write_solver_specific(StdI)
+        from stdface.solvers.hphi.writer import print_pump
+        print_pump(StdI)
         assert os.path.exists("teone.def")
 
 
@@ -400,7 +400,7 @@ class TestMVMCPlugin:
     """Tests for :class:`MVMCPlugin` full :meth:`~MVMCPlugin.write` path."""
 
     def test_write_creates_variational_files(self, tmp_path, monkeypatch):
-        """mVMC ``write`` runs ``write_solver_specific`` (orbital / Jastrow / Gutzwiller)."""
+        """mVMC ``write`` produces variational files (orbital / Jastrow / Gutzwiller)."""
         monkeypatch.chdir(tmp_path)
         StdI = _make_stdi_for_mvmc_write(nsite=4, lgc_orb_para=False)
         plugin = get_plugin("mVMC")
