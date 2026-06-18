@@ -583,7 +583,7 @@ def _dispatch_bond_interaction(
 
 def add_neighbor_interaction(
     StdI: StdIntList,
-    fp: TextIO | None,
+    buf: "GnuplotBuffer | None",
     cell_w: int, cell_l: int,
     delta_w: int, delta_l: int,
     uc_i: int, uc_j: int,
@@ -602,8 +602,8 @@ def add_neighbor_interaction(
     ----------
     StdI : StdIntList
         Model parameter structure (modified in-place).
-    fp : TextIO or None
-        Gnuplot file handle (may be ``None``).
+    buf : GnuplotBuffer or None
+        Gnuplot bond buffer (may be ``None`` to suppress gnuplot output).
     cell_w, cell_l : int
         Cell position of the initial site.
     delta_w, delta_l : int
@@ -633,7 +633,7 @@ def add_neighbor_interaction(
     from .site_util import set_label  # local import to avoid circular dependency
 
     isite, jsite, Cphase, dR = set_label(
-        StdI, fp, cell_w, cell_l, delta_w, delta_l, uc_i, uc_j, connect)
+        StdI, buf, cell_w, cell_l, delta_w, delta_l, uc_i, uc_j, connect)
     _dispatch_bond_interaction(StdI, isite, jsite, Cphase, dR, J, t, V)
     return isite, jsite, Cphase, dR
 

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..core.stdface_vals import StdIntList
+    from .site_util import GnuplotData
 
 
 class LatticePlugin(ABC):
@@ -50,13 +51,19 @@ class LatticePlugin(ABC):
         """Number of spatial dimensions (1, 2, or 3)."""
 
     @abstractmethod
-    def setup(self, StdI: StdIntList) -> None:
+    def setup(self, StdI: StdIntList) -> "GnuplotData | None":
         """Build the lattice geometry and Hamiltonian terms.
 
         Parameters
         ----------
         StdI : StdIntList
             The parameter structure (modified in place).
+
+        Returns
+        -------
+        GnuplotData or None
+            The ``lattice.gp`` data for 2-D lattices (``None`` for 3-D
+            lattices or when gnuplot output is suppressed).
         """
 
     def boost(self, StdI: StdIntList) -> None:
