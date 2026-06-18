@@ -5,7 +5,7 @@ post-lattice hooks (LargeValue, Boost), and Expert-mode file writing.
 """
 from __future__ import annotations
 
-from ...plugin import SolverPlugin, register
+from ...plugin import ExpertModeSolverPlugin, register
 from ...core.stdface_vals import StdIntList, SolverType, MethodType, NaN_i, NaN_d
 from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_sl,
@@ -14,7 +14,7 @@ from ...core.keyword_parser import (
 from .writer import large_value, print_calc_mod, print_excitation, print_pump
 
 
-class HPhiPlugin(SolverPlugin):
+class HPhiPlugin(ExpertModeSolverPlugin):
     """Plugin for the HPhi exact-diagonalisation / Lanczos solver."""
 
     @property
@@ -24,6 +24,18 @@ class HPhiPlugin(SolverPlugin):
     @property
     def keyword_table(self) -> dict[str, tuple]:
         return _HPHI_KEYWORDS
+
+    def set_defaults(self, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _check_mod_para_hphi
+        _check_mod_para_hphi(StdI)
+
+    def write_modpara_body(self, fp, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _write_modpara_hphi
+        _write_modpara_hphi(fp, StdI)
+
+    def write_namelist_body(self, fp, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _write_namelist_hphi
+        _write_namelist_hphi(fp, StdI)
 
     @property
     def reset_scalars(self) -> list[tuple[str, object]]:

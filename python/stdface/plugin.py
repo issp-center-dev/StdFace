@@ -197,6 +197,46 @@ class SolverPlugin(ABC):
             The parameter structure (modified in place).
         """
 
+    def set_defaults(self, StdI: StdIntList) -> None:
+        """Apply solver-specific default model parameters (default: no-op).
+
+        Called from :func:`check_mod_para`.  Lives on the base class (not
+        :class:`ExpertModeSolverPlugin`) because non-Expert solvers such as
+        H-wave (and UHFR after B4) also run ``check_mod_para``.
+
+        Parameters
+        ----------
+        StdI : StdIntList
+            The parameter structure (modified in place).
+        """
+
+
+class ExpertModeSolverPlugin(SolverPlugin):
+    """Base class for solvers that emit ``modpara.def`` / ``namelist.def``.
+
+    HPhi, mVMC and UHF inherit from this class.  The solver-specific body
+    of ``modpara.def`` and the extra entries of ``namelist.def`` are
+    provided by :meth:`write_modpara_body` and :meth:`write_namelist_body`;
+    :meth:`has_two_body_green` controls whether ``greentwo.def`` is listed.
+
+    These methods replace the former ``_MODPARA_BODY_DISPATCH`` /
+    ``_NAMELIST_BODY_DISPATCH`` dispatch tables.
+    """
+
+    @abstractmethod
+    def write_modpara_body(self, fp, StdI: StdIntList) -> None:
+        """Write the solver-specific body of ``modpara.def``."""
+
+    def write_namelist_body(self, fp, StdI: StdIntList) -> None:
+        """Write solver-specific extra entries in ``namelist.def``.
+
+        Default: no extra entries (used by UHF).
+        """
+
+    def has_two_body_green(self, StdI: StdIntList) -> bool:
+        """Whether ``greentwo.def`` is listed in ``namelist.def`` (default True)."""
+        return True
+
 
 # ---------------------------------------------------------------------------
 #  Plugin registry

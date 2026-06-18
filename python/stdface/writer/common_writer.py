@@ -246,15 +246,6 @@ def _write_namelist_mvmc(fp, StdI: StdIntList) -> None:
     fp.write("        TransSym  qptransidx.def\n")
 
 
-_NAMELIST_BODY_DISPATCH: dict[SolverType, Callable] = {
-    SolverType.HPhi: _write_namelist_hphi,
-    SolverType.mVMC: _write_namelist_mvmc,
-}
-"""Maps solver type to the function that writes solver-specific namelist entries.
-
-Solvers not in this dict (UHF, HWAVE) have no solver-specific entries.
-"""
-
 # Interaction file flags and their namelist lines
 _INTERACTION_FLAGS: list[tuple[str, str]] = [
     ("LCintra",   "    CoulombIntra  coulombintra.def\n"),
@@ -280,8 +271,8 @@ def print_namelist(StdI: StdIntList) -> None:
 
     The common prefix (ModPara, LocSpin, Trans, conditional interaction
     files, Green-function files) is written for all solvers.  Solver-specific
-    entries are delegated to body-writer functions via
-    ``_NAMELIST_BODY_DISPATCH``.
+    entries are delegated to
+    :meth:`ExpertModeSolverPlugin.write_namelist_body`.
 
     Parameters
     ----------
@@ -297,14 +288,16 @@ def print_namelist(StdI: StdIntList) -> None:
             if getattr(StdI, flag_attr) == 1:
                 fp.write(line)
 
+        from ..plugin import get_plugin, ExpertModeSolverPlugin
+        plugin = get_plugin(StdI.solver)
+        assert isinstance(plugin, ExpertModeSolverPlugin)
+
         if StdI.ioutputmode != 0:
             fp.write("        OneBodyG  greenone.def\n")
-            if StdI.solver in (SolverType.HPhi, SolverType.mVMC):
+            if plugin.has_two_body_green(StdI):
                 fp.write("        TwoBodyG  greentwo.def\n")
 
-        body_writer = _NAMELIST_BODY_DISPATCH.get(StdI.solver)
-        if body_writer is not None:
-            body_writer(fp, StdI)
+        plugin.write_namelist_body(fp, StdI)
 
     logger.info("    namelist.def is written.")
 
@@ -438,24 +431,12 @@ _MODPARA_BANNER: dict[str, str] = {
 """Maps UHF/HWAVE solver type to the ``modpara.def`` banner line."""
 
 
-_MODPARA_BODY_DISPATCH: dict[str, Callable] = {
-    SolverType.HPhi:  _write_modpara_hphi,
-    SolverType.mVMC:  _write_modpara_mvmc,
-    SolverType.UHF:   _write_modpara_uhf_hwave,
-    SolverType.HWAVE: _write_modpara_uhf_hwave,
-}
-"""Maps ``SolverType`` to the function that writes the solver-specific body
-of ``modpara.def``.  UHF and H-wave share the same writer
-(:func:`_write_modpara_uhf_hwave`).
-"""
-
-
 def print_mod_para(StdI: StdIntList) -> None:
     """Write ``modpara.def`` containing model / calculation parameters.
 
     This is the Python translation of the C function ``PrintModPara()``.
-    The file layout depends on the active solver (``StdI.solver``).
-    Solver-specific content is dispatched via :data:`_MODPARA_BODY_DISPATCH`.
+    The common header is written here; the solver-specific body is provided
+    by :meth:`ExpertModeSolverPlugin.write_modpara_body`.
 
     Parameters
     ----------
@@ -463,14 +444,15 @@ def print_mod_para(StdI: StdIntList) -> None:
         The global parameter structure.  A large number of solver-specific
         fields are read; see the individual body-writer functions for details.
     """
+    from ..plugin import get_plugin, ExpertModeSolverPlugin
+    plugin = get_plugin(StdI.solver)
+    assert isinstance(plugin, ExpertModeSolverPlugin)
+
     with open("modpara.def", "w") as fp:
         fp.write("--------------------\n")
         fp.write("Model_Parameters   0\n")
         fp.write("--------------------\n")
-
-        writer = _MODPARA_BODY_DISPATCH.get(StdI.solver)
-        if writer is not None:
-            writer(fp, StdI)
+        plugin.write_modpara_body(fp, StdI)
 
     logger.info("     modpara.def is written.")
 
@@ -1001,19 +983,6 @@ def _check_mod_para_uhf(StdI: StdIntList) -> None:
     StdI.NMPTrans = print_val_i("NMPTrans", StdI.NMPTrans, 0)
 
 
-_SOLVER_DEFAULTS_DISPATCH: dict[str, Callable] = {
-    SolverType.HPhi: _check_mod_para_hphi,
-    SolverType.mVMC: _check_mod_para_mvmc,
-    SolverType.UHF:  _check_mod_para_uhf,
-    SolverType.HWAVE: _check_mod_para_uhf,
-}
-"""Maps ``SolverType`` to the corresponding solver-specific defaults function.
-
-UHF and H-wave share the same defaults handler
-(:func:`_check_mod_para_uhf`).
-"""
-
-
 # -------------------------------------------------------------------
 #  Conserved-quantity validation rules
 # -------------------------------------------------------------------
@@ -1120,10 +1089,9 @@ def check_mod_para(StdI: StdIntList) -> None:
     """Validate and set default values for solver-specific model parameters.
 
     This is the Python translation of the C function ``CheckModPara()``.
-    Depending on ``StdI.solver``, different parameter groups are
-    validated via :data:`_SOLVER_DEFAULTS_DISPATCH`.  Then the conserved
-    quantities (``ncond``, ``2Sz``) are checked via
-    :func:`_check_conserved_quantities`.
+    Solver-specific defaults are applied via the plugin's
+    :meth:`SolverPlugin.set_defaults`.  Then the conserved quantities
+    (``ncond``, ``2Sz``) are checked via :func:`_check_conserved_quantities`.
 
     Parameters
     ----------
@@ -1134,11 +1102,10 @@ def check_mod_para(StdI: StdIntList) -> None:
         and :func:`required_val_i`.
     """
     # ------------------------------------------------------------------
-    #  Solver-specific defaults (dispatched)
+    #  Solver-specific defaults (via plugin)
     # ------------------------------------------------------------------
-    handler = _SOLVER_DEFAULTS_DISPATCH.get(StdI.solver)
-    if handler is not None:
-        handler(StdI)
+    from ..plugin import get_plugin
+    get_plugin(StdI.solver).set_defaults(StdI)
 
     # ------------------------------------------------------------------
     #  Conserved quantities: ncond and 2Sz
