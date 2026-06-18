@@ -1266,12 +1266,11 @@ def wannier90(StdI: StdIntList) -> None:
     tUJindx: list = [None, None, None]
 
     # (1) Compute the shape of the super-cell and sites in the super-cell
-    with open("lattice.xsf", "w") as fp_xsf:
-        StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)
-        StdI.phase[1] = print_val_d("phase1", StdI.phase[1], 0.0)
-        StdI.phase[2] = print_val_d("phase2", StdI.phase[2], 0.0)
-        StdI.NsiteUC = 1
-        init_site(StdI, fp_xsf, 3)
+    StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)
+    StdI.phase[1] = print_val_d("phase1", StdI.phase[1], 0.0)
+    StdI.phase[2] = print_val_d("phase2", StdI.phase[2], 0.0)
+    StdI.NsiteUC = 1
+    init_site(StdI, 3)
     logger.info("\n  @ Wannier90 Geometry \n")
     _geometry_w90(StdI)
 

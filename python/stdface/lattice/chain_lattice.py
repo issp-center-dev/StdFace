@@ -32,7 +32,7 @@ from .interaction_builder import (
 )
 from .site_util import (
     init_site, set_label, set_local_spin_flags,
-    lattice_gp,
+    new_gnuplot_buffer, GnuplotData, print_geometry,
 )
 from .boost_output import (
     write_boost_mag_field, write_boost_j_full,
@@ -43,7 +43,7 @@ from .boost_output import (
 logger = logging.getLogger(__name__)
 
 
-def chain(StdI: StdIntList) -> None:
+def chain(StdI: StdIntList) -> "GnuplotData | None":
     """Set up a Hamiltonian for the Hubbard model on a chain lattice.
 
     Parameters
@@ -73,128 +73,130 @@ def chain(StdI: StdIntList) -> None:
     localized spins.
     """
     # (1) Compute the shape of the super-cell and sites in the super-cell
-    with lattice_gp(StdI) as fp:
+    buf = new_gnuplot_buffer(StdI)
 
-        StdI.NsiteUC = 1
+    StdI.NsiteUC = 1
 
-        logger.info("  @ Lattice Size & Shape\n")
+    logger.info("  @ Lattice Size & Shape\n")
 
-        StdI.a = print_val_d("a", StdI.a, 1.0)
-        StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
-        StdI.length[1] = print_val_d("Llength", StdI.length[1], StdI.a)
-        StdI.direct[0, 0] = print_val_d("Wx", StdI.direct[0, 0], StdI.length[0])
-        StdI.direct[0, 1] = print_val_d("Wy", StdI.direct[0, 1], 0.0)
-        StdI.direct[1, 0] = print_val_d("Lx", StdI.direct[1, 0], 0.0)
-        StdI.direct[1, 1] = print_val_d("Ly", StdI.direct[1, 1], StdI.length[1])
+    StdI.a = print_val_d("a", StdI.a, 1.0)
+    StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
+    StdI.length[1] = print_val_d("Llength", StdI.length[1], StdI.a)
+    StdI.direct[0, 0] = print_val_d("Wx", StdI.direct[0, 0], StdI.length[0])
+    StdI.direct[0, 1] = print_val_d("Wy", StdI.direct[0, 1], 0.0)
+    StdI.direct[1, 0] = print_val_d("Lx", StdI.direct[1, 0], 0.0)
+    StdI.direct[1, 1] = print_val_d("Ly", StdI.direct[1, 1], StdI.length[1])
 
-        StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)
-        not_used_d("phase1", StdI.phase[1])
-        StdI.phase[1] = StdI.phase[0]
-        StdI.phase[0] = 0.0
+    StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)
+    not_used_d("phase1", StdI.phase[1])
+    StdI.phase[1] = StdI.phase[0]
+    StdI.phase[0] = 0.0
 
-        required_val_i("L", StdI.L)
-        not_used_i("W", StdI.W)
-        StdI.W = 1
-        init_site(StdI, fp, 2)
-        StdI.tau[0, 0] = 0.0
-        StdI.tau[0, 1] = 0.0
-        StdI.tau[0, 2] = 0.0
+    required_val_i("L", StdI.L)
+    not_used_i("W", StdI.W)
+    StdI.W = 1
+    init_site(StdI, 2)
+    StdI.tau[0, 0] = 0.0
+    StdI.tau[0, 1] = 0.0
+    StdI.tau[0, 2] = 0.0
 
-        # (2) Check & store parameters of Hamiltonian
-        logger.info("\n  @ Hamiltonian \n")
-        not_used_j("J1", StdI.J1All, StdI.J1)
-        not_used_j("J2", StdI.J2All, StdI.J2)
-        not_used_j("J1'", StdI.J1pAll, StdI.J1p)
-        not_used_j("J2'", StdI.J2pAll, StdI.J2p)
-        not_used_d("t1", StdI.t1)
-        not_used_d("t2", StdI.t2)
-        not_used_d("t1'", StdI.t1p)
-        not_used_d("t2'", StdI.t2p)
-        not_used_d("V1", StdI.V1)
-        not_used_d("V2", StdI.V2)
-        not_used_d("V1'", StdI.V1p)
-        not_used_d("V2'", StdI.V2p)
-        not_used_d("K", StdI.K)
-        StdI.h = print_val_d("h", StdI.h, 0.0)
-        StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
-        StdI.Gamma_y = print_val_d("Gamma_y", StdI.Gamma_y, 0.0)
+    # (2) Check & store parameters of Hamiltonian
+    logger.info("\n  @ Hamiltonian \n")
+    not_used_j("J1", StdI.J1All, StdI.J1)
+    not_used_j("J2", StdI.J2All, StdI.J2)
+    not_used_j("J1'", StdI.J1pAll, StdI.J1p)
+    not_used_j("J2'", StdI.J2pAll, StdI.J2p)
+    not_used_d("t1", StdI.t1)
+    not_used_d("t2", StdI.t2)
+    not_used_d("t1'", StdI.t1p)
+    not_used_d("t2'", StdI.t2p)
+    not_used_d("V1", StdI.V1)
+    not_used_d("V2", StdI.V2)
+    not_used_d("V1'", StdI.V1p)
+    not_used_d("V2'", StdI.V2p)
+    not_used_d("K", StdI.K)
+    StdI.h = print_val_d("h", StdI.h, 0.0)
+    StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
+    StdI.Gamma_y = print_val_d("Gamma_y", StdI.Gamma_y, 0.0)
 
-        if StdI.model == ModelType.SPIN:
+    if StdI.model == ModelType.SPIN:
+        StdI.S2 = print_val_i("2S", StdI.S2, 1)
+        StdI.D[2, 2] = print_val_d("D", StdI.D[2, 2], 0.0)
+        input_spin_nn(StdI.J, StdI.JAll, StdI.J0, StdI.J0All, "J0")
+        input_spin_nn(StdI.Jp, StdI.JpAll, StdI.J0p, StdI.J0pAll, "J0'")
+        input_spin_nn(StdI.Jpp, StdI.JppAll, StdI.J0pp, StdI.J0ppAll, "J0''")
+
+        not_used_d("mu", StdI.mu)
+        not_used_d("U", StdI.U)
+        not_used_d("t", StdI.t)
+        not_used_d("t0", StdI.t0)
+        not_used_d("t'", StdI.tp)
+        not_used_d("V", StdI.V)
+        not_used_d("V0", StdI.V0)
+        not_used_d("V'", StdI.Vp)
+    else:
+        StdI.mu = print_val_d("mu", StdI.mu, 0.0)
+        StdI.U = print_val_d("U", StdI.U, 0.0)
+        StdI.t0 = input_hopp(StdI.t, StdI.t0, "t0")
+        StdI.t0p = input_hopp(StdI.tp, StdI.t0p, "t0'")
+        StdI.t0pp = input_hopp(StdI.tpp, StdI.t0pp, "t0''")
+        StdI.V0 = input_coulomb_v(StdI.V, StdI.V0, "V0")
+        StdI.V0p = input_coulomb_v(StdI.Vp, StdI.V0p, "V0'")
+        StdI.V0pp = input_coulomb_v(StdI.Vpp, StdI.V0pp, "V0''")
+
+        not_used_j("J0", StdI.J0All, StdI.J0)
+        not_used_j("J0'", StdI.J0pAll, StdI.J0p)
+        not_used_j("J0''", StdI.J0ppAll, StdI.J0pp)
+        not_used_d("D", StdI.D[2, 2])
+
+        if StdI.model == ModelType.HUBBARD:
+            not_used_i("2S", StdI.S2)
+            not_used_j("J", StdI.JAll, StdI.J)
+        elif StdI.model == ModelType.KONDO:
             StdI.S2 = print_val_i("2S", StdI.S2, 1)
-            StdI.D[2, 2] = print_val_d("D", StdI.D[2, 2], 0.0)
-            input_spin_nn(StdI.J, StdI.JAll, StdI.J0, StdI.J0All, "J0")
-            input_spin_nn(StdI.Jp, StdI.JpAll, StdI.J0p, StdI.J0pAll, "J0'")
-            input_spin_nn(StdI.Jpp, StdI.JppAll, StdI.J0pp, StdI.J0ppAll, "J0''")
+            input_spin(StdI.J, StdI.JAll, "J")
 
-            not_used_d("mu", StdI.mu)
-            not_used_d("U", StdI.U)
-            not_used_d("t", StdI.t)
-            not_used_d("t0", StdI.t0)
-            not_used_d("t'", StdI.tp)
-            not_used_d("V", StdI.V)
-            not_used_d("V0", StdI.V0)
-            not_used_d("V'", StdI.Vp)
-        else:
-            StdI.mu = print_val_d("mu", StdI.mu, 0.0)
-            StdI.U = print_val_d("U", StdI.U, 0.0)
-            StdI.t0 = input_hopp(StdI.t, StdI.t0, "t0")
-            StdI.t0p = input_hopp(StdI.tp, StdI.t0p, "t0'")
-            StdI.t0pp = input_hopp(StdI.tpp, StdI.t0pp, "t0''")
-            StdI.V0 = input_coulomb_v(StdI.V, StdI.V0, "V0")
-            StdI.V0p = input_coulomb_v(StdI.Vp, StdI.V0p, "V0'")
-            StdI.V0pp = input_coulomb_v(StdI.Vpp, StdI.V0pp, "V0''")
+    logger.info("\n  @ Numerical conditions\n")
 
-            not_used_j("J0", StdI.J0All, StdI.J0)
-            not_used_j("J0'", StdI.J0pAll, StdI.J0p)
-            not_used_j("J0''", StdI.J0ppAll, StdI.J0pp)
-            not_used_d("D", StdI.D[2, 2])
+    # (3) Set local spin flag and the number of sites
+    set_local_spin_flags(StdI, StdI.L)
 
-            if StdI.model == ModelType.HUBBARD:
-                not_used_i("2S", StdI.S2)
-                not_used_j("J", StdI.JAll, StdI.J)
-            elif StdI.model == ModelType.KONDO:
-                StdI.S2 = print_val_i("2S", StdI.S2, 1)
-                input_spin(StdI.J, StdI.JAll, "J")
+    # (4) Compute upper limit of Transfer & Interaction and allocate them
+    if StdI.model == ModelType.SPIN:
+        ntransMax = StdI.L * (StdI.S2 + 1 + 2 * StdI.S2)
+        nintrMax = (StdI.L * (StdI.NsiteUC + 1 + 1 + 1)
+                    * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
+    else:
+        ntransMax = StdI.L * 2 * (2 * StdI.NsiteUC + 2 + 2 + 2)
+        nintrMax = StdI.L * (StdI.NsiteUC + 4 * (1 + 1 + 1))
 
-        logger.info("\n  @ Numerical conditions\n")
+        if StdI.model == ModelType.KONDO:
+            ntransMax += StdI.L * (StdI.S2 + 1 + 2 * StdI.S2)
+            nintrMax += StdI.nsite // 2 * (3 * 1 + 1) * (3 * StdI.S2 + 1)
 
-        # (3) Set local spin flag and the number of sites
-        set_local_spin_flags(StdI, StdI.L)
+    malloc_interactions(StdI, ntransMax, nintrMax)
 
-        # (4) Compute upper limit of Transfer & Interaction and allocate them
-        if StdI.model == ModelType.SPIN:
-            ntransMax = StdI.L * (StdI.S2 + 1 + 2 * StdI.S2)
-            nintrMax = (StdI.L * (StdI.NsiteUC + 1 + 1 + 1)
-                        * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
-        else:
-            ntransMax = StdI.L * 2 * (2 * StdI.NsiteUC + 2 + 2 + 2)
-            nintrMax = StdI.L * (StdI.NsiteUC + 4 * (1 + 1 + 1))
+    # (5) Set Transfer & Interaction
+    for cell_l in range(StdI.L):
 
-            if StdI.model == ModelType.KONDO:
-                ntransMax += StdI.L * (StdI.S2 + 1 + 2 * StdI.S2)
-                nintrMax += StdI.nsite // 2 * (3 * 1 + 1) * (3 * StdI.S2 + 1)
+        isite = cell_l
+        if StdI.model == ModelType.KONDO:
+            isite += StdI.L
 
-        malloc_interactions(StdI, ntransMax, nintrMax)
+        # Local term
+        add_local_terms(StdI, isite, cell_l)
 
-        # (5) Set Transfer & Interaction
-        for cell_l in range(StdI.L):
-
-            isite = cell_l
-            if StdI.model == ModelType.KONDO:
-                isite += StdI.L
-
-            # Local term
-            add_local_terms(StdI, isite, cell_l)
-
-            # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
-            _BONDS = (
-                (0, 1, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn
-                (0, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn
-                (0, 3, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn
-            )
-            for dW, dL, si, sj, nn, J, t, V in _BONDS:
-                add_neighbor_interaction(
-                    StdI, fp, 0, cell_l, dW, dL, si, sj, nn, J, t, V)
+        # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
+        _BONDS = (
+            (0, 1, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn
+            (0, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn
+            (0, 3, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn
+        )
+        for dW, dL, si, sj, nn, J, t, V in _BONDS:
+            add_neighbor_interaction(
+                StdI, buf, 0, cell_l, dW, dL, si, sj, nn, J, t, V)
+    print_geometry(StdI)
+    return buf.build(StdI) if buf else None
 
 
 def chain_boost(StdI: StdIntList) -> None:
@@ -307,9 +309,9 @@ class ChainPlugin(LatticePlugin):
     def ndim(self) -> int:
         return 1
 
-    def setup(self, StdI: StdIntList) -> None:
+    def setup(self, StdI: StdIntList) -> "GnuplotData | None":
         """Delegate to the chain() function."""
-        chain(StdI)
+        return chain(StdI)
 
     def boost(self, StdI: StdIntList) -> None:
         """Delegate to the chain_boost() function."""

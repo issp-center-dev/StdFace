@@ -2,7 +2,7 @@
 
 Tests for ``_cell_vector``, ``_fold_to_cell``, ``_fold_site``,
 ``_validate_box_params``, ``init_site``, ``find_site``, ``set_label``,
-and ``lattice_gp``.
+and ``new_gnuplot_buffer`` / ``GnuplotBuffer``.
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from stdface.lattice.site_util import (
     _validate_box_params,
     _det_and_cofactor, _compute_reciprocal_box, _enumerate_cells,
     _LATTICE_GP_FOOTER,
-    lattice_gp, close_lattice_xsf,
+    GnuplotBuffer, new_gnuplot_buffer, close_lattice_xsf,
     init_site, find_site, set_label,
     set_local_spin_flags,
 )
@@ -274,7 +274,7 @@ class TestInitSite:
     def test_lwh_sets_box(self):
         """Test that L/W/Height sets the box matrix."""
         StdI = self._make_init_stdi(L=4, W=2)
-        init_site(StdI, None, 2)
+        init_site(StdI, 2)
         assert StdI.box[0, 0] == 2  # W
         assert StdI.box[1, 1] == 4  # L
         assert StdI.NCell == 8
@@ -282,39 +282,28 @@ class TestInitSite:
     def test_computes_ncell(self):
         """Test that NCell is computed as det(box)."""
         StdI = self._make_init_stdi(L=3, W=3)
-        init_site(StdI, None, 2)
+        init_site(StdI, 2)
         assert StdI.NCell == 9
 
     def test_allocates_cell_array(self):
         """Test that Cell array has correct shape."""
         StdI = self._make_init_stdi(L=4)
-        init_site(StdI, None, 2)
+        init_site(StdI, 2)
         assert StdI.Cell.shape == (4, 3)
 
     def test_allocates_tau(self):
         """Test that tau array has correct shape."""
         StdI = self._make_init_stdi(L=4, NsiteUC=2)
-        init_site(StdI, None, 2)
+        init_site(StdI, 2)
         assert StdI.tau.shape == (2, 3)
 
     def test_anti_periodic_phase(self):
         """Test that phase=180 sets AntiPeriod flag."""
         StdI = self._make_init_stdi(L=4)
         StdI.phase[0] = 180.0
-        init_site(StdI, None, 2)
+        init_site(StdI, 2)
         assert StdI.AntiPeriod[0] == 1
         assert StdI.AntiPeriod[1] == 0
-
-    def test_writes_gnuplot_header(self):
-        """Test that 2D init_site writes gnuplot lattice.gp header."""
-        StdI = self._make_init_stdi(L=2, W=2)
-        fp = io.StringIO()
-        init_site(StdI, fp, 2)
-        content = fp.getvalue()
-        assert "set xrange" in content
-        assert "set yrange" in content
-        assert "set arrow" in content
-
 
 # ===================================================================
 #  _validate_box_params
@@ -735,26 +724,27 @@ class TestSetLabel:
         assert isite == 0
         assert jsite == 1
 
-    def test_writes_gnuplot_labels(self):
-        """Test that gnuplot labels are written when fp is provided."""
+    def test_records_gnuplot_labels(self):
+        """Bonds are recorded in the buffer when one is provided."""
         StdI = _make_stdi_chain(4)
-        fp = io.StringIO()
-        set_label(StdI, fp, 0, 0, 1, 0, 0, 0, 1)
-        content = fp.getvalue()
+        buf = GnuplotBuffer()
+        set_label(StdI, buf, 0, 0, 1, 0, 0, 0, 1)
+        content = buf.build(StdI).content
         assert "set label" in content
-        assert "set arrow" in content
+        # bond arrow uses "nohead ls" (header boundary arrows use "nohead front ls")
+        assert "nohead ls" in content
 
     def test_no_arrow_for_connect_ge_3(self):
-        """Test that connect >= 3 suppresses arrow output."""
+        """Test that connect >= 3 suppresses the bond arrow."""
         StdI = _make_stdi_chain(4)
-        fp = io.StringIO()
-        set_label(StdI, fp, 0, 0, 1, 0, 0, 0, 3)
-        content = fp.getvalue()
+        buf = GnuplotBuffer()
+        set_label(StdI, buf, 0, 0, 1, 0, 0, 0, 3)
+        content = buf.build(StdI).content
         assert "set label" in content
-        assert "set arrow" not in content
+        assert "nohead ls" not in content  # no bond arrow (header arrows use "front")
 
-    def test_fp_none_no_error(self):
-        """Test that fp=None doesn't cause an error."""
+    def test_buf_none_no_error(self):
+        """Test that buf=None doesn't cause an error."""
         StdI = _make_stdi_chain(4)
         isite, jsite, Cphase, dR = set_label(
             StdI, None, 0, 0, 1, 0, 0, 0, 1)
@@ -1002,100 +992,38 @@ class TestWriteGnuplotHeader:
 
 
 # ===================================================================
-#  lattice_gp context manager
+#  new_gnuplot_buffer (gnuplot-output suppression)
 # ===================================================================
 
 
-class TestLatticeGp:
-    """Tests for the lattice_gp context manager."""
+class TestNewGnuplotBuffer:
+    """Tests for new_gnuplot_buffer (replaces the lattice_gp context manager)."""
 
-    def test_yields_file_for_hphi(self, tmp_path, monkeypatch):
-        """Test that a file handle is yielded for HPhi solver."""
-        monkeypatch.chdir(tmp_path)
+    def test_buffer_for_hphi(self):
+        """HPhi gets a GnuplotBuffer."""
         StdI = _make_stdi_chain(4)
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        with lattice_gp(StdI) as fp:
-            assert fp is not None
+        StdI.solver = SolverType.HPhi
+        assert isinstance(new_gnuplot_buffer(StdI), GnuplotBuffer)
 
-    def test_yields_file_for_mvmc(self, tmp_path, monkeypatch):
-        """Test that a file handle is yielded for mVMC solver."""
-        monkeypatch.chdir(tmp_path)
+    def test_buffer_for_mvmc(self):
+        """mVMC gets a GnuplotBuffer."""
         StdI = _make_stdi_chain(4)
         StdI.solver = SolverType.mVMC
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        with lattice_gp(StdI) as fp:
-            assert fp is not None
+        assert isinstance(new_gnuplot_buffer(StdI), GnuplotBuffer)
 
-    def test_yields_none_for_hwave(self, tmp_path, monkeypatch):
-        """Test that None is yielded for H-wave when lattice_gp=0."""
-        monkeypatch.chdir(tmp_path)
+    def test_none_for_hwave_default(self):
+        """H-wave with lattice_gp=0 suppresses output (None)."""
         StdI = _make_stdi_chain(4)
         StdI.solver = SolverType.HWAVE
         StdI.lattice_gp = 0
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        with lattice_gp(StdI) as fp:
-            assert fp is None
+        assert new_gnuplot_buffer(StdI) is None
 
-    def test_yields_file_for_hwave_with_lattice_gp(self, tmp_path, monkeypatch):
-        """Test that a file handle is yielded for H-wave when lattice_gp=1."""
-        monkeypatch.chdir(tmp_path)
+    def test_buffer_for_hwave_with_lattice_gp(self):
+        """H-wave with lattice_gp=1 gets a GnuplotBuffer."""
         StdI = _make_stdi_chain(4)
         StdI.solver = SolverType.HWAVE
         StdI.lattice_gp = 1
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        with lattice_gp(StdI) as fp:
-            assert fp is not None
-
-    def test_creates_lattice_gp_file(self, tmp_path, monkeypatch):
-        """Test that lattice.gp is created on disk."""
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        with lattice_gp(StdI) as fp:
-            pass
-        assert (tmp_path / "lattice.gp").exists()
-
-    def test_writes_footer_on_exit(self, tmp_path, monkeypatch):
-        """Test that footer is written when the context manager exits."""
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        with lattice_gp(StdI) as fp:
-            fp.write("# test header\n")
-        content = (tmp_path / "lattice.gp").read_text()
-        assert "# test header" in content
-        assert "plot '-' w d lc 7" in content
-        assert "pause -1" in content
-
-    def test_none_fp_no_error(self, tmp_path, monkeypatch):
-        """Test that None fp context manager exits without error."""
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.solver = SolverType.HWAVE
-        StdI.lattice_gp = 0
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        # Should not raise
-        with lattice_gp(StdI) as fp:
-            assert fp is None
-
-    def test_calls_print_geometry(self, tmp_path, monkeypatch):
-        """Test that geometry.dat is created (proves print_geometry was called)."""
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.solver = SolverType.HWAVE
-        StdI.lattice_gp = 0
-        StdI.nsite = 4
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        with lattice_gp(StdI) as fp:
-            pass
-        assert (tmp_path / "geometry.dat").exists()
+        assert isinstance(new_gnuplot_buffer(StdI), GnuplotBuffer)
 
     def test_footer_content_matches_constant(self):
         """Test that _LATTICE_GP_FOOTER has expected content."""

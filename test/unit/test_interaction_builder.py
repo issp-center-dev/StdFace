@@ -709,14 +709,14 @@ class TestAddNeighborInteraction:
             StdI, None, 0, 0, 1, 0, 0, 0, 1, J, 1.0, 0.0)
 
     def test_gnuplot_output_written(self):
-        """When fp is provided, gnuplot labels are written."""
-        import io
+        """When a buffer is provided, the bond is recorded."""
+        from stdface.lattice.site_util import GnuplotBuffer
         StdI = _make_stdi_square_for_neighbor(4, 4, "hubbard")
         J = np.zeros((3, 3))
-        fp = io.StringIO()
+        buf = GnuplotBuffer()
         add_neighbor_interaction(
-            StdI, fp, 0, 0, 1, 0, 0, 0, 1, J, 1.0, 0.0)
-        content = fp.getvalue()
+            StdI, buf, 0, 0, 1, 0, 0, 0, 1, J, 1.0, 0.0)
+        content = buf.build(StdI).content
         assert "set label" in content
 
 

@@ -66,7 +66,7 @@ def fc_ortho(StdI: StdIntList) -> None:
     StdI.phase[1] = print_val_d("phase1", StdI.phase[1], 0.0)
     StdI.phase[2] = print_val_d("phase2", StdI.phase[2], 0.0)
 
-    init_site(StdI, None, 3)
+    init_site(StdI, 3)
     StdI.tau[0, 0] = 0.0
     StdI.tau[0, 1] = 0.0
     StdI.tau[0, 2] = 0.0

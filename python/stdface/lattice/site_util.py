@@ -7,13 +7,15 @@ gnuplot labels for 2-D lattice visualisation.
 Functions
 ---------
 init_site
-    Initialise the super-cell (box, reciprocal box, cells, gnuplot header).
+    Initialise the super-cell (box, reciprocal box, cells).
 find_site
     Find global site indices and boundary phase for a pair of sites.
 set_label
-    Write gnuplot labels and return site indices (2-D lattices).
-lattice_gp
-    Context manager for ``lattice.gp`` gnuplot output (2-D lattices).
+    Record a gnuplot bond and return site indices (2-D lattices).
+GnuplotBuffer / GnuplotData
+    Accumulate gnuplot bonds and render the ``lattice.gp`` script (2-D).
+new_gnuplot_buffer
+    Return a GnuplotBuffer or None depending on solver/lattice_gp settings.
 close_lattice_xsf
     Write ``lattice.xsf``, ``geometry.dat``, and finalise 3-D lattice output.
 
@@ -33,10 +35,11 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import io
 import logging
 import itertools
-from contextlib import contextmanager
-from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TextIO
 
 import numpy as np
@@ -239,41 +242,83 @@ def _write_gnuplot_header(fp: TextIO, StdI: StdIntList) -> None:
 _LATTICE_GP_FOOTER = "plot '-' w d lc 7\n0.0 0.0\nend\npause -1\n"
 
 
-@contextmanager
-def lattice_gp(StdI: StdIntList) -> Iterator[TextIO | None]:
-    """Context manager for ``lattice.gp`` gnuplot output.
+@dataclass(frozen=True)
+class _BondEntry:
+    """A single gnuplot bond: two labelled site endpoints and a connector."""
 
-    Opens ``lattice.gp`` for writing when the solver is not H-wave, or
-    when ``StdI.lattice_gp`` is explicitly set to 1.  Otherwise the
-    yielded handle is ``None``.  On exit the gnuplot footer is written,
-    the file is closed, and :func:`print_geometry` is called.
+    isite: int
+    jsite: int
+    xi: float
+    yi: float
+    xj: float
+    yj: float
+    connect: int
 
-    Parameters
-    ----------
-    StdI : StdIntList
-        Model parameter structure.
 
-    Yields
-    ------
-    fp : TextIO or None
-        Open file handle, or ``None`` when output is suppressed.
+@dataclass
+class GnuplotData:
+    """The fully-rendered ``lattice.gp`` gnuplot script (D1 build/write pattern)."""
+
+    content: str
+
+    def write(self, directory: Path = Path(".")) -> None:
+        """Write the script to ``<directory>/lattice.gp``."""
+        with open(Path(directory) / "lattice.gp", "w") as fp:
+            fp.write(self.content)
+
+    def to_dict(self) -> dict:
+        return {"content": self.content}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GnuplotData":
+        return cls(content=data["content"])
+
+
+class GnuplotBuffer:
+    """Accumulates gnuplot bond entries (I/O-free) and renders a GnuplotData.
+
+    Replaces the old ``lattice_gp`` context manager: lattice builders call
+    :meth:`add` for each bond, then :meth:`build` produces the script string
+    without touching the filesystem.
     """
-    fp: TextIO | None = None
+
+    def __init__(self) -> None:
+        self._entries: list[_BondEntry] = []
+
+    def add(self, isite: int, jsite: int,
+            xi: float, yi: float, xj: float, yj: float, connect: int) -> None:
+        """Record one bond (two endpoints + connector)."""
+        self._entries.append(_BondEntry(isite, jsite, xi, yi, xj, yj, connect))
+
+    def __bool__(self) -> bool:
+        return bool(self._entries)
+
+    def build(self, StdI: StdIntList) -> "GnuplotData":
+        """Render the accumulated entries into a :class:`GnuplotData` (I/O-free)."""
+        out = io.StringIO()
+        _write_gnuplot_header(out, StdI)
+        for e in self._entries:
+            _write_gnuplot_bond(out, e.isite, e.jsite,
+                                e.xi, e.yi, e.xj, e.yj, e.connect)
+        out.write(_LATTICE_GP_FOOTER)
+        return GnuplotData(content=out.getvalue())
+
+
+def new_gnuplot_buffer(StdI: StdIntList) -> "GnuplotBuffer | None":
+    """Return a fresh :class:`GnuplotBuffer`, or ``None`` when suppressed.
+
+    Gnuplot output is suppressed for H-wave unless ``StdI.lattice_gp`` is
+    explicitly set to 1 (mirrors the old ``lattice_gp`` context manager).
+    """
     if StdI.solver != SolverType.HWAVE or StdI.lattice_gp == 1:
-        fp = open("lattice.gp", "w")
-    try:
-        yield fp
-    finally:
-        if fp is not None:
-            fp.write(_LATTICE_GP_FOOTER)
-            fp.close()
-        print_geometry(StdI)
+        return GnuplotBuffer()
+    return None
 
 
 def close_lattice_xsf(StdI: StdIntList) -> None:
     """Write ``lattice.xsf``, ``geometry.dat``, and print geometry.
 
-    This is the 3-D counterpart of :func:`lattice_gp`.  It writes
+    This is the 3-D counterpart of the 2-D gnuplot path.  It writes
     the XCrySDen structure file via :func:`print_xsf` and the
     ``geometry.dat`` file via :func:`print_geometry`.
 
@@ -464,18 +509,20 @@ def _enumerate_cells(StdI: StdIntList) -> None:
             jj_idx += 1
 
 
-def init_site(StdI: StdIntList, fp: TextIO | None, dim: int) -> None:
+def init_site(StdI: StdIntList, dim: int) -> None:
     """Initialize the super-cell where simulation is performed.
 
     Parameters
     ----------
     StdI : StdIntList
         Model parameter structure (modified in-place).
-    fp : file object or None
-        File pointer to ``lattice.gp`` (may be ``None``).
     dim : int
-        Dimension of the system.  If 2, the gnuplot header for
-        ``lattice.gp`` is written.
+        Dimension of the system.
+
+    Notes
+    -----
+    The gnuplot header for ``lattice.gp`` is no longer written here; it is
+    produced by :meth:`GnuplotBuffer.build`.
     """
     logger.info("\n  @ Super-Lattice setting\n")
 
@@ -501,10 +548,6 @@ def init_site(StdI: StdIntList, fp: TextIO | None, dim: int) -> None:
 
     # (5) Find cells in the super-cell
     _enumerate_cells(StdI)
-
-    # (6) For 2D, print lattice.gp header
-    if dim == 2 and fp is not None:
-        _write_gnuplot_header(fp, StdI)
 
 
 def find_site(
@@ -593,20 +636,20 @@ def _write_gnuplot_bond(
 
 def set_label(
     StdI: StdIntList,
-    fp: TextIO | None,
+    buf: "GnuplotBuffer | None",
     cell_w: int, cell_l: int,
     delta_w: int, delta_l: int,
     uc_i: int, uc_j: int,
     connect: int,
 ) -> tuple[int, int, complex, np.ndarray]:
-    """Set label in the gnuplot display (2D systems only).
+    """Compute bond site indices and record the bond for gnuplot (2D only).
 
     Parameters
     ----------
     StdI : StdIntList
         Model parameter structure.
-    fp : file object or None
-        File pointer to ``lattice.gp``.
+    buf : GnuplotBuffer or None
+        Buffer to record the bond into; ``None`` suppresses gnuplot output.
     cell_w, cell_l : int
         Position of the initial site.
     delta_w, delta_l : int
@@ -640,8 +683,8 @@ def set_label(
     xi, yi = frac_i @ D
     xj, yj = frac_j @ D
 
-    if fp is not None:
-        _write_gnuplot_bond(fp, isite, jsite, xi, yi, xj, yj, connect)
+    if buf is not None:
+        buf.add(isite, jsite, xi, yi, xj, yj, connect)
 
     # Then print the normal one
     isite, jsite, Cphase, dR = find_site(
@@ -652,8 +695,8 @@ def set_label(
     xi, yi = frac_i @ D
     xj, yj = frac_j @ D
 
-    if fp is not None:
-        _write_gnuplot_bond(fp, isite, jsite, xi, yi, xj, yj, connect)
+    if buf is not None:
+        buf.add(isite, jsite, xi, yi, xj, yj, connect)
 
     return isite, jsite, Cphase, dR
 

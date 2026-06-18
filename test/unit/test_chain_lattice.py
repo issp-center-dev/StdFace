@@ -184,49 +184,41 @@ class TestSpinModel:
 
 
 class TestLatticeGP:
-    """Test that lattice.gp file is created."""
+    """Test that chain() returns GnuplotData (the caller writes lattice.gp)."""
 
-    def test_lattice_gp_created(self, tmp_path):
-        """chain() should produce a lattice.gp file."""
+    def test_returns_gnuplot_data(self, tmp_path):
+        """chain() should return a GnuplotData object."""
         os.chdir(tmp_path)
         s = _make_spin_chain(L=4)
-        cl.chain(s)
+        gp = cl.chain(s)
+        assert gp is not None
 
-        gp_file = tmp_path / "lattice.gp"
-        assert gp_file.exists()
-
-    def test_lattice_gp_content(self, tmp_path):
-        """lattice.gp should end with the expected gnuplot command."""
+    def test_gnuplot_content(self, tmp_path):
+        """The returned content should end with the expected gnuplot command."""
         os.chdir(tmp_path)
         s = _make_spin_chain(L=4)
-        cl.chain(s)
+        gp = cl.chain(s)
+        assert "plot '-' w d lc 7" in gp.content
+        assert "pause -1" in gp.content
 
-        gp_file = tmp_path / "lattice.gp"
-        content = gp_file.read_text()
-        assert "plot '-' w d lc 7" in content
-        assert "pause -1" in content
-
-    def test_lattice_gp_not_created_hwave(self, tmp_path):
-        """When solver is HWAVE and lattice_gp is 0, no lattice.gp file."""
+    def test_none_for_hwave(self, tmp_path):
+        """When solver is HWAVE and lattice_gp is 0, chain() returns None."""
         os.chdir(tmp_path)
         s = _make_spin_chain(L=4)
         s.solver = "HWAVE"
         s.lattice_gp = 0
-        cl.chain(s)
+        assert cl.chain(s) is None
 
-        gp_file = tmp_path / "lattice.gp"
-        assert not gp_file.exists()
-
-    def test_lattice_gp_created_hwave_flag(self, tmp_path):
-        """When solver is HWAVE but lattice_gp is 1, lattice.gp is created."""
+    def test_data_for_hwave_flag(self, tmp_path):
+        """When solver is HWAVE but lattice_gp is 1, chain() returns GnuplotData."""
         os.chdir(tmp_path)
         s = _make_spin_chain(L=4)
         s.solver = "HWAVE"
         s.lattice_gp = 1
-        cl.chain(s)
-
-        gp_file = tmp_path / "lattice.gp"
-        assert gp_file.exists()
+        gp = cl.chain(s)
+        assert gp is not None
+        gp.write(tmp_path)
+        assert (tmp_path / "lattice.gp").exists()
 
 
 # ---------------------------------------------------------------------------
