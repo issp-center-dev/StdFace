@@ -53,25 +53,25 @@ class TestParseInputFile:
         assert StdI.model == "kondo"
 
     def test_exits_on_missing_file(self, tmp_path):
-        """Test that missing file causes SystemExit."""
+        """Test that a missing file raises FileNotFoundError."""
         StdI = StdIntList()
-        with pytest.raises(SystemExit):
+        with pytest.raises(FileNotFoundError):
             _parse_input_file(str(tmp_path / "nonexistent.in"), StdI, SolverType.HPhi)
 
     def test_exits_on_missing_equals(self, tmp_path):
-        """Test that a line without '=' causes SystemExit."""
+        """Test that a line without '=' raises ValueError."""
         infile = tmp_path / "stan.in"
         infile.write_text("model hubbard\n")
         StdI = StdIntList()
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _parse_input_file(str(infile), StdI, SolverType.HPhi)
 
     def test_exits_on_unknown_keyword(self, tmp_path):
-        """Test that an unrecognised keyword causes SystemExit."""
+        """Test that an unrecognised keyword raises ValueError."""
         infile = tmp_path / "stan.in"
         infile.write_text("totally_fake_keyword = 42\n")
         StdI = StdIntList()
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _parse_input_file(str(infile), StdI, SolverType.HPhi)
 
     def test_case_insensitive_keywords(self, tmp_path):

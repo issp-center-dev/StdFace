@@ -196,10 +196,10 @@ class TestCheckOutputMode:
         assert StdI.ioutputmode == 2
 
     def test_invalid_mode_exits(self):
-        """Test that invalid mode causes exit."""
+        """Test that invalid mode raises ValueError."""
         StdI = _make_stdi_base()
         StdI.outputmode = "bogus"
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             check_output_mode(StdI)
 
 

@@ -243,19 +243,23 @@ class TestGeneralJ:
 class TestPrintValD:
     """Tests for print_val_d."""
 
-    def test_nan_uses_default(self, capsys):
-        """NaN input should return default and print DEFAULT tag."""
-        result = smu.print_val_d("mu", float("nan"), 0.5)
-        assert result == 0.5
-        captured = capsys.readouterr()
-        assert "DEFAULT VALUE IS USED" in captured.out
+    def test_nan_uses_default(self, caplog):
+        """NaN input should return default and log DEFAULT tag."""
+        import logging
 
-    def test_specified_value(self, capsys):
+        with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
+            result = smu.print_val_d("mu", float("nan"), 0.5)
+        assert result == 0.5
+        assert "DEFAULT VALUE IS USED" in caplog.text
+
+    def test_specified_value(self, caplog):
         """Non-NaN input should be returned as-is."""
-        result = smu.print_val_d("mu", 1.5, 0.5)
+        import logging
+
+        with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
+            result = smu.print_val_d("mu", 1.5, 0.5)
         assert result == 1.5
-        captured = capsys.readouterr()
-        assert "DEFAULT" not in captured.out
+        assert "DEFAULT" not in caplog.text
 
 
 class TestPrintValDd:

@@ -291,8 +291,8 @@ class TestStoreWithCheckDupS:
         assert result == "Hubbard"
 
     def test_exits_on_duplicate(self):
-        """Test that duplicate assignment causes exit."""
-        with pytest.raises(SystemExit):
+        """Test that duplicate assignment raises ValueError."""
+        with pytest.raises(ValueError):
             store_with_check_dup_s("model", "spin", "hubbard")
 
 
@@ -315,8 +315,8 @@ class TestStoreWithCheckDupSl:
         assert result == "abcde"
 
     def test_exits_on_duplicate(self):
-        """Test that duplicate assignment causes exit."""
-        with pytest.raises(SystemExit):
+        """Test that duplicate assignment raises ValueError."""
+        with pytest.raises(ValueError):
             store_with_check_dup_sl("lattice", "chain", "square")
 
 
@@ -339,8 +339,8 @@ class TestStoreWithCheckDupI:
         assert result == 2
 
     def test_exits_on_duplicate(self):
-        """Test that duplicate assignment causes exit."""
-        with pytest.raises(SystemExit):
+        """Test that duplicate assignment raises ValueError."""
+        with pytest.raises(ValueError):
             store_with_check_dup_i("L", "8", 4)
 
 
@@ -358,8 +358,8 @@ class TestStoreWithCheckDupD:
         assert result == 4.5
 
     def test_exits_on_duplicate(self):
-        """Test that duplicate assignment causes exit."""
-        with pytest.raises(SystemExit):
+        """Test that duplicate assignment raises ValueError."""
+        with pytest.raises(ValueError):
             store_with_check_dup_d("U", "5.0", 4.5)
 
 
@@ -397,8 +397,8 @@ class TestStoreWithCheckDupC:
         assert result == complex(1.0, 0.0)
 
     def test_exits_on_duplicate(self):
-        """Test that duplicate assignment causes exit."""
-        with pytest.raises(SystemExit):
+        """Test that duplicate assignment raises ValueError."""
+        with pytest.raises(ValueError):
             store_with_check_dup_c("t", "1.0", complex(2.0, 0.0))
 
 

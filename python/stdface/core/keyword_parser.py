@@ -7,10 +7,12 @@ solver-specific keyword dispatchers for HPhi, mVMC, UHF, and H-wave.
 from __future__ import annotations
 
 import cmath
+import logging
 import math
 
 from .stdface_vals import StdIntList, SolverType, NaN_i, UNSET_STRING
-from .param_check import exit_program
+
+logger = logging.getLogger(__name__)
 
 
 _TRIM_TABLE = str.maketrans("", "", " :;\"\\\b\v\n\0")
@@ -41,15 +43,21 @@ def trim_space_quote(text: str) -> str:
 
 
 def _fail_duplicate(keyword: str) -> None:
-    """Print a duplicate-keyword error and terminate.
+    """Log a duplicate-keyword error and raise.
 
     Parameters
     ----------
     keyword : str
         The duplicated keyword name.
+
+    Raises
+    ------
+    ValueError
+        Always raised after logging the error message.
     """
-    print(f"ERROR !  Keyword {keyword} is duplicated ! ")
-    exit_program(-1)
+    msg = f"Keyword {keyword} is duplicated."
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:
@@ -74,7 +82,7 @@ def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
     if current != UNSET_STRING:
@@ -109,7 +117,7 @@ def store_with_check_dup_sl(
 
     Raises
     ------
-    SystemExit
+    ValueError
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
     if current != UNSET_STRING:
@@ -139,7 +147,7 @@ def store_with_check_dup_i(keyword: str, value: str, current: int) -> int:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
     if current != NaN_i:
@@ -169,7 +177,7 @@ def store_with_check_dup_d(keyword: str, value: str, current: float) -> float:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If *current* is not NaN, indicating a duplicate keyword.
     """
     if not math.isnan(current):
@@ -227,7 +235,7 @@ def store_with_check_dup_c(keyword: str, value: str, current: complex) -> comple
 
     Raises
     ------
-    SystemExit
+    ValueError
         If *current* is already set, indicating a duplicate keyword.
     """
     if not cmath.isnan(current):

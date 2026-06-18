@@ -102,9 +102,9 @@ def print_val_d(valname: str, val: float, val0: float) -> float:
     """
     if math.isnan(val):
         val = val0
-        print(f"  {valname:>15s} = {val:<10.5f}  ######  DEFAULT VALUE IS USED  ######")
+        logger.info("  %15s = %-10.5f  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
-        print(f"  {valname:>15s} = {val:<10.5f}")
+        logger.info("  %15s = %-10.5f", valname, val)
     return val
 
 
@@ -154,10 +154,12 @@ def print_val_c(valname: str, val: complex, val0: complex) -> complex:
     """
     if math.isnan(val.real):
         val = val0
-        print(f"  {valname:>15s} = {val.real:<10.5f} {val.imag:<10.5f}"
-              f"  ######  DEFAULT VALUE IS USED  ######")
+        logger.info(
+            "  %15s = %-10.5f %-10.5f  ######  DEFAULT VALUE IS USED  ######",
+            valname, val.real, val.imag,
+        )
     else:
-        print(f"  {valname:>15s} = {val.real:<10.5f} {val.imag:<10.5f}")
+        logger.info("  %15s = %-10.5f %-10.5f", valname, val.real, val.imag)
     return val
 
 
@@ -182,9 +184,9 @@ def print_val_i(valname: str, val: int, val0: int) -> int:
     """
     if val == NaN_i:
         val = val0
-        print(f"  {valname:>15s} = {val:<10d}  ######  DEFAULT VALUE IS USED  ######")
+        logger.info("  %15s = %-10d  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
-        print(f"  {valname:>15s} = {val:<10d}")
+        logger.info("  %15s = %-10d", valname, val)
     return val
 
 

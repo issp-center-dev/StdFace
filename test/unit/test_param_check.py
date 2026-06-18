@@ -53,18 +53,22 @@ class TestPrintValD:
         result = print_val_d("test", 2.5, 1.5)
         assert result == 2.5
 
-    def test_prints_default_tag(self, capsys):
-        """Test that the DEFAULT VALUE tag is printed for NaN."""
-        print_val_d("myvar", NaN_d, 3.0)
-        output = capsys.readouterr().out
-        assert "DEFAULT VALUE IS USED" in output
-        assert "myvar" in output
+    def test_prints_default_tag(self, caplog):
+        """Test that the DEFAULT VALUE tag is logged for NaN."""
+        import logging
 
-    def test_no_default_tag_when_set(self, capsys):
-        """Test that no DEFAULT tag is printed for a set value."""
-        print_val_d("myvar", 3.0, 0.0)
-        output = capsys.readouterr().out
-        assert "DEFAULT VALUE IS USED" not in output
+        with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
+            print_val_d("myvar", NaN_d, 3.0)
+        assert "DEFAULT VALUE IS USED" in caplog.text
+        assert "myvar" in caplog.text
+
+    def test_no_default_tag_when_set(self, caplog):
+        """Test that no DEFAULT tag is logged for a set value."""
+        import logging
+
+        with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
+            print_val_d("myvar", 3.0, 0.0)
+        assert "DEFAULT VALUE IS USED" not in caplog.text
 
 
 class TestPrintValDD:
@@ -113,11 +117,13 @@ class TestPrintValI:
         result = print_val_i("test", 5, 10)
         assert result == 5
 
-    def test_prints_default_tag(self, capsys):
-        """Test that the DEFAULT VALUE tag is printed for sentinel."""
-        print_val_i("myvar", NaN_i, 7)
-        output = capsys.readouterr().out
-        assert "DEFAULT VALUE IS USED" in output
+    def test_prints_default_tag(self, caplog):
+        """Test that the DEFAULT VALUE tag is logged for sentinel."""
+        import logging
+
+        with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
+            print_val_i("myvar", NaN_i, 7)
+        assert "DEFAULT VALUE IS USED" in caplog.text
 
 
 class TestNotUsedD:

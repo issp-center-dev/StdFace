@@ -24,9 +24,12 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 from typing import NamedTuple
 
 from ..core.stdface_vals import StdIntList, AMPLITUDE_EPS
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +148,7 @@ def _write_interaction_file(
             lines.append(f"{idx_str} {coeff[k]:25.15f}\n")
     with open(filename, "w") as fp:
         fp.write("".join(lines))
-    print(f"    {filename} is written.")
+    logger.info("    %s is written.", filename)
 
 
 def _process_interaction(
@@ -494,7 +497,7 @@ def _write_interall(StdI: StdIntList) -> None:
 
         with open("interall.def", "w") as fp:
             fp.write("".join(lines))
-        print("    interall.def is written.")
+        logger.info("    interall.def is written.")
 
 
 def print_interactions(StdI: StdIntList) -> None:

@@ -386,21 +386,25 @@ class TestValidateBoxParams:
         with pytest.raises(SystemExit):
             _validate_box_params(NaN_i, 2, NaN_i, box, suffix="sub")
 
-    def test_suffix_affects_labels(self, capsys):
-        """Suffix parameter changes the printed parameter names."""
-        box = self._nan_box()
-        L, W, H = _validate_box_params(4, 3, 2, box, suffix="sub")
-        captured = capsys.readouterr().out
-        assert "Lsub" in captured
-        assert "Wsub" in captured
-        assert "Hsub" in captured
+    def test_suffix_affects_labels(self, caplog):
+        """Suffix parameter changes the logged parameter names."""
+        import logging
 
-    def test_no_suffix_height_label(self, capsys):
-        """Without suffix, height label is 'Height'."""
         box = self._nan_box()
-        L, W, H = _validate_box_params(NaN_i, NaN_i, 5, box)
-        captured = capsys.readouterr().out
-        assert "Height" in captured
+        with caplog.at_level(logging.INFO):
+            L, W, H = _validate_box_params(4, 3, 2, box, suffix="sub")
+        assert "Lsub" in caplog.text
+        assert "Wsub" in caplog.text
+        assert "Hsub" in caplog.text
+
+    def test_no_suffix_height_label(self, caplog):
+        """Without suffix, height label is 'Height'."""
+        import logging
+
+        box = self._nan_box()
+        with caplog.at_level(logging.INFO):
+            L, W, H = _validate_box_params(NaN_i, NaN_i, 5, box)
+        assert "Height" in caplog.text
 
     def test_box_modified_in_place(self):
         """Box array is modified in-place, not replaced."""

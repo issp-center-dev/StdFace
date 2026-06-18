@@ -54,7 +54,7 @@ from ..core.stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType, NaN_i, UNSET_STRING,
     AMPLITUDE_EPS,
 )
-from ..core.param_check import exit_program, print_val_i, print_val_d, required_val_i, not_used_i
+from ..core.param_check import print_val_i, print_val_d, required_val_i, not_used_i
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +159,7 @@ def print_loc_spin(StdI: StdIntList) -> None:
     with open("locspn.def", "w") as fp:
         fp.write("".join(lines))
 
-    print("    locspn.def is written.")
+    logger.info("    locspn.def is written.")
 
 
 def print_trans(StdI: StdIntList) -> None:
@@ -199,7 +199,7 @@ def print_trans(StdI: StdIntList) -> None:
     with open("trans.def", "w") as fp:
         fp.write("".join(lines))
 
-    print("      trans.def is written.")
+    logger.info("      trans.def is written.")
 
 
 def _write_namelist_hphi(fp, StdI: StdIntList) -> None:
@@ -306,7 +306,7 @@ def print_namelist(StdI: StdIntList) -> None:
         if body_writer is not None:
             body_writer(fp, StdI)
 
-    print("    namelist.def is written.")
+    logger.info("    namelist.def is written.")
 
 
 def _write_modpara_hphi(fp, StdI: StdIntList) -> None:
@@ -472,7 +472,7 @@ def print_mod_para(StdI: StdIntList) -> None:
         if writer is not None:
             writer(fp, StdI)
 
-    print("     modpara.def is written.")
+    logger.info("     modpara.def is written.")
 
 
 class GreenFunctionIndices:
@@ -762,7 +762,7 @@ def print_1_green(StdI: StdIntList) -> None:
             lines.append(f"{i0:5d} {s0:5d} {i1:5d} {s1:5d}\n")
         fp.write("".join(lines))
 
-    print("    greenone.def is written.")
+    logger.info("    greenone.def is written.")
 
 
 def print_2_green(StdI: StdIntList) -> None:
@@ -813,7 +813,7 @@ def print_2_green(StdI: StdIntList) -> None:
             )
         fp.write("".join(lines))
 
-    print("    greentwo.def is written.")
+    logger.info("    greentwo.def is written.")
 
 
 def unsupported_system(model: str, lattice: str) -> None:
@@ -863,22 +863,23 @@ def check_output_mode(StdI: StdIntList) -> None:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If ``StdI.outputmode`` does not match any recognised keyword.
     """
     if StdI.outputmode == UNSET_STRING:
         StdI.ioutputmode = 1
-        print(
-            f"      ioutputmode = {StdI.ioutputmode:<10d}"
-            "  ######  DEFAULT VALUE IS USED  ######"
+        logger.info(
+            "      ioutputmode = %-10d  ######  DEFAULT VALUE IS USED  ######",
+            StdI.ioutputmode,
         )
     else:
         mode = OUTPUT_MODE_TO_INT.get(StdI.outputmode)
         if mode is None:
-            print(f"\n ERROR ! Unsupported OutPutMode : {StdI.outputmode}")
-            exit_program(-1)
+            msg = f"Unsupported OutPutMode : {StdI.outputmode}"
+            logger.error(msg)
+            raise ValueError(msg)
         StdI.ioutputmode = mode
-        print(f"      ioutputmode = {StdI.ioutputmode:<10d}")
+        logger.info("      ioutputmode = %-10d", StdI.ioutputmode)
 
 
 def _check_mod_para_hphi(StdI: StdIntList) -> None:
@@ -928,12 +929,12 @@ def _check_mod_para_mvmc(StdI: StdIntList) -> None:
     """
     if StdI.CParaFileHead == UNSET_STRING:
         StdI.CParaFileHead = "zqp"
-        print(
-            f"    CParaFileHead = {StdI.CParaFileHead:<12s}"
-            "######  DEFAULT VALUE IS USED  ######"
+        logger.info(
+            "    CParaFileHead = %-12s######  DEFAULT VALUE IS USED  ######",
+            StdI.CParaFileHead,
         )
     else:
-        print(f"    CParaFileHead = {StdI.CParaFileHead}")
+        logger.info("    CParaFileHead = %s", StdI.CParaFileHead)
 
     StdI.NVMCCalMode = print_val_i("NVMCCalMode", StdI.NVMCCalMode, 0)
     StdI.NLanczosMode = print_val_i("NLanczosMode", StdI.NLanczosMode, 0)
@@ -968,7 +969,7 @@ def _check_mod_para_mvmc(StdI: StdIntList) -> None:
     ex_path = MODEL_GC_TO_EX_UPDATE_PATH.get(key)
     if ex_path is not None:
         StdI.NExUpdatePath = ex_path
-    print(f"  {'NExUpdatePath':>15s} = {StdI.NExUpdatePath:<10d}")
+    logger.info("  %15s = %-10d", "NExUpdatePath", StdI.NExUpdatePath)
 
     StdI.RndSeed = print_val_i("RndSeed", StdI.RndSeed, 123456789)
     StdI.NSplitSize = print_val_i("NSplitSize", StdI.NSplitSize, 1)
