@@ -127,6 +127,17 @@ UNSET_STRING: str = "****"
 """Sentinel for an unset string parameter (C convention ``"****"``)."""
 
 
+def is_unset_or_trivial_d(val: float, trivial: float = 0.0) -> bool:
+    """Return True if a float parameter is unset (NaN) or equals *trivial*.
+
+    Helper for :meth:`SolverPlugin.validate` implementations.  Note that
+    ``math.isnan`` correctly detects the ``NaN_d`` sentinel (``== NaN_d``
+    would not, since ``NaN != NaN``).
+    """
+    import math
+    return math.isnan(val) or val == trivial
+
+
 # ---------------------------------------------------------------------------
 #  Numerical tolerances
 # ---------------------------------------------------------------------------

@@ -278,6 +278,36 @@ class TestBuildLatticeAndBoost:
             _build_lattice_and_boost(StdI, "__no_solver_plugin__")
         lattice_plugin.setup.assert_called_once_with(StdI)
 
+    def test_calls_validate_after_post_lattice(self):
+        """validate() is invoked between post_lattice and write (B6 hook)."""
+        StdI = StdIntList()
+        StdI.model = ModelType.HUBBARD
+        StdI.lattice = "chain"
+        lattice_plugin = MagicMock()
+        lattice_plugin.setup.return_value = None
+        solver_plugin = MagicMock()
+        with patch("stdface.core.stdface_main._get_lattice",
+                   return_value=lattice_plugin), \
+             patch("stdface.plugin.get_plugin", return_value=solver_plugin):
+            _build_lattice_and_boost(StdI, "HPhi")
+        solver_plugin.post_lattice.assert_called_once_with(StdI)
+        solver_plugin.validate.assert_called_once_with(StdI)
+
+    def test_validate_error_propagates(self):
+        """A ValueError raised by validate() propagates out."""
+        StdI = StdIntList()
+        StdI.model = ModelType.HUBBARD
+        StdI.lattice = "chain"
+        lattice_plugin = MagicMock()
+        lattice_plugin.setup.return_value = None
+        solver_plugin = MagicMock()
+        solver_plugin.validate.side_effect = ValueError("invalid params")
+        with patch("stdface.core.stdface_main._get_lattice",
+                   return_value=lattice_plugin), \
+             patch("stdface.plugin.get_plugin", return_value=solver_plugin):
+            with pytest.raises(ValueError):
+                _build_lattice_and_boost(StdI, "HPhi")
+
 
 class TestBoostDispatchItemsDefensive:
     """Cover ``except KeyError: pass`` inside ``BOOST_DISPATCH.items()``."""
