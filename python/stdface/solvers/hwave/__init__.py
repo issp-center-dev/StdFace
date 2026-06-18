@@ -1,9 +1,9 @@
 """H-wave solver plugin package.
 
-Importing this package auto-registers the H-wave plugin.
+Importing this package auto-registers the H-wave plugins (UHFR / UHFK).
 """
 from __future__ import annotations
 
-from ._plugin import HWavePlugin  # noqa: F401 — public API
+from ._plugin import UHFRPlugin, UHFKPlugin  # noqa: F401 — public API
 
-__all__ = ["HWavePlugin"]
+__all__ = ["UHFRPlugin", "UHFKPlugin"]

@@ -1,29 +1,35 @@
-"""H-wave solver plugin.
+"""H-wave solver plugins (UHFR / UHFK).
 
-Encapsulates all H-wave-specific keyword parsing, field reset tables,
-and Expert-mode file writing.
+The user passes ``--solver HWAVE``; ``_resolve_solver_name`` then maps it to
+:class:`UHFRPlugin` (real-space ``.def`` output) or :class:`UHFKPlugin`
+(Wannier90 export) based on ``calcmode``.  UHFR is **not** an
+``ExpertModeSolverPlugin`` (it writes no modpara/namelist/locspn).
 """
 from __future__ import annotations
 
-from ...plugin import SolverPlugin, register
+from ...plugin import SolverPlugin, WannierModeSolverPlugin, register
 from ...core.stdface_vals import StdIntList, SolverType, NaN_i, NaN_d
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d, store_with_check_dup_sl,
     _grid3x3_keywords,
 )
-from ...writer.wannier90_writer import export_geometry, export_interaction
 
 
-class HWavePlugin(SolverPlugin):
-    """Plugin for the H-wave solver."""
+class UHFRPlugin(SolverPlugin):
+    """H-wave real-space UHF mode (``uhfr``).
+
+    Writes ``.def`` files but, unlike Expert mode, no ``modpara.def`` /
+    ``namelist.def`` / ``locspn.def`` — so it inherits ``SolverPlugin``
+    directly rather than ``ExpertModeSolverPlugin``.
+    """
 
     @property
     def name(self) -> str:
-        return SolverType.HWAVE
+        return SolverType.UHFR
 
     @property
     def keyword_table(self) -> dict[str, tuple]:
-        return _HWAVE_KEYWORDS
+        return _UHFR_KEYWORDS
 
     @property
     def reset_scalars(self) -> list[tuple[str, object]]:
@@ -38,25 +44,36 @@ class HWavePlugin(SolverPlugin):
         _check_mod_para_uhf(StdI)
 
     def write(self, StdI: StdIntList) -> None:
-        """Write H-wave output files.
-
-        Overrides the template method entirely because H-wave has two
-        completely different output modes (uhfr vs wannier90 export).
-        """
         from ...writer.common_writer import (
             print_trans, print_1_green, check_output_mode, check_mod_para,
         )
         from ...writer.interaction_writer import print_interactions
 
-        if StdI.calcmode == "uhfr":
-            print_trans(StdI)
-            print_interactions(StdI)
-            check_mod_para(StdI)
-            check_output_mode(StdI)
-            print_1_green(StdI)
-        else:
-            export_geometry(StdI)
-            export_interaction(StdI)
+        print_trans(StdI)
+        print_interactions(StdI)
+        check_mod_para(StdI)
+        check_output_mode(StdI)
+        print_1_green(StdI)
+
+
+class UHFKPlugin(WannierModeSolverPlugin):
+    """H-wave Wannier90 mode (``uhfk`` / ``rpa``); writes geom/transfer files."""
+
+    @property
+    def name(self) -> str:
+        return SolverType.UHFK
+
+    @property
+    def keyword_table(self) -> dict[str, tuple]:
+        return _UHFK_KEYWORDS
+
+    @property
+    def reset_scalars(self) -> list[tuple[str, object]]:
+        return _RESET_SCALARS
+
+    @property
+    def reset_arrays(self) -> list[tuple[str, object]]:
+        return _RESET_ARRAYS
 
 
 # -----------------------------------------------------------------------
@@ -80,9 +97,11 @@ _UHF_BASE_KEYWORDS: dict[str, tuple] = {
     "mix":           (store_with_check_dup_d, "mix"),
 }
 
-_HWAVE_KEYWORDS: dict[str, tuple] = {
-    **_UHF_BASE_KEYWORDS,
-    "calcmode":   (store_with_check_dup_sl, "calcmode"),
+# UHFR accepts the same keywords as UHF; UHFK only the Wannier-export keys.
+# (``calcmode`` is parsed via the pre-resolution HWAVE table in keyword_parser.)
+_UHFR_KEYWORDS: dict[str, tuple] = _UHF_BASE_KEYWORDS
+
+_UHFK_KEYWORDS: dict[str, tuple] = {
     "fileprefix": (store_with_check_dup_sl, "fileprefix"),
     "exportall":  (store_with_check_dup_i,  "export_all"),
     "lattice_gp": (store_with_check_dup_i,  "lattice_gp"),
@@ -91,6 +110,10 @@ _HWAVE_KEYWORDS: dict[str, tuple] = {
 # -----------------------------------------------------------------------
 #  Reset tables
 # -----------------------------------------------------------------------
+#
+# Field resets actually run pre-resolution (solver == HWAVE) via the legacy
+# fallback in stdface_main; these tables satisfy the plugin interface and
+# cover the union of UHFR/UHFK fields.
 
 _UHF_BASE_SCALARS: list[tuple[str, object]] = [
     ("NMPTrans", NaN_i),
@@ -115,4 +138,5 @@ _RESET_ARRAYS: list[tuple[str, object]] = [
 
 
 # Auto-register on import
-register(HWavePlugin())
+register(UHFRPlugin())
+register(UHFKPlugin())

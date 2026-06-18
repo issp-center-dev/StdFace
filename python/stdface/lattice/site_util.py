@@ -304,13 +304,17 @@ class GnuplotBuffer:
         return GnuplotData(content=out.getvalue())
 
 
+_HWAVE_SOLVERS = (SolverType.HWAVE, SolverType.UHFR, SolverType.UHFK)
+
+
 def new_gnuplot_buffer(StdI: StdIntList) -> "GnuplotBuffer | None":
     """Return a fresh :class:`GnuplotBuffer`, or ``None`` when suppressed.
 
-    Gnuplot output is suppressed for H-wave unless ``StdI.lattice_gp`` is
-    explicitly set to 1 (mirrors the old ``lattice_gp`` context manager).
+    Gnuplot output is suppressed for the H-wave family (HWAVE / UHFR / UHFK)
+    unless ``StdI.lattice_gp`` is explicitly set to 1.  HWAVE is included for
+    direct/pre-resolution calls; UHFR/UHFK are the resolved names.
     """
-    if StdI.solver != SolverType.HWAVE or StdI.lattice_gp == 1:
+    if StdI.solver not in _HWAVE_SOLVERS or StdI.lattice_gp == 1:
         return GnuplotBuffer()
     return None
 

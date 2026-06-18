@@ -60,13 +60,20 @@ class SolverType(str, Enum):
     UHF : str
         Unrestricted Hartree-Fock solver.
     HWAVE : str
-        H-wave solver (Hartree-Fock / RPA / Wannier90 export).
+        H-wave solver as supplied on the command line; resolved to
+        :attr:`UHFR` or :attr:`UHFK` by ``_resolve_solver_name``.
+    UHFR : str
+        H-wave real-space UHF mode (``calcmode = uhfr``).
+    UHFK : str
+        H-wave Wannier90 mode (``calcmode = uhfk`` or ``rpa``).
     """
 
     HPhi = "HPhi"
     mVMC = "mVMC"
     UHF = "UHF"
     HWAVE = "HWAVE"
+    UHFR = "UHFR"
+    UHFK = "UHFK"
 
 
 class MethodType(str, Enum):

@@ -294,9 +294,9 @@ class TestModelType:
 class TestSolverType:
     """Tests for the SolverType enum."""
 
-    def test_has_four_members(self):
-        """SolverType should have exactly 4 members."""
-        assert len(SolverType) == 4
+    def test_has_six_members(self):
+        """SolverType should have exactly 6 members (incl. UHFR/UHFK)."""
+        assert len(SolverType) == 6
 
     def test_values(self):
         """SolverType members should have the expected string values."""
@@ -304,6 +304,8 @@ class TestSolverType:
         assert SolverType.mVMC == "mVMC"
         assert SolverType.UHF == "UHF"
         assert SolverType.HWAVE == "HWAVE"
+        assert SolverType.UHFR == "UHFR"
+        assert SolverType.UHFK == "UHFK"
 
     def test_is_str_subclass(self):
         """SolverType members should be instances of str."""

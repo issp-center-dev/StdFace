@@ -15,7 +15,7 @@ from stdface.plugin import SolverPlugin, get_plugin
 from stdface.solvers.hphi import HPhiPlugin
 from stdface.solvers.mvmc import MVMCPlugin
 from stdface.solvers.uhf import UHFPlugin
-from stdface.solvers.hwave import HWavePlugin
+from stdface.solvers.hwave import UHFRPlugin, UHFKPlugin
 from stdface.core.stdface_vals import StdIntList
 from stdface.lattice import chain_lattice as cl
 
@@ -289,11 +289,17 @@ class TestGetPlugin:
         assert isinstance(plugin, UHFPlugin)
         assert plugin.name == "UHF"
 
-    def test_returns_hwave_plugin(self):
-        """Test that 'HWAVE' returns an HWavePlugin."""
-        plugin = get_plugin("HWAVE")
-        assert isinstance(plugin, HWavePlugin)
-        assert plugin.name == "HWAVE"
+    def test_returns_uhfr_plugin(self):
+        """Test that 'UHFR' returns a UHFRPlugin."""
+        plugin = get_plugin("UHFR")
+        assert isinstance(plugin, UHFRPlugin)
+        assert plugin.name == "UHFR"
+
+    def test_returns_uhfk_plugin(self):
+        """Test that 'UHFK' returns a UHFKPlugin."""
+        plugin = get_plugin("UHFK")
+        assert isinstance(plugin, UHFKPlugin)
+        assert plugin.name == "UHFK"
 
     def test_raises_on_unknown_solver(self):
         """Test that an unknown solver raises KeyError."""
@@ -444,16 +450,16 @@ class TestUHFPlugin:
                 os.chdir(orig)
 
 
-class TestHWavePlugin:
-    """Tests for the HWavePlugin class."""
+class TestHWaveSplit:
+    """Tests for the UHFR / UHFK plugins (the H-wave split)."""
 
-    def test_uhfr_mode_writes_trans(self):
-        """Test that HWAVE in uhfr mode writes trans.def."""
+    def test_uhfr_writes_trans(self):
+        """UHFR writes trans.def / greenone.def."""
         StdI = _make_stdi_for_hphi(nsite=4)
-        StdI.solver = "HWAVE"
+        StdI.solver = "UHFR"
         StdI.calcmode = "uhfr"
         StdI.outputmode = "****"
-        plugin = get_plugin("HWAVE")
+        plugin = get_plugin("UHFR")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -465,12 +471,12 @@ class TestHWavePlugin:
             finally:
                 os.chdir(orig)
 
-    def test_wannier90_export_writes_geom(self, tmp_path, monkeypatch):
-        """Non-``uhfr`` ``calcmode`` runs ``export_geometry`` / ``export_interaction``."""
+    def test_uhfk_export_writes_geom(self, tmp_path, monkeypatch):
+        """UHFK runs ``export_geometry`` / ``export_interaction``."""
         monkeypatch.chdir(tmp_path)
         StdI = _make_hwave_wannier_export_stdi(nsiteUC=2, ncell=2)
-        StdI.calcmode = "wannier90"
-        plugin = get_plugin("HWAVE")
+        StdI.solver = "UHFK"
+        plugin = get_plugin("UHFK")
         plugin.write(StdI)
         assert os.path.exists("geom.dat")
         # ``ntrans == 0`` → transfer export is skipped (no ``transfer.dat``)
