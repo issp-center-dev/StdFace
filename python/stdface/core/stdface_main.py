@@ -420,11 +420,16 @@ def _apply_field_resets(StdI: StdIntList, solver: SolverType) -> None:
     from ..plugin import get_plugin
     try:
         plugin = get_plugin(solver)
+        scalars = plugin.reset_scalars
+        arrays = plugin.reset_arrays
     except KeyError:
-        return
-    for name, value in plugin.reset_scalars:
+        # No registered plugin (e.g. HWAVE before _resolve_solver_name).
+        # Fall back to the legacy reset tables.
+        scalars = _SOLVER_RESET_SCALARS.get(solver, [])
+        arrays = _SOLVER_RESET_ARRAYS.get(solver, [])
+    for name, value in scalars:
         setattr(StdI, name, value)
-    for name, value in plugin.reset_arrays:
+    for name, value in arrays:
         arr = getattr(StdI, name)
         arr[...] = value
 
@@ -660,6 +665,24 @@ def _parse_input_file(fname: str, StdI: StdIntList, solver: str) -> None:
     _apply_keywords(data, StdI, solver)
 
 
+def _resolve_solver_name(StdI: StdIntList) -> None:
+    """Normalise ``HWAVE`` to ``UHFR`` / ``UHFK`` based on ``calcmode``.
+
+    ``calcmode = "uhfr"`` -> ``UHFR`` (real-space ``.def`` output);
+    everything else (``uhfk`` / ``rpa`` / **unset**) -> ``UHFK`` (Wannier90
+    export).  This mirrors the original ``if calcmode == "uhfr": ... else:
+    export`` branching, where an unspecified calcmode took the export path.
+
+    ``geometry.dat`` suppression remains keyed on ``calcmode`` (only
+    ``uhfk`` / ``rpa`` suppress it; an unset calcmode still writes it).
+
+    Must be called after keyword parsing and before ``get_plugin``.
+    """
+    if StdI.solver == SolverType.HWAVE:
+        StdI.solver = (SolverType.UHFR if StdI.calcmode == "uhfr"
+                       else SolverType.UHFK)
+
+
 # ===================================================================
 #  stdface_main -- top-level entry point
 # ===================================================================
@@ -707,6 +730,10 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     _reset_vals(StdI)
     _parse_input_file(fname, StdI, solver)
+
+    # HWAVE -> UHFR / UHFK (before any get_plugin call below)
+    _resolve_solver_name(StdI)
+    solver = StdI.solver
 
     # ------------------------------------------------------------------
     #  Construct Model

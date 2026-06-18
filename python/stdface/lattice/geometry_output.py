@@ -120,8 +120,8 @@ def print_geometry(StdI: StdIntList) -> None:
         - ``Cell`` : ndarray (NCell, 3) -- cell fractional coordinates.
         - ``model`` : str -- model name (``"kondo"`` doubles sites).
     """
-    if (StdI.solver == SolverType.HWAVE
-            and StdI.calcmode in ("uhfk", "rpa")):
+    # Suppressed for explicit Wannier modes; an unset calcmode still writes it.
+    if StdI.calcmode in ("uhfk", "rpa"):
         return
 
     with open("geometry.dat", "w") as fp:

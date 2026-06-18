@@ -58,8 +58,8 @@ class TestHPhiPostLatticeBoostKeyError:
 
 
 class TestSolverKeywordTableProperties:
-    def test_hwave_mvmc_uhf_expose_keyword_tables(self):
-        for name in (SolverType.HWAVE, SolverType.mVMC, SolverType.UHF):
+    def test_solvers_expose_keyword_tables(self):
+        for name in (SolverType.UHFR, SolverType.UHFK, SolverType.mVMC, SolverType.UHF):
             kt = get_plugin(name).keyword_table
             assert isinstance(kt, dict)
             assert kt
