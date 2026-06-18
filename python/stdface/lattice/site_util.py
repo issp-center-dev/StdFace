@@ -33,10 +33,13 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import io
 import logging
 import itertools
 from contextlib import contextmanager
 from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TextIO
 
 import numpy as np
@@ -237,6 +240,68 @@ def _write_gnuplot_header(fp: TextIO, StdI: StdIntList) -> None:
 
 
 _LATTICE_GP_FOOTER = "plot '-' w d lc 7\n0.0 0.0\nend\npause -1\n"
+
+
+@dataclass(frozen=True)
+class _BondEntry:
+    """A single gnuplot bond: two labelled site endpoints and a connector."""
+
+    isite: int
+    jsite: int
+    xi: float
+    yi: float
+    xj: float
+    yj: float
+    connect: int
+
+
+@dataclass
+class GnuplotData:
+    """The fully-rendered ``lattice.gp`` gnuplot script (D1 build/write pattern)."""
+
+    content: str
+
+    def write(self, directory: Path = Path(".")) -> None:
+        """Write the script to ``<directory>/lattice.gp``."""
+        with open(Path(directory) / "lattice.gp", "w") as fp:
+            fp.write(self.content)
+
+    def to_dict(self) -> dict:
+        return {"content": self.content}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GnuplotData":
+        return cls(content=data["content"])
+
+
+class GnuplotBuffer:
+    """Accumulates gnuplot bond entries (I/O-free) and renders a GnuplotData.
+
+    Replaces the old ``lattice_gp`` context manager: lattice builders call
+    :meth:`add` for each bond, then :meth:`build` produces the script string
+    without touching the filesystem.
+    """
+
+    def __init__(self) -> None:
+        self._entries: list[_BondEntry] = []
+
+    def add(self, isite: int, jsite: int,
+            xi: float, yi: float, xj: float, yj: float, connect: int) -> None:
+        """Record one bond (two endpoints + connector)."""
+        self._entries.append(_BondEntry(isite, jsite, xi, yi, xj, yj, connect))
+
+    def __bool__(self) -> bool:
+        return bool(self._entries)
+
+    def build(self, StdI: StdIntList) -> "GnuplotData":
+        """Render the accumulated entries into a :class:`GnuplotData` (I/O-free)."""
+        out = io.StringIO()
+        _write_gnuplot_header(out, StdI)
+        for e in self._entries:
+            _write_gnuplot_bond(out, e.isite, e.jsite,
+                                e.xi, e.yi, e.xj, e.yj, e.connect)
+        out.write(_LATTICE_GP_FOOTER)
+        return GnuplotData(content=out.getvalue())
 
 
 @contextmanager
