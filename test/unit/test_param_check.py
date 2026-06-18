@@ -11,7 +11,6 @@ import numpy as np
 import pytest
 
 from stdface.core.param_check import (
-    exit_program,
     print_val_d,
     print_val_dd,
     print_val_c,
@@ -22,22 +21,6 @@ from stdface.core.param_check import (
     required_val_i,
 )
 from stdface.core.stdface_vals import NaN_i, NaN_d
-
-
-class TestExitProgram:
-    """Tests for exit_program."""
-
-    def test_exits_with_code(self):
-        """Test that exit_program raises SystemExit with the given code."""
-        with pytest.raises(SystemExit) as exc_info:
-            exit_program(-1)
-        assert exc_info.value.code == -1
-
-    def test_exits_with_zero(self):
-        """Test that exit_program can exit with code 0."""
-        with pytest.raises(SystemExit) as exc_info:
-            exit_program(0)
-        assert exc_info.value.code == 0
 
 
 class TestPrintValD:
@@ -211,7 +194,6 @@ class TestBackwardCompatibility:
     def test_import_from_stdface_model_util(self):
         """Test that all extracted functions are re-exported."""
         from stdface.core.stdface_model_util import (
-            exit_program as ep,
             print_val_d as pvd,
             print_val_dd as pvdd,
             print_val_c as pvc,
@@ -222,7 +204,6 @@ class TestBackwardCompatibility:
             required_val_i as rvi,
         )
         from stdface.core.param_check import (
-            exit_program,
             print_val_d,
             print_val_dd,
             print_val_c,
@@ -232,7 +213,6 @@ class TestBackwardCompatibility:
             not_used_i,
             required_val_i,
         )
-        assert ep is exit_program
         assert pvd is print_val_d
         assert pvdd is print_val_dd
         assert pvc is print_val_c

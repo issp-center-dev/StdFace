@@ -26,27 +26,6 @@ def _make_allocated(ntrans: int = 100, nintr: int = 100) -> StdIntList:
 
 
 # ---------------------------------------------------------------------------
-#  exit_program
-# ---------------------------------------------------------------------------
-
-
-class TestExitProgram:
-    """Tests for exit_program."""
-
-    def test_exit_raises(self):
-        """exit_program should call sys.exit."""
-        with pytest.raises(SystemExit) as exc_info:
-            smu.exit_program(42)
-        assert exc_info.value.code == 42
-
-    def test_exit_negative(self):
-        """exit_program with negative code."""
-        with pytest.raises(SystemExit) as exc_info:
-            smu.exit_program(-1)
-        assert exc_info.value.code == -1
-
-
-# ---------------------------------------------------------------------------
 #  trans
 # ---------------------------------------------------------------------------
 
@@ -265,12 +244,12 @@ class TestPrintValD:
 class TestPrintValDd:
     """Tests for print_val_dd."""
 
-    def test_nan_with_primary_default(self, capsys):
+    def test_nan_with_primary_default(self):
         """When val=NaN and val0 is specified, use val0."""
         result = smu.print_val_dd("V", float("nan"), 2.0, 0.0)
         assert result == 2.0
 
-    def test_nan_with_secondary_default(self, capsys):
+    def test_nan_with_secondary_default(self):
         """When val=NaN and val0=NaN, use val1."""
         result = smu.print_val_dd("V", float("nan"), float("nan"), 3.0)
         assert result == 3.0
@@ -279,12 +258,12 @@ class TestPrintValDd:
 class TestPrintValC:
     """Tests for print_val_c."""
 
-    def test_nan_uses_default(self, capsys):
+    def test_nan_uses_default(self):
         """NaN real part should trigger default."""
         result = smu.print_val_c("t", complex(float("nan"), 0), 1.0 + 0.5j)
         assert result == 1.0 + 0.5j
 
-    def test_specified_value(self, capsys):
+    def test_specified_value(self):
         """Non-NaN should be returned as-is."""
         result = smu.print_val_c("t", 2.0 + 1.0j, 0.0 + 0j)
         assert result == 2.0 + 1.0j
@@ -293,12 +272,12 @@ class TestPrintValC:
 class TestPrintValI:
     """Tests for print_val_i."""
 
-    def test_sentinel_uses_default(self, capsys):
+    def test_sentinel_uses_default(self):
         """Sentinel value should trigger default."""
         result = smu.print_val_i("L", 2147483647, 4)
         assert result == 4
 
-    def test_specified_value(self, capsys):
+    def test_specified_value(self):
         """Non-sentinel should be returned as-is."""
         result = smu.print_val_i("L", 8, 4)
         assert result == 8
@@ -460,7 +439,7 @@ class TestMallocInteractions:
 class TestInputSpinNN:
     """Tests for input_spin_nn."""
 
-    def test_isotropic_fills_diagonal(self, capsys):
+    def test_isotropic_fills_diagonal(self):
         """Isotropic JAll should fill diagonal of J0."""
         J = np.full((3, 3), float("nan"))
         J0 = np.full((3, 3), float("nan"))
@@ -481,7 +460,7 @@ class TestInputSpinNN:
 class TestInputSpin:
     """Tests for input_spin."""
 
-    def test_isotropic_fills_diagonal(self, capsys):
+    def test_isotropic_fills_diagonal(self):
         """Isotropic JpAll should fill diagonal of Jp."""
         Jp = np.full((3, 3), float("nan"))
         smu.input_spin(Jp, JpAll=0.5, Jpname="J'")
@@ -499,12 +478,12 @@ class TestInputSpin:
 class TestInputCoulombV:
     """Tests for input_coulomb_v."""
 
-    def test_specified_v0(self, capsys):
+    def test_specified_v0(self):
         """When V0 is specified, it should be returned."""
         result = smu.input_coulomb_v(float("nan"), 2.5, "V1")
         assert result == 2.5
 
-    def test_inherit_from_v(self, capsys):
+    def test_inherit_from_v(self):
         """When V0=NaN but V is specified, inherit V."""
         result = smu.input_coulomb_v(1.0, float("nan"), "V1")
         assert result == 1.0
@@ -523,12 +502,12 @@ class TestInputCoulombV:
 class TestInputHopp:
     """Tests for input_hopp."""
 
-    def test_specified_t0(self, capsys):
+    def test_specified_t0(self):
         """When t0 is specified, it should be returned."""
         result = smu.input_hopp(complex(float("nan"), 0), 0.5 + 0.1j, "t1")
         assert result == 0.5 + 0.1j
 
-    def test_inherit_from_t(self, capsys):
+    def test_inherit_from_t(self):
         """When t0=NaN but t is specified, inherit t."""
         result = smu.input_hopp(1.0 + 0j, complex(float("nan"), 0), "t1")
         assert result == 1.0 + 0j

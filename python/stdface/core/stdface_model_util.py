@@ -37,7 +37,6 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 from .param_check import (  # noqa: F401 – re-exported for backward compatibility
-    exit_program,
     print_val_d,
     print_val_dd,
     print_val_c,

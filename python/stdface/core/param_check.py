@@ -7,8 +7,6 @@ implementations, solver writers, and the main entry point.
 
 Functions
 ---------
-exit_program
-    Terminate the program with a given error code.
 print_val_d
     Print / default a real-valued parameter.
 print_val_dd
@@ -42,37 +40,12 @@ from __future__ import annotations
 import itertools
 import logging
 import math
-import sys
 
 import numpy as np
 
 from .stdface_vals import NaN_i
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-#  Exit wrapper
-# ---------------------------------------------------------------------------
-
-
-def exit_program(errorcode: int) -> None:
-    """Terminate the program with the given error code.
-
-    Parameters
-    ----------
-    errorcode : int
-        Exit code passed to ``sys.exit``.
-
-    Notes
-    -----
-    In the original C code this was ``StdFace_exit`` which wrapped
-    ``MPI_Abort`` / ``MPI_Finalize``.  The Python version simply calls
-    ``sys.exit``.
-    """
-    sys.stdout.flush()
-    sys.stderr.flush()
-    sys.exit(errorcode)
 
 
 # ---------------------------------------------------------------------------
