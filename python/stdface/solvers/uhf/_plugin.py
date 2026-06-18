@@ -5,7 +5,7 @@ and Expert-mode file writing.
 """
 from __future__ import annotations
 
-from ...plugin import SolverPlugin, register
+from ...plugin import ExpertModeSolverPlugin, register
 from ...core.stdface_vals import StdIntList, SolverType, NaN_i, NaN_d
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d,
@@ -13,7 +13,7 @@ from ...core.keyword_parser import (
 )
 
 
-class UHFPlugin(SolverPlugin):
+class UHFPlugin(ExpertModeSolverPlugin):
     """Plugin for the UHF (unrestricted Hartree-Fock) solver."""
 
     @property
@@ -31,6 +31,17 @@ class UHFPlugin(SolverPlugin):
     @property
     def reset_arrays(self) -> list[tuple[str, object]]:
         return _RESET_ARRAYS
+
+    def set_defaults(self, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _check_mod_para_uhf
+        _check_mod_para_uhf(StdI)
+
+    def write_modpara_body(self, fp, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _write_modpara_uhf_hwave
+        _write_modpara_uhf_hwave(fp, StdI)
+
+    def has_two_body_green(self, StdI: StdIntList) -> bool:
+        return False
 
     def write_green(self, StdI: StdIntList) -> None:
         """Write only greenone.def (UHF does not use greentwo)."""

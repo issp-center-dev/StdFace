@@ -33,6 +33,10 @@ class HWavePlugin(SolverPlugin):
     def reset_arrays(self) -> list[tuple[str, object]]:
         return _RESET_ARRAYS
 
+    def set_defaults(self, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _check_mod_para_uhf
+        _check_mod_para_uhf(StdI)
+
     def write(self, StdI: StdIntList) -> None:
         """Write H-wave output files.
 

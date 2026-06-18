@@ -23,7 +23,6 @@ from stdface.writer.common_writer import (
     check_mod_para,
     OUTPUT_MODE_TO_INT,
     MODEL_GC_TO_EX_UPDATE_PATH,
-    _SOLVER_DEFAULTS_DISPATCH,
     _check_mod_para_hphi,
     _check_mod_para_mvmc,
     _check_mod_para_uhf,
@@ -33,10 +32,8 @@ from stdface.writer.common_writer import (
     _write_modpara_mvmc,
     _write_modpara_uhf_hwave,
     _MODPARA_BANNER,
-    _MODPARA_BODY_DISPATCH,
     _write_namelist_hphi,
     _write_namelist_mvmc,
-    _NAMELIST_BODY_DISPATCH,
     _INTERACTION_FLAGS,
     GreenFunctionIndices,
     _merge_duplicate_terms,
@@ -276,22 +273,7 @@ class TestPrintNamelist:
 
 
 class TestNamelistBodyDispatch:
-    """Tests for the namelist body-writer dispatch pattern."""
-
-    def test_dispatch_has_hphi_and_mvmc(self):
-        """Test that dispatch table has HPhi and mVMC entries."""
-        assert SolverType.HPhi in _NAMELIST_BODY_DISPATCH
-        assert SolverType.mVMC in _NAMELIST_BODY_DISPATCH
-
-    def test_dispatch_uhf_hwave_absent(self):
-        """Test that UHF and HWAVE have no solver-specific entries."""
-        assert SolverType.UHF not in _NAMELIST_BODY_DISPATCH
-        assert SolverType.HWAVE not in _NAMELIST_BODY_DISPATCH
-
-    def test_dispatch_maps_to_correct_functions(self):
-        """Test that dispatch maps to the correct body-writer functions."""
-        assert _NAMELIST_BODY_DISPATCH[SolverType.HPhi] is _write_namelist_hphi
-        assert _NAMELIST_BODY_DISPATCH[SolverType.mVMC] is _write_namelist_mvmc
+    """Tests for the namelist body-writer functions and helpers."""
 
     def test_interaction_flags_table(self):
         """Test that _INTERACTION_FLAGS has 7 entries with valid attributes."""
@@ -718,57 +700,13 @@ class TestPrintModPara:
             finally:
                 os.chdir(orig)
 
-    def test_writes_modpara_hwave(self):
-        """Test that modpara.def is created for HWAVE solver."""
-        StdI = _make_stdi_base(solver="HWAVE", nsite=4)
-        StdI.CDataFileHead = "zvo"
-        StdI.Iteration_max = 1000
-        StdI.eps = 8
-        StdI.mix = 0.5
-        StdI.RndSeed = 123456789
-        StdI.eps_slater = 6
-        StdI.NMPTrans = 0
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            orig = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                print_mod_para(StdI)
-                content = open("modpara.def").read()
-                assert "HWAVE_Cal_Parameters" in content
-            finally:
-                os.chdir(orig)
-
-    def test_writes_modpara_unknown_solver_skips_body_writer(self):
-        """Unknown ``solver`` still writes the header; body dispatch is skipped."""
-        StdI = _make_stdi_base(nsite=2)
-        StdI.solver = "NotRegisteredSolver"
-        StdI.CDataFileHead = "zvo"
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            orig = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                print_mod_para(StdI)
-                content = open("modpara.def").read()
-                assert "Model_Parameters" in content
-                assert "HPhi_Cal_Parameters" not in content
-            finally:
-                os.chdir(orig)
+    # Note: HWAVE no longer writes modpara.def via print_mod_para (it is not an
+    # ExpertModeSolverPlugin and overrides write()); the former
+    # test_writes_modpara_hwave / unknown-solver tests were removed in B1.
 
 
 class TestModparaBodyDispatch:
-    """Tests for the _MODPARA_BODY_DISPATCH table and helper writers."""
-
-    def test_dispatch_has_four_solvers(self):
-        assert len(_MODPARA_BODY_DISPATCH) == 4
-
-    def test_dispatch_maps_all_solver_types(self):
-        for s in (SolverType.HPhi, SolverType.mVMC, SolverType.UHF, SolverType.HWAVE):
-            assert s in _MODPARA_BODY_DISPATCH
-
-    def test_uhf_and_hwave_share_writer(self):
-        assert _MODPARA_BODY_DISPATCH[SolverType.UHF] is _MODPARA_BODY_DISPATCH[SolverType.HWAVE]
+    """Tests for the modpara body-writer functions and banner."""
 
     def test_banner_has_uhf_and_hwave(self):
         assert SolverType.UHF in _MODPARA_BANNER
@@ -1012,27 +950,7 @@ class TestModelGcToExUpdatePath:
 
 
 class TestSolverDefaultsDispatch:
-    """Tests for _SOLVER_DEFAULTS_DISPATCH and extracted helper functions."""
-
-    # -- dispatch dict structure --
-
-    def test_dispatch_has_four_entries(self):
-        assert len(_SOLVER_DEFAULTS_DISPATCH) == 4
-
-    def test_dispatch_hphi_maps_to_hphi_handler(self):
-        assert _SOLVER_DEFAULTS_DISPATCH[SolverType.HPhi] is _check_mod_para_hphi
-
-    def test_dispatch_mvmc_maps_to_mvmc_handler(self):
-        assert _SOLVER_DEFAULTS_DISPATCH[SolverType.mVMC] is _check_mod_para_mvmc
-
-    def test_dispatch_uhf_maps_to_uhf_handler(self):
-        assert _SOLVER_DEFAULTS_DISPATCH[SolverType.UHF] is _check_mod_para_uhf
-
-    def test_dispatch_hwave_shares_uhf_handler(self):
-        assert _SOLVER_DEFAULTS_DISPATCH[SolverType.HWAVE] is _check_mod_para_uhf
-
-    def test_dispatch_unknown_returns_none(self):
-        assert _SOLVER_DEFAULTS_DISPATCH.get("bogus_solver") is None
+    """Tests for the solver-defaults helper functions (set via plugins)."""
 
     # -- HPhi handler sets defaults --
 
@@ -1345,16 +1263,6 @@ class TestCheckConservedQuantities:
         StdI = _make_stdi_base(model="hubbard", solver="HPhi")
         StdI.lGC = 2
         _check_conserved_quantities(StdI)
-
-
-class TestCheckModParaUnknownSolver:
-    """``check_mod_para`` when ``solver`` is not in defaults dispatch."""
-
-    def test_unknown_solver_skips_defaults_handler(self):
-        StdI = _make_stdi_base(nsite=2)
-        StdI.solver = "UnknownSolver"
-        StdI.lGC = 2
-        check_mod_para(StdI)
 
 
 class TestConservedQtyRulesTable:

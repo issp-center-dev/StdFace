@@ -5,7 +5,7 @@ and Expert-mode file writing.
 """
 from __future__ import annotations
 
-from ...plugin import SolverPlugin, register
+from ...plugin import ExpertModeSolverPlugin, register
 from ...core.stdface_vals import StdIntList, SolverType, NaN_i, NaN_d
 from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_i, store_with_check_dup_d,
@@ -16,7 +16,7 @@ from .variational import generate_orb, proj, print_jastrow
 from .writer import print_orb, print_orb_para, print_gutzwiller
 
 
-class MVMCPlugin(SolverPlugin):
+class MVMCPlugin(ExpertModeSolverPlugin):
     """Plugin for the mVMC variational Monte Carlo solver."""
 
     @property
@@ -26,6 +26,18 @@ class MVMCPlugin(SolverPlugin):
     @property
     def keyword_table(self) -> dict[str, tuple]:
         return _MVMC_KEYWORDS
+
+    def set_defaults(self, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _check_mod_para_mvmc
+        _check_mod_para_mvmc(StdI)
+
+    def write_modpara_body(self, fp, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _write_modpara_mvmc
+        _write_modpara_mvmc(fp, StdI)
+
+    def write_namelist_body(self, fp, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _write_namelist_mvmc
+        _write_namelist_mvmc(fp, StdI)
 
     @property
     def reset_scalars(self) -> list[tuple[str, object]]:
