@@ -895,8 +895,7 @@ class TestWannier90Hubbard:
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
 
-        assert s.transindx is not None
-        assert s.trans is not None
+        assert s.trans_list
 
     def test_wan2site_content(self, tmp_path):
         """wan2site.dat should contain correct site mapping."""
@@ -1033,7 +1032,7 @@ class TestWannier90DoubleCountingIntegration:
 
         assert s.NsiteUC == NsiteUC
         assert (tmp_path / "initial.def").exists()
-        assert s.ntrans >= 0
+        assert len(s.trans_list) >= 0
 
 
 class TestWannier90HrMultilineDegeneracy:
@@ -1052,7 +1051,7 @@ class TestWannier90HrMultilineDegeneracy:
 
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
-        assert s.ntrans >= 0
+        assert len(s.trans_list) >= 0
 
 
 # ---------------------------------------------------------------------------
@@ -1062,9 +1061,7 @@ class TestWannier90HrMultilineDegeneracy:
 
 def _setup_interactions(s: StdIntList, ntransMax: int = 100, nintrMax: int = 100) -> None:
     """Allocate interaction arrays on StdIntList for testing."""
-    s.transindx = np.zeros((ntransMax, 4), dtype=int)
-    s.trans = np.zeros(ntransMax, dtype=complex)
-    s.ntrans = 0
+    s.trans_list = []
     s.intrindx = np.zeros((nintrMax, 8), dtype=int)
     s.intr = np.zeros(nintrMax, dtype=complex)
     s.nintr = 0
@@ -1104,9 +1101,9 @@ class TestApplyHoppingTerms:
         NtUJ = [0, 0, 0]
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
-        ntrans_before = s.ntrans
+        ntrans_before = len(s.trans_list)
         w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
-        assert s.ntrans == ntrans_before
+        assert len(s.trans_list) == ntrans_before
 
     def test_local_hopping_hubbard(self):
         """Local hopping term should add on-site transfer for Hubbard."""
@@ -1124,10 +1121,10 @@ class TestApplyHoppingTerms:
         w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
 
         # Should add 2 transfer terms (one per spin)
-        assert s.ntrans == 2
+        assert len(s.trans_list) == 2
         # Transfer value should be -(-1.0) = 1.0
-        np.testing.assert_allclose(s.trans[0], 1.0 + 0j, atol=1e-12)
-        np.testing.assert_allclose(s.trans[1], 1.0 + 0j, atol=1e-12)
+        np.testing.assert_allclose(s.trans_list[0][0], 1.0 + 0j, atol=1e-12)
+        np.testing.assert_allclose(s.trans_list[1][0], 1.0 + 0j, atol=1e-12)
 
     def test_local_hopping_spin_is_noop(self):
         """Local hopping should be skipped for spin model."""
@@ -1144,7 +1141,7 @@ class TestApplyHoppingTerms:
         w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
 
         # No transfer terms added for spin local hopping
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
     def test_zero_terms_is_noop(self):
         """Should do nothing when NtUJ[0] is 0."""
@@ -1159,7 +1156,7 @@ class TestApplyHoppingTerms:
 
         w90._apply_hopping_terms(s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx, None)
 
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1230,9 +1227,9 @@ class TestApplyCoulombTerms:
 
         assert s.NCintra == 1
         # Should add 2 transfer terms (one per spin)
-        assert s.ntrans == 2
+        assert len(s.trans_list) == 2
         # alpha * U * DenMat = 0.5 * 4.0 * 0.5 = 1.0
-        np.testing.assert_allclose(s.trans[0], 1.0 + 0j, atol=1e-12)
+        np.testing.assert_allclose(s.trans_list[0][0], 1.0 + 0j, atol=1e-12)
 
     def test_zero_terms_is_noop(self):
         """Should do nothing when NtUJ[1] is 0."""
@@ -1251,7 +1248,7 @@ class TestApplyCoulombTerms:
         )
 
         assert s.NCintra == 0
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1395,9 +1392,8 @@ class TestBuildWannierInteractions:
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
 
-        assert s.transindx is not None
-        assert s.trans is not None
-        assert s.ntrans >= 0
+        assert s.trans_list
+        assert len(s.trans_list) >= 0
 
     def test_spin_allocates_arrays(self, tmp_path):
         """Should allocate interaction arrays for Spin model."""
@@ -1412,7 +1408,7 @@ class TestBuildWannierInteractions:
         s = _make_wannier_StdI(model="spin", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
 
-        assert s.transindx is not None
+        assert isinstance(s.trans_list, list)
         assert s.intrindx is not None
 
 

@@ -331,12 +331,10 @@ class StdIntList:
         Number of sites, set in each lattice file.
     locspinflag : np.ndarray or None
         ``[nsite]`` LocSpin in Expert mode.
-    ntrans : int
-        Number of transfer, counted in each lattice file.
-    transindx : np.ndarray or None
-        ``[ntrans][4]`` Site/spin indices of one-body term.
-    trans : np.ndarray or None
-        ``[ntrans]`` Coefficient of one-body term (complex).
+    trans_list : list of tuple
+        One-body transfer terms as ``(amp, isite, ispin, jsite, jspin)``
+        tuples (``amp`` is complex).  Replaces the former
+        ``trans`` / ``transindx`` / ``ntrans`` arrays + counter.
     nintr : int
         Number of InterAll, counted in each lattice file.
     Lintr : int
@@ -723,9 +721,7 @@ class StdIntList:
     # ------------------------------------------------------------------
     nsite: int = 0
     locspinflag: None = None
-    ntrans: int = 0
-    transindx: None = None
-    trans: None = None
+    trans_list: list = field(default_factory=list)
     nintr: int = 0
     Lintr: int = 0
     intrindx: None = None

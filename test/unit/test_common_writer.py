@@ -102,9 +102,7 @@ class TestPrintTrans:
     def test_writes_trans_def(self):
         """Test that trans.def is created."""
         StdI = _make_stdi_base(nsite=2)
-        StdI.ntrans = 2
-        StdI.transindx = [[0, 0, 1, 0], [1, 0, 0, 0]]
-        StdI.trans = [1.0 + 0j, 1.0 + 0j]
+        StdI.trans_list = [(1.0 + 0j, 0, 0, 1, 0), (1.0 + 0j, 1, 0, 0, 0)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -120,9 +118,11 @@ class TestPrintTrans:
     def test_merges_duplicates(self):
         """Test that duplicate transfer terms are merged."""
         StdI = _make_stdi_base(nsite=2)
-        StdI.ntrans = 3
-        StdI.transindx = [[0, 0, 1, 0], [0, 0, 1, 0], [1, 0, 0, 0]]
-        StdI.trans = [1.0 + 0j, 2.0 + 0j, 0.5 + 0j]
+        StdI.trans_list = [
+            (1.0 + 0j, 0, 0, 1, 0),
+            (2.0 + 0j, 0, 0, 1, 0),
+            (0.5 + 0j, 1, 0, 0, 0),
+        ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -139,9 +139,7 @@ class TestPrintTrans:
     def test_suppresses_small_values(self):
         """Test that entries below threshold are suppressed."""
         StdI = _make_stdi_base(nsite=2)
-        StdI.ntrans = 2
-        StdI.transindx = [[0, 0, 1, 0], [1, 0, 0, 0]]
-        StdI.trans = [1e-8 + 0j, 1.0 + 0j]
+        StdI.trans_list = [(1e-8 + 0j, 0, 0, 1, 0), (1.0 + 0j, 1, 0, 0, 0)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()

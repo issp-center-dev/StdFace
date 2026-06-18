@@ -37,24 +37,24 @@ class TestTrans:
         """trans should add an entry to trans/transindx arrays."""
         s = _make_allocated()
         smu.trans(s, 1.0 + 0.5j, 0, 0, 1, 1)
-        assert s.ntrans == 1
-        assert s.trans[0] == pytest.approx(1.0 + 0.5j)
-        assert list(s.transindx[0]) == [0, 0, 1, 1]
+        assert len(s.trans_list) == 1
+        assert s.trans_list[0][0] == pytest.approx(1.0 + 0.5j)
+        assert list(s.trans_list[0][1:]) == [0, 0, 1, 1]
 
     def test_skip_tiny(self):
         """trans should skip entries with |trans0| < 1e-12."""
         s = _make_allocated()
         smu.trans(s, 1e-13, 0, 0, 1, 1)
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
     def test_multiple_entries(self):
         """trans should increment ntrans correctly."""
         s = _make_allocated()
         smu.trans(s, 1.0, 0, 0, 1, 0)
         smu.trans(s, 2.0, 1, 1, 0, 1)
-        assert s.ntrans == 2
-        assert s.trans[0] == 1.0
-        assert s.trans[1] == 2.0
+        assert len(s.trans_list) == 2
+        assert s.trans_list[0][0] == 1.0
+        assert s.trans_list[1][0] == 2.0
 
 
 # ---------------------------------------------------------------------------
@@ -70,14 +70,14 @@ class TestHopping:
         s = _make_allocated()
         dR = np.zeros(3)
         smu.hopping(s, 1.0 + 0j, 0, 1, dR)
-        assert s.ntrans == 4
+        assert len(s.trans_list) == 4
 
     def test_zero_hopping(self):
         """Zero hopping should add no entries."""
         s = _make_allocated()
         dR = np.zeros(3)
         smu.hopping(s, 0.0, 0, 1, dR)
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ class TestHubbardLocal:
         smu.hubbard_local(s, mu0=1.0, h0=0.0, Gamma0=0.0,
                           Gamma0_y=0.0, U0=4.0, isite=0)
         # mu contributes 2 transfers (spin up, spin down)
-        assert s.ntrans == 2
+        assert len(s.trans_list) == 2
         assert s.NCintra == 1
         assert s.Cintra[0] == 4.0
         assert s.CintraIndx[0, 0] == 0
@@ -105,7 +105,7 @@ class TestHubbardLocal:
         smu.hubbard_local(s, mu0=0.0, h0=1.0, Gamma0=0.5,
                           Gamma0_y=0.3, U0=0.0, isite=2)
         # h: 2 transfers, Gamma: 2, Gamma_y: 2 = 6 total
-        assert s.ntrans == 6
+        assert len(s.trans_list) == 6
         assert s.NCintra == 1
 
 
@@ -122,19 +122,19 @@ class TestMagField:
         s = _make_allocated()
         smu.mag_field(s, S2=1, h=1.0, Gamma=0.5, Gamma_y=0.0, isite=0)
         # S2=1: ispin=0 (Sz=0.5 -> 1 longitudinal), ispin=1 (Sz=-0.5 -> 1 longitudinal + 2 transverse)
-        assert s.ntrans == 4
+        assert len(s.trans_list) == 4
 
     def test_zero_field(self):
         """Zero field should produce no transfers."""
         s = _make_allocated()
         smu.mag_field(s, S2=1, h=0.0, Gamma=0.0, Gamma_y=0.0, isite=0)
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
     def test_spin_one(self):
         """S=1 (S2=2) should produce more terms."""
         s = _make_allocated()
         smu.mag_field(s, S2=2, h=1.0, Gamma=0.5, Gamma_y=0.0, isite=0)
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -393,9 +393,7 @@ class TestMallocInteractions:
         """All interaction arrays should be properly allocated."""
         s = StdIntList()
         smu.malloc_interactions(s, ntransMax=50, nintrMax=30)
-        assert s.transindx.shape == (50, 4)
-        assert s.trans.shape == (50,)
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
         assert s.intrindx.shape == (30, 8)
         assert s.intr.shape == (30,)
         assert s.nintr == 0

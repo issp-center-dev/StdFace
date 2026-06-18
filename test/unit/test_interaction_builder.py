@@ -61,9 +61,7 @@ class TestMallocInteractions:
         StdI.method = "lanczos"
         StdI.PumpBody = 0
         malloc_interactions(StdI, 50, 80)
-        assert StdI.trans.shape == (50,)
-        assert StdI.transindx.shape == (50, 4)
-        assert StdI.ntrans == 0
+        assert len(StdI.trans_list) == 0
 
     def test_intr_arrays_allocated(self):
         """Test that interaction arrays are allocated with correct shapes."""
@@ -133,29 +131,29 @@ class TestTrans:
         """Test that a transfer term is added correctly."""
         StdI = _make_stdi()
         trans(StdI, 1.0 + 0j, 0, 0, 1, 0)
-        assert StdI.ntrans == 1
-        assert StdI.trans[0] == 1.0 + 0j
-        assert list(StdI.transindx[0]) == [0, 0, 1, 0]
+        assert len(StdI.trans_list) == 1
+        assert StdI.trans_list[0][0] == 1.0 + 0j
+        assert list(StdI.trans_list[0][1:]) == [0, 0, 1, 0]
 
     def test_skips_small_value(self):
         """Test that values below threshold are skipped."""
         StdI = _make_stdi()
         trans(StdI, 1e-13, 0, 0, 1, 0)
-        assert StdI.ntrans == 0
+        assert len(StdI.trans_list) == 0
 
     def test_increments_counter(self):
         """Test that multiple calls increment the counter."""
         StdI = _make_stdi()
         trans(StdI, 1.0, 0, 0, 1, 0)
         trans(StdI, 2.0, 1, 1, 0, 1)
-        assert StdI.ntrans == 2
-        assert StdI.trans[1] == 2.0
+        assert len(StdI.trans_list) == 2
+        assert StdI.trans_list[1][0] == 2.0
 
     def test_complex_value(self):
         """Test that complex transfer values are stored."""
         StdI = _make_stdi()
         trans(StdI, 1.0 + 0.5j, 0, 0, 1, 1)
-        assert StdI.trans[0] == pytest.approx(1.0 + 0.5j)
+        assert StdI.trans_list[0][0] == pytest.approx(1.0 + 0.5j)
 
 
 class TestHoppingPump:
@@ -195,7 +193,7 @@ class TestHopping:
         dR = np.array([1.0, 0.0, 0.0])
         hopping(StdI, 1.0 + 0j, 0, 1, dR)
         # 2 spins × 2 directions = 4 terms
-        assert StdI.ntrans == 4
+        assert len(StdI.trans_list) == 4
 
     def test_hermitian_conjugate(self):
         """Test that hopping adds conjugate pairs."""
@@ -203,8 +201,8 @@ class TestHopping:
         dR = np.array([1.0, 0.0, 0.0])
         hopping(StdI, 1.0 + 0.5j, 0, 1, dR)
         # For spin 0: trans(t, j, 0, i, 0) and trans(conj(t), i, 0, j, 0)
-        assert StdI.trans[0] == pytest.approx(1.0 + 0.5j)
-        assert StdI.trans[1] == pytest.approx(1.0 - 0.5j)
+        assert StdI.trans_list[0][0] == pytest.approx(1.0 + 0.5j)
+        assert StdI.trans_list[1][0] == pytest.approx(1.0 - 0.5j)
 
 
 # ===================================================================
@@ -221,18 +219,18 @@ class TestHubbardLocal:
         hubbard_local(StdI, mu0=1.0, h0=0.0, Gamma0=0.0, Gamma0_y=0.0,
                       U0=0.0, isite=0)
         # mu0 contributes 2 terms (spin up and down)
-        assert StdI.ntrans == 2
-        assert StdI.trans[0] == pytest.approx(1.0)  # mu - 0.5*h
-        assert StdI.trans[1] == pytest.approx(1.0)  # mu + 0.5*h
+        assert len(StdI.trans_list) == 2
+        assert StdI.trans_list[0][0] == pytest.approx(1.0)  # mu - 0.5*h
+        assert StdI.trans_list[1][0] == pytest.approx(1.0)  # mu + 0.5*h
 
     def test_magnetic_field(self):
         """Test that longitudinal field splits spin channels."""
         StdI = _make_stdi()
         hubbard_local(StdI, mu0=0.0, h0=2.0, Gamma0=0.0, Gamma0_y=0.0,
                       U0=0.0, isite=0)
-        assert StdI.ntrans == 2
-        assert StdI.trans[0] == pytest.approx(-1.0)  # 0 - 0.5*2
-        assert StdI.trans[1] == pytest.approx(1.0)   # 0 + 0.5*2
+        assert len(StdI.trans_list) == 2
+        assert StdI.trans_list[0][0] == pytest.approx(-1.0)  # 0 - 0.5*2
+        assert StdI.trans_list[1][0] == pytest.approx(1.0)   # 0 + 0.5*2
 
     def test_intra_coulomb(self):
         """Test that intra-Coulomb U is added."""
@@ -249,9 +247,9 @@ class TestHubbardLocal:
         hubbard_local(StdI, mu0=0.0, h0=0.0, Gamma0=1.0, Gamma0_y=0.0,
                       U0=0.0, isite=0)
         # Gamma: 2 terms (spin-flip)
-        assert StdI.ntrans == 2
-        assert StdI.trans[0] == pytest.approx(-0.5)
-        assert StdI.trans[1] == pytest.approx(-0.5)
+        assert len(StdI.trans_list) == 2
+        assert StdI.trans_list[0][0] == pytest.approx(-0.5)
+        assert StdI.trans_list[1][0] == pytest.approx(-0.5)
 
 
 # ===================================================================
@@ -267,25 +265,25 @@ class TestMagField:
         StdI = _make_stdi()
         mag_field(StdI, S2=1, h=1.0, Gamma=0.0, Gamma_y=0.0, isite=0)
         # S=1/2: 2 states → 2 diagonal terms
-        assert StdI.ntrans == 2
+        assert len(StdI.trans_list) == 2
         # ispin=0: Sz=+0.5, trans = -h*0.5 = -0.5
-        assert StdI.trans[0] == pytest.approx(-0.5)
+        assert StdI.trans_list[0][0] == pytest.approx(-0.5)
         # ispin=1: Sz=-0.5, trans = -h*(-0.5) = 0.5
-        assert StdI.trans[1] == pytest.approx(0.5)
+        assert StdI.trans_list[1][0] == pytest.approx(0.5)
 
     def test_spin_half_transverse(self):
         """Test transverse field for S=1/2."""
         StdI = _make_stdi()
         mag_field(StdI, S2=1, h=0.0, Gamma=2.0, Gamma_y=0.0, isite=0)
         # 2 diagonal (h=0 → both zero, skipped) + 2 off-diagonal from Gamma
-        assert StdI.ntrans == 2
+        assert len(StdI.trans_list) == 2
 
     def test_spin_one(self):
         """Test field for S=1 (3 states)."""
         StdI = _make_stdi()
         mag_field(StdI, S2=2, h=1.0, Gamma=0.0, Gamma_y=0.0, isite=0)
         # S=1: Sz=1,0,-1 → 3 diagonal terms, but Sz=0 gives 0 which is skipped
-        assert StdI.ntrans == 2
+        assert len(StdI.trans_list) == 2
 
 
 # ===================================================================
@@ -667,10 +665,10 @@ class TestAddNeighborInteraction:
         """For hubbard model, hopping is called (ntrans increases)."""
         StdI = _make_stdi_square_for_neighbor(4, 4, "hubbard")
         J = np.zeros((3, 3))
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         add_neighbor_interaction(
             StdI, None, 0, 0, 1, 0, 0, 0, 1, J, 1.0, 0.0)
-        assert StdI.ntrans > ntrans_before
+        assert len(StdI.trans_list) > ntrans_before
 
     def test_hubbard_model_calls_coulomb(self):
         """For hubbard model with V != 0, coulomb adds interaction."""
@@ -685,10 +683,10 @@ class TestAddNeighborInteraction:
         """For spin model, ntrans should not change."""
         StdI = _make_stdi_square_for_neighbor(4, 4, "spin")
         J = np.eye(3)
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         add_neighbor_interaction(
             StdI, None, 0, 0, 1, 0, 0, 0, 1, J, 1.0, 1.0)
-        assert StdI.ntrans == ntrans_before
+        assert len(StdI.trans_list) == ntrans_before
 
     def test_hubbard_model_no_general_j(self):
         """For hubbard model, general_j (spin-spin) should not be called."""
@@ -818,10 +816,10 @@ class TestAddNeighborInteraction3D:
         """For hubbard model, hopping terms are added."""
         StdI = _make_stdi_ortho_for_neighbor(2, 2, 2, "hubbard")
         J = np.zeros((3, 3))
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         add_neighbor_interaction_3d(
             StdI, 0, 0, 0, 1, 0, 0, 0, 0, J, 1.0, 0.0)
-        assert StdI.ntrans > ntrans_before
+        assert len(StdI.trans_list) > ntrans_before
 
     def test_hubbard_model_calls_coulomb(self):
         """For hubbard model with V != 0, coulomb adds interaction."""
@@ -836,10 +834,10 @@ class TestAddNeighborInteraction3D:
         """For spin model, ntrans should not change from neighbor interaction."""
         StdI = _make_stdi_ortho_for_neighbor(2, 2, 2, "spin")
         J = np.eye(3)
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         add_neighbor_interaction_3d(
             StdI, 0, 0, 0, 1, 0, 0, 0, 0, J, 1.0, 1.0)
-        assert StdI.ntrans == ntrans_before
+        assert len(StdI.trans_list) == ntrans_before
 
     def test_hubbard_model_no_general_j(self):
         """For hubbard model, general_j (spin-spin) should not be called."""
@@ -975,10 +973,10 @@ class TestAddLocalTerms:
         StdI.Gamma = 0.0
         StdI.Gamma_y = 0.0
         StdI.D = np.zeros((3, 3))
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         add_local_terms(StdI, 0, 0)
         # h != 0 means mag_field adds transfer terms
-        assert StdI.ntrans > ntrans_before
+        assert len(StdI.trans_list) > ntrans_before
 
     def test_spin_model_adds_anisotropy(self):
         """For spin model with D != 0, anisotropy terms are added via general_j."""
@@ -1001,10 +999,10 @@ class TestAddLocalTerms:
         StdI.Gamma = 0.0
         StdI.Gamma_y = 0.0
         StdI.U = 2.0
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         ncintra_before = StdI.NCintra
         add_local_terms(StdI, 0, 0)
-        assert StdI.ntrans > ntrans_before
+        assert len(StdI.trans_list) > ntrans_before
         assert StdI.NCintra > ncintra_before
 
     def test_hubbard_model_no_kondo_coupling(self):
@@ -1051,10 +1049,10 @@ class TestAddLocalTerms:
         StdI.Gamma_y = 0.0
         StdI.U = 0.0
         StdI.J = np.zeros((3, 3))
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         add_local_terms(StdI, 10, 5)
         # hubbard_local adds h on isite=10, mag_field adds h on jsite_kondo=5
-        assert StdI.ntrans > ntrans_before
+        assert len(StdI.trans_list) > ntrans_before
 
     def test_spin_model_no_hubbard_terms(self):
         """For spin model, no Cintra or Cinter terms are added."""
@@ -1076,6 +1074,6 @@ class TestAddLocalTerms:
         StdI.Gamma = 1.0
         StdI.Gamma_y = 0.0
         StdI.D = np.zeros((3, 3))
-        ntrans_before = StdI.ntrans
+        ntrans_before = len(StdI.trans_list)
         add_local_terms(StdI, 0, 0)
-        assert StdI.ntrans > ntrans_before
+        assert len(StdI.trans_list) > ntrans_before

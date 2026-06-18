@@ -152,9 +152,8 @@ class TestSpinModel:
         s = _make_spin_chain(L=4)
         cl.chain(s)
 
-        assert s.transindx is not None
+        assert isinstance(s.trans_list, list)
         assert s.intrindx is not None
-        assert s.trans is not None
         assert s.intr is not None
 
     def test_spin_chain_tau(self, tmp_path):

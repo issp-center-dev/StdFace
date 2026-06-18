@@ -87,9 +87,8 @@ def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
     StdI.NCisAjt = 0
     StdI.NTransfer = 0
 
-    # Transfer array
-    StdI.transindx = []
-    StdI.trans = []
+    # Transfer terms
+    StdI.trans_list = []
 
     # locspinflag
     StdI.locspinflag = [0] * nsite
@@ -239,9 +238,7 @@ def _make_hwave_wannier_export_stdi(nsiteUC: int = 2, ncell: int = 2) -> StdIntL
         s.Cell[i, 0] = i
     s.direct = np.eye(3)
     s.tau = np.zeros((nsiteUC, 3))
-    s.ntrans = 0
-    s.transindx = None
-    s.trans = None
+    s.trans_list = []
     s.NCintra = 0
     s.CintraIndx = None
     s.Cintra = None

@@ -63,8 +63,7 @@ def trans(
 ) -> None:
     """Add a transfer (one-body) term to the list.
 
-    Appends to ``StdI.trans`` and ``StdI.transindx`` and increments
-    ``StdI.ntrans``.
+    Appends ``(trans0, isite, ispin, jsite, jspin)`` to ``StdI.trans_list``.
 
     Parameters
     ----------
@@ -83,10 +82,7 @@ def trans(
     """
     if abs(trans0) < ZERO_BODY_EPS:
         return
-    n = StdI.ntrans
-    StdI.trans[n] = trans0
-    StdI.transindx[n] = [isite, ispin, jsite, jspin]
-    StdI.ntrans = n + 1
+    StdI.trans_list.append((trans0, isite, ispin, jsite, jspin))
 
 
 def hopping(
@@ -513,10 +509,8 @@ def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None
     nintrMax : int
         Upper limit of the number of interaction terms.
     """
-    # (1) Transfer
-    StdI.transindx = np.zeros((ntransMax, 4), dtype=int)
-    StdI.trans = np.zeros(ntransMax, dtype=complex)
-    StdI.ntrans = 0
+    # (1) Transfer (A1: list-based; ntransMax no longer needed here)
+    StdI.trans_list = []
 
     # HPhi pump arrays
     if (StdI.solver == SolverType.HPhi

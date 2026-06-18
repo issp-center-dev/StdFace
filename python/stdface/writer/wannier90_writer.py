@@ -883,9 +883,12 @@ def export_interaction(StdI: StdIntList) -> None:
     if StdI.export_all != NaN_i:
         _is_export_all = StdI.export_all
 
+    _ntrans = len(StdI.trans_list)
+    _tindx = np.array([t[1:5] for t in StdI.trans_list], dtype=int).reshape(_ntrans, 4)
+    _tval = np.array([t[0] for t in StdI.trans_list], dtype=complex)
     _export_transfer(
         StdI,
-        StdI.ntrans, StdI.transindx, StdI.trans,
+        _ntrans, _tindx, _tval,
         _prefix(StdI, "transfer.dat"), "Transfer",
         0)
 

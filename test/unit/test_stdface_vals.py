@@ -53,7 +53,7 @@ class TestStdIntListDefaults:
         assert s.NCell == 0
         assert s.NsiteUC == 0
         assert s.nsite == 0
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
         assert s.nintr == 0
 
     def test_float_defaults(self):
@@ -81,8 +81,7 @@ class TestStdIntListDefaults:
         assert s.Cell is None
         assert s.tau is None
         assert s.locspinflag is None
-        assert s.transindx is None
-        assert s.trans is None
+        assert s.trans_list == []
         assert s.intrindx is None
         assert s.intr is None
         assert s.CintraIndx is None

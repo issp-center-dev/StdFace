@@ -419,7 +419,7 @@ class TestChainHubbardAndKondo:
         chain(s)
         assert s.model == "hubbard"
         assert s.nsite == 4
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
     def test_kondo_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -427,7 +427,7 @@ class TestChainHubbardAndKondo:
         chain(s)
         assert s.model == "kondo"
         assert s.nsite == 8
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
 
 class TestSquareKondo:
@@ -439,7 +439,7 @@ class TestSquareKondo:
         tetragonal(s)
         assert s.model == "kondo"
         assert s.nsite == 8
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
 
 class TestTriangularHubbard:
@@ -452,7 +452,7 @@ class TestTriangularHubbard:
         assert s.model == "hubbard"
         assert s.NCell == 4
         assert s.nsite == 4
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
 
 class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
@@ -464,7 +464,7 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         orthorhombic(s)
         assert s.model == "hubbard"
         assert s.nsite == 8
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
     def test_fc_ortho_hubbard_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -472,7 +472,7 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         fc_ortho(s)
         assert s.model == "hubbard"
         assert s.nsite == 8
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
     def test_pyrochlore_hubbard_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -481,7 +481,7 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         assert s.model == "hubbard"
         # ``NsiteUC == 4`` tetrahedral sites per cell × ``L*W*H`` cells
         assert s.nsite == 32
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
     def test_honeycomb_hubbard_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -491,7 +491,7 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         assert s.NCell == 4
         # Honeycomb has ``NsiteUC == 2`` (two sublattice sites) × ``NCell`` cells
         assert s.nsite == 8
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
     def test_honeycomb_kondo_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -501,7 +501,7 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         assert s.NCell == 4
         # Kondo doubles physical sites: ``2 * NsiteUC * NCell``
         assert s.nsite == 16
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
 
 class TestKagomeLadderTriangularKondoHubbard:
@@ -513,7 +513,7 @@ class TestKagomeLadderTriangularKondoHubbard:
         kagome(s)
         assert s.model == "hubbard"
         assert s.nsite == 12
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
     def test_ladder_hubbard_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -521,7 +521,7 @@ class TestKagomeLadderTriangularKondoHubbard:
         ladder(s)
         assert s.model == "hubbard"
         assert s.nsite == 8
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
     def test_triangular_kondo_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -529,4 +529,4 @@ class TestKagomeLadderTriangularKondoHubbard:
         triangular(s)
         assert s.model == "kondo"
         assert s.nsite == 8
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0

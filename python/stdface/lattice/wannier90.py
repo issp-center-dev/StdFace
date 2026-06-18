@@ -736,12 +736,8 @@ def _apply_hopping_terms(
             if StdI.model == ModelType.HUBBARD:
                 isite = StdI.NsiteUC * kCell + int(tUJindx[0][it, 3])
                 for ispin in range(2):
-                    StdI.trans[StdI.ntrans] = -tUJ[0][it]
-                    StdI.transindx[StdI.ntrans, 0] = isite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = isite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (-tUJ[0][it], isite, ispin, isite, ispin))
         else:
             # Non-local term
             isite, jsite, Cphase, dR = find_site(
@@ -819,14 +815,9 @@ def _apply_coulomb_terms(
                     DenMat0 = DenMat[(0, 0, 0)][
                         int(tUJindx[1][it, 3]), int(tUJindx[1][it, 3])
                     ]
-                    StdI.trans[StdI.ntrans] = (
-                        StdI.alpha * tUJ[1][it].real * DenMat0
-                    )
-                    StdI.transindx[StdI.ntrans, 0] = isite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = isite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (StdI.alpha * tUJ[1][it].real * DenMat0,
+                         isite, ispin, isite, ispin))
         else:
             # Non-local term
             isite, jsite, Cphase, dR = find_site(
@@ -844,23 +835,15 @@ def _apply_coulomb_terms(
                     DenMat0 = DenMat[(0, 0, 0)][
                         int(tUJindx[1][it, 4]), int(tUJindx[1][it, 4])
                     ]
-                    StdI.trans[StdI.ntrans] = tUJ[1][it].real * DenMat0
-                    StdI.transindx[StdI.ntrans, 0] = isite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = isite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (tUJ[1][it].real * DenMat0, isite, ispin, isite, ispin))
 
                     # U_{Rij} D_{0ii} (Local)
                     DenMat0 = DenMat[(0, 0, 0)][
                         int(tUJindx[1][it, 3]), int(tUJindx[1][it, 3])
                     ]
-                    StdI.trans[StdI.ntrans] = tUJ[1][it].real * DenMat0
-                    StdI.transindx[StdI.ntrans, 0] = jsite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = jsite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (tUJ[1][it].real * DenMat0, jsite, ispin, jsite, ispin))
 
                 # Hartree-Fock correction
                 if idcmode == _DCMode.FULL:
@@ -953,27 +936,17 @@ def _apply_hund_terms(
                         DenMat0 = DenMat[(0, 0, 0)][
                             int(tUJindx[2][it, 4]), int(tUJindx[2][it, 4])
                         ]
-                        StdI.trans[StdI.ntrans] = (
-                            -(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0
-                        )
-                        StdI.transindx[StdI.ntrans, 0] = isite
-                        StdI.transindx[StdI.ntrans, 1] = ispin
-                        StdI.transindx[StdI.ntrans, 2] = isite
-                        StdI.transindx[StdI.ntrans, 3] = ispin
-                        StdI.ntrans += 1
+                        StdI.trans_list.append(
+                            (-(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0,
+                             isite, ispin, isite, ispin))
 
                         # -0.5 J_{Rij} D_{0ii}
                         DenMat0 = DenMat[(0, 0, 0)][
                             int(tUJindx[2][it, 3]), int(tUJindx[2][it, 3])
                         ]
-                        StdI.trans[StdI.ntrans] = (
-                            -(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0
-                        )
-                        StdI.transindx[StdI.ntrans, 0] = jsite
-                        StdI.transindx[StdI.ntrans, 1] = ispin
-                        StdI.transindx[StdI.ntrans, 2] = jsite
-                        StdI.transindx[StdI.ntrans, 3] = ispin
-                        StdI.ntrans += 1
+                        StdI.trans_list.append(
+                            (-(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0,
+                             jsite, ispin, jsite, ispin))
 
                     # Hartree-Fock correction
                     if idcmode == _DCMode.FULL:
