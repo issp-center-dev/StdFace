@@ -81,91 +81,23 @@ class SolverPlugin(ABC):
         """Array-fill field reset table."""
 
     # ------------------------------------------------------------------
-    #  Template method for writing output files
+    #  Output generation
     # ------------------------------------------------------------------
 
+    @abstractmethod
     def write(self, StdI: StdIntList) -> None:
         """Write all Expert-mode definition files for this solver.
 
-        This is a template method that calls the common output steps in
-        order.  Override individual steps or this entire method as needed.
+        Each plugin implements its own explicit output sequence.  Expert-mode
+        solvers (HPhi/mVMC/UHF) build the common files via
+        :meth:`ExpertModeSolverPlugin._write_common_files`; other solvers
+        (H-wave) write their own file set.
 
         Parameters
         ----------
         StdI : StdIntList
             The fully-populated parameter structure.
         """
-        self.write_locspn(StdI)
-        self.write_trans(StdI)
-        self.write_interactions(StdI)
-        self.check_and_write_modpara(StdI)
-        self.write_solver_specific(StdI)
-        self.check_output_mode(StdI)
-        self.write_green(StdI)
-        self.write_namelist(StdI)
-
-    # ------------------------------------------------------------------
-    #  Default step implementations — override as needed
-    # ------------------------------------------------------------------
-
-    def write_locspn(self, StdI: StdIntList) -> None:
-        """Write locspn.def."""
-        from .writer.common_writer import print_loc_spin
-        print_loc_spin(StdI)
-
-    def write_trans(self, StdI: StdIntList) -> None:
-        """Write trans.def."""
-        from .writer.common_writer import print_trans
-        print_trans(StdI)
-
-    def write_interactions(self, StdI: StdIntList) -> None:
-        """Write interaction definition files."""
-        from .writer.interaction_writer import print_interactions
-        print_interactions(StdI)
-
-    def check_and_write_modpara(self, StdI: StdIntList) -> None:
-        """Check and write modpara.def."""
-        from .writer.common_writer import check_mod_para, print_mod_para
-        check_mod_para(StdI)
-        print_mod_para(StdI)
-
-    def write_solver_specific(self, StdI: StdIntList) -> None:
-        """Write solver-specific output files.
-
-        Override this method to add solver-specific output (e.g. excitation
-        files for HPhi, variational parameter files for mVMC).
-        The default implementation does nothing.
-
-        Parameters
-        ----------
-        StdI : StdIntList
-            The fully-populated parameter structure.
-        """
-
-    def check_output_mode(self, StdI: StdIntList) -> None:
-        """Check and validate the output mode setting."""
-        from .writer.common_writer import check_output_mode
-        check_output_mode(StdI)
-
-    def write_green(self, StdI: StdIntList) -> None:
-        """Write Green's function definition files.
-
-        Default writes both greenone.def and greentwo.def.
-        Override to write only a subset.
-
-        Parameters
-        ----------
-        StdI : StdIntList
-            The fully-populated parameter structure.
-        """
-        from .writer.common_writer import print_1_green, print_2_green
-        print_1_green(StdI)
-        print_2_green(StdI)
-
-    def write_namelist(self, StdI: StdIntList) -> None:
-        """Write namelist.def."""
-        from .writer.common_writer import print_namelist
-        print_namelist(StdI)
 
     # ------------------------------------------------------------------
     #  Optional lifecycle hooks
@@ -236,6 +168,31 @@ class ExpertModeSolverPlugin(SolverPlugin):
     def has_two_body_green(self, StdI: StdIntList) -> bool:
         """Whether ``greentwo.def`` is listed in ``namelist.def`` (default True)."""
         return True
+
+    def _write_common_files(self, StdI: StdIntList) -> None:
+        """Write the files common to all Expert-mode solvers.
+
+        Replaces the former ``write()`` template + per-step wrapper methods.
+        ``namelist.def`` is intentionally **not** written here: each solver
+        writes its solver-specific files first (HPhi's excitation/calcmod set
+        ``SpectrumBody`` / ``PumpBody`` that ``print_namelist`` reads) and
+        calls ``print_namelist`` last.
+        """
+        from .writer.common_writer import (
+            print_loc_spin, print_trans, check_mod_para, print_mod_para,
+            check_output_mode, print_1_green, print_2_green,
+        )
+        from .writer.interaction_writer import print_interactions
+
+        print_loc_spin(StdI)
+        print_trans(StdI)
+        print_interactions(StdI)
+        check_mod_para(StdI)
+        print_mod_para(StdI)
+        check_output_mode(StdI)
+        print_1_green(StdI)
+        if self.has_two_body_green(StdI):
+            print_2_green(StdI)
 
 
 # ---------------------------------------------------------------------------
