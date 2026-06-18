@@ -11,7 +11,7 @@ from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d, store_with_check_dup_sl,
     _grid3x3_keywords,
 )
-from .export_wannier90 import export_geometry, export_interaction
+from ...writer.wannier90_writer import export_geometry, export_interaction
 
 
 class HWavePlugin(SolverPlugin):

@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from stdface.core.stdface_vals import StdIntList
-from stdface.solvers.hwave import export_wannier90 as ew
+from stdface.writer import wannier90_writer as ew
 
 
 # ---------------------------------------------------------------------------
@@ -732,6 +732,15 @@ class TestExportGeometry:
         s.fileprefix = "myprefix"
         ew.export_geometry(s)
         assert os.path.exists(tmp_path / "myprefix_geom.dat")
+
+
+class TestBackwardCompatShim:
+    """The old solvers.hwave.export_wannier90 path still re-exports the API."""
+
+    def test_old_path_reexports(self):
+        from stdface.solvers.hwave import export_wannier90 as old
+        assert old.export_geometry is ew.export_geometry
+        assert old.export_interaction is ew.export_interaction
 
 
 # ===========================================================================
