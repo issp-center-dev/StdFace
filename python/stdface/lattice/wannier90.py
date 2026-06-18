@@ -477,8 +477,8 @@ def _print_uhf_initial(
     IniGuess = np.zeros((StdI.nsite, StdI.nsite), dtype=complex)
 
     for kCell in range(StdI.NCell):
-        iW = StdI.Cell[kCell, 0]
-        iL = StdI.Cell[kCell, 1]
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
         iH = StdI.Cell[kCell, 2]
 
         # Diagonal term
@@ -491,7 +491,7 @@ def _print_uhf_initial(
             for it in range(NtUJ[idx]):
                 row = tUJindx[idx][it]
                 isite, jsite, Cphase, dR = find_site(
-                    StdI, iW, iL, iH,
+                    StdI, cell_w, cell_l, iH,
                     int(row[0]), int(row[1]), int(row[2]),
                     int(row[3]), int(row[4]),
                 )
@@ -694,8 +694,8 @@ def _read_w90_with_cutoff(
 def _apply_hopping_terms(
     StdI: StdIntList,
     kCell: int,
-    iW: int,
-    iL: int,
+    cell_w: int,
+    cell_l: int,
     iH: int,
     NtUJ: list[int],
     tUJ: list,
@@ -705,7 +705,7 @@ def _apply_hopping_terms(
     """Apply hopping transfer terms for one unit cell.
 
     Processes all hopping (t) terms for the unit cell at position
-    ``(iW, iL, iH)``.  Local terms contribute on-site energies (Hubbard)
+    ``(cell_w, cell_l, iH)``.  Local terms contribute on-site energies (Hubbard)
     and non-local terms contribute either super-exchange (spin) or
     hopping integrals (Hubbard).
 
@@ -715,7 +715,7 @@ def _apply_hopping_terms(
         Structure containing model parameters.  Modified in-place.
     kCell : int
         Linear index of the current unit cell.
-    iW, iL, iH : int
+    cell_w, cell_l, iH : int
         Unit-cell coordinates.
     NtUJ : list of int
         Number of terms per interaction type.
@@ -745,7 +745,7 @@ def _apply_hopping_terms(
         else:
             # Non-local term
             isite, jsite, Cphase, dR = find_site(
-                StdI, iW, iL, iH,
+                StdI, cell_w, cell_l, iH,
                 int(tUJindx[0][it, 0]), int(tUJindx[0][it, 1]),
                 int(tUJindx[0][it, 2]),
                 int(tUJindx[0][it, 3]), int(tUJindx[0][it, 4]),
@@ -765,8 +765,8 @@ def _apply_hopping_terms(
 def _apply_coulomb_terms(
     StdI: StdIntList,
     kCell: int,
-    iW: int,
-    iL: int,
+    cell_w: int,
+    cell_l: int,
     iH: int,
     NtUJ: list[int],
     tUJ: list,
@@ -777,7 +777,7 @@ def _apply_coulomb_terms(
     """Apply Coulomb (U) interaction terms for one unit cell.
 
     Processes all Coulomb terms for the unit cell at position
-    ``(iW, iL, iH)``, including local intra-site Coulomb, non-local
+    ``(cell_w, cell_l, iH)``, including local intra-site Coulomb, non-local
     inter-site Coulomb, and double-counting corrections when enabled.
 
     Parameters
@@ -786,7 +786,7 @@ def _apply_coulomb_terms(
         Structure containing model parameters.  Modified in-place.
     kCell : int
         Linear index of the current unit cell.
-    iW, iL, iH : int
+    cell_w, cell_l, iH : int
         Unit-cell coordinates.
     NtUJ : list of int
         Number of terms per interaction type.
@@ -830,7 +830,7 @@ def _apply_coulomb_terms(
         else:
             # Non-local term
             isite, jsite, Cphase, dR = find_site(
-                StdI, iW, iL, iH,
+                StdI, cell_w, cell_l, iH,
                 int(tUJindx[1][it, 0]), int(tUJindx[1][it, 1]),
                 int(tUJindx[1][it, 2]),
                 int(tUJindx[1][it, 3]), int(tUJindx[1][it, 4]),
@@ -882,8 +882,8 @@ def _apply_coulomb_terms(
 def _apply_hund_terms(
     StdI: StdIntList,
     kCell: int,
-    iW: int,
-    iL: int,
+    cell_w: int,
+    cell_l: int,
     iH: int,
     NtUJ: list[int],
     tUJ: list,
@@ -894,7 +894,7 @@ def _apply_hund_terms(
     """Apply Hund (J) coupling terms for one unit cell.
 
     Processes all Hund coupling terms for the unit cell at position
-    ``(iW, iL, iH)``, including exchange, pair-hopping (Hubbard), and
+    ``(cell_w, cell_l, iH)``, including exchange, pair-hopping (Hubbard), and
     double-counting corrections when enabled.
 
     Parameters
@@ -903,7 +903,7 @@ def _apply_hund_terms(
         Structure containing model parameters.  Modified in-place.
     kCell : int
         Linear index of the current unit cell.
-    iW, iL, iH : int
+    cell_w, cell_l, iH : int
         Unit-cell coordinates.
     NtUJ : list of int
         Number of terms per interaction type.
@@ -924,7 +924,7 @@ def _apply_hund_terms(
                 or tUJindx[2][it, 2] != 0
                 or tUJindx[2][it, 3] != tUJindx[2][it, 4]):
             isite, jsite, Cphase, dR = find_site(
-                StdI, iW, iL, iH,
+                StdI, cell_w, cell_l, iH,
                 int(tUJindx[2][it, 0]), int(tUJindx[2][it, 1]),
                 int(tUJindx[2][it, 2]),
                 int(tUJindx[2][it, 3]), int(tUJindx[2][it, 4]),
@@ -1091,8 +1091,8 @@ def _build_wannier_interactions(
 
     # Main cell loop — apply all interaction terms
     for kCell in range(StdI.NCell):
-        iW = StdI.Cell[kCell, 0]
-        iL = StdI.Cell[kCell, 1]
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
         iH = StdI.Cell[kCell, 2]
 
         # Local term
@@ -1104,13 +1104,13 @@ def _build_wannier_interactions(
                 hubbard_local(StdI, StdI.mu, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, 0.0, isite)
 
         # Hopping
-        _apply_hopping_terms(StdI, kCell, iW, iL, iH, NtUJ, tUJ, tUJindx, Uspin)
+        _apply_hopping_terms(StdI, kCell, cell_w, cell_l, iH, NtUJ, tUJ, tUJindx, Uspin)
 
         # Coulomb integral (U)
-        _apply_coulomb_terms(StdI, kCell, iW, iL, iH, NtUJ, tUJ, tUJindx, idcmode, DenMat)
+        _apply_coulomb_terms(StdI, kCell, cell_w, cell_l, iH, NtUJ, tUJ, tUJindx, idcmode, DenMat)
 
         # Hund coupling (J)
-        _apply_hund_terms(StdI, kCell, iW, iL, iH, NtUJ, tUJ, tUJindx, idcmode, DenMat)
+        _apply_hund_terms(StdI, kCell, cell_w, cell_l, iH, NtUJ, tUJ, tUJindx, idcmode, DenMat)
 
 
 def _write_wan2site(StdI: StdIntList) -> None:

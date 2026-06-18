@@ -443,11 +443,11 @@ def _jastrow_global_optimization(
         reversal = 1 if iCell_j == dCell else 0
         dCV_is_zero = (dCV == [0, 0, 0])
 
-        for isiteUC in range(StdI.NsiteUC):
-            for jsiteUC in range(StdI.NsiteUC):
-                if reversal == 1 and jsiteUC > isiteUC:
+        for uc_i in range(StdI.NsiteUC):
+            for uc_j in range(StdI.NsiteUC):
+                if reversal == 1 and uc_j > uc_i:
                     continue
-                if isiteUC == jsiteUC and dCV_is_zero:
+                if uc_i == uc_j and dCV_is_zero:
                     continue
 
                 for iCell_idx in range(StdI.NCell):
@@ -456,7 +456,7 @@ def _jastrow_global_optimization(
                         StdI,
                         iCV[0], iCV[1], iCV[2],
                         dCV[0], dCV[1], dCV[2],
-                        isiteUC, jsiteUC)
+                        uc_i, uc_j)
                     Jastrow[i_s, j_s] = NJastrow
                     Jastrow[j_s, i_s] = NJastrow
 

@@ -509,9 +509,9 @@ def init_site(StdI: StdIntList, fp: TextIO | None, dim: int) -> None:
 
 def find_site(
     StdI: StdIntList,
-    iW: int, iL: int, iH: int,
-    diW: int, diL: int, diH: int,
-    isiteUC: int, jsiteUC: int,
+    cell_w: int, cell_l: int, iH: int,
+    delta_w: int, delta_l: int, diH: int,
+    uc_i: int, uc_j: int,
 ) -> tuple[int, int, complex, np.ndarray]:
     """Find the site indices and boundary phase for a pair of sites.
 
@@ -519,13 +519,13 @@ def find_site(
     ----------
     StdI : StdIntList
         Model parameter structure.
-    iW, iL, iH : int
+    cell_w, cell_l, iH : int
         Position of the initial site.
-    diW, diL, diH : int
+    delta_w, delta_l, diH : int
         Translation from the initial site.
-    isiteUC : int
+    uc_i : int
         Intrinsic site index of the initial site in the unit cell.
-    jsiteUC : int
+    uc_j : int
         Intrinsic site index of the final site in the unit cell.
 
     Returns
@@ -539,18 +539,18 @@ def find_site(
     dR : numpy.ndarray
         Distance vector R_i - R_j in fractional coordinates (shape ``(3,)``).
     """
-    di = np.array([diW, diL, diH], dtype=float)
-    dR = -di + StdI.tau[isiteUC, :] - StdI.tau[jsiteUC, :]
+    di = np.array([delta_w, delta_l, diH], dtype=float)
+    dR = -di + StdI.tau[uc_i, :] - StdI.tau[uc_j, :]
 
-    jCellV = [iW + diW, iL + diL, iH + diH]
+    jCellV = [cell_w + delta_w, cell_l + delta_l, iH + diH]
     nBox, jCellV = _fold_site(StdI, jCellV)
     Cphase = np.prod(StdI.ExpPhase ** np.array(nBox))
 
     jCell = _find_cell_index(StdI, jCellV)
-    iCell = _find_cell_index(StdI, [iW, iL, iH])
+    iCell = _find_cell_index(StdI, [cell_w, cell_l, iH])
 
-    isite = iCell * StdI.NsiteUC + isiteUC
-    jsite = jCell * StdI.NsiteUC + jsiteUC
+    isite = iCell * StdI.NsiteUC + uc_i
+    jsite = jCell * StdI.NsiteUC + uc_j
     if StdI.model == ModelType.KONDO:
         isite += StdI.NCell * StdI.NsiteUC
         jsite += StdI.NCell * StdI.NsiteUC
@@ -594,9 +594,9 @@ def _write_gnuplot_bond(
 def set_label(
     StdI: StdIntList,
     fp: TextIO | None,
-    iW: int, iL: int,
-    diW: int, diL: int,
-    isiteUC: int, jsiteUC: int,
+    cell_w: int, cell_l: int,
+    delta_w: int, delta_l: int,
+    uc_i: int, uc_j: int,
     connect: int,
 ) -> tuple[int, int, complex, np.ndarray]:
     """Set label in the gnuplot display (2D systems only).
@@ -607,13 +607,13 @@ def set_label(
         Model parameter structure.
     fp : file object or None
         File pointer to ``lattice.gp``.
-    iW, iL : int
+    cell_w, cell_l : int
         Position of the initial site.
-    diW, diL : int
+    delta_w, delta_l : int
         Translation from the initial site.
-    isiteUC : int
+    uc_i : int
         Intrinsic site index of the initial site.
-    jsiteUC : int
+    uc_j : int
         Intrinsic site index of the final site.
     connect : int
         Connection type (1 for nearest, 2 for 2nd nearest).
@@ -631,12 +631,12 @@ def set_label(
     """
     # First print the reversed one
     isite, jsite, Cphase, dR = find_site(
-        StdI, iW, iL, 0, -diW, -diL, 0, jsiteUC, isiteUC)
+        StdI, cell_w, cell_l, 0, -delta_w, -delta_l, 0, uc_j, uc_i)
 
     # Compute 2D positions via direct[:2,:2].T @ fractional_coords
     D = StdI.direct[:2, :2]
-    frac_i = np.array([iW + StdI.tau[jsiteUC, 0], iL + StdI.tau[jsiteUC, 1]])
-    frac_j = np.array([iW - diW + StdI.tau[isiteUC, 0], iL - diL + StdI.tau[isiteUC, 1]])
+    frac_i = np.array([cell_w + StdI.tau[uc_j, 0], cell_l + StdI.tau[uc_j, 1]])
+    frac_j = np.array([cell_w - delta_w + StdI.tau[uc_i, 0], cell_l - delta_l + StdI.tau[uc_i, 1]])
     xi, yi = frac_i @ D
     xj, yj = frac_j @ D
 
@@ -645,10 +645,10 @@ def set_label(
 
     # Then print the normal one
     isite, jsite, Cphase, dR = find_site(
-        StdI, iW, iL, 0, diW, diL, 0, isiteUC, jsiteUC)
+        StdI, cell_w, cell_l, 0, delta_w, delta_l, 0, uc_i, uc_j)
 
-    frac_i = np.array([iW + StdI.tau[isiteUC, 0], iL + StdI.tau[isiteUC, 1]])
-    frac_j = np.array([iW + diW + StdI.tau[jsiteUC, 0], iL + diL + StdI.tau[jsiteUC, 1]])
+    frac_i = np.array([cell_w + StdI.tau[uc_i, 0], cell_l + StdI.tau[uc_i, 1]])
+    frac_j = np.array([cell_w + delta_w + StdI.tau[uc_j, 0], cell_l + delta_l + StdI.tau[uc_j, 1]])
     xi, yi = frac_i @ D
     xj, yj = frac_j @ D
 

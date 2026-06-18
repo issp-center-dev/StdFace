@@ -156,8 +156,8 @@ def pyrochlore(StdI: StdIntList) -> None:
 
     # (5) Set Transfer & Interaction
     for kCell in range(StdI.NCell):
-        iW = StdI.Cell[kCell, 0]
-        iL = StdI.Cell[kCell, 1]
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
         iH = StdI.Cell[kCell, 2]
 
         # Local term
@@ -166,17 +166,17 @@ def pyrochlore(StdI: StdIntList) -> None:
             isite += StdI.nsite // 2
 
         if StdI.model == ModelType.SPIN:
-            for isiteUC in range(StdI.NsiteUC):
-                mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, isite + isiteUC)
-                general_j(StdI, StdI.D, StdI.S2, StdI.S2, isite + isiteUC, isite + isiteUC)
+            for uc_i in range(StdI.NsiteUC):
+                mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, isite + uc_i)
+                general_j(StdI, StdI.D, StdI.S2, StdI.S2, isite + uc_i, isite + uc_i)
         else:
-            for isiteUC in range(StdI.NsiteUC):
-                hubbard_local(StdI, StdI.mu, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, StdI.U, isite + isiteUC)
+            for uc_i in range(StdI.NsiteUC):
+                hubbard_local(StdI, StdI.mu, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, StdI.U, isite + uc_i)
             if StdI.model == ModelType.KONDO:
                 jsite = StdI.NsiteUC * kCell
-                for isiteUC in range(StdI.NsiteUC):
-                    general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + isiteUC)
-                    mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite + isiteUC)
+                for uc_i in range(StdI.NsiteUC):
+                    general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + uc_i)
+                    mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite + uc_i)
 
         # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
         _BONDS = (
@@ -197,7 +197,7 @@ def pyrochlore(StdI: StdIntList) -> None:
         )
         for dW, dL, dH, si, sj, J, t, V in _BONDS:
             add_neighbor_interaction_3d(
-                StdI, iW, iL, iH, dW, dL, dH, si, sj, J, t, V)
+                StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
 
     close_lattice_xsf(StdI)
 

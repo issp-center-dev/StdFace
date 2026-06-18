@@ -177,14 +177,14 @@ def chain(StdI: StdIntList) -> None:
         malloc_interactions(StdI, ntransMax, nintrMax)
 
         # (5) Set Transfer & Interaction
-        for iL in range(StdI.L):
+        for cell_l in range(StdI.L):
 
-            isite = iL
+            isite = cell_l
             if StdI.model == ModelType.KONDO:
                 isite += StdI.L
 
             # Local term
-            add_local_terms(StdI, isite, iL)
+            add_local_terms(StdI, isite, cell_l)
 
             # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
             _BONDS = (
@@ -194,7 +194,7 @@ def chain(StdI: StdIntList) -> None:
             )
             for dW, dL, si, sj, nn, J, t, V in _BONDS:
                 add_neighbor_interaction(
-                    StdI, fp, 0, iL, dW, dL, si, sj, nn, J, t, V)
+                    StdI, fp, 0, cell_l, dW, dL, si, sj, nn, J, t, V)
 
 
 def chain_boost(StdI: StdIntList) -> None:

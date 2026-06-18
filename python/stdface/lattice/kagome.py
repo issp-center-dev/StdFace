@@ -160,16 +160,16 @@ def kagome(StdI: StdIntList) -> None:
 
         # (5) Set Transfer & Interaction
         for kCell in range(StdI.NCell):
-            iW = StdI.Cell[kCell, 0]
-            iL = StdI.Cell[kCell, 1]
+            cell_w = StdI.Cell[kCell, 0]
+            cell_l = StdI.Cell[kCell, 1]
 
             # Local term
             isite = StdI.NsiteUC * kCell
             if StdI.model == ModelType.KONDO:
                 isite += StdI.nsite // 2
             jsite_base = StdI.NsiteUC * kCell
-            for isiteUC in range(StdI.NsiteUC):
-                add_local_terms(StdI, isite + isiteUC, jsite_base + isiteUC)
+            for uc_i in range(StdI.NsiteUC):
+                add_local_terms(StdI, isite + uc_i, jsite_base + uc_i)
 
             # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
             _BONDS = (
@@ -190,7 +190,7 @@ def kagome(StdI: StdIntList) -> None:
             )
             for dW, dL, si, sj, nn, J, t, V in _BONDS:
                 add_neighbor_interaction(
-                    StdI, fp, iW, iL, dW, dL, si, sj, nn, J, t, V)
+                    StdI, fp, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
 
 
 def kagome_boost(StdI: StdIntList) -> None:
