@@ -195,6 +195,23 @@ class ExpertModeSolverPlugin(SolverPlugin):
             print_2_green(StdI)
 
 
+class WannierModeSolverPlugin(SolverPlugin):
+    """Base class for solvers that emit Wannier90-format files (UHFK / RPA).
+
+    Writes ``geometry``/``transfer``/``coulombintra`` files via the
+    Wannier90 writer instead of the Expert-mode ``.def`` files.
+    """
+
+    def write(self, StdI: StdIntList) -> None:
+        from .writer.wannier90_writer import export_geometry, export_interaction
+        export_geometry(StdI)
+        export_interaction(StdI)
+        self.write_wannier_extras(StdI)
+
+    def write_wannier_extras(self, StdI: StdIntList) -> None:
+        """Write additional Wannier-mode files (default: none)."""
+
+
 # ---------------------------------------------------------------------------
 #  Plugin registry
 # ---------------------------------------------------------------------------
