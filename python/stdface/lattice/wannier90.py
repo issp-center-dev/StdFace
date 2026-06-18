@@ -18,16 +18,16 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import itertools
 import math
-import sys
 from enum import IntEnum
 from typing import NamedTuple, TextIO
 
 import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, UNSET_STRING, AMPLITUDE_EPS
-from ..core.param_check import exit_program, print_val_d, print_val_i, not_used_d
+from ..core.param_check import print_val_d, print_val_i, not_used_d
 from .geometry_output import print_geometry, print_xsf
 from .interaction_builder import (
     malloc_interactions, mag_field, general_j, hubbard_local, hopping, coulomb,
@@ -38,6 +38,9 @@ from .site_util import init_site, find_site, set_local_spin_flags
 # ---------------------------------------------------------------------------
 #  Internal helpers
 # ---------------------------------------------------------------------------
+
+
+logger = logging.getLogger(__name__)
 
 
 def _check_in_box(rvec: np.ndarray, inverse_matrix: np.ndarray) -> bool:
@@ -92,14 +95,13 @@ def _geometry_w90(StdI: StdIntList) -> None:
         are populated.
     """
     filename = f"{StdI.CDataFileHead}_geom.dat"
-    print(f"    Wannier90 Geometry file = {filename}")
+    logger.info(f"    Wannier90 Geometry file = {filename}")
 
     try:
         fp_geom = open(filename, "r")
-    except FileNotFoundError:
-
-        print(f"\n  Error: Fail to open the file {filename}. \n", file=sys.stderr)
-        exit_program(-1)
+    except OSError as exc:
+        logger.error("Fail to open the file %s", filename)
+        raise FileNotFoundError(filename) from exc
 
     with fp_geom:
         # Read direct lattice vectors
@@ -108,19 +110,19 @@ def _geometry_w90(StdI: StdIntList) -> None:
 
         # Read number of correlated sites
         StdI.NsiteUC = int(fp_geom.readline().split()[0])
-        print(f"    Number of Correlated Sites = {StdI.NsiteUC}")
+        logger.info(f"    Number of Correlated Sites = {StdI.NsiteUC}")
 
         # Allocate and read Wannier centre positions
         StdI.tau = np.zeros((StdI.NsiteUC, 3))
         for isite in range(StdI.NsiteUC):
             StdI.tau[isite, :] = [float(x) for x in fp_geom.readline().split()[:3]]
 
-    print("    Direct lattice vectors:")
+    logger.info("    Direct lattice vectors:")
     for row in StdI.direct:
-        print(f"      {row[0]:10.5f} {row[1]:10.5f} {row[2]:10.5f}")
-    print("    Wannier centres:")
+        logger.info(f"      {row[0]:10.5f} {row[1]:10.5f} {row[2]:10.5f}")
+    logger.info("    Wannier centres:")
     for tau_row in StdI.tau[:StdI.NsiteUC]:
-        print(f"      {tau_row[0]:10.5f} {tau_row[1]:10.5f} {tau_row[2]:10.5f}")
+        logger.info(f"      {tau_row[0]:10.5f} {tau_row[1]:10.5f} {tau_row[2]:10.5f}")
 
 
 def _apply_boundary_weights(
@@ -211,21 +213,22 @@ def _count_and_store_terms(
     Mat_tot[:nWSC, :, :] *= Weight_tot[:nWSC, np.newaxis, np.newaxis]
 
     # Print and count effective terms
-    print("\n      EFFECTIVE terms:")
-    print("           R0   R1   R2 band_i band_f Hamiltonian")
+    logger.info("\n      EFFECTIVE terms:")
+    logger.info("           R0   R1   R2 band_i band_f Hamiltonian")
     NtUJ[itUJ] = 0
     for iWSC in range(nWSC):
         for iWan in range(NsiteUC):
             for jWan in range(NsiteUC):
                 if cutoff < abs(Mat_tot[iWSC, iWan, jWan]):
-                    print(
-                        f"        {indx_tot[iWSC, 0]:5d}{indx_tot[iWSC, 1]:5d}"
-                        f"{indx_tot[iWSC, 2]:5d}{iWan:5d}{jWan:5d}"
-                        f"{Mat_tot[iWSC, iWan, jWan].real:12.6f}"
-                        f"{Mat_tot[iWSC, iWan, jWan].imag:12.6f}"
+                    logger.info(
+                        "        %5d%5d%5d%5d%5d%12.6f%12.6f",
+                        indx_tot[iWSC, 0], indx_tot[iWSC, 1],
+                        indx_tot[iWSC, 2], iWan, jWan,
+                        Mat_tot[iWSC, iWan, jWan].real,
+                        Mat_tot[iWSC, iWan, jWan].imag,
                     )
                     NtUJ[itUJ] += 1
-    print(f"      Total number of EFFECTIVE term = {NtUJ[itUJ]}")
+    logger.info(f"      Total number of EFFECTIVE term = {NtUJ[itUJ]}")
 
     # Extract surviving terms using numpy masking
     abs_mat = np.abs(Mat_tot[:nWSC, :NsiteUC, :NsiteUC])
@@ -297,7 +300,7 @@ def _read_w90(
     try:
         fp_hr = open(filename, "r")
     except FileNotFoundError:
-        print(f"\n  Skip to read the file {filename}. \n")
+        logger.info(f"\n  Skip to read the file {filename}. \n")
         return
 
     with fp_hr:
@@ -391,9 +394,9 @@ def _read_density_matrix(
 
     try:
         fp_dr = open(filename, "r")
-    except FileNotFoundError:
-        print(f"\n  Error: Fail to open the file {filename}. \n", file=sys.stderr)
-        exit_program(-1)
+    except OSError as exc:
+        logger.error("Fail to open the file %s", filename)
+        raise FileNotFoundError(filename) from exc
 
     with fp_dr:
         # Header
@@ -427,9 +430,9 @@ def _read_density_matrix(
                     Rmax = np.maximum(Rmax, indx_tot[iWSC])
 
     NR = Rmax - Rmin + 1
-    print(f"      Minimum R : {Rmin[0]} {Rmin[1]} {Rmin[2]}")
-    print(f"      Maximum R : {Rmax[0]} {Rmax[1]} {Rmax[2]}")
-    print(f"      Numver of R : {NR[0]} {NR[1]} {NR[2]}")
+    logger.info(f"      Minimum R : {Rmin[0]} {Rmin[1]} {Rmin[2]}")
+    logger.info(f"      Maximum R : {Rmax[0]} {Rmax[1]} {Rmax[2]}")
+    logger.info(f"      Numver of R : {NR[0]} {NR[1]} {NR[2]}")
 
     # Build dictionary: (R0, R1, R2) -> 2D array
     DenMat: dict[tuple[int, int, int], np.ndarray] = {}
@@ -517,7 +520,7 @@ def _print_uhf_initial(
                     f"{val.imag:25.15f}\n"
                 )
 
-    print("      initial.def is written.")
+    logger.info("      initial.def is written.")
 
 
 # ---------------------------------------------------------------------------
@@ -567,7 +570,7 @@ def _parse_double_counting_mode(mode_str: str) -> _DCMode:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If *mode_str* is not one of the recognised values.
     """
     result = _DC_MODE_MAP.get(mode_str)
@@ -575,12 +578,12 @@ def _parse_double_counting_mode(mode_str: str) -> _DCMode:
         return result
 
 
-    print(
-        "\n  Error: the word of doublecounting is not correct "
-        "(select from none, hartree, hartree_u, full). \n",
-        file=sys.stderr,
+    msg = (
+        "the word of doublecounting is not correct "
+        "(select from none, hartree, hartree_u, full)."
     )
-    exit_program(-1)
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -1026,8 +1029,9 @@ def _validate_wannier_params(StdI: StdIntList) -> None:
     elif StdI.model == ModelType.HUBBARD:
         StdI.mu = print_val_d("mu", StdI.mu, 0.0)
     else:
-        print("wannier + Kondo is not available !")
-        exit_program(-1)
+        msg = "wannier + Kondo is not available !"
+        logger.error(msg)
+        raise ValueError(msg)
 
 
 def _build_wannier_interactions(
@@ -1147,7 +1151,7 @@ def _validate_interaction_params(StdI: StdIntList) -> None:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If ``lambda_U`` or ``lambda_J`` is negative, or ``alpha`` is
         outside [0, 1].
     """
@@ -1159,20 +1163,18 @@ def _validate_interaction_params(StdI: StdIntList) -> None:
         StdI.lambda_J = print_val_d("lambda_J", StdI.lambda_J, StdI.lambda_)
 
     if StdI.lambda_U < 0.0 or StdI.lambda_J < 0.0:
-        print(
-            "\n  Error: the value of lambda_U / lambda_J must be "
-            "greater than or equal to 0. \n",
-            file=sys.stderr,
+        msg = (
+            "the value of lambda_U / lambda_J must be "
+            "greater than or equal to 0."
         )
-        exit_program(-1)
+        logger.error(msg)
+        raise ValueError(msg)
 
     StdI.alpha = print_val_d("alpha", StdI.alpha, 0.5)
     if StdI.alpha > 1.0 or StdI.alpha < 0.0:
-        print(
-            "\n  Error: the value of alpha must be in the range 0<= alpha <= 1. \n",
-            file=sys.stderr,
-        )
-        exit_program(-1)
+        msg = "the value of alpha must be in the range 0 <= alpha <= 1."
+        logger.error(msg)
+        raise ValueError(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -1224,7 +1226,7 @@ def _read_w90_channels(
         Interaction value array.
     """
     for ch in channels:
-        print(f"\n  @ Wannier90 {ch.label} \n")
+        logger.info(f"\n  @ Wannier90 {ch.label} \n")
         co_attr, cl_attr, cr_attr, cv_attr = _W90_FIELD_MAP[ch.key_lower]
         cutoff, cutoff_length = _read_w90_with_cutoff(
             StdI, ch.key_lower, ch.key_upper, ch.file_suffix,
@@ -1270,7 +1272,7 @@ def wannier90(StdI: StdIntList) -> None:
         StdI.phase[2] = print_val_d("phase2", StdI.phase[2], 0.0)
         StdI.NsiteUC = 1
         init_site(StdI, fp_xsf, 3)
-    print("\n  @ Wannier90 Geometry \n")
+    logger.info("\n  @ Wannier90 Geometry \n")
     _geometry_w90(StdI)
 
     _validate_interaction_params(StdI)
@@ -1292,15 +1294,15 @@ def wannier90(StdI: StdIntList) -> None:
     # Read Density matrix
     DenMat = None
     if idcmode != _DCMode.NOTCORRECT:
-        print("\n  @ Wannier90 Density-matrix \n")
+        logger.info("\n  @ Wannier90 Density-matrix \n")
         filename = f"{StdI.CDataFileHead}_dr.dat"
         DenMat = _read_density_matrix(StdI, filename)
 
     # (2) Check and store parameters of Hamiltonian
-    print("\n  @ Hamiltonian \n")
+    logger.info("\n  @ Hamiltonian \n")
     _validate_wannier_params(StdI)
 
-    print("\n  @ Numerical conditions\n")
+    logger.info("\n  @ Numerical conditions\n")
 
     # (3) Set local spin flag and number of sites
     set_local_spin_flags(StdI, StdI.NsiteUC * StdI.NCell)

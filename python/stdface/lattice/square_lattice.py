@@ -14,6 +14,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType
@@ -32,6 +33,9 @@ from .site_util import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def tetragonal(StdI: StdIntList) -> None:
     """Setup a Hamiltonian for the square (tetragonal) lattice.
 
@@ -46,7 +50,7 @@ def tetragonal(StdI: StdIntList) -> None:
 
         StdI.NsiteUC = 1
 
-        print("  @ Lattice Size & Shape\n")
+        logger.info("  @ Lattice Size & Shape\n")
 
         StdI.a = print_val_d("a", StdI.a, 1.0)
         StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
@@ -65,7 +69,7 @@ def tetragonal(StdI: StdIntList) -> None:
         StdI.tau[0, 2] = 0.0
 
         # (2) check & store parameters of Hamiltonian
-        print("\n  @ Hamiltonian \n")
+        logger.info("\n  @ Hamiltonian \n")
         not_used_j("J2", StdI.J2All, StdI.J2)
         not_used_j("J2'", StdI.J2pAll, StdI.J2p)
         not_used_d("t2", StdI.t2)
@@ -136,7 +140,7 @@ def tetragonal(StdI: StdIntList) -> None:
                 StdI.S2 = print_val_i("2S", StdI.S2, 1)
                 input_spin(StdI.J, StdI.JAll, "J")
 
-        print("\n  @ Numerical conditions\n")
+        logger.info("\n  @ Numerical conditions\n")
 
         # (3) Set local spin flag and number of sites
         set_local_spin_flags(StdI, StdI.NsiteUC * StdI.NCell)

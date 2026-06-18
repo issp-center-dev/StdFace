@@ -33,6 +33,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 import itertools
 from contextlib import contextmanager
 from collections.abc import Iterator
@@ -41,8 +42,11 @@ from typing import TextIO
 import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, AMPLITUDE_EPS
-from ..core.param_check import exit_program, print_val_i
+from ..core.param_check import print_val_i
 from .geometry_output import print_geometry, print_xsf
+
+
+logger = logging.getLogger(__name__)
 
 
 def _cell_vector(Cell: np.ndarray, idx: int) -> list[int]:
@@ -317,7 +321,7 @@ def _validate_box_params(
 
     Raises
     ------
-    SystemExit
+    ValueError
         If both L/W/Height and box entries are specified simultaneously.
     """
     sfx = suffix
@@ -327,8 +331,9 @@ def _validate_box_params(
     if lwh_specified and box_specified:
         lwh_names = f"(L{sfx}, W{sfx}, H{sfx + 'eight' if not sfx else sfx})"
         box_names = f"(a0W{sfx}, ..., a2H{sfx})"
-        print(f"\nERROR ! {lwh_names} and {box_names} conflict !\n")
-        exit_program(-1)
+        msg = f"\nERROR ! {lwh_names} and {box_names} conflict !\n"
+        logger.error(msg)
+        raise ValueError(msg)
     elif lwh_specified:
         L = print_val_i(f"L{sfx}", L, 1)
         W = print_val_i(f"W{sfx}", W, 1)
@@ -408,13 +413,15 @@ def _compute_reciprocal_box(StdI: StdIntList) -> None:
 
     Raises
     ------
-    SystemExit
+    ValueError
         If the determinant is zero (degenerate super-cell).
     """
     StdI.NCell, StdI.rbox = _det_and_cofactor(StdI.box)
-    print(f"   Number of Cell = {abs(StdI.NCell)}")
+    logger.info("   Number of Cell = %d", abs(StdI.NCell))
     if StdI.NCell == 0:
-        exit_program(-1)
+        msg = "Super-cell is degenerate (det(box) = 0)."
+        logger.error(msg)
+        raise ValueError(msg)
 
 
 def _enumerate_cells(StdI: StdIntList) -> None:
@@ -470,7 +477,7 @@ def init_site(StdI: StdIntList, fp: TextIO | None, dim: int) -> None:
         Dimension of the system.  If 2, the gnuplot header for
         ``lattice.gp`` is written.
     """
-    print("\n  @ Super-Lattice setting\n")
+    logger.info("\n  @ Super-Lattice setting\n")
 
     # (1) Check input parameters about the shape of super-cell
     StdI.L, StdI.W, StdI.Height = _validate_box_params(

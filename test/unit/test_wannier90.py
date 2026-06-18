@@ -339,7 +339,7 @@ class TestGeometryW90:
         s.direct = np.zeros((3, 3))
         s.tau = np.zeros((1, 3))
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(FileNotFoundError):
             w90._geometry_w90(s)
 
 
@@ -527,7 +527,7 @@ class TestReadDensityMatrix:
         s = StdIntList()
         s.NsiteUC = 1
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(FileNotFoundError):
             w90._read_density_matrix(s, str(tmp_path / "nonexistent_dr.dat"))
 
 
@@ -800,7 +800,7 @@ class TestParseDoubleCountingMode:
 
     def test_invalid_mode_exits(self):
         """An unrecognised string should cause exit."""
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             w90._parse_double_counting_mode("bogus")
 
     def test_return_type_is_dcmode(self):
@@ -953,7 +953,7 @@ class TestWannier90KondoError:
 
         s = _make_wannier_StdI(model="kondo", prefix=prefix, W=2, L=2, Height=1)
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             w90.wannier90(s)
 
 
@@ -972,7 +972,7 @@ class TestWannier90LambdaError:
         s.lambda_U = -1.0
         s.lambda_J = 1.0
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             w90.wannier90(s)
 
 
@@ -990,7 +990,7 @@ class TestWannier90AlphaError:
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         s.alpha = 1.5
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             w90.wannier90(s)
 
 
@@ -1008,7 +1008,7 @@ class TestWannier90DoubleCountingModeError:
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         s.double_counting_mode = "invalid_mode"
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             w90.wannier90(s)
 
 
@@ -1370,7 +1370,7 @@ class TestValidateWannierParams:
         s.U = NaN_d
         s.S2 = NaN_i
         s.mu = NaN_d
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             w90._validate_wannier_params(s)
 
 

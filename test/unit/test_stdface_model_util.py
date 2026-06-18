@@ -474,7 +474,7 @@ class TestInputSpinNN:
         """Conflicting JAll and J0All should exit."""
         J = np.full((3, 3), float("nan"))
         J0 = np.full((3, 3), float("nan"))
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             smu.input_spin_nn(J, JAll=1.0, J0=J0, J0All=2.0, J0name="J0")
 
 
@@ -516,7 +516,7 @@ class TestInputCoulombV:
 
     def test_conflict_exits(self):
         """Both specified should exit."""
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             smu.input_coulomb_v(1.0, 2.0, "V1")
 
 

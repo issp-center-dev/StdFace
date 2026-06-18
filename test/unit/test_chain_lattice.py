@@ -272,7 +272,7 @@ class TestChainBoost:
         s.h = 0.0
         s.J0 = np.zeros((3, 3))
         s.Jp = np.zeros((3, 3))
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             cl.chain_boost(s)
 
     def test_boost_L_mod8_error(self, tmp_path):
@@ -287,5 +287,5 @@ class TestChainBoost:
         s.h = 0.0
         s.J0 = np.zeros((3, 3))
         s.Jp = np.zeros((3, 3))
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             cl.chain_boost(s)

@@ -376,14 +376,14 @@ class TestValidateBoxParams:
         """Both L/W/Height and box entries specified → exit."""
         box = self._nan_box()
         box[0, 0] = 5  # box entry set
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _validate_box_params(4, NaN_i, NaN_i, box)  # L set too
 
     def test_conflict_with_suffix(self):
         """Conflict error uses suffix in label."""
         box = self._nan_box()
         box[1, 1] = 3
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _validate_box_params(NaN_i, 2, NaN_i, box, suffix="sub")
 
     def test_suffix_affects_labels(self, caplog):
@@ -521,9 +521,9 @@ class TestComputeReciprocalBox:
         assert StdI.NCell == 2
 
     def test_zero_det_exits(self):
-        """Degenerate box (det=0) causes SystemExit."""
+        """Degenerate box (det=0) causes ValueError."""
         StdI = self._make_stdi_with_box([[1, 0, 0], [1, 0, 0], [0, 0, 1]])
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError):
             _compute_reciprocal_box(StdI)
 
 
