@@ -149,19 +149,45 @@ def print_loc_spin(StdI: StdIntList) -> None:
         - ``locspinflag`` : list of int -- per-site flag (0 = itinerant
           electron, nonzero = local spin with :math:`S` given by the value).
     """
-    nlocspin = int(np.count_nonzero(StdI.locspinflag[:StdI.nsite]))
+    build_loc_spn(StdI).write()
 
-    lines = ["================================ \n",
-             f"NlocalSpin {nlocspin:5d}  \n",
-             "================================ \n",
-             "========i_1LocSpn_0IteElc ====== \n",
-             "================================ \n"]
-    for isite in range(StdI.nsite):
-        lines.append(f"{isite:5d}  {StdI.locspinflag[isite]:5d}\n")
-    with open("locspn.def", "w") as fp:
-        fp.write("".join(lines))
 
-    logger.info("    locspn.def is written.")
+@dataclass
+class LocSpnData:
+    """Per-site local-spin flags (``locspn.def``).
+
+    Attributes
+    ----------
+    flags : list of int
+        One flag per site (0 = itinerant electron, nonzero = local spin).
+    """
+
+    flags: list
+
+    def write(self, directory: Path = Path(".")) -> None:
+        nlocspin = sum(1 for f in self.flags if f != 0)
+        lines = ["================================ \n",
+                 f"NlocalSpin {nlocspin:5d}  \n",
+                 "================================ \n",
+                 "========i_1LocSpn_0IteElc ====== \n",
+                 "================================ \n"]
+        for isite, flag in enumerate(self.flags):
+            lines.append(f"{isite:5d}  {flag:5d}\n")
+        with open(Path(directory) / "locspn.def", "w") as fp:
+            fp.write("".join(lines))
+        logger.info("    locspn.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"flags": list(self.flags)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LocSpnData":
+        return cls(flags=list(data["flags"]))
+
+
+def build_loc_spn(StdI: StdIntList) -> LocSpnData:
+    """Build :class:`LocSpnData` from ``StdI.locspinflag`` (first ``nsite``)."""
+    return LocSpnData(flags=[int(StdI.locspinflag[i]) for i in range(StdI.nsite)])
 
 
 @dataclass
@@ -745,34 +771,50 @@ def print_1_green(StdI: StdIntList) -> None:
         - ``nsite`` : int -- total number of sites.
         - ``locspinflag`` : list of int -- per-site local-spin flag.
     """
+    data = build_green_one(StdI)
+    if data is not None:
+        data.write()
+
+
+@dataclass
+class GreenOneData:
+    """One-body Green-function indices (``greenone.def``)."""
+
+    rows: list  # (i0, s0, i1, s1)
+
+    def write(self, directory: Path = Path(".")) -> None:
+        lines = [
+            "===============================\n",
+            f"NCisAjs {len(self.rows):10d}\n",
+            "===============================\n",
+            "======== Green functions ======\n",
+            "===============================\n",
+        ]
+        for i0, s0, i1, s1 in self.rows:
+            lines.append(f"{i0:5d} {s0:5d} {i1:5d} {s1:5d}\n")
+        with open(Path(directory) / "greenone.def", "w") as fp:
+            fp.write("".join(lines))
+        logger.info("    greenone.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"rows": [list(r) for r in self.rows]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GreenOneData":
+        return cls(rows=[tuple(r) for r in data["rows"]])
+
+
+def build_green_one(StdI: StdIntList) -> "GreenOneData | None":
+    """Build :class:`GreenOneData`, or ``None`` when output is disabled."""
     if StdI.ioutputmode == 0:
-        return
+        return None
 
     gf = GreenFunctionIndices(
         StdI.nsite, StdI.NsiteUC, StdI.locspinflag,
         is_kondo=(StdI.model == ModelType.KONDO),
     )
-
-    if StdI.ioutputmode == 1:
-        greenindx = gf.green1_corr()
-    else:
-        greenindx = gf.green1_raw()
-
-    ngreen = len(greenindx)
-
-    with open("greenone.def", "w") as fp:
-        lines = [
-            "===============================\n",
-            f"NCisAjs {ngreen:10d}\n",
-            "===============================\n",
-            "======== Green functions ======\n",
-            "===============================\n",
-        ]
-        for i0, s0, i1, s1 in greenindx:
-            lines.append(f"{i0:5d} {s0:5d} {i1:5d} {s1:5d}\n")
-        fp.write("".join(lines))
-
-    logger.info("    greenone.def is written.")
+    greenindx = gf.green1_corr() if StdI.ioutputmode == 1 else gf.green1_raw()
+    return GreenOneData(rows=[tuple(int(x) for x in idx) for idx in greenindx])
 
 
 def print_2_green(StdI: StdIntList) -> None:
@@ -793,37 +835,54 @@ def print_2_green(StdI: StdIntList) -> None:
         - ``nsite`` : int
         - ``locspinflag`` : list of int
     """
+    data = build_green_two(StdI)
+    if data is not None:
+        data.write()
+
+
+@dataclass
+class GreenTwoData:
+    """Two-body Green-function indices (``greentwo.def``)."""
+
+    rows: list  # (i0, s0, i1, s1, i2, s2, i3, s3)
+
+    def write(self, directory: Path = Path(".")) -> None:
+        lines = [
+            "=============================================\n",
+            f"NCisAjsCktAltDC {len(self.rows):10d}\n",
+            "=============================================\n",
+            "======== Green functions for Sq AND Nq ======\n",
+            "=============================================\n",
+        ]
+        for i0, s0, i1, s1, i2, s2, i3, s3 in self.rows:
+            lines.append(
+                f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
+                f"{i2:5d} {s2:5d} {i3:5d} {s3:5d}\n"
+            )
+        with open(Path(directory) / "greentwo.def", "w") as fp:
+            fp.write("".join(lines))
+        logger.info("    greentwo.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"rows": [list(r) for r in self.rows]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GreenTwoData":
+        return cls(rows=[tuple(r) for r in data["rows"]])
+
+
+def build_green_two(StdI: StdIntList) -> "GreenTwoData | None":
+    """Build :class:`GreenTwoData`, or ``None`` when output is disabled."""
     if StdI.ioutputmode not in (1, 2):
-        return
+        return None
 
     gf = GreenFunctionIndices(
         StdI.nsite, StdI.NsiteUC, StdI.locspinflag,
         is_kondo=(StdI.model == ModelType.KONDO),
         is_mvmc=(StdI.solver == SolverType.mVMC),
     )
-
-    if StdI.ioutputmode == 1:
-        greenindx = gf.green2_corr()
-    else:
-        greenindx = gf.green2_raw()
-
-    ngreen = len(greenindx)
-    with open("greentwo.def", "w") as fp:
-        lines = [
-            "=============================================\n",
-            f"NCisAjsCktAltDC {ngreen:10d}\n",
-            "=============================================\n",
-            "======== Green functions for Sq AND Nq ======\n",
-            "=============================================\n",
-        ]
-        for i0, s0, i1, s1, i2, s2, i3, s3 in greenindx:
-            lines.append(
-                f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
-                f"{i2:5d} {s2:5d} {i3:5d} {s3:5d}\n"
-            )
-        fp.write("".join(lines))
-
-    logger.info("    greentwo.def is written.")
+    greenindx = gf.green2_corr() if StdI.ioutputmode == 1 else gf.green2_raw()
+    return GreenTwoData(rows=[tuple(int(x) for x in idx) for idx in greenindx])
 
 
 def unsupported_system(model: str, lattice: str) -> None:
