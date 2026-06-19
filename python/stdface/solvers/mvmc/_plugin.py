@@ -31,9 +31,9 @@ class MVMCPlugin(ExpertModeSolverPlugin):
         from ...writer.common_writer import _check_mod_para_mvmc
         _check_mod_para_mvmc(StdI)
 
-    def write_modpara_body(self, fp, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _write_modpara_mvmc
-        _write_modpara_mvmc(fp, StdI)
+    def modpara_lines(self, StdI: StdIntList) -> list:
+        from ...writer.common_writer import _modpara_lines_mvmc
+        return _modpara_lines_mvmc(StdI)
 
     def write_namelist_body(self, fp, StdI: StdIntList) -> None:
         from ...writer.common_writer import _write_namelist_mvmc

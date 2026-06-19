@@ -36,9 +36,9 @@ class UHFPlugin(ExpertModeSolverPlugin):
         from ...writer.common_writer import _check_mod_para_uhf
         _check_mod_para_uhf(StdI)
 
-    def write_modpara_body(self, fp, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _write_modpara_uhf_hwave
-        _write_modpara_uhf_hwave(fp, StdI)
+    def modpara_lines(self, StdI: StdIntList) -> list:
+        from ...writer.common_writer import _modpara_lines_uhf_hwave
+        return _modpara_lines_uhf_hwave(StdI)
 
     def has_two_body_green(self, StdI: StdIntList) -> bool:
         return False

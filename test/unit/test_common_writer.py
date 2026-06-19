@@ -36,9 +36,11 @@ from stdface.writer.common_writer import (
     _check_mod_para_uhf,
     _check_conserved_quantities,
     _CONSERVED_QTY_RULES,
-    _write_modpara_hphi,
-    _write_modpara_mvmc,
-    _write_modpara_uhf_hwave,
+    build_modpara,
+    ModParaData,
+    _modpara_lines_hphi,
+    _modpara_lines_mvmc,
+    _modpara_lines_uhf_hwave,
     _MODPARA_BANNER,
     _write_namelist_hphi,
     _write_namelist_mvmc,
@@ -714,10 +716,7 @@ class TestModparaBodyDispatch:
         StdI.method = "lanczos"
         StdI.ExpandCoef = 10
 
-        import io
-        fp = io.StringIO()
-        _write_modpara_hphi(fp, StdI)
-        content = fp.getvalue()
+        content = ModParaData(_modpara_lines_hphi(StdI)).to_text()
         assert "HPhi_Cal_Parameters" in content
         assert "CDataFileHead  zvo" in content
         assert "Lanczos_max" in content
@@ -748,10 +747,7 @@ class TestModparaBodyDispatch:
         StdI.NStore = 1
         StdI.NSRCG = 0
 
-        import io
-        fp = io.StringIO()
-        _write_modpara_mvmc(fp, StdI)
-        content = fp.getvalue()
+        content = ModParaData(_modpara_lines_mvmc(StdI)).to_text()
         assert "VMC_Cal_Parameters" in content
         assert "NVMCSample" in content
         assert "DSROptRedCut" in content
@@ -767,10 +763,7 @@ class TestModparaBodyDispatch:
         StdI.eps_slater = 6
         StdI.NMPTrans = 0
 
-        import io
-        fp = io.StringIO()
-        _write_modpara_uhf_hwave(fp, StdI)
-        content = fp.getvalue()
+        content = ModParaData(_modpara_lines_uhf_hwave(StdI)).to_text()
         assert "UHF_Cal_Parameters" in content
         assert "IterationMax" in content
         assert "EpsSlater" in content
@@ -786,10 +779,7 @@ class TestModparaBodyDispatch:
         StdI.eps_slater = 6
         StdI.NMPTrans = 0
 
-        import io
-        fp = io.StringIO()
-        _write_modpara_uhf_hwave(fp, StdI)
-        content = fp.getvalue()
+        content = ModParaData(_modpara_lines_uhf_hwave(StdI)).to_text()
         assert "HWAVE_Cal_Parameters" in content
         assert "UHF_Cal_Parameters" not in content
 
@@ -814,10 +804,7 @@ class TestModparaBodyDispatch:
         StdI.method = "lanczos"
         StdI.ExpandCoef = 10
 
-        import io
-        fp = io.StringIO()
-        _write_modpara_hphi(fp, StdI)
-        content = fp.getvalue()
+        content = ModParaData(_modpara_lines_hphi(StdI)).to_text()
         assert "ExpandCoef" not in content
 
     def test_hphi_includes_expand_coef_for_te(self):
@@ -841,10 +828,7 @@ class TestModparaBodyDispatch:
         StdI.method = "timeevolution"
         StdI.ExpandCoef = 10
 
-        import io
-        fp = io.StringIO()
-        _write_modpara_hphi(fp, StdI)
-        content = fp.getvalue()
+        content = ModParaData(_modpara_lines_hphi(StdI)).to_text()
         assert "ExpandCoef" in content
 
 
@@ -1756,3 +1740,61 @@ class TestLocSpnGreenBuildWrite:
             finally:
                 os.chdir(orig)
         assert a == b
+
+
+class TestModParaDataBuildWrite:
+    """D1b-1: build_modpara / ModParaData (data vs format separation)."""
+
+    def _hphi_stdi(self):
+        StdI = _make_stdi_base(solver="HPhi", nsite=4)
+        StdI.CDataFileHead = "zvo"
+        StdI.Lanczos_max = 2000
+        StdI.initial_iv = -1
+        StdI.nvec = None
+        StdI.exct = 1
+        StdI.LanczosEps = 14
+        StdI.LanczosTarget = 2
+        StdI.LargeValue = 10.0
+        StdI.NumAve = 5
+        StdI.ExpecInterval = 20
+        StdI.Nomega = 200
+        StdI.OmegaMax = 40.0
+        StdI.OmegaMin = -40.0
+        StdI.OmegaOrg = 0.0
+        StdI.OmegaIm = 0.1
+        StdI.method = "lanczos"
+        StdI.ExpandCoef = 10
+        StdI.Sz2 = 0
+        StdI.ncond = None
+        return StdI
+
+    def test_to_dict_exposes_semantic_params(self):
+        d = build_modpara(self._hphi_stdi()).to_dict()
+        params = d["params"]
+        # plain key -> typed value; OmegaMax -> two-element list; no fmt/sep
+        assert params["Nsite"] == 4
+        assert params["CDataFileHead"] == "zvo"
+        assert params["LargeValue"] == 10.0
+        assert params["OmegaMax"] == [40.0, 0.1]
+        assert "Model_Parameters" not in params  # raw/sep dropped
+
+    def test_build_write_parity_with_print(self):
+        s = self._hphi_stdi()
+        with tempfile.TemporaryDirectory() as tmp:
+            orig = os.getcwd()
+            os.chdir(tmp)
+            try:
+                print_mod_para(s)
+                via_print = open("modpara.def").read()
+                build_modpara(s).write()
+                via_build = open("modpara.def").read()
+            finally:
+                os.chdir(orig)
+        assert via_print == via_build
+        assert via_print.startswith("--------------------\nModel_Parameters   0\n")
+        assert "HPhi_Cal_Parameters" in via_print
+
+    def test_to_text_matches_file(self, tmp_path):
+        data = build_modpara(self._hphi_stdi())
+        data.write(tmp_path)
+        assert (tmp_path / "modpara.def").read_text() == data.to_text()
