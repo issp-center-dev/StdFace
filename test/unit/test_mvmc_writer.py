@@ -27,7 +27,6 @@ from stdface.solvers.mvmc.writer import (
 )
 
 # Sentinel values matching what _reset_vals sets at runtime
-NaN_i = 2147483647
 
 # The .def file header is 5 lines:
 #   line 0: =============================================
@@ -64,7 +63,7 @@ def _make_stdi_for_gutzwiller(nsite: int = 4, **overrides) -> StdIntList:
     """Create a StdIntList with fields needed by print_gutzwiller."""
     StdI = StdIntList()
     StdI.nsite = nsite
-    StdI.NMPTrans = overrides.get("NMPTrans", NaN_i)
+    StdI.NMPTrans = overrides.get("NMPTrans", None)
     StdI.model = overrides.get("model", "hubbard")
 
     # Default: diagonal orbital = 0 for all sites
@@ -222,11 +221,11 @@ class TestPrintGutzwiller:
     def test_momentum_projected_hubbard(self):
         """Test momentum-projected mode for Hubbard model.
 
-        With NMPTrans=NaN_i (unset) and all sites sharing orbital 0,
+        With NMPTrans=None (unset) and all sites sharing orbital 0,
         NGutzwiller should be 1 (one unique orbital on diagonal).
         """
         StdI = _make_stdi_for_gutzwiller(
-            nsite=4, model="hubbard", NMPTrans=NaN_i,
+            nsite=4, model="hubbard", NMPTrans=None,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -319,7 +318,7 @@ class TestPrintGutzwiller:
     def test_hubbard_opt_flags_all_one(self):
         """Test that Hubbard model optimization flags are all 1."""
         StdI = _make_stdi_for_gutzwiller(
-            nsite=2, model="hubbard", NMPTrans=NaN_i,
+            nsite=2, model="hubbard", NMPTrans=None,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:

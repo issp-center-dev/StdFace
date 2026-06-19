@@ -51,7 +51,7 @@ class TestResolveSolverName:
 
     def test_unset_calcmode_maps_to_uhfk(self):
         """Unset calcmode takes the Wannier-export (UHFK) path, as the old code did."""
-        StdI = self._stdi("****")  # UNSET_STRING
+        StdI = self._stdi(None)  # None
         _resolve_solver_name(StdI)
         assert StdI.solver == SolverType.UHFK
 

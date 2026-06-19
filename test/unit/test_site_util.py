@@ -259,8 +259,8 @@ class TestInitSite:
         StdI.pi = math.acos(-1.0)
         StdI.pi180 = StdI.pi / 180.0
         StdI.L = L
-        StdI.W = W if W is not None else NaN_i
-        StdI.Height = Height if Height is not None else NaN_i
+        StdI.W = W if W is not None else None
+        StdI.Height = Height if Height is not None else None
         StdI.NsiteUC = NsiteUC
         StdI.direct[:, :] = 0.0
         StdI.direct[0, 0] = 1.0
@@ -328,7 +328,7 @@ class TestValidateBoxParams:
     def test_lwh_partial_defaults_to_one(self):
         """Unset L/W/Height entries default to 1."""
         box = self._nan_box()
-        L, W, H = _validate_box_params(6, NaN_i, NaN_i, box)
+        L, W, H = _validate_box_params(6, None, None, box)
         assert (L, W, H) == (6, 1, 1)
         expected = np.array([[1, 0, 0], [0, 6, 0], [0, 0, 1]], dtype=int)
         np.testing.assert_array_equal(box, expected)
@@ -337,9 +337,9 @@ class TestValidateBoxParams:
         """When box entries set and no defaults, identity is used as default."""
         box = self._nan_box()
         box[0, 0] = 5
-        # Others remain NaN_i → should be replaced by identity defaults
-        L, W, H = _validate_box_params(NaN_i, NaN_i, NaN_i, box)
-        assert (L, W, H) == (NaN_i, NaN_i, NaN_i)
+        # Others remain None → should be replaced by identity defaults
+        L, W, H = _validate_box_params(None, None, None, box)
+        assert (L, W, H) == (None, None, None)
         # box[0,0]=5 kept; off-diag default=0, diag default=1
         assert box[0, 0] == 5
         assert box[1, 1] == 1
@@ -350,13 +350,13 @@ class TestValidateBoxParams:
         """When defaults are given, they are used for unset box entries."""
         box = self._nan_box()
         defaults = np.array([[10, 20, 30], [40, 50, 60], [70, 80, 90]])
-        L, W, H = _validate_box_params(NaN_i, NaN_i, NaN_i, box, defaults=defaults)
+        L, W, H = _validate_box_params(None, None, None, box, defaults=defaults)
         np.testing.assert_array_equal(box, defaults)
 
     def test_neither_specified_fills_from_defaults(self):
         """When nothing is specified, box is filled from defaults."""
         box = self._nan_box()
-        L, W, H = _validate_box_params(NaN_i, NaN_i, NaN_i, box)
+        L, W, H = _validate_box_params(None, None, None, box)
         # Default is identity
         expected = np.eye(3, dtype=int)
         np.testing.assert_array_equal(box, expected)
@@ -366,14 +366,14 @@ class TestValidateBoxParams:
         box = self._nan_box()
         box[0, 0] = 5  # box entry set
         with pytest.raises(ValueError):
-            _validate_box_params(4, NaN_i, NaN_i, box)  # L set too
+            _validate_box_params(4, None, None, box)  # L set too
 
     def test_conflict_with_suffix(self):
         """Conflict error uses suffix in label."""
         box = self._nan_box()
         box[1, 1] = 3
         with pytest.raises(ValueError):
-            _validate_box_params(NaN_i, 2, NaN_i, box, suffix="sub")
+            _validate_box_params(None, 2, None, box, suffix="sub")
 
     def test_suffix_affects_labels(self, caplog):
         """Suffix parameter changes the logged parameter names."""
@@ -392,7 +392,7 @@ class TestValidateBoxParams:
 
         box = self._nan_box()
         with caplog.at_level(logging.INFO):
-            L, W, H = _validate_box_params(NaN_i, NaN_i, 5, box)
+            L, W, H = _validate_box_params(None, None, 5, box)
         assert "Height" in caplog.text
 
     def test_box_modified_in_place(self):

@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 import numpy as np
 
-from ...core.stdface_vals import StdIntList, ModelType, NaN_i
+from ...core.stdface_vals import StdIntList, ModelType
 from ...lattice.site_util import (
     _cell_vector, _fold_to_cell, _fold_site, _find_cell_index,
     _validate_box_params, _det_and_cofactor, find_site,
@@ -479,7 +479,7 @@ def print_jastrow(StdI: StdIntList) -> None:
     """
     Jastrow = np.zeros((StdI.nsite, StdI.nsite), dtype=int)
 
-    if abs(StdI.NMPTrans) == 1 or StdI.NMPTrans == NaN_i:
+    if StdI.NMPTrans is None or abs(StdI.NMPTrans) == 1:
         NJastrow, Jastrow = _jastrow_momentum_projected(StdI, Jastrow)
     else:
         NJastrow = _jastrow_global_optimization(StdI, Jastrow)

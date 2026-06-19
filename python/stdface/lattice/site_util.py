@@ -344,7 +344,8 @@ def _validate_box_params(
     """Validate and normalise L/W/Height vs box specification.
 
     Exactly one of {L, W, Height} or {box entries} may be specified
-    (i.e. differ from ``NaN_i``).  If both are given an error is raised.
+    (L/W/Height differ from ``None``; box entries differ from ``NaN_i``).
+    If both are given an error is raised.
     When L/W/Height are specified, the box is filled as a diagonal matrix
     ``diag(W, L, Height)``.  When the box entries are specified (or
     neither is), each entry is validated with ``print_val_i`` using
@@ -353,7 +354,7 @@ def _validate_box_params(
     Parameters
     ----------
     L, W, Height : int
-        Scalar lattice dimensions (may be ``NaN_i`` for unset).
+        Scalar lattice dimensions (may be ``None`` for unset).
     box : np.ndarray
         3x3 box matrix (modified **in-place**).
     suffix : str, optional
@@ -374,7 +375,7 @@ def _validate_box_params(
         If both L/W/Height and box entries are specified simultaneously.
     """
     sfx = suffix
-    lwh_specified = (L != NaN_i or W != NaN_i or Height != NaN_i)
+    lwh_specified = (L is not None or W is not None or Height is not None)
     box_specified = any(box[i, j] != NaN_i for i in range(3) for j in range(3))
 
     if lwh_specified and box_specified:

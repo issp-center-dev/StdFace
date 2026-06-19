@@ -23,8 +23,6 @@ from stdface.core.stdface_main import (
     _apply_field_resets,
     _reset_vals,
     NaN_i,
-    NaN_d,
-    NaN_c,
 )
 from stdface.core.stdface_vals import StdIntList, SolverType
 
@@ -126,22 +124,22 @@ class TestApplyFieldResetsHPhi:
     """Tests for _apply_field_resets with HPhi solver."""
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("HPhi")
         _apply_field_resets(StdI, SolverType.HPhi)
-        assert math.isnan(StdI.LargeValue)
-        assert math.isnan(StdI.OmegaMax)
-        assert math.isnan(StdI.OmegaMin)
-        assert math.isnan(StdI.dt)
+        assert StdI.LargeValue is None
+        assert StdI.OmegaMax is None
+        assert StdI.OmegaMin is None
+        assert StdI.dt is None
 
     def test_sets_nan_i_fields(self):
-        """Test that integer fields are set to NaN_i."""
+        """Test that integer fields are set to None."""
         StdI = _make_stdi("HPhi")
         _apply_field_resets(StdI, SolverType.HPhi)
-        assert StdI.Nomega == NaN_i
-        assert StdI.Lanczos_max == NaN_i
-        assert StdI.exct == NaN_i
-        assert StdI.NGPU == NaN_i
+        assert StdI.Nomega is None
+        assert StdI.Lanczos_max is None
+        assert StdI.exct is None
+        assert StdI.NGPU is None
 
     def test_sets_flg_temp(self):
         """Test that FlgTemp is set to 1 (not NaN)."""
@@ -171,28 +169,28 @@ class TestApplyFieldResetsMVMC:
     """Tests for _apply_field_resets with mVMC solver."""
 
     def test_sets_nan_i_fields(self):
-        """Test that integer fields are set to NaN_i."""
+        """Test that integer fields are set to None."""
         StdI = _make_stdi("mVMC")
         _apply_field_resets(StdI, SolverType.mVMC)
-        assert StdI.NVMCCalMode == NaN_i
-        assert StdI.NVMCSample == NaN_i
-        assert StdI.ComplexType == NaN_i
-        assert StdI.RndSeed == NaN_i
+        assert StdI.NVMCCalMode is None
+        assert StdI.NVMCSample is None
+        assert StdI.ComplexType is None
+        assert StdI.RndSeed is None
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("mVMC")
         _apply_field_resets(StdI, SolverType.mVMC)
-        assert math.isnan(StdI.DSROptRedCut)
-        assert math.isnan(StdI.DSROptStaDel)
+        assert StdI.DSROptRedCut is None
+        assert StdI.DSROptStaDel is None
 
     def test_sets_boxsub_scalars(self):
-        """Test that Hsub/Lsub/Wsub are set to NaN_i."""
+        """Test that Hsub/Lsub/Wsub are set to None."""
         StdI = _make_stdi("mVMC")
         _apply_field_resets(StdI, SolverType.mVMC)
-        assert StdI.Hsub == NaN_i
-        assert StdI.Lsub == NaN_i
-        assert StdI.Wsub == NaN_i
+        assert StdI.Hsub is None
+        assert StdI.Lsub is None
+        assert StdI.Wsub is None
 
     def test_fills_boxsub_array(self):
         """Test that boxsub array is filled with NaN_i."""
@@ -210,18 +208,18 @@ class TestApplyFieldResetsUHF:
     """Tests for _apply_field_resets with UHF solver."""
 
     def test_sets_nan_i_fields(self):
-        """Test that integer fields are set to NaN_i."""
+        """Test that integer fields are set to None."""
         StdI = _make_stdi("UHF")
         _apply_field_resets(StdI, SolverType.UHF)
-        assert StdI.NMPTrans == NaN_i
-        assert StdI.RndSeed == NaN_i
-        assert StdI.Iteration_max == NaN_i
+        assert StdI.NMPTrans is None
+        assert StdI.RndSeed is None
+        assert StdI.Iteration_max is None
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("UHF")
         _apply_field_resets(StdI, SolverType.UHF)
-        assert math.isnan(StdI.mix)
+        assert StdI.mix is None
 
     def test_fills_boxsub_array(self):
         """Test that boxsub array is filled with NaN_i."""
@@ -230,12 +228,12 @@ class TestApplyFieldResetsUHF:
         assert (StdI.boxsub == NaN_i).all()
 
     def test_sets_boxsub_scalars(self):
-        """Test that Hsub/Lsub/Wsub are set to NaN_i."""
+        """Test that Hsub/Lsub/Wsub are set to None."""
         StdI = _make_stdi("UHF")
         _apply_field_resets(StdI, SolverType.UHF)
-        assert StdI.Hsub == NaN_i
-        assert StdI.Lsub == NaN_i
-        assert StdI.Wsub == NaN_i
+        assert StdI.Hsub is None
+        assert StdI.Lsub is None
+        assert StdI.Wsub is None
 
 
 # -------------------------------------------------------------------
@@ -247,19 +245,19 @@ class TestApplyFieldResetsHWAVE:
     """Tests for _apply_field_resets with HWAVE solver."""
 
     def test_sets_nan_i_fields(self):
-        """Test that integer fields are set to NaN_i."""
+        """Test that integer fields are set to None."""
         StdI = _make_stdi("HWAVE")
         _apply_field_resets(StdI, SolverType.HWAVE)
-        assert StdI.NMPTrans == NaN_i
-        assert StdI.RndSeed == NaN_i
-        assert StdI.export_all == NaN_i
-        assert StdI.lattice_gp == NaN_i
+        assert StdI.NMPTrans is None
+        assert StdI.RndSeed is None
+        assert StdI.export_all is None
+        assert StdI.lattice_gp is None
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("HWAVE")
         _apply_field_resets(StdI, SolverType.HWAVE)
-        assert math.isnan(StdI.mix)
+        assert StdI.mix is None
 
     def test_fills_boxsub_array(self):
         """Test that boxsub array is filled with NaN_i."""
@@ -271,8 +269,8 @@ class TestApplyFieldResetsHWAVE:
         """Test that HWAVE resets export_all/lattice_gp beyond UHF."""
         StdI = _make_stdi("HWAVE")
         _apply_field_resets(StdI, SolverType.HWAVE)
-        assert StdI.export_all == NaN_i
-        assert StdI.lattice_gp == NaN_i
+        assert StdI.export_all is None
+        assert StdI.lattice_gp is None
 
 
 # -------------------------------------------------------------------
@@ -351,19 +349,19 @@ class TestCommonResetTableStructure:
         assert len(names) == len(set(names))
 
     def test_scalar_values_are_sentinels(self):
-        """Test that scalar values are NaN_d, NaN_i, or NaN_c."""
+        """Scalar reset values are None (int scalars), NaN_d, or NaN_c."""
         for name, value in _COMMON_RESET_SCALARS:
-            if isinstance(value, complex):
+            if value is None:
+                continue  # A2: integer scalars are unset as None
+            elif isinstance(value, complex):
                 assert math.isnan(value.real), f"{name}: {value} not NaN_c"
             elif isinstance(value, float):
                 assert math.isnan(value), f"{name}: {value} not NaN_d"
-            elif isinstance(value, int):
-                assert value == NaN_i, f"{name}: {value} not NaN_i"
             else:
                 pytest.fail(f"{name}: unexpected type {type(value)}")
 
     def test_array_values_are_sentinels(self):
-        """Test that array fill values are NaN_d or NaN_i."""
+        """Array fill values are NaN_d (float matrices) or NaN_i (int matrices)."""
         for name, value in _COMMON_RESET_ARRAYS:
             if isinstance(value, float):
                 assert math.isnan(value), f"{name}: {value} not NaN_d"
@@ -433,35 +431,15 @@ class TestCommonResetTableContent:
 class TestResetVals:
     """Tests for _reset_vals using the data-driven tables."""
 
-    def test_common_float_scalars_are_nan(self):
-        """Test that common float scalar fields are set to NaN."""
+    def test_common_scalars_reset_to_none(self):
+        """A2: all common scalar fields (int/float/complex) reset to None."""
         StdI = StdIntList()
         StdI.solver = "HPhi"
         _reset_vals(StdI)
         for name, value in _COMMON_RESET_SCALARS:
-            if isinstance(value, float):
-                actual = getattr(StdI, name)
-                assert math.isnan(actual), f"{name} = {actual}, expected NaN"
-
-    def test_common_int_scalars_are_nan_i(self):
-        """Test that common integer scalar fields are set to NaN_i."""
-        StdI = StdIntList()
-        StdI.solver = "HPhi"
-        _reset_vals(StdI)
-        for name, value in _COMMON_RESET_SCALARS:
-            if isinstance(value, int):
-                actual = getattr(StdI, name)
-                assert actual == NaN_i, f"{name} = {actual}, expected NaN_i"
-
-    def test_common_complex_scalars_are_nan_c(self):
-        """Test that common complex scalar fields are set to NaN_c."""
-        StdI = StdIntList()
-        StdI.solver = "HPhi"
-        _reset_vals(StdI)
-        for name, value in _COMMON_RESET_SCALARS:
-            if isinstance(value, complex):
-                actual = getattr(StdI, name)
-                assert math.isnan(actual.real), f"{name} = {actual}, expected NaN_c"
+            assert value is None, f"{name} table value should be None, got {value}"
+            actual = getattr(StdI, name)
+            assert actual is None, f"{name} = {actual}, expected None"
 
     def test_common_arrays_filled(self):
         """Test that common array fields are filled with sentinel values."""
@@ -499,5 +477,5 @@ class TestResetVals:
         StdI = StdIntList()
         StdI.solver = "HPhi"
         _reset_vals(StdI)
-        assert math.isnan(StdI.LargeValue)
+        assert StdI.LargeValue is None
         assert StdI.FlgTemp == 1

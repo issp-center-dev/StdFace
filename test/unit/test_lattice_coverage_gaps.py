@@ -58,8 +58,8 @@ def _base_chain_stdi(L: int) -> StdIntList:
     s.phase[0] = NaN_d
     s.phase[1] = NaN_d
     s.L = L
-    s.W = NaN_i
-    s.Height = NaN_i
+    s.W = None
+    s.Height = None
     s.box[:, :] = NaN_i
     s.h = NaN_d
     s.Gamma = NaN_d
@@ -80,7 +80,7 @@ def make_hubbard_chain(L: int = 4) -> StdIntList:
     """Hubbard chain: fermion branch with only nn hopping ``t0``."""
     s = _base_chain_stdi(L)
     s.model = "hubbard"
-    s.S2 = NaN_i
+    s.S2 = None
     s.mu = 0.0
     s.U = 0.0
     s.t = NaN_c
@@ -100,7 +100,7 @@ def make_kondo_chain(L: int = 4) -> StdIntList:
     """Kondo chain: ``input_spin`` on ``J`` and enlarged interaction counts."""
     s = _base_chain_stdi(L)
     s.model = "kondo"
-    s.S2 = NaN_i
+    s.S2 = None
     s.mu = 0.0
     s.U = 0.0
     s.t = NaN_c
@@ -131,9 +131,9 @@ def make_kondo_square(L: int = 2, W: int = 2) -> StdIntList:
     s.phase[:] = NaN_d
     s.L = L
     s.W = W
-    s.Height = NaN_i
+    s.Height = None
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -182,9 +182,9 @@ def make_hubbard_triangular(L: int = 2, W: int = 2) -> StdIntList:
     s.phase[:] = NaN_d
     s.L = L
     s.W = W
-    s.Height = NaN_i
+    s.Height = None
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -225,7 +225,7 @@ def make_hubbard_orthorhombic(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
     s.W = W
     s.Height = H
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -260,7 +260,7 @@ def make_hubbard_fc_ortho(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
     s.W = W
     s.Height = H
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -295,7 +295,7 @@ def make_hubbard_pyrochlore(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
     s.W = W
     s.Height = H
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -335,9 +335,9 @@ def make_hubbard_kagome(L: int = 2, W: int = 2) -> StdIntList:
     s.phase[:] = NaN_d
     s.L = L
     s.W = W
-    s.Height = NaN_i
+    s.Height = None
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -370,9 +370,9 @@ def make_hubbard_ladder(L: int = 4, W_legs: int = 2) -> StdIntList:
     s.phase[:] = NaN_d
     s.L = L
     s.W = W_legs
-    s.Height = NaN_i
+    s.Height = None
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d

@@ -25,7 +25,6 @@ from stdface.writer.interaction_writer import (
 
 
 # Sentinel values matching what _reset_vals sets at runtime
-NaN_i = 2147483647
 
 
 def _make_stdi_base(**overrides) -> StdIntList:

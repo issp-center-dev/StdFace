@@ -45,6 +45,7 @@ import numpy as np
 
 from .stdface_vals import NaN_i
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +74,7 @@ def print_val_d(valname: str, val: float, val0: float) -> float:
     float
         The (possibly updated) value.
     """
-    if math.isnan(val):
+    if val is None or math.isnan(val):
         val = val0
         logger.info("  %15s = %-10.5f  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
@@ -104,7 +105,7 @@ def print_val_dd(valname: str, val: float, val0: float, val1: float) -> float:
     float
         The (possibly updated) value.
     """
-    default = val1 if math.isnan(val0) else val0
+    default = val1 if (val0 is None or math.isnan(val0)) else val0
     return print_val_d(valname, val, default)
 
 
@@ -125,7 +126,7 @@ def print_val_c(valname: str, val: complex, val0: complex) -> complex:
     complex
         The (possibly updated) value.
     """
-    if math.isnan(val.real):
+    if val is None or math.isnan(val.real):
         val = val0
         logger.info(
             "  %15s = %-10.5f %-10.5f  ######  DEFAULT VALUE IS USED  ######",
@@ -155,7 +156,7 @@ def print_val_i(valname: str, val: int, val0: int) -> int:
     int
         The (possibly updated) value.
     """
-    if val == NaN_i:
+    if val is None or val == NaN_i:
         val = val0
         logger.info("  %15s = %-10d  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
@@ -197,6 +198,8 @@ def not_used_d(valname: str, val: float | complex) -> None:
         is tested (matching the C behaviour of implicitly casting
         ``double complex`` to ``double``).
     """
+    if val is None:
+        return
     check = val.real if isinstance(val, complex) else val
     if not math.isnan(check):
         _fail_not_used(valname)
@@ -239,7 +242,7 @@ def not_used_i(valname: str, val: int) -> None:
     val : int
         Value to check (abort if not the sentinel 2147483647).
     """
-    if val != NaN_i:
+    if val is not None and val != NaN_i:
         _fail_not_used(valname)
 
 
@@ -258,7 +261,7 @@ def required_val_i(valname: str, val: int) -> None:
     ValueError
         If ``val`` equals the sentinel (i.e. the parameter is unset).
     """
-    if val == NaN_i:
+    if val is None or val == NaN_i:
         msg = f"{valname} is NOT specified."
         logger.error(msg)
         raise ValueError(msg)

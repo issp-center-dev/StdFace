@@ -96,7 +96,7 @@ def _check_scalar_vs_matrix(scalar: float, mat: np.ndarray,
     mat_name : str
         Base name for the matrix in error messages.
     """
-    if math.isnan(scalar):
+    if scalar is None or math.isnan(scalar):
         return
     idx = _first_set_index(mat)
     if idx is not None:
@@ -169,10 +169,10 @@ def _resolve_spin_matrix(
         elif J is not None and not math.isnan(J[i1, i2]):
             J0[i1, i2] = J[i1, i2]
             resolved = True
-        elif i1 == i2 and not math.isnan(J0All):
+        elif i1 == i2 and J0All is not None and not math.isnan(J0All):
             J0[i1, i2] = J0All
             resolved = True
-        elif i1 == i2 and not math.isnan(JAll):
+        elif i1 == i2 and JAll is not None and not math.isnan(JAll):
             J0[i1, i2] = JAll
             resolved = True
         else:
@@ -209,7 +209,7 @@ def input_spin_nn(
         Name of this spin interaction (e.g. ``"J1"``).
     """
     # Scalar-scalar conflict: JAll vs J0All
-    if not math.isnan(JAll) and not math.isnan(J0All):
+    if (JAll is not None and not math.isnan(JAll)) and (J0All is not None and not math.isnan(J0All)):
         msg = f"\n ERROR! {J0name} conflict !\n"
         logger.error(msg)
         raise ValueError(msg)
@@ -263,13 +263,13 @@ def input_coulomb_v(V: float, V0: float, V0name: str) -> float:
     float
         The resolved value of *V0*.
     """
-    if not math.isnan(V) and not math.isnan(V0):
+    if (V is not None and not math.isnan(V)) and (V0 is not None and not math.isnan(V0)):
         msg = f"\n ERROR! {V0name} conflicts !\n"
         logger.error(msg)
         raise ValueError(msg)
-    elif not math.isnan(V0):
+    elif V0 is not None and not math.isnan(V0):
         logger.info(f"  {V0name:>15s} = {V0:<10.5f}")
-    elif not math.isnan(V):
+    elif V is not None and not math.isnan(V):
         V0 = V
         logger.info(f"  {V0name:>15s} = {V0:<10.5f}")
     else:
@@ -294,13 +294,13 @@ def input_hopp(t: complex, t0: complex, t0name: str) -> complex:
     complex
         The resolved value of *t0*.
     """
-    if not math.isnan(t.real) and not math.isnan(t0.real):
+    if (t is not None and not math.isnan(t.real)) and (t0 is not None and not math.isnan(t0.real)):
         msg = f"\n ERROR! {t0name} conflicts !\n"
         logger.error(msg)
         raise ValueError(msg)
-    elif not math.isnan(t0.real):
+    elif t0 is not None and not math.isnan(t0.real):
         logger.info(f"  {t0name:>15s} = {t0.real:<10.5f} {t0.imag:<10.5f}")
-    elif not math.isnan(t.real):
+    elif t is not None and not math.isnan(t.real):
         t0 = t
         logger.info(f"  {t0name:>15s} = {t0.real:<10.5f} {t0.imag:<10.5f}")
     else:

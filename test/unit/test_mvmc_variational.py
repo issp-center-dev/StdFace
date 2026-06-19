@@ -214,12 +214,12 @@ def _make_chain_stdi(L: int = 4, model: str = "hubbard") -> StdIntList:
 
     # Sub-lattice defaults (unset)
     StdI.boxsub[:, :] = NaN_i
-    StdI.Hsub = NaN_i
-    StdI.Lsub = NaN_i
-    StdI.Wsub = NaN_i
+    StdI.Hsub = None
+    StdI.Lsub = None
+    StdI.Wsub = None
 
     # NMPTrans default
-    StdI.NMPTrans = NaN_i
+    StdI.NMPTrans = None
 
     return StdI
 
@@ -271,8 +271,8 @@ class TestInitSiteSub:
         """Test initialization via Lsub/Wsub/Hsub."""
         StdI = _make_chain_stdi(L=4)
         StdI.Wsub = 2
-        StdI.Lsub = NaN_i
-        StdI.Hsub = NaN_i
+        StdI.Lsub = None
+        StdI.Hsub = None
         _init_site_sub(StdI)
         assert StdI.NCellsub == 2
 

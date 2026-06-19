@@ -20,7 +20,7 @@ from stdface.core.param_check import (
     not_used_i,
     required_val_i,
 )
-from stdface.core.stdface_vals import NaN_i, NaN_d
+NaN_d = float("nan")
 
 
 class TestPrintValD:
@@ -92,7 +92,7 @@ class TestPrintValI:
 
     def test_returns_default_when_sentinel(self):
         """Test that sentinel is replaced by the default value."""
-        result = print_val_i("test", NaN_i, 10)
+        result = print_val_i("test", None, 10)
         assert result == 10
 
     def test_returns_value_when_set(self):
@@ -105,7 +105,7 @@ class TestPrintValI:
         import logging
 
         with caplog.at_level(logging.INFO, logger="stdface.core.param_check"):
-            print_val_i("myvar", NaN_i, 7)
+            print_val_i("myvar", None, 7)
         assert "DEFAULT VALUE IS USED" in caplog.text
 
 
@@ -158,7 +158,7 @@ class TestNotUsedI:
 
     def test_no_exit_when_sentinel(self):
         """Test that sentinel value does not trigger exit."""
-        not_used_i("test", NaN_i)  # should not raise
+        not_used_i("test", None)  # should not raise
 
     def test_exits_when_set(self):
         """Test that a set value raises ValueError."""
@@ -172,7 +172,7 @@ class TestRequiredValI:
     def test_exits_when_missing(self):
         """Test that missing (sentinel) value raises ValueError."""
         with pytest.raises(ValueError):
-            required_val_i("test", NaN_i)
+            required_val_i("test", None)
 
     def test_no_exit_when_present(self):
         """Test that a present value does not raise."""

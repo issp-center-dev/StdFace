@@ -36,7 +36,7 @@ from typing import NamedTuple
 
 import numpy as np
 
-from ...core.stdface_vals import StdIntList, ModelType, MethodType, NaN_i, UNSET_STRING, AMPLITUDE_EPS
+from ...core.stdface_vals import StdIntList, ModelType, MethodType, AMPLITUDE_EPS
 from ...core.param_check import print_val_d, print_val_i
 from ...writer.common_writer import _merge_duplicate_terms
 
@@ -142,7 +142,7 @@ def _resolve_string_param(
 ) -> int | tuple[int, int]:
     """Resolve a string-valued parameter to its integer code(s).
 
-    If the field on *StdI* is ``UNSET_STRING``, it is set to *default*
+    If the field on *StdI* is ``None`` (unset), it is set to *default*
     and *default_value* is returned.  Otherwise the field value is looked
     up in *dispatch*; a missing key raises ``ValueError``.
 
@@ -167,7 +167,7 @@ def _resolve_string_param(
         The resolved integer code(s).
     """
     field_val = getattr(StdI, field)
-    if field_val == UNSET_STRING:
+    if field_val is None:
         setattr(StdI, field, default)
         logger.info(f"  {label:>20s} = {default:<12s}######  DEFAULT VALUE IS USED  ######")
         return default_value
@@ -231,7 +231,7 @@ def _validate_ngpu_scalapack(StdI: StdIntList) -> None:
     StdI : StdIntList
         The global parameter structure.  Reads ``NGPU`` and ``Scalapack``.
     """
-    if StdI.NGPU != NaN_i:
+    if StdI.NGPU is not None:
         logger.info(f"         NGPU = {StdI.NGPU}")
         if StdI.NGPU < 1:
             logger.info(f"\n ERROR ! NGPU : {StdI.NGPU}")
@@ -239,7 +239,7 @@ def _validate_ngpu_scalapack(StdI: StdIntList) -> None:
             logger.error(msg)
             raise ValueError(msg)
 
-    if StdI.Scalapack != NaN_i:
+    if StdI.Scalapack is not None:
         logger.info(f"         Scalapack = {StdI.Scalapack}")
         if StdI.Scalapack < 0 or StdI.Scalapack > 1:
             logger.info(f"\n ERROR ! Scalapack : {StdI.Scalapack}")
@@ -306,9 +306,9 @@ def _write_calcmod_file(StdI: StdIntList, params: _CalcModParams) -> None:
         fp.write("#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n")
         fp.write("#Restart = 0:None, 1:Save, 2:Restart&Save, 3:Restart\n")
         fp.write("#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save\n")
-        if StdI.NGPU != NaN_i:
+        if StdI.NGPU is not None:
             fp.write("#NGPU (for FullDiag): The number of GPU\n")
-        if StdI.Scalapack != NaN_i:
+        if StdI.Scalapack is not None:
             fp.write("#Scalapack (for FullDiag) = 0:w/o ScaLAPACK, 1:w/ ScaLAPACK\n")
         fp.write(f"CalcType {params.iCalcType:3d}\n")
         fp.write(f"CalcModel {params.iCalcModel:3d}\n")
@@ -321,9 +321,9 @@ def _write_calcmod_file(StdI: StdIntList, params: _CalcModParams) -> None:
         fp.write(f"InputHam {params.iInputHam:3d}\n")
         fp.write(f"OutputHam {params.iOutputHam:3d}\n")
         fp.write(f"OutputExVec {params.iOutputExVec:3d}\n")
-        if StdI.NGPU != NaN_i:
+        if StdI.NGPU is not None:
             fp.write(f"NGPU {StdI.NGPU:3d}\n")
-        if StdI.Scalapack != NaN_i:
+        if StdI.Scalapack is not None:
             fp.write(f"Scalapack {StdI.Scalapack:3d}\n")
 
 
@@ -351,7 +351,7 @@ def print_calc_mod(StdI: StdIntList) -> None:
     # ------------------------------------------------------------------
     iCalcEigenvec = 0
 
-    if StdI.method == UNSET_STRING:
+    if StdI.method is None:
         msg = "ERROR ! Method is NOT specified !"
         logger.error(msg)
         raise ValueError(msg)
@@ -818,7 +818,7 @@ def print_excitation(StdI: StdIntList) -> None:
     # ------------------------------------------------------------------
     #  Resolve SpectrumType default and determine NumOp, coef, spin
     # ------------------------------------------------------------------
-    if StdI.SpectrumType == UNSET_STRING:
+    if StdI.SpectrumType is None:
         StdI.SpectrumType = "szsz"
         logger.info("     SpectrumType = szsz        ######  DEFAULT VALUE IS USED  ######")
     else:
@@ -1008,7 +1008,7 @@ def vector_potential(StdI: StdIntList) -> None:
     Et = np.zeros((StdI.Lanczos_max, 3))
 
     # Resolve PumpType default
-    if StdI.PumpType == UNSET_STRING:
+    if StdI.PumpType is None:
         StdI.PumpType = "quench"
         logger.info("     PumpType = quench        ######  DEFAULT VALUE IS USED  ######")
     else:

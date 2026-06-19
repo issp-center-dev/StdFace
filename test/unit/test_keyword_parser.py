@@ -54,9 +54,9 @@ def _make_stdi(solver: str = "HPhi") -> StdIntList:
     StdI.Gamma = NaN_d
     StdI.Gamma_y = NaN_d
     StdI.h = NaN_d
-    StdI.Height = NaN_i
-    StdI.L = NaN_i
-    StdI.W = NaN_i
+    StdI.Height = None
+    StdI.L = None
+    StdI.W = None
 
     # Isotropic scalar couplings
     StdI.JAll = NaN_d
@@ -91,7 +91,7 @@ def _make_stdi(solver: str = "HPhi") -> StdIntList:
 
     # Chemical potential / spin
     StdI.mu = NaN_d
-    StdI.S2 = NaN_i
+    StdI.S2 = None
 
     # Hopping (complex)
     StdI.t = NaN_c
@@ -126,13 +126,13 @@ def _make_stdi(solver: str = "HPhi") -> StdIntList:
     StdI.phase[:] = NaN_d
 
     # Strings
-    StdI.ncond = NaN_i
-    StdI.Sz2 = NaN_i
-    StdI.model = "****"
-    StdI.lattice = "****"
-    StdI.outputmode = "****"
-    StdI.CDataFileHead = "****"
-    StdI.double_counting_mode = "****"
+    StdI.ncond = None
+    StdI.Sz2 = None
+    StdI.model = None
+    StdI.lattice = None
+    StdI.outputmode = None
+    StdI.CDataFileHead = None
+    StdI.double_counting_mode = None
 
     # Wannier90 cutoffs
     StdI.cutoff_t = NaN_d
@@ -159,91 +159,91 @@ def _make_stdi(solver: str = "HPhi") -> StdIntList:
         StdI.OmegaMin = NaN_d
         StdI.OmegaOrg = NaN_d
         StdI.OmegaIm = NaN_d
-        StdI.Nomega = NaN_i
+        StdI.Nomega = None
         StdI.SpectrumQ[:] = NaN_d
-        StdI.method = "****"
-        StdI.Restart = "****"
-        StdI.EigenVecIO = "****"
-        StdI.InitialVecType = "****"
-        StdI.HamIO = "****"
-        StdI.CalcSpec = "****"
-        StdI.SpectrumType = "****"
-        StdI.OutputExVec = "****"
+        StdI.method = None
+        StdI.Restart = None
+        StdI.EigenVecIO = None
+        StdI.InitialVecType = None
+        StdI.HamIO = None
+        StdI.CalcSpec = None
+        StdI.SpectrumType = None
+        StdI.OutputExVec = None
         StdI.FlgTemp = 1
-        StdI.Lanczos_max = NaN_i
-        StdI.initial_iv = NaN_i
-        StdI.nvec = NaN_i
-        StdI.exct = NaN_i
-        StdI.LanczosEps = NaN_i
-        StdI.LanczosTarget = NaN_i
-        StdI.NumAve = NaN_i
-        StdI.ExpecInterval = NaN_i
+        StdI.Lanczos_max = None
+        StdI.initial_iv = None
+        StdI.nvec = None
+        StdI.exct = None
+        StdI.LanczosEps = None
+        StdI.LanczosTarget = None
+        StdI.NumAve = None
+        StdI.ExpecInterval = None
         StdI.dt = NaN_d
         StdI.tdump = NaN_d
         StdI.tshift = NaN_d
         StdI.freq = NaN_d
         StdI.Uquench = NaN_d
         StdI.VecPot[:] = NaN_d
-        StdI.PumpType = "****"
-        StdI.ExpandCoef = NaN_i
-        StdI.NGPU = NaN_i
-        StdI.Scalapack = NaN_i
+        StdI.PumpType = None
+        StdI.ExpandCoef = None
+        StdI.NGPU = None
+        StdI.Scalapack = None
 
     elif solver == "mVMC":
-        StdI.CParaFileHead = "****"
-        StdI.NVMCCalMode = NaN_i
-        StdI.NLanczosMode = NaN_i
-        StdI.NDataIdxStart = NaN_i
-        StdI.NDataQtySmp = NaN_i
-        StdI.NSPGaussLeg = NaN_i
-        StdI.NSPStot = NaN_i
-        StdI.NMPTrans = NaN_i
-        StdI.NSROptItrStep = NaN_i
-        StdI.NSROptItrSmp = NaN_i
+        StdI.CParaFileHead = None
+        StdI.NVMCCalMode = None
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
+        StdI.NSROptItrStep = None
+        StdI.NSROptItrSmp = None
         StdI.DSROptRedCut = NaN_d
         StdI.DSROptStaDel = NaN_d
         StdI.DSROptStepDt = NaN_d
-        StdI.NVMCWarmUp = NaN_i
-        StdI.NVMCInterval = NaN_i
-        StdI.NVMCSample = NaN_i
-        StdI.NExUpdatePath = NaN_i
-        StdI.RndSeed = NaN_i
-        StdI.NSplitSize = NaN_i
-        StdI.NStore = NaN_i
-        StdI.NSRCG = NaN_i
-        StdI.ComplexType = NaN_i
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.NExUpdatePath = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
+        StdI.ComplexType = None
         StdI.boxsub[:, :] = NaN_i
-        StdI.Hsub = NaN_i
-        StdI.Lsub = NaN_i
-        StdI.Wsub = NaN_i
+        StdI.Hsub = None
+        StdI.Lsub = None
+        StdI.Wsub = None
 
     elif solver == "UHF":
-        StdI.NMPTrans = NaN_i
-        StdI.RndSeed = NaN_i
+        StdI.NMPTrans = None
+        StdI.RndSeed = None
         StdI.mix = NaN_d
-        StdI.eps = NaN_i
-        StdI.eps_slater = NaN_i
-        StdI.Iteration_max = NaN_i
+        StdI.eps = None
+        StdI.eps_slater = None
+        StdI.Iteration_max = None
         StdI.boxsub[:, :] = NaN_i
-        StdI.Hsub = NaN_i
-        StdI.Lsub = NaN_i
-        StdI.Wsub = NaN_i
+        StdI.Hsub = None
+        StdI.Lsub = None
+        StdI.Wsub = None
 
     elif solver == "HWAVE":
-        StdI.NMPTrans = NaN_i
-        StdI.RndSeed = NaN_i
+        StdI.NMPTrans = None
+        StdI.RndSeed = None
         StdI.mix = NaN_d
-        StdI.eps = NaN_i
-        StdI.eps_slater = NaN_i
-        StdI.Iteration_max = NaN_i
+        StdI.eps = None
+        StdI.eps_slater = None
+        StdI.Iteration_max = None
         StdI.boxsub[:, :] = NaN_i
-        StdI.Hsub = NaN_i
-        StdI.Lsub = NaN_i
-        StdI.Wsub = NaN_i
-        StdI.calcmode = "****"
-        StdI.fileprefix = "****"
-        StdI.export_all = NaN_i
-        StdI.lattice_gp = NaN_i
+        StdI.Hsub = None
+        StdI.Lsub = None
+        StdI.Wsub = None
+        StdI.calcmode = None
+        StdI.fileprefix = None
+        StdI.export_all = None
+        StdI.lattice_gp = None
 
     return StdI
 
@@ -287,7 +287,7 @@ class TestStoreWithCheckDupS:
 
     def test_stores_new_value(self):
         """Test that a new value is stored when current is sentinel."""
-        result = store_with_check_dup_s("model", "Hubbard", "****")
+        result = store_with_check_dup_s("model", "Hubbard", None)
         assert result == "Hubbard"
 
     def test_exits_on_duplicate(self):
@@ -306,12 +306,12 @@ class TestStoreWithCheckDupSl:
 
     def test_stores_and_lowercases(self):
         """Test that value is stored and lowercased."""
-        result = store_with_check_dup_sl("lattice", "Chain", "****")
+        result = store_with_check_dup_sl("lattice", "Chain", None)
         assert result == "chain"
 
     def test_truncates_long_value(self):
         """Test truncation to maxlen."""
-        result = store_with_check_dup_sl("key", "abcdefghij", "****", maxlen=5)
+        result = store_with_check_dup_sl("key", "abcdefghij", None, maxlen=5)
         assert result == "abcde"
 
     def test_exits_on_duplicate(self):
@@ -330,12 +330,12 @@ class TestStoreWithCheckDupI:
 
     def test_stores_integer(self):
         """Test that a string is parsed to int."""
-        result = store_with_check_dup_i("L", "4", NaN_i)
+        result = store_with_check_dup_i("L", "4", None)
         assert result == 4
 
     def test_truncates_float_string(self):
         """Test that '2.0' is parsed as 2 (C sscanf behavior)."""
-        result = store_with_check_dup_i("W", "2.0", NaN_i)
+        result = store_with_check_dup_i("W", "2.0", None)
         assert result == 2
 
     def test_exits_on_duplicate(self):

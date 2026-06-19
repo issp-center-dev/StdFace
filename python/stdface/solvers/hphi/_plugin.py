@@ -5,8 +5,10 @@ post-lattice hooks (LargeValue, Boost), and Expert-mode file writing.
 """
 from __future__ import annotations
 
+import numpy as np
+
 from ...plugin import ExpertModeSolverPlugin, register
-from ...core.stdface_vals import StdIntList, SolverType, MethodType, NaN_i, NaN_d
+from ...core.stdface_vals import StdIntList, SolverType, MethodType
 from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_sl,
     store_with_check_dup_i, store_with_check_dup_d,
@@ -123,34 +125,34 @@ _HPHI_KEYWORDS: dict[str, tuple] = {
 # -----------------------------------------------------------------------
 
 _RESET_SCALARS: list[tuple[str, object]] = [
-    ("LargeValue", NaN_d),
-    ("OmegaMax", NaN_d),
-    ("OmegaMin", NaN_d),
-    ("OmegaOrg", NaN_d),
-    ("OmegaIm", NaN_d),
-    ("Nomega", NaN_i),
+    ("LargeValue", None),
+    ("OmegaMax", None),
+    ("OmegaMin", None),
+    ("OmegaOrg", None),
+    ("OmegaIm", None),
+    ("Nomega", None),
     ("FlgTemp", 1),
-    ("Lanczos_max", NaN_i),
-    ("initial_iv", NaN_i),
-    ("nvec", NaN_i),
-    ("exct", NaN_i),
-    ("LanczosEps", NaN_i),
-    ("LanczosTarget", NaN_i),
-    ("NumAve", NaN_i),
-    ("ExpecInterval", NaN_i),
-    ("dt", NaN_d),
-    ("tdump", NaN_d),
-    ("tshift", NaN_d),
-    ("freq", NaN_d),
-    ("Uquench", NaN_d),
-    ("ExpandCoef", NaN_i),
-    ("NGPU", NaN_i),
-    ("Scalapack", NaN_i),
+    ("Lanczos_max", None),
+    ("initial_iv", None),
+    ("nvec", None),
+    ("exct", None),
+    ("LanczosEps", None),
+    ("LanczosTarget", None),
+    ("NumAve", None),
+    ("ExpecInterval", None),
+    ("dt", None),
+    ("tdump", None),
+    ("tshift", None),
+    ("freq", None),
+    ("Uquench", None),
+    ("ExpandCoef", None),
+    ("NGPU", None),
+    ("Scalapack", None),
 ]
 
 _RESET_ARRAYS: list[tuple[str, object]] = [
-    ("SpectrumQ", NaN_d),
-    ("VecPot", NaN_d),
+    ("SpectrumQ", np.nan),
+    ("VecPot", np.nan),
 ]
 
 

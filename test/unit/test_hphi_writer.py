@@ -12,7 +12,6 @@ import tempfile
 import pytest
 
 from stdface.core.stdface_vals import StdIntList, MethodType, ModelType
-from stdface.core.stdface_vals import UNSET_STRING
 from stdface.solvers.hphi.writer import (
     large_value,
     print_calc_mod,
@@ -47,7 +46,6 @@ from stdface.solvers.hphi.writer import (
 )
 
 # Sentinel values matching what _reset_vals sets at runtime
-NaN_i = 2147483647
 
 
 def _make_stdi_for_large_value(**overrides) -> StdIntList:
@@ -71,14 +69,14 @@ def _make_stdi_for_calcmod(**overrides) -> StdIntList:
     StdI.method = overrides.get("method", "fulldiag")
     StdI.model = overrides.get("model", "hubbard")
     StdI.lGC = overrides.get("lGC", 0)
-    StdI.Restart = overrides.get("Restart", "****")
-    StdI.InitialVecType = overrides.get("InitialVecType", "****")
-    StdI.EigenVecIO = overrides.get("EigenVecIO", "****")
-    StdI.HamIO = overrides.get("HamIO", "****")
-    StdI.CalcSpec = overrides.get("CalcSpec", "****")
-    StdI.OutputExVec = overrides.get("OutputExVec", "****")
-    StdI.NGPU = overrides.get("NGPU", NaN_i)
-    StdI.Scalapack = overrides.get("Scalapack", NaN_i)
+    StdI.Restart = overrides.get("Restart", None)
+    StdI.InitialVecType = overrides.get("InitialVecType", None)
+    StdI.EigenVecIO = overrides.get("EigenVecIO", None)
+    StdI.HamIO = overrides.get("HamIO", None)
+    StdI.CalcSpec = overrides.get("CalcSpec", None)
+    StdI.OutputExVec = overrides.get("OutputExVec", None)
+    StdI.NGPU = overrides.get("NGPU", None)
+    StdI.Scalapack = overrides.get("Scalapack", None)
     return StdI
 
 
@@ -192,15 +190,15 @@ class TestVectorPotential:
     def test_quench_default(self):
         """Test that default PumpType is quench with PumpBody=2."""
         StdI = StdIntList()
-        StdI.PumpType = "****"
+        StdI.PumpType = None
         StdI.VecPot = [float("nan")] * 3
-        StdI.Lanczos_max = NaN_i
+        StdI.Lanczos_max = None
         StdI.dt = float("nan")
         StdI.freq = float("nan")
         StdI.tshift = float("nan")
         StdI.tdump = float("nan")
         StdI.Uquench = float("nan")
-        StdI.ExpandCoef = NaN_i
+        StdI.ExpandCoef = None
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -224,7 +222,7 @@ class TestVectorPotential:
         StdI.tshift = 0.0
         StdI.tdump = float("nan")
         StdI.Uquench = float("nan")
-        StdI.ExpandCoef = NaN_i
+        StdI.ExpandCoef = None
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -405,17 +403,17 @@ class TestResolveStringParam:
     _SAMPLE_DISPATCH = {"alpha": 10, "beta": 20}
 
     def test_unset_returns_default_value(self):
-        """Test that UNSET_STRING field returns the default value."""
+        """Test that None field returns the default value."""
         StdI = StdIntList()
-        StdI.Restart = UNSET_STRING
+        StdI.Restart = None
         result = _resolve_string_param(
             StdI, "Restart", "Restart", "none", 0, RESTART_TO_INT)
         assert result == 0
 
     def test_unset_sets_field_to_default(self):
-        """Test that UNSET_STRING field is overwritten with default string."""
+        """Test that None field is overwritten with default string."""
         StdI = StdIntList()
-        StdI.Restart = UNSET_STRING
+        StdI.Restart = None
         _resolve_string_param(
             StdI, "Restart", "Restart", "none", 0, RESTART_TO_INT)
         assert StdI.Restart == "none"
@@ -456,7 +454,7 @@ class TestResolveStringParam:
     def test_tuple_default(self):
         """Test that tuple default values are returned for unset fields."""
         StdI = StdIntList()
-        StdI.EigenVecIO = UNSET_STRING
+        StdI.EigenVecIO = None
         result = _resolve_string_param(
             StdI, "EigenVecIO", "EigenVecIO", "none",
             (0, 0), EIGENVEC_IO_TO_FLAGS)
@@ -467,7 +465,7 @@ class TestResolveStringParam:
         import logging
 
         StdI = StdIntList()
-        StdI.CalcSpec = UNSET_STRING
+        StdI.CalcSpec = None
         with caplog.at_level(logging.INFO, logger="stdface.solvers.hphi.writer"):
             _resolve_string_param(
                 StdI, "CalcSpec", "CalcSpec", "none", 0, CALC_SPEC_TO_INT)
@@ -884,13 +882,13 @@ class TestPumpTypeHandlers:
         StdI = StdIntList()
         StdI.PumpType = "bogus_laser"
         StdI.VecPot = [0.0] * 3
-        StdI.Lanczos_max = NaN_i
+        StdI.Lanczos_max = None
         StdI.dt = float("nan")
         StdI.freq = float("nan")
         StdI.tshift = float("nan")
         StdI.tdump = float("nan")
         StdI.Uquench = float("nan")
-        StdI.ExpandCoef = NaN_i
+        StdI.ExpandCoef = None
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
@@ -1068,36 +1066,36 @@ class TestValidateNGPUScalapack:
     def test_no_validation_when_unset(self):
         """Test that no error occurs when NGPU and Scalapack are unset."""
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
-        StdI.Scalapack = NaN_i
+        StdI.NGPU = None
+        StdI.Scalapack = None
         _validate_ngpu_scalapack(StdI)  # should not raise
 
     def test_valid_ngpu(self):
         """Test that valid NGPU passes validation."""
         StdI = StdIntList()
         StdI.NGPU = 2
-        StdI.Scalapack = NaN_i
+        StdI.Scalapack = None
         _validate_ngpu_scalapack(StdI)  # should not raise
 
     def test_invalid_ngpu_exits(self):
         """Test that NGPU < 1 causes exit."""
         StdI = StdIntList()
         StdI.NGPU = 0
-        StdI.Scalapack = NaN_i
+        StdI.Scalapack = None
         with pytest.raises(ValueError):
             _validate_ngpu_scalapack(StdI)
 
     def test_valid_scalapack(self):
         """Test that valid Scalapack (0 or 1) passes."""
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
+        StdI.NGPU = None
         StdI.Scalapack = 1
         _validate_ngpu_scalapack(StdI)  # should not raise
 
     def test_invalid_scalapack_exits(self):
         """Test that Scalapack > 1 causes exit."""
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
+        StdI.NGPU = None
         StdI.Scalapack = 2
         with pytest.raises(ValueError):
             _validate_ngpu_scalapack(StdI)
@@ -1105,7 +1103,7 @@ class TestValidateNGPUScalapack:
     def test_negative_scalapack_exits(self):
         """Test that Scalapack < 0 causes exit."""
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
+        StdI.NGPU = None
         StdI.Scalapack = -1
         with pytest.raises(ValueError):
             _validate_ngpu_scalapack(StdI)
@@ -1123,8 +1121,8 @@ class TestWriteCalcmodFile:
         """Test that calcmod.def is created."""
         os.chdir(tmp_path)
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
-        StdI.Scalapack = NaN_i
+        StdI.NGPU = None
+        StdI.Scalapack = None
         _write_calcmod_file(
             StdI, _CalcModParams(
                 iCalcType=0, iCalcModel=0, iCalcEigenvec=0,
@@ -1139,8 +1137,8 @@ class TestWriteCalcmodFile:
         """Test that CalcType value appears in output."""
         os.chdir(tmp_path)
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
-        StdI.Scalapack = NaN_i
+        StdI.NGPU = None
+        StdI.Scalapack = None
         _write_calcmod_file(
             StdI, _CalcModParams(
                 iCalcType=2, iCalcModel=3, iCalcEigenvec=1,
@@ -1159,7 +1157,7 @@ class TestWriteCalcmodFile:
         os.chdir(tmp_path)
         StdI = StdIntList()
         StdI.NGPU = 4
-        StdI.Scalapack = NaN_i
+        StdI.Scalapack = None
         _write_calcmod_file(
             StdI, _CalcModParams(
                 iCalcType=2, iCalcModel=0, iCalcEigenvec=0,
@@ -1175,7 +1173,7 @@ class TestWriteCalcmodFile:
         """Test that Scalapack line appears when Scalapack is set."""
         os.chdir(tmp_path)
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
+        StdI.NGPU = None
         StdI.Scalapack = 1
         _write_calcmod_file(
             StdI, _CalcModParams(
@@ -1192,8 +1190,8 @@ class TestWriteCalcmodFile:
         """Test that NGPU line is absent when NGPU is unset."""
         os.chdir(tmp_path)
         StdI = StdIntList()
-        StdI.NGPU = NaN_i
-        StdI.Scalapack = NaN_i
+        StdI.NGPU = None
+        StdI.Scalapack = None
         _write_calcmod_file(
             StdI, _CalcModParams(
                 iCalcType=0, iCalcModel=0, iCalcEigenvec=0,

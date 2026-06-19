@@ -41,7 +41,6 @@ from stdface.writer.common_writer import (
 from stdface.writer.interaction_writer import print_interactions
 
 # Sentinel values matching what _reset_vals sets at runtime
-NaN_i = 2147483647
 
 
 def _make_stdi_base(**overrides) -> StdIntList:
@@ -54,10 +53,10 @@ def _make_stdi_base(**overrides) -> StdIntList:
     StdI.lBoost = overrides.get("lBoost", 0)
     StdI.locspinflag = overrides.get("locspinflag", [0] * StdI.nsite)
     StdI.ioutputmode = overrides.get("ioutputmode", 1)
-    StdI.outputmode = overrides.get("outputmode", "****")
+    StdI.outputmode = overrides.get("outputmode", None)
     StdI.NsiteUC = overrides.get("NsiteUC", 1)
-    StdI.Sz2 = overrides.get("Sz2", NaN_i)
-    StdI.ncond = overrides.get("ncond", NaN_i)
+    StdI.Sz2 = overrides.get("Sz2", None)
+    StdI.ncond = overrides.get("ncond", None)
     return StdI
 
 
@@ -172,7 +171,7 @@ class TestCheckOutputMode:
     def test_default_sentinel(self):
         """Test '****' (default) sets ioutputmode=1."""
         StdI = _make_stdi_base()
-        StdI.outputmode = "****"
+        StdI.outputmode = None
         check_output_mode(StdI)
         assert StdI.ioutputmode == 1
 
@@ -621,7 +620,7 @@ class TestPrintModPara:
         StdI.CDataFileHead = "zvo"
         StdI.Lanczos_max = 2000
         StdI.initial_iv = -1
-        StdI.nvec = NaN_i
+        StdI.nvec = None
         StdI.exct = 1
         StdI.LanczosEps = 14
         StdI.LanczosTarget = 2
@@ -692,7 +691,7 @@ class TestModparaBodyDispatch:
         StdI.CDataFileHead = "zvo"
         StdI.Lanczos_max = 2000
         StdI.initial_iv = -1
-        StdI.nvec = NaN_i
+        StdI.nvec = None
         StdI.exct = 1
         StdI.LanczosEps = 14
         StdI.LanczosTarget = 2
@@ -792,7 +791,7 @@ class TestModparaBodyDispatch:
         StdI.CDataFileHead = "zvo"
         StdI.Lanczos_max = 2000
         StdI.initial_iv = -1
-        StdI.nvec = NaN_i
+        StdI.nvec = None
         StdI.exct = 1
         StdI.LanczosEps = 14
         StdI.LanczosTarget = 2
@@ -819,7 +818,7 @@ class TestModparaBodyDispatch:
         StdI.CDataFileHead = "zvo"
         StdI.Lanczos_max = 2000
         StdI.initial_iv = -1
-        StdI.nvec = NaN_i
+        StdI.nvec = None
         StdI.exct = 1
         StdI.LanczosEps = 14
         StdI.LanczosTarget = 2
@@ -927,42 +926,42 @@ class TestSolverDefaultsDispatch:
     def test_hphi_sets_lanczos_max(self):
         StdI = _make_stdi_base(solver="HPhi")
         StdI.LargeValue = 10.0
-        StdI.Lanczos_max = NaN_i
-        StdI.initial_iv = NaN_i
-        StdI.exct = NaN_i
-        StdI.LanczosEps = NaN_i
-        StdI.LanczosTarget = NaN_i
-        StdI.NumAve = NaN_i
-        StdI.ExpecInterval = NaN_i
-        StdI.Nomega = NaN_i
+        StdI.Lanczos_max = None
+        StdI.initial_iv = None
+        StdI.exct = None
+        StdI.LanczosEps = None
+        StdI.LanczosTarget = None
+        StdI.NumAve = None
+        StdI.ExpecInterval = None
+        StdI.Nomega = None
         _check_mod_para_hphi(StdI)
         assert StdI.Lanczos_max == 2000
 
     def test_hphi_sets_exct(self):
         StdI = _make_stdi_base(solver="HPhi")
         StdI.LargeValue = 10.0
-        StdI.Lanczos_max = NaN_i
-        StdI.initial_iv = NaN_i
-        StdI.exct = NaN_i
-        StdI.LanczosEps = NaN_i
-        StdI.LanczosTarget = NaN_i
-        StdI.NumAve = NaN_i
-        StdI.ExpecInterval = NaN_i
-        StdI.Nomega = NaN_i
+        StdI.Lanczos_max = None
+        StdI.initial_iv = None
+        StdI.exct = None
+        StdI.LanczosEps = None
+        StdI.LanczosTarget = None
+        StdI.NumAve = None
+        StdI.ExpecInterval = None
+        StdI.Nomega = None
         _check_mod_para_hphi(StdI)
         assert StdI.exct == 1
 
     def test_hphi_sets_omega_defaults(self):
         StdI = _make_stdi_base(solver="HPhi", nsite=4)
         StdI.LargeValue = 10.0
-        StdI.Lanczos_max = NaN_i
-        StdI.initial_iv = NaN_i
-        StdI.exct = NaN_i
-        StdI.LanczosEps = NaN_i
-        StdI.LanczosTarget = NaN_i
-        StdI.NumAve = NaN_i
-        StdI.ExpecInterval = NaN_i
-        StdI.Nomega = NaN_i
+        StdI.Lanczos_max = None
+        StdI.initial_iv = None
+        StdI.exct = None
+        StdI.LanczosEps = None
+        StdI.LanczosTarget = None
+        StdI.NumAve = None
+        StdI.ExpecInterval = None
+        StdI.Nomega = None
         StdI.OmegaMax = float("nan")
         StdI.OmegaMin = float("nan")
         StdI.OmegaOrg = float("nan")
@@ -976,14 +975,14 @@ class TestSolverDefaultsDispatch:
         """``LanczosTarget`` is raised to at least ``exct`` when smaller."""
         StdI = _make_stdi_base(solver="HPhi", nsite=4)
         StdI.LargeValue = 10.0
-        StdI.Lanczos_max = NaN_i
-        StdI.initial_iv = NaN_i
+        StdI.Lanczos_max = None
+        StdI.initial_iv = None
         StdI.exct = 5
-        StdI.LanczosEps = NaN_i
+        StdI.LanczosEps = None
         StdI.LanczosTarget = 2
-        StdI.NumAve = NaN_i
-        StdI.ExpecInterval = NaN_i
-        StdI.Nomega = NaN_i
+        StdI.NumAve = None
+        StdI.ExpecInterval = None
+        StdI.Nomega = None
         _check_mod_para_hphi(StdI)
         assert StdI.LanczosTarget == 5
 
@@ -991,22 +990,22 @@ class TestSolverDefaultsDispatch:
 
     def test_mvmc_sets_cpara_default(self):
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
-        StdI.NVMCCalMode = NaN_i
-        StdI.NLanczosMode = NaN_i
-        StdI.NDataIdxStart = NaN_i
-        StdI.NDataQtySmp = NaN_i
-        StdI.NSPGaussLeg = NaN_i
-        StdI.NSPStot = NaN_i
-        StdI.NMPTrans = NaN_i
-        StdI.NSROptItrStep = NaN_i
-        StdI.NSROptItrSmp = NaN_i
-        StdI.NVMCWarmUp = NaN_i
-        StdI.NVMCInterval = NaN_i
-        StdI.NVMCSample = NaN_i
-        StdI.RndSeed = NaN_i
-        StdI.NSplitSize = NaN_i
-        StdI.NStore = NaN_i
-        StdI.NSRCG = NaN_i
+        StdI.NVMCCalMode = None
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
+        StdI.NSROptItrStep = None
+        StdI.NSROptItrSmp = None
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
         _check_mod_para_mvmc(StdI)
         assert StdI.CParaFileHead == "zqp"
 
@@ -1014,22 +1013,22 @@ class TestSolverDefaultsDispatch:
         """Non-sentinel ``CParaFileHead`` takes the else branch (no default)."""
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
         StdI.CParaFileHead = "my_cpara"
-        StdI.NVMCCalMode = NaN_i
-        StdI.NLanczosMode = NaN_i
-        StdI.NDataIdxStart = NaN_i
-        StdI.NDataQtySmp = NaN_i
-        StdI.NSPGaussLeg = NaN_i
-        StdI.NSPStot = NaN_i
-        StdI.NMPTrans = NaN_i
-        StdI.NSROptItrStep = NaN_i
-        StdI.NSROptItrSmp = NaN_i
-        StdI.NVMCWarmUp = NaN_i
-        StdI.NVMCInterval = NaN_i
-        StdI.NVMCSample = NaN_i
-        StdI.RndSeed = NaN_i
-        StdI.NSplitSize = NaN_i
-        StdI.NStore = NaN_i
-        StdI.NSRCG = NaN_i
+        StdI.NVMCCalMode = None
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
+        StdI.NSROptItrStep = None
+        StdI.NSROptItrSmp = None
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
         _check_mod_para_mvmc(StdI)
         assert StdI.CParaFileHead == "my_cpara"
 
@@ -1037,63 +1036,63 @@ class TestSolverDefaultsDispatch:
         """``NVMCCalMode == 1`` runs the ``not_used_i`` branch for ``NSROptItrSmp``."""
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
         StdI.NVMCCalMode = 1
-        StdI.NLanczosMode = NaN_i
-        StdI.NDataIdxStart = NaN_i
-        StdI.NDataQtySmp = NaN_i
-        StdI.NSPGaussLeg = NaN_i
-        StdI.NSPStot = NaN_i
-        StdI.NMPTrans = NaN_i
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
         StdI.NSROptItrStep = 1000
-        StdI.NSROptItrSmp = NaN_i
-        StdI.NVMCWarmUp = NaN_i
-        StdI.NVMCInterval = NaN_i
-        StdI.NVMCSample = NaN_i
-        StdI.RndSeed = NaN_i
-        StdI.NSplitSize = NaN_i
-        StdI.NStore = NaN_i
-        StdI.NSRCG = NaN_i
+        StdI.NSROptItrSmp = None
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
         _check_mod_para_mvmc(StdI)
         assert StdI.NSROptItrSmp == 100
 
     def test_mvmc_sets_nvmccalmode(self):
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
-        StdI.NVMCCalMode = NaN_i
-        StdI.NLanczosMode = NaN_i
-        StdI.NDataIdxStart = NaN_i
-        StdI.NDataQtySmp = NaN_i
-        StdI.NSPGaussLeg = NaN_i
-        StdI.NSPStot = NaN_i
-        StdI.NMPTrans = NaN_i
-        StdI.NSROptItrStep = NaN_i
-        StdI.NSROptItrSmp = NaN_i
-        StdI.NVMCWarmUp = NaN_i
-        StdI.NVMCInterval = NaN_i
-        StdI.NVMCSample = NaN_i
-        StdI.RndSeed = NaN_i
-        StdI.NSplitSize = NaN_i
-        StdI.NStore = NaN_i
-        StdI.NSRCG = NaN_i
+        StdI.NVMCCalMode = None
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
+        StdI.NSROptItrStep = None
+        StdI.NSROptItrSmp = None
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
         _check_mod_para_mvmc(StdI)
         assert StdI.NVMCCalMode == 0
 
     def test_mvmc_sets_rndseed(self):
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
-        StdI.NVMCCalMode = NaN_i
-        StdI.NLanczosMode = NaN_i
-        StdI.NDataIdxStart = NaN_i
-        StdI.NDataQtySmp = NaN_i
-        StdI.NSPGaussLeg = NaN_i
-        StdI.NSPStot = NaN_i
-        StdI.NMPTrans = NaN_i
-        StdI.NSROptItrStep = NaN_i
-        StdI.NSROptItrSmp = NaN_i
-        StdI.NVMCWarmUp = NaN_i
-        StdI.NVMCInterval = NaN_i
-        StdI.NVMCSample = NaN_i
-        StdI.RndSeed = NaN_i
-        StdI.NSplitSize = NaN_i
-        StdI.NStore = NaN_i
-        StdI.NSRCG = NaN_i
+        StdI.NVMCCalMode = None
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
+        StdI.NSROptItrStep = None
+        StdI.NSROptItrSmp = None
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
         _check_mod_para_mvmc(StdI)
         assert StdI.RndSeed == 123456789
 
@@ -1101,32 +1100,32 @@ class TestSolverDefaultsDispatch:
 
     def test_uhf_sets_rndseed(self):
         StdI = _make_stdi_base(solver="UHF")
-        StdI.RndSeed = NaN_i
-        StdI.Iteration_max = NaN_i
-        StdI.eps = NaN_i
-        StdI.eps_slater = NaN_i
-        StdI.NMPTrans = NaN_i
+        StdI.RndSeed = None
+        StdI.Iteration_max = None
+        StdI.eps = None
+        StdI.eps_slater = None
+        StdI.NMPTrans = None
         _check_mod_para_uhf(StdI)
         assert StdI.RndSeed == 123456789
 
     def test_uhf_sets_iteration_max(self):
         StdI = _make_stdi_base(solver="UHF")
-        StdI.RndSeed = NaN_i
-        StdI.Iteration_max = NaN_i
-        StdI.eps = NaN_i
-        StdI.eps_slater = NaN_i
-        StdI.NMPTrans = NaN_i
+        StdI.RndSeed = None
+        StdI.Iteration_max = None
+        StdI.eps = None
+        StdI.eps_slater = None
+        StdI.NMPTrans = None
         _check_mod_para_uhf(StdI)
         assert StdI.Iteration_max == 1000
 
     def test_uhf_sets_mix(self):
         StdI = _make_stdi_base(solver="UHF")
-        StdI.RndSeed = NaN_i
-        StdI.Iteration_max = NaN_i
+        StdI.RndSeed = None
+        StdI.Iteration_max = None
         StdI.mix = float("nan")
-        StdI.eps = NaN_i
-        StdI.eps_slater = NaN_i
-        StdI.NMPTrans = NaN_i
+        StdI.eps = None
+        StdI.eps_slater = None
+        StdI.NMPTrans = None
         _check_mod_para_uhf(StdI)
         assert StdI.mix == 0.5
 
@@ -1139,14 +1138,14 @@ class TestCheckConservedQuantities:
     def test_hubbard_mvmc_canonical_sz2_defaults(self):
         StdI = _make_stdi_base(model="hubbard", solver="mVMC", lGC=0)
         StdI.ncond = 4
-        StdI.Sz2 = NaN_i
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)
         assert StdI.Sz2 == 0
 
     def test_hubbard_mvmc_canonical_ncond_unchanged(self):
         StdI = _make_stdi_base(model="hubbard", solver="mVMC", lGC=0)
         StdI.ncond = 4
-        StdI.Sz2 = NaN_i
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)
         assert StdI.ncond == 4
 
@@ -1155,16 +1154,16 @@ class TestCheckConservedQuantities:
     def test_hubbard_mvmc_gc_no_sz2_change(self):
         StdI = _make_stdi_base(model="hubbard", solver="mVMC", lGC=1)
         StdI.ncond = 4
-        StdI.Sz2 = NaN_i
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)
-        assert StdI.Sz2 == NaN_i
+        assert StdI.Sz2 is None
 
     # -- Hubbard + HPhi + canonical: nelec required (passes if set) --
 
     def test_hubbard_hphi_canonical_passes_with_ncond(self):
         StdI = _make_stdi_base(model="hubbard", solver="HPhi", lGC=0)
         StdI.ncond = 4
-        StdI.Sz2 = NaN_i
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)  # should not exit
         assert StdI.ncond == 4
 
@@ -1172,15 +1171,15 @@ class TestCheckConservedQuantities:
 
     def test_hubbard_hphi_gc_passes(self):
         StdI = _make_stdi_base(model="hubbard", solver="HPhi", lGC=1)
-        StdI.ncond = NaN_i
-        StdI.Sz2 = NaN_i
+        StdI.ncond = None
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)  # should not exit
 
     # -- Spin + mVMC: ncond set to 0 --
 
     def test_spin_mvmc_sets_ncond_zero(self):
         StdI = _make_stdi_base(model="spin", solver="mVMC", lGC=0)
-        StdI.ncond = NaN_i
+        StdI.ncond = None
         StdI.Sz2 = 0
         _check_conserved_quantities(StdI)
         assert StdI.ncond == 0
@@ -1189,7 +1188,7 @@ class TestCheckConservedQuantities:
 
     def test_spin_hphi_canonical_passes_with_sz2(self):
         StdI = _make_stdi_base(model="spin", solver="HPhi", lGC=0)
-        StdI.ncond = NaN_i
+        StdI.ncond = None
         StdI.Sz2 = 0
         _check_conserved_quantities(StdI)  # should not exit
         assert StdI.Sz2 == 0
@@ -1198,8 +1197,8 @@ class TestCheckConservedQuantities:
 
     def test_spin_hphi_gc_passes(self):
         StdI = _make_stdi_base(model="spin", solver="HPhi", lGC=1)
-        StdI.ncond = NaN_i
-        StdI.Sz2 = NaN_i
+        StdI.ncond = None
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)  # should not exit
 
     # -- Kondo + non-HPhi + canonical: 2Sz defaults to 0 --
@@ -1207,7 +1206,7 @@ class TestCheckConservedQuantities:
     def test_kondo_mvmc_canonical_sz2_defaults(self):
         StdI = _make_stdi_base(model="kondo", solver="mVMC", lGC=0)
         StdI.ncond = 4
-        StdI.Sz2 = NaN_i
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)
         assert StdI.Sz2 == 0
 
@@ -1216,7 +1215,7 @@ class TestCheckConservedQuantities:
     def test_kondo_hphi_canonical_passes_with_ncond(self):
         StdI = _make_stdi_base(model="kondo", solver="HPhi", lGC=0)
         StdI.ncond = 4
-        StdI.Sz2 = NaN_i
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)  # should not exit
         assert StdI.ncond == 4
 
@@ -1224,8 +1223,8 @@ class TestCheckConservedQuantities:
 
     def test_kondo_hphi_gc_passes(self):
         StdI = _make_stdi_base(model="kondo", solver="HPhi", lGC=1)
-        StdI.ncond = NaN_i
-        StdI.Sz2 = NaN_i
+        StdI.ncond = None
+        StdI.Sz2 = None
         _check_conserved_quantities(StdI)  # should not exit
 
     def test_invalid_lgc_has_no_rule_returns_early(self):

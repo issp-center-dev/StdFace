@@ -9,7 +9,7 @@ import pytest
 
 from stdface.core.stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
-    NaN_i, NaN_d, NaN_c, UNSET_STRING,
+    NaN_i,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
     is_unset_or_trivial_d,
 )
@@ -19,7 +19,10 @@ class TestIsUnsetOrTrivialD:
     """Tests for is_unset_or_trivial_d (helper for SolverPlugin.validate)."""
 
     def test_nan_is_unset(self):
-        assert is_unset_or_trivial_d(NaN_d) is True
+        assert is_unset_or_trivial_d(float("nan")) is True
+
+    def test_none_is_unset(self):
+        assert is_unset_or_trivial_d(None) is True
 
     def test_zero_is_trivial(self):
         assert is_unset_or_trivial_d(0.0) is True
@@ -36,20 +39,22 @@ class TestStdIntListDefaults:
     """Tests for default initialization of StdIntList."""
 
     def test_string_defaults(self):
-        """String fields should default to UNSET_STRING or empty string."""
+        """String fields should default to None or empty string."""
         s = StdIntList()
-        assert s.lattice == UNSET_STRING
-        assert s.model == UNSET_STRING
-        assert s.outputmode == UNSET_STRING
-        assert s.CDataFileHead == UNSET_STRING
+        assert s.lattice is None
+        assert s.model is None
+        assert s.outputmode is None
+        assert s.CDataFileHead is None
         assert s.solver == ""
 
     def test_int_defaults(self):
-        """Integer fields should default to 0."""
+        """Sentinel-reset int fields default to None; computed ones to 0."""
         s = StdIntList()
-        assert s.W == 0
-        assert s.L == 0
-        assert s.Height == 0
+        # A2: lattice dimensions are unset (None) until specified
+        assert s.W is None
+        assert s.L is None
+        assert s.Height is None
+        # Computed counters keep their 0 default
         assert s.NCell == 0
         assert s.NsiteUC == 0
         assert s.nsite == 0
@@ -57,23 +62,23 @@ class TestStdIntListDefaults:
         assert len(s.intr_list) == 0
 
     def test_float_defaults(self):
-        """Float fields should default to 0.0."""
+        """A2: sentinel-reset float fields default to None (unset)."""
         s = StdIntList()
-        assert s.a == 0.0
-        assert s.mu == 0.0
-        assert s.U == 0.0
-        assert s.h == 0.0
-        assert s.Gamma == 0.0
+        assert s.a is None
+        assert s.mu is None
+        assert s.U is None
+        assert s.h is None
+        assert s.Gamma is None
 
     def test_complex_defaults(self):
-        """Complex hopping fields should default to 0+0j."""
+        """A2: complex hopping fields default to None (unset)."""
         s = StdIntList()
-        assert s.t == 0 + 0j
-        assert s.tp == 0 + 0j
-        assert s.t0 == 0 + 0j
-        assert s.t1 == 0 + 0j
-        assert s.t2 == 0 + 0j
-        assert s.tpp == 0 + 0j
+        assert s.t is None
+        assert s.tp is None
+        assert s.t0 is None
+        assert s.t1 is None
+        assert s.t2 is None
+        assert s.tpp is None
 
     def test_dynamic_arrays_none(self):
         """Dynamic (pointer) arrays should be initialized to None."""
@@ -227,7 +232,7 @@ class TestStdIntListSolverFields:
         """C 'lambda' field should be 'lambda_' in Python."""
         s = StdIntList()
         assert hasattr(s, "lambda_")
-        assert s.lambda_ == 0.0
+        assert s.lambda_ is None
 
 
 # ===================================================================
@@ -447,51 +452,26 @@ class TestMethodType:
 
 
 class TestSentinelConstants:
-    """Tests for the module-level sentinel constants."""
+    """Tests for the surviving sentinel constant.
+
+    A2 removed NaN_d / NaN_c / UNSET_STRING; only NaN_i remains, used as
+    the unset marker for integer matrices (box / cutoff_*R / boxsub).
+    """
 
     def test_nan_i_value(self):
-        """NaN_i should be INT_MAX (2147483647)."""
+        """NaN_i should be INT_MAX (2147483647) -- kept for integer matrices."""
         assert NaN_i == 2147483647
 
     def test_nan_i_type(self):
         """NaN_i should be an int."""
         assert isinstance(NaN_i, int)
 
-    def test_nan_d_is_nan(self):
-        """NaN_d should be IEEE NaN."""
-        import math
-        assert math.isnan(NaN_d)
-
-    def test_nan_d_type(self):
-        """NaN_d should be a float."""
-        assert isinstance(NaN_d, float)
-
-    def test_nan_c_real_is_nan(self):
-        """NaN_c should have NaN real part."""
-        import math
-        assert math.isnan(NaN_c.real)
-
-    def test_nan_c_imag_is_zero(self):
-        """NaN_c should have zero imaginary part."""
-        assert NaN_c.imag == 0.0
-
-    def test_nan_c_type(self):
-        """NaN_c should be a complex."""
-        assert isinstance(NaN_c, complex)
-
-    def test_unset_string_value(self):
-        """UNSET_STRING should be '****'."""
-        assert UNSET_STRING == "****"
-
-    def test_unset_string_type(self):
-        """UNSET_STRING should be a str."""
-        assert isinstance(UNSET_STRING, str)
-
-    def test_sentinels_are_distinct(self):
-        """The three numeric sentinels should have different types."""
-        assert type(NaN_i) is int
-        assert type(NaN_d) is float
-        assert type(NaN_c) is complex
+    def test_removed_sentinels_are_gone(self):
+        """NaN_d / NaN_c / UNSET_STRING were removed in A2."""
+        import stdface.core.stdface_vals as vals
+        assert not hasattr(vals, "NaN_d")
+        assert not hasattr(vals, "NaN_c")
+        assert not hasattr(vals, "UNSET_STRING")
 
 
 class TestNumericalTolerances:

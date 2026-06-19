@@ -117,25 +117,16 @@ class MethodType(str, Enum):
 NaN_i: int = 2147483647
 """Sentinel for an unset integer parameter (same as ``INT_MAX`` in C)."""
 
-NaN_d: float = float("nan")
-"""Sentinel for an unset float parameter (IEEE NaN)."""
-
-NaN_c: complex = complex(float("nan"), 0.0)
-"""Sentinel for an unset complex parameter (real part is NaN)."""
-
-UNSET_STRING: str = "****"
-"""Sentinel for an unset string parameter (C convention ``"****"``)."""
-
 
 def is_unset_or_trivial_d(val: float, trivial: float = 0.0) -> bool:
     """Return True if a float parameter is unset (NaN) or equals *trivial*.
 
-    Helper for :meth:`SolverPlugin.validate` implementations.  Note that
-    ``math.isnan`` correctly detects the ``NaN_d`` sentinel (``== NaN_d``
-    would not, since ``NaN != NaN``).
+    Helper for :meth:`SolverPlugin.validate` implementations.  An unset
+    float parameter is ``None``; a residual ``NaN`` matrix element is
+    also treated as unset.
     """
     import math
-    return math.isnan(val) or val == trivial
+    return val is None or math.isnan(val) or val == trivial
 
 
 # ---------------------------------------------------------------------------
@@ -603,12 +594,12 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Parameters for LATTICE
     # ------------------------------------------------------------------
-    lattice: str = UNSET_STRING
-    a: float = 0.0
+    lattice: str | None = None
+    a: float | None = None
     length: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    W: int = 0
-    L: int = 0
-    Height: int = 0
+    W: int | None = None
+    L: int | None = None
+    Height: int | None = None
     direct: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
     box: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
     rbox: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
@@ -620,51 +611,51 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Parameters for MODEL
     # ------------------------------------------------------------------
-    model: str = UNSET_STRING
-    mu: float = 0.0
+    model: str | None = None
+    mu: float | None = None
 
     # Hopping parameters (complex)
-    t: complex = 0 + 0j
-    tp: complex = 0 + 0j
-    t0: complex = 0 + 0j
-    t0p: complex = 0 + 0j
-    t0pp: complex = 0 + 0j
-    t1: complex = 0 + 0j
-    t1p: complex = 0 + 0j
-    t1pp: complex = 0 + 0j
-    t2: complex = 0 + 0j
-    t2p: complex = 0 + 0j
-    t2pp: complex = 0 + 0j
-    tpp: complex = 0 + 0j
+    t: complex | None = None
+    tp: complex | None = None
+    t0: complex | None = None
+    t0p: complex | None = None
+    t0pp: complex | None = None
+    t1: complex | None = None
+    t1p: complex | None = None
+    t1pp: complex | None = None
+    t2: complex | None = None
+    t2p: complex | None = None
+    t2pp: complex | None = None
+    tpp: complex | None = None
 
     # Coulomb parameters (float)
-    U: float = 0.0
-    V: float = 0.0
-    Vp: float = 0.0
-    V0: float = 0.0
-    V0p: float = 0.0
-    V0pp: float = 0.0
-    V1: float = 0.0
-    V1p: float = 0.0
-    V1pp: float = 0.0
-    V2: float = 0.0
-    V2p: float = 0.0
-    V2pp: float = 0.0
-    Vpp: float = 0.0
+    U: float | None = None
+    V: float | None = None
+    Vp: float | None = None
+    V0: float | None = None
+    V0p: float | None = None
+    V0pp: float | None = None
+    V1: float | None = None
+    V1p: float | None = None
+    V1pp: float | None = None
+    V2: float | None = None
+    V2p: float | None = None
+    V2pp: float | None = None
+    Vpp: float | None = None
 
     # Isotropic/anisotropic diagonal spin couplings (float)
-    JAll: float = 0.0
-    JpAll: float = 0.0
-    J0All: float = 0.0
-    J0pAll: float = 0.0
-    J0ppAll: float = 0.0
-    J1All: float = 0.0
-    J1pAll: float = 0.0
-    J1ppAll: float = 0.0
-    J2All: float = 0.0
-    J2pAll: float = 0.0
-    J2ppAll: float = 0.0
-    JppAll: float = 0.0
+    JAll: float | None = None
+    JpAll: float | None = None
+    J0All: float | None = None
+    J0pAll: float | None = None
+    J0ppAll: float | None = None
+    J1All: float | None = None
+    J1pAll: float | None = None
+    J1ppAll: float | None = None
+    J2All: float | None = None
+    J2pAll: float | None = None
+    J2ppAll: float | None = None
+    JppAll: float | None = None
 
     # Spin coupling matrices (3x3 float arrays)
     J: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
@@ -682,10 +673,10 @@ class StdIntList:
     D: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
 
     # Magnetic field parameters
-    h: float = 0.0
-    Gamma: float = 0.0
-    Gamma_y: float = 0.0
-    K: float = 0.0
+    h: float | None = None
+    Gamma: float | None = None
+    Gamma_y: float | None = None
+    K: float | None = None
 
     # ------------------------------------------------------------------
     #  Phase for the boundary
@@ -719,34 +710,34 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Calculation conditions
     # ------------------------------------------------------------------
-    ncond: int = 0
+    ncond: int | None = None
     lGC: int = 0
-    S2: int = 0
-    outputmode: str = UNSET_STRING
-    CDataFileHead: str = UNSET_STRING
-    Sz2: int = 0
+    S2: int | None = None
+    outputmode: str | None = None
+    CDataFileHead: str | None = None
+    Sz2: int | None = None
     ioutputmode: int = 0
 
     # ------------------------------------------------------------------
     #  Wannier90 mode
     # ------------------------------------------------------------------
-    cutoff_t: float = 0.0
-    cutoff_u: float = 0.0
-    cutoff_j: float = 0.0
-    cutoff_length_t: float = 0.0
-    cutoff_length_U: float = 0.0
-    cutoff_length_J: float = 0.0
+    cutoff_t: float | None = None
+    cutoff_u: float | None = None
+    cutoff_j: float | None = None
+    cutoff_length_t: float | None = None
+    cutoff_length_U: float | None = None
+    cutoff_length_J: float | None = None
     cutoff_tR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
     cutoff_UR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
     cutoff_JR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
     cutoff_tVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
     cutoff_UVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
     cutoff_JVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    lambda_: float = 0.0
-    lambda_U: float = 0.0
-    lambda_J: float = 0.0
-    double_counting_mode: str = UNSET_STRING
-    alpha: float = 0.0
+    lambda_: float | None = None
+    lambda_U: float | None = None
+    lambda_J: float | None = None
+    double_counting_mode: str | None = None
+    alpha: float | None = None
 
     # ------------------------------------------------------------------
     #  Solver selector
@@ -756,80 +747,80 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  HPhi fields
     # ------------------------------------------------------------------
-    method: str = UNSET_STRING
-    Restart: str = UNSET_STRING
-    InitialVecType: str = UNSET_STRING
-    EigenVecIO: str = UNSET_STRING
-    HamIO: str = UNSET_STRING
+    method: str | None = None
+    Restart: str | None = None
+    InitialVecType: str | None = None
+    EigenVecIO: str | None = None
+    HamIO: str | None = None
     FlgTemp: int = 0
-    Lanczos_max: int = 0
-    initial_iv: int = 0
-    nvec: int = 0
-    exct: int = 0
-    LanczosEps: int = 0
-    LanczosTarget: int = 0
-    NumAve: int = 0
-    ExpecInterval: int = 0
-    LargeValue: float = 0.0
-    NGPU: int = 0
-    Scalapack: int = 0
+    Lanczos_max: int | None = None
+    initial_iv: int | None = None
+    nvec: int | None = None
+    exct: int | None = None
+    LanczosEps: int | None = None
+    LanczosTarget: int | None = None
+    NumAve: int | None = None
+    ExpecInterval: int | None = None
+    LargeValue: float | None = None
+    NGPU: int | None = None
+    Scalapack: int | None = None
     list_6spin_pair: None = None
     list_6spin_star: None = None
     num_pivot: int = 0
     ishift_nspin: int = 0
-    CalcSpec: str = UNSET_STRING
-    SpectrumType: str = UNSET_STRING
-    Nomega: int = 0
-    OmegaMax: float = 0.0
-    OmegaMin: float = 0.0
-    OmegaOrg: float = 0.0
-    OmegaIm: float = 0.0
+    CalcSpec: str | None = None
+    SpectrumType: str | None = None
+    Nomega: int | None = None
+    OmegaMax: float | None = None
+    OmegaMin: float | None = None
+    OmegaOrg: float | None = None
+    OmegaIm: float | None = None
     SpectrumQ: np.ndarray = field(default_factory=lambda: np.zeros(3))
     SpectrumBody: int = 0
-    OutputExVec: str = UNSET_STRING
-    dt: float = 0.0
-    tshift: float = 0.0
-    tdump: float = 0.0
-    freq: float = 0.0
-    Uquench: float = 0.0
+    OutputExVec: str | None = None
+    dt: float | None = None
+    tshift: float | None = None
+    tdump: float | None = None
+    freq: float | None = None
+    Uquench: float | None = None
     VecPot: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    PumpType: str = UNSET_STRING
+    PumpType: str | None = None
     PumpBody: int = 0
     npump: None = None
     pumpindx: None = None
     pump: None = None
     At: None = None
-    ExpandCoef: int = 0
+    ExpandCoef: int | None = None
 
     # ------------------------------------------------------------------
     #  mVMC fields
     # ------------------------------------------------------------------
-    CParaFileHead: str = UNSET_STRING
-    NVMCCalMode: int = 0
-    NLanczosMode: int = 0
-    NDataIdxStart: int = 0
-    NDataQtySmp: int = 0
-    NSPGaussLeg: int = 0
-    NMPTrans: int = 0
-    NSROptItrStep: int = 0
-    NSROptItrSmp: int = 0
+    CParaFileHead: str | None = None
+    NVMCCalMode: int | None = None
+    NLanczosMode: int | None = None
+    NDataIdxStart: int | None = None
+    NDataQtySmp: int | None = None
+    NSPGaussLeg: int | None = None
+    NMPTrans: int | None = None
+    NSROptItrStep: int | None = None
+    NSROptItrSmp: int | None = None
     NSROptFixSmp: int = 0
-    DSROptRedCut: float = 0.0
-    DSROptStaDel: float = 0.0
-    DSROptStepDt: float = 0.0
-    NVMCWarmUp: int = 0
-    NVMCInterval: int = 0
-    NVMCSample: int = 0
-    NExUpdatePath: int = 0
-    RndSeed: int = 0
-    NSplitSize: int = 0
-    NSPStot: int = 0
-    NStore: int = 0
-    NSRCG: int = 0
-    ComplexType: int = 0
-    Lsub: int = 0
-    Wsub: int = 0
-    Hsub: int = 0
+    DSROptRedCut: float | None = None
+    DSROptStaDel: float | None = None
+    DSROptStepDt: float | None = None
+    NVMCWarmUp: int | None = None
+    NVMCInterval: int | None = None
+    NVMCSample: int | None = None
+    NExUpdatePath: int | None = None
+    RndSeed: int | None = None
+    NSplitSize: int | None = None
+    NSPStot: int | None = None
+    NStore: int | None = None
+    NSRCG: int | None = None
+    ComplexType: int | None = None
+    Lsub: int | None = None
+    Wsub: int | None = None
+    Hsub: int | None = None
     NCellsub: int = 0
     boxsub: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
     rboxsub: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
@@ -841,15 +832,15 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  UHF / HWAVE fields
     # ------------------------------------------------------------------
-    mix: float = 0.0
-    eps: int = 0
-    eps_slater: int = 0
-    Iteration_max: int = 0
+    mix: float | None = None
+    eps: int | None = None
+    eps_slater: int | None = None
+    Iteration_max: int | None = None
 
     # ------------------------------------------------------------------
     #  HWAVE-only fields
     # ------------------------------------------------------------------
-    calcmode: str = UNSET_STRING
-    fileprefix: str = UNSET_STRING
-    export_all: int = 0
-    lattice_gp: int = 0
+    calcmode: str | None = None
+    fileprefix: str | None = None
+    export_all: int | None = None
+    lattice_gp: int | None = None

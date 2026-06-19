@@ -111,10 +111,10 @@ def make_spin_stdint_2d(
 
     s.L = L
     s.W = W
-    s.Height = NaN_i
+    s.Height = None
     s.box[:, :] = NaN_i
 
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -148,7 +148,7 @@ def make_spin_stdint_3d(*, lattice: str, L: int, W: int, H: int) -> StdIntList:
     s.Height = H
     s.box[:, :] = NaN_i
 
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -177,10 +177,10 @@ def make_spin_ladder(L: int, W_legs: int) -> StdIntList:
 
     s.L = L
     s.W = W_legs
-    s.Height = NaN_i
+    s.Height = None
     s.box[:, :] = NaN_i
 
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -340,10 +340,10 @@ class TestTetragonalHubbard:
 
         s.L = L
         s.W = W
-        s.Height = NaN_i
+        s.Height = None
         s.box[:, :] = NaN_i
 
-        s.S2 = NaN_i
+        s.S2 = None
         s.mu = 0.0
         s.U = 0.0
         s.h = NaN_d

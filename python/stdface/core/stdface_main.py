@@ -31,12 +31,14 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import logging
+
+import numpy as np
 from collections.abc import Callable
 from typing import NamedTuple
 
 from .stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
-    NaN_i, NaN_d, NaN_c, UNSET_STRING,
+    NaN_i,
 )
 from ..solvers.hphi.writer import (
     vector_potential as _vector_potential,
@@ -190,7 +192,7 @@ METHOD_ALIASES: dict[str, MethodType] = {
 """Maps HPhi method name aliases to their canonical forms."""
 
 # Sentinel constants imported from stdface_vals:
-# NaN_i, NaN_d, NaN_c, UNSET_STRING
+# NaN_i (int matrices); float matrices use np.nan
 
 
 # ===================================================================
@@ -208,125 +210,125 @@ METHOD_ALIASES: dict[str, MethodType] = {
 # ===================================================================
 #
 #  _COMMON_RESET_SCALARS lists (field_name, sentinel_value) pairs for
-#  scalar fields that are reset to NaN_d, NaN_i, or NaN_c by every
+#  scalar fields that are reset to None by every
 #  call to _reset_vals().  These replace ~80 individual ``StdI.x = val``
 #  assignments.
 
 _COMMON_RESET_SCALARS: list[tuple[str, object]] = [
     # Lattice scalars
-    ("a", NaN_d),
+    ("a", None),
     # Magnetic field
-    ("Gamma", NaN_d),
-    ("Gamma_y", NaN_d),
-    ("h", NaN_d),
+    ("Gamma", None),
+    ("Gamma_y", None),
+    ("h", None),
     # Lattice dimensions
-    ("Height", NaN_i),
-    ("L", NaN_i),
-    ("W", NaN_i),
+    ("Height", None),
+    ("L", None),
+    ("W", None),
     # Isotropic scalar spin couplings
-    ("JAll", NaN_d),
-    ("JpAll", NaN_d),
-    ("JppAll", NaN_d),
-    ("J0All", NaN_d),
-    ("J0pAll", NaN_d),
-    ("J0ppAll", NaN_d),
-    ("J1All", NaN_d),
-    ("J1pAll", NaN_d),
-    ("J1ppAll", NaN_d),
-    ("J2All", NaN_d),
-    ("J2pAll", NaN_d),
-    ("J2ppAll", NaN_d),
+    ("JAll", None),
+    ("JpAll", None),
+    ("JppAll", None),
+    ("J0All", None),
+    ("J0pAll", None),
+    ("J0ppAll", None),
+    ("J1All", None),
+    ("J1pAll", None),
+    ("J1ppAll", None),
+    ("J2All", None),
+    ("J2pAll", None),
+    ("J2ppAll", None),
     # Anisotropy / single-ion
-    ("K", NaN_d),
+    ("K", None),
     # Chemical potential / spin
-    ("mu", NaN_d),
-    ("S2", NaN_i),
+    ("mu", None),
+    ("S2", None),
     # Hopping parameters (complex)
-    ("t", NaN_c),
-    ("tp", NaN_c),
-    ("tpp", NaN_c),
-    ("t0", NaN_c),
-    ("t0p", NaN_c),
-    ("t0pp", NaN_c),
-    ("t1", NaN_c),
-    ("t1p", NaN_c),
-    ("t1pp", NaN_c),
-    ("t2", NaN_c),
-    ("t2p", NaN_c),
-    ("t2pp", NaN_c),
+    ("t", None),
+    ("tp", None),
+    ("tpp", None),
+    ("t0", None),
+    ("t0p", None),
+    ("t0pp", None),
+    ("t1", None),
+    ("t1p", None),
+    ("t1pp", None),
+    ("t2", None),
+    ("t2p", None),
+    ("t2pp", None),
     # Coulomb parameters
-    ("U", NaN_d),
-    ("V", NaN_d),
-    ("Vp", NaN_d),
-    ("Vpp", NaN_d),
-    ("V0", NaN_d),
-    ("V0p", NaN_d),
-    ("V0pp", NaN_d),
-    ("V1", NaN_d),
-    ("V1p", NaN_d),
-    ("V1pp", NaN_d),
-    ("V2", NaN_d),
-    ("V2p", NaN_d),
-    ("V2pp", NaN_d),
+    ("U", None),
+    ("V", None),
+    ("Vp", None),
+    ("Vpp", None),
+    ("V0", None),
+    ("V0p", None),
+    ("V0pp", None),
+    ("V1", None),
+    ("V1p", None),
+    ("V1pp", None),
+    ("V2", None),
+    ("V2p", None),
+    ("V2pp", None),
     # Calculation conditions
-    ("ncond", NaN_i),
-    ("Sz2", NaN_i),
+    ("ncond", None),
+    ("Sz2", None),
     # Wannier90 cutoffs
-    ("cutoff_t", NaN_d),
-    ("cutoff_u", NaN_d),
-    ("cutoff_j", NaN_d),
-    ("cutoff_length_t", NaN_d),
-    ("cutoff_length_U", NaN_d),
-    ("cutoff_length_J", NaN_d),
-    ("lambda_", NaN_d),
-    ("lambda_U", NaN_d),
-    ("lambda_J", NaN_d),
-    ("alpha", NaN_d),
+    ("cutoff_t", None),
+    ("cutoff_u", None),
+    ("cutoff_j", None),
+    ("cutoff_length_t", None),
+    ("cutoff_length_U", None),
+    ("cutoff_length_J", None),
+    ("lambda_", None),
+    ("lambda_U", None),
+    ("lambda_J", None),
+    ("alpha", None),
 ]
 """Common scalar field resets — ``setattr(StdI, name, value)``."""
 
 
 _COMMON_RESET_ARRAYS: list[tuple[str, object]] = [
     # Lattice vectors
-    ("length", NaN_d),
+    ("length", np.nan),
     ("box", NaN_i),
-    ("direct", NaN_d),
+    ("direct", np.nan),
     # 3x3 spin coupling matrices
-    ("J", NaN_d),
-    ("Jp", NaN_d),
-    ("Jpp", NaN_d),
-    ("J0", NaN_d),
-    ("J0p", NaN_d),
-    ("J0pp", NaN_d),
-    ("J1", NaN_d),
-    ("J1p", NaN_d),
-    ("J1pp", NaN_d),
-    ("J2", NaN_d),
-    ("J2p", NaN_d),
-    ("J2pp", NaN_d),
+    ("J", np.nan),
+    ("Jp", np.nan),
+    ("Jpp", np.nan),
+    ("J0", np.nan),
+    ("J0p", np.nan),
+    ("J0pp", np.nan),
+    ("J1", np.nan),
+    ("J1p", np.nan),
+    ("J1pp", np.nan),
+    ("J2", np.nan),
+    ("J2p", np.nan),
+    ("J2pp", np.nan),
     # Phase / boundary
-    ("phase", NaN_d),
+    ("phase", np.nan),
     # Wannier90 cutoff vectors
     ("cutoff_tR", NaN_i),
     ("cutoff_UR", NaN_i),
     ("cutoff_JR", NaN_i),
-    ("cutoff_tVec", NaN_d),
-    ("cutoff_UVec", NaN_d),
-    ("cutoff_JVec", NaN_d),
+    ("cutoff_tVec", np.nan),
+    ("cutoff_UVec", np.nan),
+    ("cutoff_JVec", np.nan),
 ]
 """Common array-fill field resets — ``getattr(StdI, name)[...] = value``."""
 
 
 _UHF_BASE_SCALARS: list[tuple[str, object]] = [
-    ("NMPTrans", NaN_i),
-    ("RndSeed", NaN_i),
-    ("mix", NaN_d),
-    ("eps", NaN_i),
-    ("eps_slater", NaN_i),
-    ("Iteration_max", NaN_i),
-    ("Hsub", NaN_i),
-    ("Lsub", NaN_i),
-    ("Wsub", NaN_i),
+    ("NMPTrans", None),
+    ("RndSeed", None),
+    ("mix", None),
+    ("eps", None),
+    ("eps_slater", None),
+    ("Iteration_max", None),
+    ("Hsub", None),
+    ("Lsub", None),
+    ("Wsub", None),
 ]
 
 _UHF_BASE_ARRAYS: list[tuple[str, object]] = [
@@ -335,68 +337,68 @@ _UHF_BASE_ARRAYS: list[tuple[str, object]] = [
 
 _SOLVER_RESET_SCALARS: dict[SolverType, list[tuple[str, object]]] = {
     SolverType.HPhi: [
-        ("LargeValue", NaN_d),
-        ("OmegaMax", NaN_d),
-        ("OmegaMin", NaN_d),
-        ("OmegaOrg", NaN_d),
-        ("OmegaIm", NaN_d),
-        ("Nomega", NaN_i),
+        ("LargeValue", None),
+        ("OmegaMax", None),
+        ("OmegaMin", None),
+        ("OmegaOrg", None),
+        ("OmegaIm", None),
+        ("Nomega", None),
         ("FlgTemp", 1),
-        ("Lanczos_max", NaN_i),
-        ("initial_iv", NaN_i),
-        ("nvec", NaN_i),
-        ("exct", NaN_i),
-        ("LanczosEps", NaN_i),
-        ("LanczosTarget", NaN_i),
-        ("NumAve", NaN_i),
-        ("ExpecInterval", NaN_i),
-        ("dt", NaN_d),
-        ("tdump", NaN_d),
-        ("tshift", NaN_d),
-        ("freq", NaN_d),
-        ("Uquench", NaN_d),
-        ("ExpandCoef", NaN_i),
-        ("NGPU", NaN_i),
-        ("Scalapack", NaN_i),
+        ("Lanczos_max", None),
+        ("initial_iv", None),
+        ("nvec", None),
+        ("exct", None),
+        ("LanczosEps", None),
+        ("LanczosTarget", None),
+        ("NumAve", None),
+        ("ExpecInterval", None),
+        ("dt", None),
+        ("tdump", None),
+        ("tshift", None),
+        ("freq", None),
+        ("Uquench", None),
+        ("ExpandCoef", None),
+        ("NGPU", None),
+        ("Scalapack", None),
     ],
     SolverType.mVMC: [
-        ("NVMCCalMode", NaN_i),
-        ("NLanczosMode", NaN_i),
-        ("NDataIdxStart", NaN_i),
-        ("NDataQtySmp", NaN_i),
-        ("NSPGaussLeg", NaN_i),
-        ("NSPStot", NaN_i),
-        ("NMPTrans", NaN_i),
-        ("NSROptItrStep", NaN_i),
-        ("NSROptItrSmp", NaN_i),
-        ("DSROptRedCut", NaN_d),
-        ("DSROptStaDel", NaN_d),
-        ("DSROptStepDt", NaN_d),
-        ("NVMCWarmUp", NaN_i),
-        ("NVMCInterval", NaN_i),
-        ("NVMCSample", NaN_i),
-        ("NExUpdatePath", NaN_i),
-        ("RndSeed", NaN_i),
-        ("NSplitSize", NaN_i),
-        ("NStore", NaN_i),
-        ("NSRCG", NaN_i),
-        ("ComplexType", NaN_i),
-        ("Hsub", NaN_i),
-        ("Lsub", NaN_i),
-        ("Wsub", NaN_i),
+        ("NVMCCalMode", None),
+        ("NLanczosMode", None),
+        ("NDataIdxStart", None),
+        ("NDataQtySmp", None),
+        ("NSPGaussLeg", None),
+        ("NSPStot", None),
+        ("NMPTrans", None),
+        ("NSROptItrStep", None),
+        ("NSROptItrSmp", None),
+        ("DSROptRedCut", None),
+        ("DSROptStaDel", None),
+        ("DSROptStepDt", None),
+        ("NVMCWarmUp", None),
+        ("NVMCInterval", None),
+        ("NVMCSample", None),
+        ("NExUpdatePath", None),
+        ("RndSeed", None),
+        ("NSplitSize", None),
+        ("NStore", None),
+        ("NSRCG", None),
+        ("ComplexType", None),
+        ("Hsub", None),
+        ("Lsub", None),
+        ("Wsub", None),
     ],
     SolverType.UHF: _UHF_BASE_SCALARS,
     SolverType.HWAVE: _UHF_BASE_SCALARS + [
-        ("export_all", NaN_i),
-        ("lattice_gp", NaN_i),
+        ("export_all", None),
+        ("lattice_gp", None),
     ],
 }
 """Scalar field resets for each solver — ``setattr(StdI, name, value)``."""
 
 _SOLVER_RESET_ARRAYS: dict[SolverType, list[tuple[str, object]]] = {
     SolverType.HPhi: [
-        ("SpectrumQ", NaN_d),
-        ("VecPot", NaN_d),
+        ("SpectrumQ", np.nan),
+        ("VecPot", np.nan),
     ],
     SolverType.mVMC: [
         ("boxsub", NaN_i),
@@ -465,9 +467,9 @@ def _reset_vals(StdI: StdIntList) -> None:
     for name, value in _COMMON_RESET_ARRAYS:
         getattr(StdI, name)[...] = value
 
-    # --- D matrix: zero everywhere except D[2][2] = NaN_d -------------------
+    # --- D matrix: zero everywhere except D[2][2] = NaN -------------------
     StdI.D[:, :] = 0.0
-    StdI.D[2, 2] = NaN_d
+    StdI.D[2, 2] = np.nan
 
     # --- Solver-specific fields (table-driven) ------------------------------
     _apply_field_resets(StdI, StdI.solver)
@@ -742,7 +744,7 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     logger.info("#######  Construct Model  #######")
 
     # CDataFileHead default
-    if StdI.CDataFileHead == UNSET_STRING:
+    if StdI.CDataFileHead is None:
         StdI.CDataFileHead = "zvo"
         logger.info("    CDataFileHead = %-12s######  DEFAULT VALUE IS USED  ######", "zvo")
     else:

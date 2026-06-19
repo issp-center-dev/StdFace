@@ -45,13 +45,13 @@ def _make_spin_chain(L: int = 4) -> StdIntList:
     s.phase[1] = NaN_d
 
     s.L = L
-    s.W = NaN_i
-    s.Height = NaN_i
+    s.W = None
+    s.Height = None
     # Set box to NaN_i so init_site uses L/W/Height path
     s.box[:, :] = NaN_i
 
     # Spin parameters
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d

@@ -8,7 +8,7 @@ The user passes ``--solver HWAVE``; ``_resolve_solver_name`` then maps it to
 from __future__ import annotations
 
 from ...plugin import SolverPlugin, WannierModeSolverPlugin, register
-from ...core.stdface_vals import StdIntList, SolverType, NaN_i, NaN_d
+from ...core.stdface_vals import StdIntList, SolverType, NaN_i
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d, store_with_check_dup_sl,
     _grid3x3_keywords,
@@ -116,20 +116,20 @@ _UHFK_KEYWORDS: dict[str, tuple] = {
 # cover the union of UHFR/UHFK fields.
 
 _UHF_BASE_SCALARS: list[tuple[str, object]] = [
-    ("NMPTrans", NaN_i),
-    ("RndSeed", NaN_i),
-    ("mix", NaN_d),
-    ("eps", NaN_i),
-    ("eps_slater", NaN_i),
-    ("Iteration_max", NaN_i),
-    ("Hsub", NaN_i),
-    ("Lsub", NaN_i),
-    ("Wsub", NaN_i),
+    ("NMPTrans", None),
+    ("RndSeed", None),
+    ("mix", None),
+    ("eps", None),
+    ("eps_slater", None),
+    ("Iteration_max", None),
+    ("Hsub", None),
+    ("Lsub", None),
+    ("Wsub", None),
 ]
 
 _RESET_SCALARS: list[tuple[str, object]] = _UHF_BASE_SCALARS + [
-    ("export_all", NaN_i),
-    ("lattice_gp", NaN_i),
+    ("export_all", None),
+    ("lattice_gp", None),
 ]
 
 _RESET_ARRAYS: list[tuple[str, object]] = [
