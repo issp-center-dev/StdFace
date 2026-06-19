@@ -224,6 +224,87 @@ class LatticeGeometry:
 
 
 @dataclass
+class ModelInput:
+    """Model Hamiltonian parameters (hoppings, Coulomb, spin couplings, field).
+
+    Holds the user-facing model name and the Hamiltonian coupling
+    constants: hoppings ``t*``, Coulomb ``U``/``V*``, spin couplings
+    ``J*``/``J*All`` and single-ion ``D``, plus the magnetic-field
+    parameters.  ``StdIntList`` delegates to an instance of this class via
+    façade properties (see :func:`_delegate`).  Calculation selectors
+    (``lGC`` / ``S2`` / ``Sz2`` / ``ncond`` / ``method`` / ``lBoost``)
+    remain on ``StdIntList`` for now; they may move here at C2.
+    """
+
+    model: str | None = None
+    mu: float | None = None
+
+    # Hopping parameters (complex)
+    t: complex | None = None
+    tp: complex | None = None
+    t0: complex | None = None
+    t0p: complex | None = None
+    t0pp: complex | None = None
+    t1: complex | None = None
+    t1p: complex | None = None
+    t1pp: complex | None = None
+    t2: complex | None = None
+    t2p: complex | None = None
+    t2pp: complex | None = None
+    tpp: complex | None = None
+
+    # Coulomb parameters (float)
+    U: float | None = None
+    V: float | None = None
+    Vp: float | None = None
+    V0: float | None = None
+    V0p: float | None = None
+    V0pp: float | None = None
+    V1: float | None = None
+    V1p: float | None = None
+    V1pp: float | None = None
+    V2: float | None = None
+    V2p: float | None = None
+    V2pp: float | None = None
+    Vpp: float | None = None
+
+    # Isotropic/anisotropic diagonal spin couplings (float)
+    JAll: float | None = None
+    JpAll: float | None = None
+    J0All: float | None = None
+    J0pAll: float | None = None
+    J0ppAll: float | None = None
+    J1All: float | None = None
+    J1pAll: float | None = None
+    J1ppAll: float | None = None
+    J2All: float | None = None
+    J2pAll: float | None = None
+    J2ppAll: float | None = None
+    JppAll: float | None = None
+
+    # Spin coupling matrices (3x3 float arrays)
+    J: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    Jp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J0: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J0p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J0pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J1: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J1p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J1pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J2: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J2p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J2pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    Jpp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    D: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+
+    # Magnetic field parameters
+    h: float | None = None
+    Gamma: float | None = None
+    Gamma_y: float | None = None
+    K: float | None = None
+
+
+@dataclass
 class StdIntList:
     """Main structure containing all parameters and variables for Standard mode.
 
@@ -689,74 +770,65 @@ class StdIntList:
     tau = _delegate("_lattice", "tau")
 
     # ------------------------------------------------------------------
-    #  Parameters for MODEL
+    #  Parameters for MODEL (delegated to _model)
     # ------------------------------------------------------------------
-    model: str | None = None
-    mu: float | None = None
-
-    # Hopping parameters (complex)
-    t: complex | None = None
-    tp: complex | None = None
-    t0: complex | None = None
-    t0p: complex | None = None
-    t0pp: complex | None = None
-    t1: complex | None = None
-    t1p: complex | None = None
-    t1pp: complex | None = None
-    t2: complex | None = None
-    t2p: complex | None = None
-    t2pp: complex | None = None
-    tpp: complex | None = None
-
-    # Coulomb parameters (float)
-    U: float | None = None
-    V: float | None = None
-    Vp: float | None = None
-    V0: float | None = None
-    V0p: float | None = None
-    V0pp: float | None = None
-    V1: float | None = None
-    V1p: float | None = None
-    V1pp: float | None = None
-    V2: float | None = None
-    V2p: float | None = None
-    V2pp: float | None = None
-    Vpp: float | None = None
-
-    # Isotropic/anisotropic diagonal spin couplings (float)
-    JAll: float | None = None
-    JpAll: float | None = None
-    J0All: float | None = None
-    J0pAll: float | None = None
-    J0ppAll: float | None = None
-    J1All: float | None = None
-    J1pAll: float | None = None
-    J1ppAll: float | None = None
-    J2All: float | None = None
-    J2pAll: float | None = None
-    J2ppAll: float | None = None
-    JppAll: float | None = None
-
-    # Spin coupling matrices (3x3 float arrays)
-    J: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    Jp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J0: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J0p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J0pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J1: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J1p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J1pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J2: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J2p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J2pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    Jpp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    D: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-
-    # Magnetic field parameters
-    h: float | None = None
-    Gamma: float | None = None
-    Gamma_y: float | None = None
-    K: float | None = None
+    _model: ModelInput = field(default_factory=ModelInput)
+    model = _delegate("_model", "model")
+    mu = _delegate("_model", "mu")
+    t = _delegate("_model", "t")
+    tp = _delegate("_model", "tp")
+    t0 = _delegate("_model", "t0")
+    t0p = _delegate("_model", "t0p")
+    t0pp = _delegate("_model", "t0pp")
+    t1 = _delegate("_model", "t1")
+    t1p = _delegate("_model", "t1p")
+    t1pp = _delegate("_model", "t1pp")
+    t2 = _delegate("_model", "t2")
+    t2p = _delegate("_model", "t2p")
+    t2pp = _delegate("_model", "t2pp")
+    tpp = _delegate("_model", "tpp")
+    U = _delegate("_model", "U")
+    V = _delegate("_model", "V")
+    Vp = _delegate("_model", "Vp")
+    V0 = _delegate("_model", "V0")
+    V0p = _delegate("_model", "V0p")
+    V0pp = _delegate("_model", "V0pp")
+    V1 = _delegate("_model", "V1")
+    V1p = _delegate("_model", "V1p")
+    V1pp = _delegate("_model", "V1pp")
+    V2 = _delegate("_model", "V2")
+    V2p = _delegate("_model", "V2p")
+    V2pp = _delegate("_model", "V2pp")
+    Vpp = _delegate("_model", "Vpp")
+    JAll = _delegate("_model", "JAll")
+    JpAll = _delegate("_model", "JpAll")
+    J0All = _delegate("_model", "J0All")
+    J0pAll = _delegate("_model", "J0pAll")
+    J0ppAll = _delegate("_model", "J0ppAll")
+    J1All = _delegate("_model", "J1All")
+    J1pAll = _delegate("_model", "J1pAll")
+    J1ppAll = _delegate("_model", "J1ppAll")
+    J2All = _delegate("_model", "J2All")
+    J2pAll = _delegate("_model", "J2pAll")
+    J2ppAll = _delegate("_model", "J2ppAll")
+    JppAll = _delegate("_model", "JppAll")
+    J = _delegate("_model", "J")
+    Jp = _delegate("_model", "Jp")
+    J0 = _delegate("_model", "J0")
+    J0p = _delegate("_model", "J0p")
+    J0pp = _delegate("_model", "J0pp")
+    J1 = _delegate("_model", "J1")
+    J1p = _delegate("_model", "J1p")
+    J1pp = _delegate("_model", "J1pp")
+    J2 = _delegate("_model", "J2")
+    J2p = _delegate("_model", "J2p")
+    J2pp = _delegate("_model", "J2pp")
+    Jpp = _delegate("_model", "Jpp")
+    D = _delegate("_model", "D")
+    h = _delegate("_model", "h")
+    Gamma = _delegate("_model", "Gamma")
+    Gamma_y = _delegate("_model", "Gamma_y")
+    K = _delegate("_model", "K")
 
     # ------------------------------------------------------------------
     #  Phase for the boundary (delegated to _lattice)

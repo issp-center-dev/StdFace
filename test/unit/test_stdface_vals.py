@@ -8,12 +8,49 @@ import numpy as np
 import pytest
 
 from stdface.core.stdface_vals import (
-    StdIntList, HamiltonianTerms, LatticeGeometry,
+    StdIntList, HamiltonianTerms, LatticeGeometry, ModelInput,
     ModelType, SolverType, MethodType,
     NaN_i,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
     is_unset_or_trivial_d,
 )
+
+
+class TestModelInputSplit:
+    """C1-3: model Hamiltonian parameters live in a ModelInput sub-object,
+    exposed on StdIntList via transparent façade properties."""
+
+    def test_model_subobject_present(self):
+        s = StdIntList()
+        assert isinstance(s._model, ModelInput)
+
+    def test_facade_reads_subobject(self):
+        s = StdIntList()
+        assert s.J is s._model.J
+        assert s.t is None and s.U is None
+
+    def test_facade_scalar_write(self):
+        s = StdIntList()
+        s.t = 1.0 + 2.0j
+        s.U = 4.0
+        s.JAll = 0.3
+        assert s._model.t == 1.0 + 2.0j
+        assert s._model.U == 4.0
+        assert s._model.JAll == 0.3
+
+    def test_facade_inplace_numpy_mutation(self):
+        s = StdIntList()
+        s.J[0, 0] = 1.5
+        s.D[2, 2] = -0.7
+        assert s._model.J[0, 0] == 1.5
+        assert s._model.D[2, 2] == -0.7
+
+    def test_instances_independent(self):
+        s1, s2 = StdIntList(), StdIntList()
+        s1.t = 9.0
+        s1.J[0, 0] = 5.0
+        assert s2.t is None
+        assert s2.J[0, 0] == 0.0
 
 
 class TestLatticeGeometrySplit:
