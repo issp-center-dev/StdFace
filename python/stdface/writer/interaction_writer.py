@@ -25,6 +25,8 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from pathlib import Path
 from typing import NamedTuple
 
 import numpy as np
@@ -110,105 +112,79 @@ def _count_nonzero(nterms: int, coeff: list) -> int:
     return sum(1 for k in range(nterms) if abs(coeff[k]) > AMPLITUDE_EPS)
 
 
-def _write_interaction_file(
-    filename: str,
-    count_label: str,
-    banner: str,
-    nterms: int,
-    indx: list,
-    coeff: list,
-    n_indices: int,
-) -> None:
-    """Write an interaction ``.def`` file with 1 or 2 site indices per term.
+@dataclass
+class InteractionData:
+    """One real-valued interaction ``.def`` file (1- or 2-index family).
 
-    Parameters
+    Attributes
     ----------
     filename : str
         Output file name (e.g. ``"coulombintra.def"``).
     count_label : str
-        Label for the count header line (e.g. ``"NCoulombIntra"``).
+        Count header label (e.g. ``"NCoulombIntra"``).
     banner : str
         Description banner line.
-    nterms : int
-        Total number of terms.
-    indx : list
-        Index array (``n_indices`` site indices per term).
-    coeff : list
-        Coefficient array.
-    n_indices : int
-        Number of site indices per term (1 or 2).
+    rows : list of tuple
+        ``(*site_indices, coeff)`` per non-zero term (``coeff`` real).
     """
-    nintr0 = _count_nonzero(nterms, coeff)
-    lines = ["=============================================\n",
-             f"{count_label} {nintr0:10d}\n",
-             "=============================================\n",
-             f"{banner}\n",
-             "=============================================\n"]
-    for k in range(nterms):
-        if abs(coeff[k]) > AMPLITUDE_EPS:
-            idx_str = " ".join(f"{indx[k][i]:5d}" for i in range(n_indices))
-            lines.append(f"{idx_str} {coeff[k]:25.15f}\n")
-    with open(filename, "w") as fp:
-        fp.write("".join(lines))
-    logger.info("    %s is written.", filename)
+
+    filename: str
+    count_label: str
+    banner: str
+    rows: list
+
+    def write(self, directory: Path = Path(".")) -> None:
+        lines = ["=============================================\n",
+                 f"{self.count_label} {len(self.rows):10d}\n",
+                 "=============================================\n",
+                 f"{self.banner}\n",
+                 "=============================================\n"]
+        for row in self.rows:
+            *idx, coeff = row
+            idx_str = " ".join(f"{i:5d}" for i in idx)
+            lines.append(f"{idx_str} {coeff:25.15f}\n")
+        with open(Path(directory) / self.filename, "w") as fp:
+            fp.write("".join(lines))
+        logger.info("    %s is written.", self.filename)
+
+    def to_dict(self) -> dict:
+        return {"filename": self.filename, "count_label": self.count_label,
+                "banner": self.banner, "rows": [list(r) for r in self.rows]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "InteractionData":
+        return cls(data["filename"], data["count_label"], data["banner"],
+                   [tuple(r) for r in data["rows"]])
 
 
-def _process_interaction(
-    StdI: StdIntList,
-    list_attr: str,
-    flag_attr: str,
-    filename: str,
-    count_label: str,
-    banner: str,
-    n_indices: int,
-) -> None:
-    """Merge, count, and write one interaction type.
+def _build_interaction(
+    StdI: StdIntList, meta: "_InteractionMeta"
+) -> "InteractionData | None":
+    """Merge one interaction family, set its ``L*`` flag, and return data.
 
-    This is the generic driver that replaces the 6 repetitive blocks in
-    ``print_interactions()``.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The central data structure.
-    list_attr : str
-        Name of the term-list attribute (e.g. ``"Cintra_list"``); each entry
-        is ``(coeff, *site_indices)``.
-    flag_attr : str
-        Name of the output-flag attribute (e.g. ``"LCintra"``).
-    filename : str
-        Output ``.def`` file name.
-    count_label : str
-        Label for the count line in the header.
-    banner : str
-        Description banner in the header.
-    n_indices : int
-        Number of site indices per term (1 or 2).
+    Returns ``None`` (and sets the flag to 0) when the family is empty or
+    suppressed by boost mode.  Otherwise sets the flag to 1 and returns an
+    :class:`InteractionData` with the merged non-zero rows.
     """
-    terms = getattr(StdI, list_attr)
+    terms = getattr(StdI, meta.list_attr)
     nterms = len(terms)
     coeff = [t[0] for t in terms]
     indx = [list(t[1:]) for t in terms]
 
-    # Merge duplicates
-    if n_indices == 1:
+    if meta.n_indices == 1:
         _merge_1idx(nterms, indx, coeff)
     else:
         _merge_2idx(nterms, indx, coeff)
 
-    # Count non-zero terms
     nintr0 = _count_nonzero(nterms, coeff)
-
-    # Set output flag
     if nintr0 == 0 or StdI.lBoost == 1:
-        setattr(StdI, flag_attr, 0)
-    else:
-        setattr(StdI, flag_attr, 1)
+        setattr(StdI, meta.flag_attr, 0)
+        return None
+    setattr(StdI, meta.flag_attr, 1)
 
-    # Write file if needed
-    if getattr(StdI, flag_attr) == 1:
-        _write_interaction_file(
-            filename, count_label, banner, nterms, indx, coeff, n_indices)
+    rows = [tuple(int(x) for x in indx[k]) + (float(coeff[k]),)
+            for k in range(nterms) if abs(coeff[k]) > AMPLITUDE_EPS]
+    return InteractionData(meta.filename, meta.count_label, meta.banner, rows)
 
 
 # ---------------------------------------------------------------------------
@@ -451,51 +427,72 @@ def _remove_interall_diagonal(
                 intr[jintr] = 0.0
 
 
-def _write_interall(StdI: StdIntList, nintr, intr_indx, intr_val) -> None:
-    """Count non-zero InterAll terms, set the flag, and write the file.
+@dataclass
+class InterAllData:
+    """Complex two-body ``interall.def`` file.
 
-    Parameters
+    Attributes
     ----------
-    StdI : StdIntList
-        The central data structure.  ``lBoost`` and ``Lintr`` are
-        accessed / modified.
-    nintr : int
-        Number of InterAll terms.
-    intr_indx : np.ndarray
-        ``(nintr, 8)`` site/spin index array.
-    intr_val : np.ndarray
-        ``(nintr,)`` complex coefficient array.
+    rows : list of tuple
+        ``(i0, s0, i1, s1, i2, s2, i3, s3, re, im)`` per non-zero term.
     """
-    nintr0 = _count_nonzero(nintr, intr_val)
 
-    if nintr0 == 0 or StdI.lBoost == 1:
-        StdI.Lintr = 0
-    else:
-        StdI.Lintr = 1
+    rows: list
 
-    if StdI.Lintr == 1:
+    def write(self, directory: Path = Path(".")) -> None:
         lines = ["====================== \n",
-                 f"NInterAll {nintr0:7d}  \n",
+                 f"NInterAll {len(self.rows):7d}  \n",
                  "====================== \n",
                  "========zInterAll===== \n",
                  "====================== \n"]
-
-        if StdI.lBoost == 0:
-            for kintr in range(nintr):
-                val = intr_val[kintr]
-                if abs(val) > AMPLITUDE_EPS:
-                    i0, s0, i1, s1, i2, s2, i3, s3 = intr_indx[kintr]
-                    lines.append(
-                        f"{i0:5d} {s0:5d} "
-                        f"{i1:5d} {s1:5d} "
-                        f"{i2:5d} {s2:5d} "
-                        f"{i3:5d} {s3:5d} "
-                        f"{val.real:25.15f}  {val.imag:25.15f}\n"
-                    )
-
-        with open("interall.def", "w") as fp:
+        for i0, s0, i1, s1, i2, s2, i3, s3, re, im in self.rows:
+            lines.append(
+                f"{i0:5d} {s0:5d} "
+                f"{i1:5d} {s1:5d} "
+                f"{i2:5d} {s2:5d} "
+                f"{i3:5d} {s3:5d} "
+                f"{re:25.15f}  {im:25.15f}\n"
+            )
+        with open(Path(directory) / "interall.def", "w") as fp:
             fp.write("".join(lines))
         logger.info("    interall.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"rows": [list(r) for r in self.rows]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "InterAllData":
+        return cls(rows=[tuple(r) for r in data["rows"]])
+
+
+def _build_interall(StdI: StdIntList) -> "InterAllData | None":
+    """Run the three InterAll merge passes, set ``Lintr``, and return data.
+
+    Returns ``None`` (and sets ``Lintr`` to 0) when there are no non-zero
+    terms or boost mode suppresses output.
+    """
+    nintr = len(StdI.intr_list)
+    intr_indx = np.array([t[1:9] for t in StdI.intr_list], dtype=int).reshape(nintr, 8)
+    intr_val = np.array([t[0] for t in StdI.intr_list], dtype=complex)
+    _merge_interall_equivalent(nintr, intr_indx, intr_val)
+    _reorder_interall_hermitian(nintr, intr_indx, intr_val)
+    _remove_interall_diagonal(nintr, intr_indx, intr_val)
+
+    nintr0 = _count_nonzero(nintr, intr_val)
+    if nintr0 == 0 or StdI.lBoost == 1:
+        StdI.Lintr = 0
+        return None
+    StdI.Lintr = 1
+
+    rows = []
+    for kintr in range(nintr):
+        val = intr_val[kintr]
+        if abs(val) > AMPLITUDE_EPS:
+            i0, s0, i1, s1, i2, s2, i3, s3 = intr_indx[kintr]
+            rows.append((int(i0), int(s0), int(i1), int(s1),
+                         int(i2), int(s2), int(i3), int(s3),
+                         float(val.real), float(val.imag)))
+    return InterAllData(rows=rows)
 
 
 def print_interactions(StdI: StdIntList) -> None:
@@ -522,19 +519,27 @@ def print_interactions(StdI: StdIntList) -> None:
         The central data structure holding all interaction arrays, index
         arrays, counts, and flags.  Modified in place.
     """
-    # =================================================================
-    #  Standard interaction types (data-driven)
-    # =================================================================
-    for spec in _INTERACTION_TYPES:
-        _process_interaction(StdI, **spec._asdict())
+    for data in build_interactions(StdI):
+        data.write()
 
-    # =================================================================
-    #  InterAll (build numpy arrays from the list at the write boundary)
-    # =================================================================
-    nintr = len(StdI.intr_list)
-    intr_indx = np.array([t[1:9] for t in StdI.intr_list], dtype=int).reshape(nintr, 8)
-    intr_val = np.array([t[0] for t in StdI.intr_list], dtype=complex)
-    _merge_interall_equivalent(nintr, intr_indx, intr_val)
-    _reorder_interall_hermitian(nintr, intr_indx, intr_val)
-    _remove_interall_diagonal(nintr, intr_indx, intr_val)
-    _write_interall(StdI, nintr, intr_indx, intr_val)
+
+def build_interactions(StdI: StdIntList):
+    """Merge all interaction types, set the ``L*`` flags, and return data.
+
+    Returns a list of :class:`InteractionData` (for each enabled 1-/2-index
+    family) and an :class:`InterAllData` (when enabled).  The ``L*`` /
+    ``Lintr`` flags are set on *StdI* as a side effect because the namelist
+    writer reads them; only file writing is deferred to the returned
+    objects' :meth:`write`.
+    """
+    out: list = []
+    # Standard 1-/2-index families (data-driven)
+    for spec in _INTERACTION_TYPES:
+        data = _build_interaction(StdI, spec)
+        if data is not None:
+            out.append(data)
+    # InterAll (three merge passes inside _build_interall)
+    interall = _build_interall(StdI)
+    if interall is not None:
+        out.append(interall)
+    return out

@@ -11,16 +11,17 @@ import tempfile
 from stdface.core.stdface_vals import StdIntList
 from stdface.writer.interaction_writer import (
     print_interactions,
+    build_interactions,
+    InteractionData,
+    InterAllData,
+    _build_interall,
     _merge_1idx,
     _merge_2idx,
     _count_nonzero,
-    _process_interaction,
     _INTERACTION_TYPES,
     _merge_interall_equivalent,
     _reorder_interall_hermitian,
     _remove_interall_diagonal,
-    _write_interall,
-    _write_interaction_file,
 )
 
 
@@ -457,64 +458,40 @@ class TestRemoveInterallDiagonal:
         assert intr[1] == 2.0 + 0j
 
 
-class TestWriteInteractionFile:
-    """Tests for _write_interaction_file (unified 1-idx / 2-idx writer)."""
+class TestInteractionDataWrite:
+    """D1-3: InteractionData.write (1-idx / 2-idx family files)."""
 
-    def test_1idx_basic(self, tmp_path, monkeypatch):
-        """Write a 1-index file with mixed zero/non-zero terms."""
-        monkeypatch.chdir(tmp_path)
-        indx = [[0], [1], [2]]
-        coeff = [2.5, 0.0, 3.0]
-        _write_interaction_file(
-            "coulombintra.def", "NCoulombIntra",
-            "================== CoulombIntra ================",
-            3, indx, coeff, n_indices=1,
-        )
+    _CI = "================== CoulombIntra ================"
+    _EX = "====== ExchangeCoupling coupling ============"
+
+    def test_1idx_basic(self, tmp_path):
+        InteractionData("coulombintra.def", "NCoulombIntra", self._CI,
+                        [(0, 2.5), (2, 3.0)]).write(tmp_path)
         content = (tmp_path / "coulombintra.def").read_text()
         assert "NCoulombIntra          2" in content
         assert "2.500000000000000" in content
         assert "3.000000000000000" in content
-        # The zero term should NOT appear in output
         lines = [l for l in content.splitlines() if "." in l and "===" not in l]
         assert len(lines) == 2
 
-    def test_2idx_basic(self, tmp_path, monkeypatch):
-        """Write a 2-index file with one non-zero term."""
-        monkeypatch.chdir(tmp_path)
-        indx = [[0, 1], [2, 3]]
-        coeff = [1.5, 0.0]
-        _write_interaction_file(
-            "exchange.def", "NExchange",
-            "====== ExchangeCoupling coupling ============",
-            2, indx, coeff, n_indices=2,
-        )
+    def test_2idx_basic(self, tmp_path):
+        InteractionData("exchange.def", "NExchange", self._EX,
+                        [(0, 1, 1.5)]).write(tmp_path)
         content = (tmp_path / "exchange.def").read_text()
         assert "NExchange          1" in content
         assert "1.500000000000000" in content
         lines = [l for l in content.splitlines() if "." in l and "===" not in l]
         assert len(lines) == 1
 
-    def test_all_zero_still_writes_file(self, tmp_path, monkeypatch):
-        """File is always written (flag check is in _process_interaction)."""
-        monkeypatch.chdir(tmp_path)
-        indx = [[0]]
-        coeff = [0.0]
-        _write_interaction_file(
-            "coulombintra.def", "NCoulombIntra",
-            "================== CoulombIntra ================",
-            1, indx, coeff, n_indices=1,
-        )
-        content = (tmp_path / "coulombintra.def").read_text()
-        assert "NCoulombIntra          0" in content
+    def test_empty_rows_writes_zero_count(self, tmp_path):
+        InteractionData("coulombintra.def", "NCoulombIntra", self._CI,
+                        []).write(tmp_path)
+        assert "NCoulombIntra          0" in (tmp_path / "coulombintra.def").read_text()
 
-    def test_header_format(self, tmp_path, monkeypatch):
-        """Verify the 5-line header structure."""
-        monkeypatch.chdir(tmp_path)
-        _write_interaction_file(
-            "hund.def", "NHund",
-            "=============== Hund coupling ===============",
-            0, [], [], n_indices=2,
-        )
+    def test_header_format(self, tmp_path):
+        InteractionData("hund.def", "NHund",
+                        "=============== Hund coupling ===============",
+                        []).write(tmp_path)
         lines = (tmp_path / "hund.def").read_text().splitlines()
         assert lines[0] == "============================================="
         assert lines[1].startswith("NHund")
@@ -522,68 +499,50 @@ class TestWriteInteractionFile:
         assert lines[3] == "=============== Hund coupling ==============="
         assert lines[4] == "============================================="
 
+    def test_to_from_dict_roundtrip(self):
+        d = InteractionData("hund.def", "NHund", "banner", [(0, 1, 0.5)])
+        assert InteractionData.from_dict(d.to_dict()).rows == d.rows
 
-class TestWriteInterall:
-    """Tests for _write_interall."""
 
-    def test_zero_terms_no_file(self):
+class TestBuildInterall:
+    """D1-3: _build_interall / InterAllData (build/write separation)."""
+
+    def test_zero_terms_returns_none(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        with tempfile.TemporaryDirectory() as tmpdir:
-            orig = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                _write_interall(StdI, 0, [], [])
-                assert StdI.Lintr == 0
-                assert not os.path.exists("interall.def")
-            finally:
-                os.chdir(orig)
+        assert _build_interall(StdI) is None
+        assert StdI.Lintr == 0
 
     def test_boost_suppresses_interall(self):
         StdI = _make_stdi_base(lBoost=1)
         _make_empty_interactions(StdI)
-        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0]]
-        _iv_val = [1.0 + 0j]
-        with tempfile.TemporaryDirectory() as tmpdir:
-            orig = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
-                assert StdI.Lintr == 0
-                assert not os.path.exists("interall.def")
-            finally:
-                os.chdir(orig)
+        StdI.intr_list = [(1.0 + 0j, 0, 0, 1, 0, 2, 0, 3, 0)]
+        assert _build_interall(StdI) is None
+        assert StdI.Lintr == 0
 
-    def test_nonzero_writes_file(self):
+    def test_nonzero_builds_data(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0], [4, 0, 5, 0, 6, 0, 7, 0]]
-        _iv_val = [1.5 + 0.5j, 0.0 + 0j]
-        with tempfile.TemporaryDirectory() as tmpdir:
-            orig = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
-                assert StdI.Lintr == 1
-                assert os.path.exists("interall.def")
-                content = open("interall.def").read()
-                assert "NInterAll       1" in content
-                assert "1.500000000000000" in content
-                assert "0.500000000000000" in content
-            finally:
-                os.chdir(orig)
+        StdI.intr_list = [(1.5 + 0.5j, 0, 0, 1, 0, 2, 0, 3, 0)]
+        data = _build_interall(StdI)
+        assert StdI.Lintr == 1
+        assert isinstance(data, InterAllData)
+        assert data.rows == [(0, 0, 1, 0, 2, 0, 3, 0, 1.5, 0.5)]
+        assert InterAllData.from_dict(data.to_dict()).rows == data.rows
 
-    def test_all_zero_no_file(self):
+    def test_write_parity_with_print(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0], [4, 0, 5, 0, 6, 0, 7, 0]]
-        _iv_val = [0.0 + 0j, 0.0 + 0j]
+        StdI.intr_list = [(1.5 + 0.5j, 0, 0, 1, 0, 2, 0, 3, 0)]
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
-                assert StdI.Lintr == 0
-                assert not os.path.exists("interall.def")
+                print_interactions(StdI)
+                via_print = open("interall.def").read()
+                _build_interall(StdI).write()
+                via_data = open("interall.def").read()
             finally:
                 os.chdir(orig)
+        assert via_print == via_data
+        assert "NInterAll       1" in via_print
