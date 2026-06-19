@@ -45,12 +45,68 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass, field
 
 import numpy as np
 
 from typing import TextIO
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType, MethodType, ZERO_BODY_EPS, AMPLITUDE_EPS
+
+
+@dataclass
+class LocalTerms:
+    """Pure-data container for the on-site (local) Hamiltonian terms.
+
+    Produced by the pure ``*_terms`` builders and by
+    :meth:`ModelPlugin.build_local_terms`.  Each field mirrors the
+    corresponding ``HamiltonianTerms`` list; :meth:`extend_into` appends
+    them to a :class:`StdIntList`.
+    """
+
+    trans: list = field(default_factory=list)
+    intr: list = field(default_factory=list)
+    Cintra: list = field(default_factory=list)
+    Cinter: list = field(default_factory=list)
+    Hund: list = field(default_factory=list)
+    Ex: list = field(default_factory=list)
+    PairLift: list = field(default_factory=list)
+
+    def extend_into(self, StdI: StdIntList) -> None:
+        """Append every term list to the matching ``StdI`` list."""
+        StdI.trans_list.extend(self.trans)
+        StdI.intr_list.extend(self.intr)
+        StdI.Cintra_list.extend(self.Cintra)
+        StdI.Cinter_list.extend(self.Cinter)
+        StdI.Hund_list.extend(self.Hund)
+        StdI.Ex_list.extend(self.Ex)
+        StdI.PairLift_list.extend(self.PairLift)
+
+    def merge(self, other: "LocalTerms") -> None:
+        """Append every term list from *other* into this container."""
+        self.trans += other.trans
+        self.intr += other.intr
+        self.Cintra += other.Cintra
+        self.Cinter += other.Cinter
+        self.Hund += other.Hund
+        self.Ex += other.Ex
+        self.PairLift += other.PairLift
+
+
+def _trans_term(amp: complex, isite: int, ispin: int,
+                jsite: int, jspin: int) -> list:
+    """Return ``[(amp, i, si, j, sj)]`` or ``[]`` if below ``ZERO_BODY_EPS``."""
+    if abs(amp) < ZERO_BODY_EPS:
+        return []
+    return [(amp, isite, ispin, jsite, jspin)]
+
+
+def _intr_term(amp: complex, i1: int, s1: int, i2: int, s2: int,
+               i3: int, s3: int, i4: int, s4: int) -> list:
+    """Return ``[(amp, …8 indices)]`` or ``[]`` if below ``ZERO_BODY_EPS``."""
+    if abs(amp) < ZERO_BODY_EPS:
+        return []
+    return [(amp, i1, s1, i2, s2, i3, s3, i4, s4)]
 
 
 def trans(
@@ -160,14 +216,27 @@ def hubbard_local(
     isite : int
         Site index.
     """
-    trans(StdI, mu0 - 0.5 * h0, isite, 0, isite, 0)
-    trans(StdI, mu0 + 0.5 * h0, isite, 1, isite, 1)
-    trans(StdI, -0.5 * Gamma0, isite, 1, isite, 0)
-    trans(StdI, -0.5 * Gamma0, isite, 0, isite, 1)
-    trans(StdI, -0.5 * 1j * Gamma0_y, isite, 1, isite, 0)
-    trans(StdI, 0.5 * 1j * Gamma0_y, isite, 0, isite, 1)
+    hubbard_local_terms(mu0, h0, Gamma0, Gamma0_y, U0, isite).extend_into(StdI)
 
-    StdI.Cintra_list.append((U0, isite))
+
+def hubbard_local_terms(
+    mu0: float,
+    h0: float,
+    Gamma0: float,
+    Gamma0_y: float,
+    U0: float,
+    isite: int,
+) -> LocalTerms:
+    """Pure builder for :func:`hubbard_local` (returns :class:`LocalTerms`)."""
+    terms = LocalTerms()
+    terms.trans += _trans_term(mu0 - 0.5 * h0, isite, 0, isite, 0)
+    terms.trans += _trans_term(mu0 + 0.5 * h0, isite, 1, isite, 1)
+    terms.trans += _trans_term(-0.5 * Gamma0, isite, 1, isite, 0)
+    terms.trans += _trans_term(-0.5 * Gamma0, isite, 0, isite, 1)
+    terms.trans += _trans_term(-0.5 * 1j * Gamma0_y, isite, 1, isite, 0)
+    terms.trans += _trans_term(0.5 * 1j * Gamma0_y, isite, 0, isite, 1)
+    terms.Cintra.append((U0, isite))
+    return terms
 
 
 def mag_field(
@@ -197,18 +266,31 @@ def mag_field(
     isite : int
         Site index.
     """
+    StdI.trans_list.extend(mag_field_terms(S2, h, Gamma, Gamma_y, isite))
+
+
+def mag_field_terms(
+    S2: int,
+    h: float,
+    Gamma: float,
+    Gamma_y: float,
+    isite: int,
+) -> list:
+    """Pure builder for :func:`mag_field` (returns a list of transfer terms)."""
+    out: list = []
     S = S2 * 0.5
     for ispin in range(S2 + 1):
         Sz = S - float(ispin)
         # Longitudinal part: -h σ c†_{i σ} c_{i σ}
-        trans(StdI, -h * Sz, isite, ispin, isite, ispin)
+        out += _trans_term(-h * Sz, isite, ispin, isite, ispin)
         # Transverse part
         if ispin > 0:
             factor = math.sqrt(S * (S + 1.0) - Sz * (Sz + 1.0))
-            trans(StdI, -0.5 * Gamma * factor - 0.5 * 1j * Gamma_y * factor,
-                  isite, ispin, isite, ispin - 1)
-            trans(StdI, -0.5 * Gamma * factor + 0.5 * 1j * Gamma_y * factor,
-                  isite, ispin - 1, isite, ispin)
+            out += _trans_term(-0.5 * Gamma * factor - 0.5 * 1j * Gamma_y * factor,
+                               isite, ispin, isite, ispin - 1)
+            out += _trans_term(-0.5 * Gamma * factor + 0.5 * 1j * Gamma_y * factor,
+                               isite, ispin - 1, isite, ispin)
+    return out
 
 
 def intr(
@@ -296,31 +378,47 @@ def _add_spin_half_terms(
         general intr() path should still handle the Jzz and exchange terms,
         respectively.
     """
-    # Hund: -0.5 * Jzz
-    StdI.Hund_list.append((-0.5 * J[2, 2], isite, jsite))
+    terms, use_z, use_ex = _spin_half_terms(J, isite, jsite, StdI.solver, StdI.model)
+    terms.extend_into(StdI)
+    return use_z, use_ex
 
+
+def _spin_half_terms(
+    J: np.ndarray,
+    isite: int,
+    jsite: int,
+    solver: SolverType,
+    model: ModelType,
+) -> tuple[LocalTerms, bool, bool]:
+    """Pure builder for :func:`_add_spin_half_terms`.
+
+    Returns ``(terms, use_z_general, use_ex_general)``.
+    """
+    terms = LocalTerms()
+    # Hund: -0.5 * Jzz
+    terms.Hund.append((-0.5 * J[2, 2], isite, jsite))
     # Cinter: -0.25 * Jzz
-    StdI.Cinter_list.append((-0.25 * J[2, 2], isite, jsite))
+    terms.Cinter.append((-0.25 * J[2, 2], isite, jsite))
 
     # Check whether off-diagonal J elements allow Ex/PairLift shortcut
     cond_offdiag = (abs(J[0, 1]) < AMPLITUDE_EPS and abs(J[1, 0]) < AMPLITUDE_EPS)
-    if StdI.solver == SolverType.mVMC:
+    if solver == SolverType.mVMC:
         cond_offdiag = cond_offdiag and (abs(J[0, 0] - J[1, 1]) < AMPLITUDE_EPS)
 
     if not cond_offdiag:
-        return False, True  # z handled by shortcut, ex goes through general
+        return terms, False, True  # z via shortcut, ex via general
 
     # Exchange
-    if StdI.solver == SolverType.mVMC or StdI.model == ModelType.KONDO:
+    if solver == SolverType.mVMC or model == ModelType.KONDO:
         ex_val = -0.25 * (J[0, 0] + J[1, 1])
     else:
         ex_val = 0.25 * (J[0, 0] + J[1, 1])
-    StdI.Ex_list.append((ex_val, isite, jsite))
+    terms.Ex.append((ex_val, isite, jsite))
 
     # Pair lift
-    StdI.PairLift_list.append((0.25 * (J[0, 0] - J[1, 1]), isite, jsite))
+    terms.PairLift.append((0.25 * (J[0, 0] - J[1, 1]), isite, jsite))
 
-    return False, False  # both handled by shortcut
+    return terms, False, False  # both handled by shortcut
 
 
 def general_j(
@@ -348,10 +446,28 @@ def general_j(
     jsite : int
         Second site index.
     """
+    general_j_terms(J, Si2, Sj2, isite, jsite,
+                    StdI.solver, StdI.model).extend_into(StdI)
+
+
+def general_j_terms(
+    J: np.ndarray,
+    Si2: int,
+    Sj2: int,
+    isite: int,
+    jsite: int,
+    solver: SolverType,
+    model: ModelType,
+) -> LocalTerms:
+    """Pure builder for :func:`general_j` (returns :class:`LocalTerms`).
+
+    *solver* and *model* select the spin-1/2 shortcut branch (see
+    :func:`_spin_half_terms`).
+    """
     if Si2 == 1 or Sj2 == 1:
-        use_z, use_ex = _add_spin_half_terms(StdI, J, isite, jsite)
+        terms, use_z, use_ex = _spin_half_terms(J, isite, jsite, solver, model)
     else:
-        use_z, use_ex = True, True
+        terms, use_z, use_ex = LocalTerms(), True, True
 
     Si = 0.5 * Si2
     Sj = 0.5 * Sj2
@@ -374,9 +490,9 @@ def general_j(
             # (1) J_z S_{iz} S_{jz}
             if use_z:
                 intr0 = J[2, 2] * Siz * Sjz
-                intr(StdI, intr0,
-                     isite, ispin, isite, ispin,
-                     jsite, jspin, jsite, jspin)
+                terms.intr += _intr_term(intr0,
+                                         isite, ispin, isite, ispin,
+                                         jsite, jspin, jsite, jspin)
 
             if ispin > 0 and jspin > 0 and use_ex:
                 fi = ladder_i[ispin]
@@ -384,43 +500,44 @@ def general_j(
 
                 # (2) S_i^+ S_j^- + h.c.
                 intr0 = 0.25 * (J[0, 0] + J[1, 1] + 1j * (J[0, 1] - J[1, 0])) * fi * fj
-                intr(StdI, intr0,
-                     isite, ispin - 1, isite, ispin,
-                     jsite, jspin, jsite, jspin - 1)
-                intr(StdI, np.conj(intr0),
-                     isite, ispin, isite, ispin - 1,
-                     jsite, jspin - 1, jsite, jspin)
+                terms.intr += _intr_term(intr0,
+                                         isite, ispin - 1, isite, ispin,
+                                         jsite, jspin, jsite, jspin - 1)
+                terms.intr += _intr_term(np.conj(intr0),
+                                         isite, ispin, isite, ispin - 1,
+                                         jsite, jspin - 1, jsite, jspin)
 
                 # (3) S_i^+ S_j^+ + h.c.
                 intr0 = 0.25 * (J[0, 0] - J[1, 1] - 1j * (J[0, 1] + J[1, 0])) * fi * fj
-                intr(StdI, intr0,
-                     isite, ispin - 1, isite, ispin,
-                     jsite, jspin - 1, jsite, jspin)
-                intr(StdI, np.conj(intr0),
-                     isite, ispin, isite, ispin - 1,
-                     jsite, jspin, jsite, jspin - 1)
+                terms.intr += _intr_term(intr0,
+                                         isite, ispin - 1, isite, ispin,
+                                         jsite, jspin - 1, jsite, jspin)
+                terms.intr += _intr_term(np.conj(intr0),
+                                         isite, ispin, isite, ispin - 1,
+                                         jsite, jspin, jsite, jspin - 1)
 
             # (4) S_i^+ S_{jz} + h.c.
             if ispin > 0:
                 fi = ladder_i[ispin]
                 intr0 = 0.5 * (J[0, 2] - 1j * J[1, 2]) * fi * Sjz
-                intr(StdI, intr0,
-                     isite, ispin - 1, isite, ispin,
-                     jsite, jspin, jsite, jspin)
-                intr(StdI, np.conj(intr0),
-                     jsite, jspin, jsite, jspin,
-                     isite, ispin, isite, ispin - 1)
+                terms.intr += _intr_term(intr0,
+                                         isite, ispin - 1, isite, ispin,
+                                         jsite, jspin, jsite, jspin)
+                terms.intr += _intr_term(np.conj(intr0),
+                                         jsite, jspin, jsite, jspin,
+                                         isite, ispin, isite, ispin - 1)
 
             # (5) S_{iz} S_j^+ + h.c.
             if jspin > 0:
                 fj = ladder_j[jspin]
                 intr0 = 0.5 * (J[2, 0] - 1j * J[2, 1]) * Siz * fj
-                intr(StdI, intr0,
-                     isite, ispin, isite, ispin,
-                     jsite, jspin - 1, jsite, jspin)
-                intr(StdI, np.conj(intr0),
-                     jsite, jspin, jsite, jspin - 1,
-                     isite, ispin, isite, ispin)
+                terms.intr += _intr_term(intr0,
+                                         isite, ispin, isite, ispin,
+                                         jsite, jspin - 1, jsite, jspin)
+                terms.intr += _intr_term(np.conj(intr0),
+                                         jsite, jspin, jsite, jspin - 1,
+                                         isite, ispin, isite, ispin)
+    return terms
 
 
 def coulomb(StdI: StdIntList, V: float, isite: int, jsite: int) -> None:
@@ -678,13 +795,7 @@ def add_local_terms(
         Global site index of the localized spin in the Kondo model.
         Ignored when the model is not KONDO.
     """
-    if StdI.model == ModelType.SPIN:
-        mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, isite)
-        general_j(StdI, StdI.D, StdI.S2, StdI.S2, isite, isite)
-    else:
-        hubbard_local(StdI, StdI.mu, -StdI.h, -StdI.Gamma, -StdI.Gamma_y,
-                      StdI.U, isite)
-        if StdI.model == ModelType.KONDO:
-            general_j(StdI, StdI.J, 1, StdI.S2, isite, jsite_kondo)
-            mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y,
-                      jsite_kondo)
+    # Local import avoids the interaction_builder <-> model_plugin cycle.
+    from ..core.model_plugin import get_model
+    terms = get_model(StdI.model).build_local_terms(StdI, isite, jsite_kondo)
+    terms.extend_into(StdI)

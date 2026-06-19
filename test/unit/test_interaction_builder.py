@@ -26,7 +26,66 @@ from stdface.lattice.interaction_builder import (
     add_local_terms,
     _spin_ladder_factor,
     _add_spin_half_terms,
+    LocalTerms,
+    mag_field_terms,
+    hubbard_local_terms,
+    general_j_terms,
+    _spin_half_terms,
 )
+from stdface.core.stdface_vals import SolverType, ModelType
+
+
+class TestPureLocalTermBuilders:
+    """C2-1: pure *_terms builders return data equal to what the
+    StdI-mutating wrappers append (behaviour preserved)."""
+
+    def test_localterms_extend_into(self):
+        s = _make_stdi()
+        t = LocalTerms(trans=[(1 + 0j, 0, 0, 1, 1)], Cintra=[(4.0, 0)],
+                       Hund=[(0.5, 0, 1)])
+        t.extend_into(s)
+        assert s.trans_list == [(1 + 0j, 0, 0, 1, 1)]
+        assert s.Cintra_list == [(4.0, 0)]
+        assert s.Hund_list == [(0.5, 0, 1)]
+
+    def test_mag_field_terms_matches_wrapper(self):
+        s = _make_stdi(model="spin")
+        mag_field(s, 2, 1.0, 0.5, 0.3, 0)
+        assert s.trans_list == mag_field_terms(2, 1.0, 0.5, 0.3, 0)
+
+    def test_mag_field_terms_skips_tiny(self):
+        # zero field -> no terms
+        assert mag_field_terms(1, 0.0, 0.0, 0.0, 0) == []
+
+    def test_hubbard_local_terms_matches_wrapper(self):
+        s = _make_stdi()
+        hubbard_local(s, 1.0, 0.5, 0.3, 0.2, 4.0, 2)
+        pure = hubbard_local_terms(1.0, 0.5, 0.3, 0.2, 4.0, 2)
+        assert s.trans_list == pure.trans
+        assert s.Cintra_list == pure.Cintra
+
+    def test_general_j_terms_matches_wrapper(self):
+        import numpy as np
+        J = np.zeros((3, 3))
+        J[0, 0] = J[1, 1] = J[2, 2] = 1.0
+        J[0, 1] = 0.4  # off-diagonal -> exercises general intr path
+        s = _make_stdi(solver="HPhi", model="spin")
+        general_j(s, J, 1, 1, 0, 1)
+        pure = general_j_terms(J, 1, 1, 0, 1, SolverType.HPhi, ModelType.SPIN)
+        assert s.Hund_list == pure.Hund
+        assert s.Cinter_list == pure.Cinter
+        assert s.Ex_list == pure.Ex
+        assert s.PairLift_list == pure.PairLift
+        assert s.intr_list == pure.intr
+
+    def test_spin_half_terms_returns_flags(self):
+        import numpy as np
+        J = np.zeros((3, 3))
+        J[0, 0] = J[1, 1] = J[2, 2] = 1.0  # diagonal -> shortcut handles both
+        terms, use_z, use_ex = _spin_half_terms(
+            J, 0, 1, SolverType.HPhi, ModelType.SPIN)
+        assert use_z is False and use_ex is False
+        assert terms.Hund == [(-0.5, 0, 1)]
 
 
 def _make_stdi(
