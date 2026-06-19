@@ -381,9 +381,13 @@ def _wannier_interaction_data(
     intr_table: list[_IntrItem], nsiteuc: int, nspin: int,
     fname: str, tagname: str, export_all: int,
 ) -> WannierInteractionData:
-    """Package an ``intr_table`` into a :class:`WannierInteractionData`."""
-    items = [(it.r[0], it.r[1], it.r[2], it.a, it.b, it.s, it.t,
-              it.v.real, it.v.imag) for it in intr_table]
+    """Package an ``intr_table`` into a :class:`WannierInteractionData`.
+
+    Values are cast to plain Python types so ``to_dict`` is JSON-native.
+    """
+    items = [(int(it.r[0]), int(it.r[1]), int(it.r[2]),
+              int(it.a), int(it.b), int(it.s), int(it.t),
+              float(it.v.real), float(it.v.imag)) for it in intr_table]
     return WannierInteractionData(fname, tagname, nsiteuc, nspin,
                                   export_all, items)
 
