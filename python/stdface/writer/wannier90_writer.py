@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import itertools
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 
@@ -105,37 +106,61 @@ def _fatal(msg: str) -> None:
 #  Write geometry file
 # -----------------------------------------------------------------------
 
-def _write_geometry(StdI: StdIntList, fname: str) -> None:
-    """Write geometry data to file in Wannier90 format.
+@dataclass
+class WannierGeometryData:
+    """Wannier90-format geometry file (``geom.dat``).
 
-    Parameters
+    Attributes
     ----------
-    StdI : StdIntList
-        Standard input parameters containing geometry info.
-    fname : str
-        Output filename.
-
-    Notes
-    -----
-    Writes:
-    - Primitive lattice vectors
-    - Number of orbitals per unit cell
-    - Orbital positions in fractional coordinates
+    direct : list of (float, float, float)
+        Primitive lattice vectors (3 rows).
+    nsiteuc : int
+        Number of orbitals per unit cell.
+    tau : list of (float, float, float)
+        Orbital positions in fractional coordinates (``nsiteuc`` rows).
     """
-    with open(fname, "w") as fp_out:
-        # Print primitive vectors
-        for row in StdI.direct:
-            fp_out.write(f"{row[0]:16.12f} {row[1]:16.12f} {row[2]:16.12f}\n")
 
-        # Print number of orbits
-        fp_out.write(f"{StdI.NsiteUC}\n")
+    direct: list
+    nsiteuc: int
+    tau: list
 
-        # Print centre of orbits
-        for tau_row in StdI.tau[:StdI.NsiteUC]:
-            fp_out.write(f"{tau_row[0]:25.15e} "
-                         f"{tau_row[1]:25.15e} "
-                         f"{tau_row[2]:25.15e}\n")
-    logger.info(f"{fname:>24s} is written.")
+    def write(self, fname: str = "geom.dat") -> None:
+        """Write the geometry to *fname* (which may include a prefix/dir)."""
+        with open(fname, "w") as fp_out:
+            for row in self.direct:
+                fp_out.write(f"{row[0]:16.12f} {row[1]:16.12f} {row[2]:16.12f}\n")
+            fp_out.write(f"{self.nsiteuc}\n")
+            for tau_row in self.tau:
+                fp_out.write(f"{tau_row[0]:25.15e} "
+                             f"{tau_row[1]:25.15e} "
+                             f"{tau_row[2]:25.15e}\n")
+        logger.info(f"{fname:>24s} is written.")
+
+    def to_dict(self) -> dict:
+        return {"direct": [list(r) for r in self.direct],
+                "nsiteuc": self.nsiteuc,
+                "tau": [list(r) for r in self.tau]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "WannierGeometryData":
+        return cls(direct=[tuple(r) for r in data["direct"]],
+                   nsiteuc=data["nsiteuc"],
+                   tau=[tuple(r) for r in data["tau"]])
+
+
+def build_wannier_geometry(StdI: StdIntList) -> WannierGeometryData:
+    """Build :class:`WannierGeometryData` from ``StdI`` geometry fields."""
+    return WannierGeometryData(
+        direct=[(float(r[0]), float(r[1]), float(r[2])) for r in StdI.direct],
+        nsiteuc=StdI.NsiteUC,
+        tau=[(float(r[0]), float(r[1]), float(r[2]))
+             for r in StdI.tau[:StdI.NsiteUC]],
+    )
+
+
+def _write_geometry(StdI: StdIntList, fname: str) -> None:
+    """Write ``geom.dat`` (thin wrapper over :func:`build_wannier_geometry`)."""
+    build_wannier_geometry(StdI).write(fname)
 
 
 # -----------------------------------------------------------------------
@@ -243,6 +268,7 @@ def _write_wannier_body(
     nsiteuc: int,
     nspin: int,
     matrix: np.ndarray,
+    export_all: int | None = None,
 ) -> None:
     """Write the matrix body of a Wannier90-format interaction file.
 
@@ -266,6 +292,8 @@ def _write_wannier_body(
     matrix : numpy.ndarray
         Flat complex interaction matrix.
     """
+    if export_all is None:
+        export_all = _is_export_all
     spin_pairs = list(itertools.product(range(nspin), repeat=2))
     dims = [rr[i] * 2 + 1 for i in range(3)]
     for r in range(nvol):
@@ -278,7 +306,7 @@ def _write_wannier_body(
                 for s, t in spin_pairs:
                     idx = _compute_index(rx, ry, rz, a, b, s, t,
                                          rr, nsiteuc, nspin)
-                    if _is_export_all or abs(matrix[idx]) > _EPS:
+                    if export_all or abs(matrix[idx]) > _EPS:
                         spin_part = f"{s:4d} {t:4d} " if nspin > 1 else ""
                         fp.write(
                             f"{rx:4d} {ry:4d} {rz:4d} "
@@ -288,42 +316,84 @@ def _write_wannier_body(
                             f"{matrix[idx].imag:16.12f}\n")
 
 
-def _write_wannier90(intr_table: list[_IntrItem],
-                     nsiteuc: int, nspin: int,
-                     fname: str, tagname: str) -> None:
-    """Write interaction parameters to file in Wannier90 format.
+@dataclass
+class WannierInteractionData:
+    """One Wannier90-format interaction ``.dat`` file.
 
-    Builds the interaction matrix from the item list, then writes the
-    Wannier90-format file with header and body.
-
-    Parameters
+    Attributes
     ----------
-    intr_table : list of _IntrItem
-        Array of interaction parameters.
+    fname : str
+        Output filename (prefix already applied).
+    tagname : str
+        Tag identifying interaction type.
     nsiteuc : int
         Number of sites per unit cell.
     nspin : int
-        Number of spin states.
-    fname : str
-        Output filename.
-    tagname : str
-        Tag identifying interaction type.
+        Number of spin states (1 or 2).
+    export_all : int
+        Whether to emit zero entries (1) or only non-negligible ones (0).
+    items : list of tuple
+        ``(rx, ry, rz, a, b, s, t, re, im)`` per interaction entry; the
+        flat matrix is rebuilt from these at :meth:`write` time.
     """
-    rr, nvol, matrix = _build_wannier_matrix(
-        intr_table, nsiteuc, nspin)
 
-    with open(fname, "w") as fp_out:
-        # Write header
-        fp_out.write(f"{tagname} in wannier90-like format for uhfk\n")
-        fp_out.write(f"{nsiteuc}\n{nvol}\n")
-        for i in range(nvol):
-            if i > 0 and i % 15 == 0:
-                fp_out.write("\n")
-            fp_out.write(f" {1}")
-        fp_out.write("\n")
+    fname: str
+    tagname: str
+    nsiteuc: int
+    nspin: int
+    export_all: int
+    items: list
 
-        _write_wannier_body(fp_out, rr, nvol, nsiteuc, nspin, matrix)
-    logger.info(f"{fname:>24s} is written.")
+    def _intr_table(self) -> list:
+        return [_IntrItem(r=[it[0], it[1], it[2]], a=it[3], b=it[4],
+                          s=it[5], t=it[6], v=complex(it[7], it[8]))
+                for it in self.items]
+
+    def write(self, directory: Path = Path(".")) -> None:
+        rr, nvol, matrix = _build_wannier_matrix(
+            self._intr_table(), self.nsiteuc, self.nspin)
+        with open(Path(directory) / self.fname, "w") as fp_out:
+            fp_out.write(f"{self.tagname} in wannier90-like format for uhfk\n")
+            fp_out.write(f"{self.nsiteuc}\n{nvol}\n")
+            for i in range(nvol):
+                if i > 0 and i % 15 == 0:
+                    fp_out.write("\n")
+                fp_out.write(f" {1}")
+            fp_out.write("\n")
+            _write_wannier_body(fp_out, rr, nvol, self.nsiteuc, self.nspin,
+                                matrix, self.export_all)
+        logger.info(f"{self.fname:>24s} is written.")
+
+    def to_dict(self) -> dict:
+        return {"fname": self.fname, "tagname": self.tagname,
+                "nsiteuc": self.nsiteuc, "nspin": self.nspin,
+                "export_all": self.export_all,
+                "items": [list(it) for it in self.items]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "WannierInteractionData":
+        return cls(data["fname"], data["tagname"], data["nsiteuc"],
+                   data["nspin"], data["export_all"],
+                   [tuple(it) for it in data["items"]])
+
+
+def _wannier_interaction_data(
+    intr_table: list[_IntrItem], nsiteuc: int, nspin: int,
+    fname: str, tagname: str, export_all: int,
+) -> WannierInteractionData:
+    """Package an ``intr_table`` into a :class:`WannierInteractionData`."""
+    items = [(it.r[0], it.r[1], it.r[2], it.a, it.b, it.s, it.t,
+              it.v.real, it.v.imag) for it in intr_table]
+    return WannierInteractionData(fname, tagname, nsiteuc, nspin,
+                                  export_all, items)
+
+
+def _write_wannier90(intr_table: list[_IntrItem],
+                     nsiteuc: int, nspin: int,
+                     fname: str, tagname: str) -> None:
+    """Write a Wannier90 interaction file (build + write wrapper)."""
+    _wannier_interaction_data(
+        intr_table, nsiteuc, nspin, fname, tagname, _is_export_all).write()
 
 
 # -----------------------------------------------------------------------
@@ -520,7 +590,7 @@ def _export_inter(StdI: StdIntList,
                   ntbl: int,
                   tbl_index: np.ndarray,
                   tbl_value: np.ndarray,
-                  fname: str, tagname: str) -> None:
+                  fname: str, tagname: str) -> "WannierInteractionData | None":
     """Export interaction coefficients from complex array.
 
     Parameters
@@ -540,7 +610,7 @@ def _export_inter(StdI: StdIntList,
     """
     if ntbl == 0:
         logger.info(f"{fname:>24s} is skipped.")
-        return
+        return None
 
     nintr, intr_index, intr_value = _accumulate_list(
         2, ntbl, tbl_index, tbl_value, 1)
@@ -549,9 +619,10 @@ def _export_inter(StdI: StdIntList,
                   if nintr > 0 else [])
 
     if intr_table:
-        _write_wannier90(intr_table, StdI.NsiteUC, 1, fname, tagname)
-    else:
-        logger.info(f"{fname:>24s} is skipped.")
+        return _wannier_interaction_data(
+            intr_table, StdI.NsiteUC, 1, fname, tagname, _is_export_all)
+    logger.info(f"{fname:>24s} is skipped.")
+    return None
 
 
 # -----------------------------------------------------------------------
@@ -562,7 +633,7 @@ def _export_inter_real(StdI: StdIntList,
                        ntbl: int,
                        tbl_index: np.ndarray,
                        tbl_value: np.ndarray,
-                       fname: str, tagname: str) -> None:
+                       fname: str, tagname: str) -> "WannierInteractionData | None":
     """Export interaction coefficients from real array.
 
     Parameters
@@ -588,7 +659,7 @@ def _export_inter_real(StdI: StdIntList,
         buf = tbl_value.astype(complex)
     else:
         buf = np.array([], dtype=complex)
-    _export_inter(StdI, ntbl, tbl_index, buf, fname, tagname)
+    return _export_inter(StdI, ntbl, tbl_index, buf, fname, tagname)
 
 
 # -----------------------------------------------------------------------
@@ -670,7 +741,7 @@ def _export_transfer(StdI: StdIntList,
                      tbl_index: np.ndarray,
                      tbl_value: np.ndarray,
                      fname: str, tagname: str,
-                     spin_dep: int) -> None:
+                     spin_dep: int) -> "WannierInteractionData | None":
     """Export transfer (hopping) coefficients.
 
     Parameters
@@ -692,7 +763,7 @@ def _export_transfer(StdI: StdIntList,
     """
     if ntbl == 0:
         logger.info(f"{fname:>24s} is skipped.")
-        return
+        return None
 
     # Accumulate entries of the same index pair
     nintr, intr_index, intr_value = _accumulate_list(
@@ -703,10 +774,11 @@ def _export_transfer(StdI: StdIntList,
         if nintr > 0 else [])
 
     if intr_table:
-        _write_wannier90(intr_table, StdI.NsiteUC,
-                         2 if spin_dep == 1 else 1, fname, tagname)
-    else:
-        logger.info(f"{fname:>24s} is skipped.")
+        return _wannier_interaction_data(
+            intr_table, StdI.NsiteUC, 2 if spin_dep == 1 else 1,
+            fname, tagname, _is_export_all)
+    logger.info(f"{fname:>24s} is skipped.")
+    return None
 
 
 # -----------------------------------------------------------------------
@@ -770,7 +842,7 @@ def _export_coulomb_intra(StdI: StdIntList,
                           ntbl: int,
                           tbl_index: np.ndarray,
                           tbl_value: np.ndarray,
-                          fname: str, tagname: str) -> None:
+                          fname: str, tagname: str) -> "WannierInteractionData | None":
     """Export on-site Coulomb term coefficients.
 
     Parameters
@@ -790,7 +862,7 @@ def _export_coulomb_intra(StdI: StdIntList,
     """
     if ntbl == 0:
         logger.info(f"{fname:>24s} is skipped.")
-        return
+        return None
 
     tbl_value_c = tbl_value.astype(complex)
 
@@ -802,9 +874,10 @@ def _export_coulomb_intra(StdI: StdIntList,
         if nintr > 0 else [])
 
     if intr_table:
-        _write_wannier90(intr_table, StdI.NsiteUC, 1, fname, tagname)
-    else:
-        logger.info(f"{fname:>24s} is skipped.")
+        return _wannier_interaction_data(
+            intr_table, StdI.NsiteUC, 1, fname, tagname, _is_export_all)
+    logger.info(f"{fname:>24s} is skipped.")
+    return None
 
 
 # -----------------------------------------------------------------------
@@ -878,27 +951,38 @@ def export_interaction(StdI: StdIntList) -> None:
     - ``pairlift.dat``
     - ``pairhopp.dat``
     """
+    for data in build_wannier_interactions(StdI):
+        data.write()
+
+
+def build_wannier_interactions(StdI: StdIntList) -> list:
+    """Build the Wannier90 interaction files as data objects.
+
+    Returns a list of :class:`WannierInteractionData` (one per non-empty
+    interaction type).  Updates the module-level ``_is_export_all`` flag
+    from ``StdI.export_all`` as a side effect (read by each file's
+    :meth:`WannierInteractionData.write`).
+    """
     global _is_export_all
 
     if StdI.export_all is not None:
         _is_export_all = StdI.export_all
 
+    out: list = []
+
     _ntrans = len(StdI.trans_list)
     _tindx = np.array([t[1:5] for t in StdI.trans_list], dtype=int).reshape(_ntrans, 4)
     _tval = np.array([t[0] for t in StdI.trans_list], dtype=complex)
-    _export_transfer(
-        StdI,
-        _ntrans, _tindx, _tval,
-        _prefix(StdI, "transfer.dat"), "Transfer",
-        0)
+    out.append(_export_transfer(
+        StdI, _ntrans, _tindx, _tval,
+        _prefix(StdI, "transfer.dat"), "Transfer", 0))
 
     _nci = len(StdI.Cintra_list)
-    _export_coulomb_intra(
-        StdI,
-        _nci,
+    out.append(_export_coulomb_intra(
+        StdI, _nci,
         np.array([t[1:] for t in StdI.Cintra_list], dtype=int).reshape(_nci, 1),
         np.array([t[0] for t in StdI.Cintra_list]),
-        _prefix(StdI, "coulombintra.dat"), "CoulombIntra")
+        _prefix(StdI, "coulombintra.dat"), "CoulombIntra"))
 
     # Two-body shortcut interactions: (list_attr, filename, tag)
     _INTER_REAL_EXPORTS = (
@@ -911,9 +995,10 @@ def export_interaction(StdI: StdIntList) -> None:
     for list_attr, fname_suffix, tag in _INTER_REAL_EXPORTS:
         terms = getattr(StdI, list_attr)
         n = len(terms)
-        _export_inter_real(
-            StdI,
-            n,
+        out.append(_export_inter_real(
+            StdI, n,
             np.array([t[1:] for t in terms], dtype=int).reshape(n, 2),
             np.array([t[0] for t in terms]),
-            _prefix(StdI, fname_suffix), tag)
+            _prefix(StdI, fname_suffix), tag))
+
+    return [d for d in out if d is not None]
