@@ -50,7 +50,6 @@ class TestWannierModeOutput:
         out = build_wannier_output(_make_uhfk_stdi())
         assert isinstance(out, WannierModeOutput)
         assert out.geom_fname == "geom.dat"
-        assert out.lattice_gp is None
         assert out.interactions  # at least transfer + coulombintra
 
     def test_prefix_applied(self):
@@ -61,8 +60,7 @@ class TestWannierModeOutput:
 
     def test_to_dict_keys(self):
         d = build_wannier_output(_make_uhfk_stdi()).to_dict()
-        assert set(d) == {"geometry", "geom_fname", "interactions", "lattice_gp"}
-        assert d["lattice_gp"] is None
+        assert set(d) == {"geometry", "geom_fname", "interactions"}
 
     def test_write_parity_with_direct_export(self, tmp_path):
         via_direct = tmp_path / "direct"

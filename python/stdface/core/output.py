@@ -27,7 +27,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .stdface_vals import StdIntList
-from ..lattice.site_util import GnuplotData
 from ..writer.wannier90_writer import (
     WannierGeometryData,
     WannierInteractionData,
@@ -42,8 +41,8 @@ class SolverOutput(ABC):
 
     Subclasses hold the mode-specific ``XxxData`` objects and implement
     :meth:`write` (emit files) and :meth:`to_dict` (JSON-serialisable
-    view).  ``lattice_gp`` (gnuplot data, or ``None``) is common to all
-    modes and declared on each subclass.
+    view).  Gnuplot output is lattice-level and solver-independent, so it
+    is **not** part of the solver output; it is handled on its own path.
     """
 
     @abstractmethod
@@ -64,7 +63,6 @@ class WannierModeOutput(SolverOutput):
     geometry: WannierGeometryData
     geom_fname: str
     interactions: list  # list[WannierInteractionData]
-    lattice_gp: GnuplotData | None = None
 
     def write(self, directory: Path = Path(".")) -> None:
         directory = Path(directory)
@@ -72,28 +70,19 @@ class WannierModeOutput(SolverOutput):
         self.geometry.write(str(directory / self.geom_fname))
         for data in self.interactions:
             data.write(directory)
-        if self.lattice_gp is not None:
-            self.lattice_gp.write(directory)
 
     def to_dict(self) -> dict:
         return {
             "geometry": self.geometry.to_dict(),
             "geom_fname": self.geom_fname,
             "interactions": [d.to_dict() for d in self.interactions],
-            "lattice_gp": (self.lattice_gp.to_dict()
-                           if self.lattice_gp is not None else None),
         }
 
 
 def build_wannier_output(StdI: StdIntList) -> WannierModeOutput:
-    """Assemble a :class:`WannierModeOutput` from *StdI*.
-
-    Gnuplot output is suppressed in Wannier mode, so ``lattice_gp`` is
-    always ``None``.
-    """
+    """Assemble a :class:`WannierModeOutput` from *StdI*."""
     return WannierModeOutput(
         geometry=build_wannier_geometry(StdI),
         geom_fname=_prefix(StdI, "geom.dat"),
         interactions=build_wannier_interactions(StdI),
-        lattice_gp=None,
     )
