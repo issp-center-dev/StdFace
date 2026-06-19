@@ -146,6 +146,53 @@ one-body (transfer) and two-body (InterAll) Hamiltonian entries.
 """
 
 
+# ---------------------------------------------------------------------------
+#  Sub-objects of StdIntList (C1: data-structure split)
+# ---------------------------------------------------------------------------
+
+
+def _delegate(sub: str, name: str) -> property:
+    """Build a property on ``StdIntList`` delegating to ``self.<sub>.<name>``.
+
+    Used by the C1 façade so existing ``StdI.<name>`` access (read, write,
+    and in-place numpy mutation) transparently reaches the sub-object.
+    """
+    def getter(self):
+        return getattr(getattr(self, sub), name)
+
+    def setter(self, value):
+        setattr(getattr(self, sub), name, value)
+
+    return property(getter, setter)
+
+
+@dataclass
+class HamiltonianTerms:
+    """Hamiltonian term lists and their output flags.
+
+    Holds the transfer / interaction term lists (built during lattice
+    setup) and the per-type ``L*`` output flags set when writing the
+    ``.def`` files.  ``StdIntList`` delegates to an instance of this class
+    via façade properties (see :func:`_delegate`).
+    """
+
+    trans_list: list = field(default_factory=list)
+    Lintr: int = 0
+    intr_list: list = field(default_factory=list)
+    LCintra: int = 0
+    Cintra_list: list = field(default_factory=list)
+    LCinter: int = 0
+    Cinter_list: list = field(default_factory=list)
+    LHund: int = 0
+    Hund_list: list = field(default_factory=list)
+    LEx: int = 0
+    Ex_list: list = field(default_factory=list)
+    LPairLift: int = 0
+    PairLift_list: list = field(default_factory=list)
+    LPairHopp: int = 0
+    PairHopp_list: list = field(default_factory=list)
+
+
 @dataclass
 class StdIntList:
     """Main structure containing all parameters and variables for Standard mode.
@@ -690,21 +737,24 @@ class StdIntList:
     # ------------------------------------------------------------------
     nsite: int = 0
     locspinflag: None = None
-    trans_list: list = field(default_factory=list)
-    Lintr: int = 0
-    intr_list: list = field(default_factory=list)
-    LCintra: int = 0
-    Cintra_list: list = field(default_factory=list)
-    LCinter: int = 0
-    Cinter_list: list = field(default_factory=list)
-    LHund: int = 0
-    Hund_list: list = field(default_factory=list)
-    LEx: int = 0
-    Ex_list: list = field(default_factory=list)
-    LPairLift: int = 0
-    PairLift_list: list = field(default_factory=list)
-    LPairHopp: int = 0
-    PairHopp_list: list = field(default_factory=list)
+    # C1: Hamiltonian terms live in a sub-object; the 15 names below are
+    # façade properties delegating to ``self._terms`` (see _delegate).
+    _terms: HamiltonianTerms = field(default_factory=HamiltonianTerms)
+    trans_list = _delegate("_terms", "trans_list")
+    Lintr = _delegate("_terms", "Lintr")
+    intr_list = _delegate("_terms", "intr_list")
+    LCintra = _delegate("_terms", "LCintra")
+    Cintra_list = _delegate("_terms", "Cintra_list")
+    LCinter = _delegate("_terms", "LCinter")
+    Cinter_list = _delegate("_terms", "Cinter_list")
+    LHund = _delegate("_terms", "LHund")
+    Hund_list = _delegate("_terms", "Hund_list")
+    LEx = _delegate("_terms", "LEx")
+    Ex_list = _delegate("_terms", "Ex_list")
+    LPairLift = _delegate("_terms", "LPairLift")
+    PairLift_list = _delegate("_terms", "PairLift_list")
+    LPairHopp = _delegate("_terms", "LPairHopp")
+    PairHopp_list = _delegate("_terms", "PairHopp_list")
     lBoost: int = 0
 
     # ------------------------------------------------------------------

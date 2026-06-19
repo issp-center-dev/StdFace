@@ -8,11 +8,43 @@ import numpy as np
 import pytest
 
 from stdface.core.stdface_vals import (
-    StdIntList, ModelType, SolverType, MethodType,
+    StdIntList, HamiltonianTerms, ModelType, SolverType, MethodType,
     NaN_i,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
     is_unset_or_trivial_d,
 )
+
+
+class TestHamiltonianTermsSplit:
+    """C1-1: Hamiltonian terms live in a HamiltonianTerms sub-object,
+    exposed on StdIntList via transparent façade properties."""
+
+    def test_terms_subobject_present(self):
+        s = StdIntList()
+        assert isinstance(s._terms, HamiltonianTerms)
+
+    def test_facade_reads_subobject(self):
+        s = StdIntList()
+        assert s.trans_list is s._terms.trans_list
+        assert s.Cintra_list is s._terms.Cintra_list
+        assert s.LCintra == s._terms.LCintra == 0
+
+    def test_facade_write_reaches_subobject(self):
+        s = StdIntList()
+        s.LCinter = 1
+        assert s._terms.LCinter == 1
+        s.intr_list.append((1 + 0j, 0, 0, 0, 0, 0, 0, 0, 0))
+        assert len(s._terms.intr_list) == 1
+
+    def test_subobject_write_visible_via_facade(self):
+        s = StdIntList()
+        s._terms.Hund_list.append((0.5, 0, 1))
+        assert s.Hund_list == [(0.5, 0, 1)]
+
+    def test_instances_independent(self):
+        s1, s2 = StdIntList(), StdIntList()
+        s1.trans_list.append((1 + 0j, 0, 0, 1, 1))
+        assert s2.trans_list == []
 
 
 class TestIsUnsetOrTrivialD:
