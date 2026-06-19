@@ -8,11 +8,117 @@ import numpy as np
 import pytest
 
 from stdface.core.stdface_vals import (
-    StdIntList, ModelType, SolverType, MethodType,
+    StdIntList, HamiltonianTerms, LatticeGeometry, ModelInput,
+    ModelType, SolverType, MethodType,
     NaN_i,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
     is_unset_or_trivial_d,
 )
+
+
+class TestModelInputSplit:
+    """C1-3: model Hamiltonian parameters live in a ModelInput sub-object,
+    exposed on StdIntList via transparent façade properties."""
+
+    def test_model_subobject_present(self):
+        s = StdIntList()
+        assert isinstance(s._model, ModelInput)
+
+    def test_facade_reads_subobject(self):
+        s = StdIntList()
+        assert s.J is s._model.J
+        assert s.t is None and s.U is None
+
+    def test_facade_scalar_write(self):
+        s = StdIntList()
+        s.t = 1.0 + 2.0j
+        s.U = 4.0
+        s.JAll = 0.3
+        assert s._model.t == 1.0 + 2.0j
+        assert s._model.U == 4.0
+        assert s._model.JAll == 0.3
+
+    def test_facade_inplace_numpy_mutation(self):
+        s = StdIntList()
+        s.J[0, 0] = 1.5
+        s.D[2, 2] = -0.7
+        assert s._model.J[0, 0] == 1.5
+        assert s._model.D[2, 2] == -0.7
+
+    def test_instances_independent(self):
+        s1, s2 = StdIntList(), StdIntList()
+        s1.t = 9.0
+        s1.J[0, 0] = 5.0
+        assert s2.t is None
+        assert s2.J[0, 0] == 0.0
+
+
+class TestLatticeGeometrySplit:
+    """C1-2: lattice geometry lives in a LatticeGeometry sub-object,
+    exposed on StdIntList via transparent façade properties."""
+
+    def test_lattice_subobject_present(self):
+        s = StdIntList()
+        assert isinstance(s._lattice, LatticeGeometry)
+
+    def test_facade_reads_subobject(self):
+        s = StdIntList()
+        assert s.box is s._lattice.box
+        assert s.direct is s._lattice.direct
+        assert s.W is None and s.nsite == 0
+
+    def test_facade_inplace_numpy_mutation(self):
+        s = StdIntList()
+        s.box[0, 0] = 5
+        s.direct[1, 2] = 3.0
+        assert s._lattice.box[0, 0] == 5
+        assert s._lattice.direct[1, 2] == 3.0
+
+    def test_facade_scalar_write(self):
+        s = StdIntList()
+        s.W, s.L, s.Height = 2, 3, 4
+        s.nsite = 24
+        assert (s._lattice.W, s._lattice.L, s._lattice.Height) == (2, 3, 4)
+        assert s._lattice.nsite == 24
+
+    def test_instances_independent(self):
+        s1, s2 = StdIntList(), StdIntList()
+        s1.box[0, 0] = 9
+        s1.NCell = 7
+        assert s2.box[0, 0] == 0
+        assert s2.NCell == 0
+
+
+class TestHamiltonianTermsSplit:
+    """C1-1: Hamiltonian terms live in a HamiltonianTerms sub-object,
+    exposed on StdIntList via transparent façade properties."""
+
+    def test_terms_subobject_present(self):
+        s = StdIntList()
+        assert isinstance(s._terms, HamiltonianTerms)
+
+    def test_facade_reads_subobject(self):
+        s = StdIntList()
+        assert s.trans_list is s._terms.trans_list
+        assert s.Cintra_list is s._terms.Cintra_list
+        assert s.LCintra == s._terms.LCintra == 0
+
+    def test_facade_write_reaches_subobject(self):
+        s = StdIntList()
+        s.LCinter = 1
+        assert s._terms.LCinter == 1
+        s.intr_list.append((1 + 0j, 0, 0, 0, 0, 0, 0, 0, 0))
+        assert len(s._terms.intr_list) == 1
+
+    def test_subobject_write_visible_via_facade(self):
+        s = StdIntList()
+        s._terms.Hund_list.append((0.5, 0, 1))
+        assert s.Hund_list == [(0.5, 0, 1)]
+
+    def test_instances_independent(self):
+        s1, s2 = StdIntList(), StdIntList()
+        s1.trans_list.append((1 + 0j, 0, 0, 1, 1))
+        assert s2.trans_list == []
 
 
 class TestIsUnsetOrTrivialD:

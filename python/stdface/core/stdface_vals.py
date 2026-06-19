@@ -146,6 +146,164 @@ one-body (transfer) and two-body (InterAll) Hamiltonian entries.
 """
 
 
+# ---------------------------------------------------------------------------
+#  Sub-objects of StdIntList (C1: data-structure split)
+# ---------------------------------------------------------------------------
+
+
+def _delegate(sub: str, name: str) -> property:
+    """Build a property on ``StdIntList`` delegating to ``self.<sub>.<name>``.
+
+    Used by the C1 façade so existing ``StdI.<name>`` access (read, write,
+    and in-place numpy mutation) transparently reaches the sub-object.
+    """
+    def getter(self):
+        return getattr(getattr(self, sub), name)
+
+    def setter(self, value):
+        setattr(getattr(self, sub), name, value)
+
+    return property(getter, setter)
+
+
+@dataclass
+class HamiltonianTerms:
+    """Hamiltonian term lists and their output flags.
+
+    Holds the transfer / interaction term lists (built during lattice
+    setup) and the per-type ``L*`` output flags set when writing the
+    ``.def`` files.  ``StdIntList`` delegates to an instance of this class
+    via façade properties (see :func:`_delegate`).
+    """
+
+    trans_list: list = field(default_factory=list)
+    Lintr: int = 0
+    intr_list: list = field(default_factory=list)
+    LCintra: int = 0
+    Cintra_list: list = field(default_factory=list)
+    LCinter: int = 0
+    Cinter_list: list = field(default_factory=list)
+    LHund: int = 0
+    Hund_list: list = field(default_factory=list)
+    LEx: int = 0
+    Ex_list: list = field(default_factory=list)
+    LPairLift: int = 0
+    PairLift_list: list = field(default_factory=list)
+    LPairHopp: int = 0
+    PairHopp_list: list = field(default_factory=list)
+
+
+@dataclass
+class LatticeGeometry:
+    """Lattice geometry: super-cell box, unit-cell data and boundary phase.
+
+    Holds the lattice name, lattice constants/dimensions, the super-cell
+    ``box`` / ``rbox`` / ``direct`` matrices, unit-cell data
+    (``NCell`` / ``Cell`` / ``NsiteUC`` / ``tau`` / ``nsite``) and the
+    boundary phase vectors.  ``StdIntList`` delegates to an instance of
+    this class via façade properties (see :func:`_delegate`).
+    """
+
+    lattice: str | None = None
+    a: float | None = None
+    length: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    W: int | None = None
+    L: int | None = None
+    Height: int | None = None
+    direct: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    box: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
+    rbox: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
+    NCell: int = 0
+    Cell: None = None
+    NsiteUC: int = 0
+    tau: None = None
+    nsite: int = 0
+    phase: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    ExpPhase: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=complex))
+    AntiPeriod: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
+
+
+@dataclass
+class ModelInput:
+    """Model Hamiltonian parameters (hoppings, Coulomb, spin couplings, field).
+
+    Holds the user-facing model name and the Hamiltonian coupling
+    constants: hoppings ``t*``, Coulomb ``U``/``V*``, spin couplings
+    ``J*``/``J*All`` and single-ion ``D``, plus the magnetic-field
+    parameters.  ``StdIntList`` delegates to an instance of this class via
+    façade properties (see :func:`_delegate`).  Calculation selectors
+    (``lGC`` / ``S2`` / ``Sz2`` / ``ncond`` / ``method`` / ``lBoost``)
+    remain on ``StdIntList`` for now; they may move here at C2.
+    """
+
+    model: str | None = None
+    mu: float | None = None
+
+    # Hopping parameters (complex)
+    t: complex | None = None
+    tp: complex | None = None
+    t0: complex | None = None
+    t0p: complex | None = None
+    t0pp: complex | None = None
+    t1: complex | None = None
+    t1p: complex | None = None
+    t1pp: complex | None = None
+    t2: complex | None = None
+    t2p: complex | None = None
+    t2pp: complex | None = None
+    tpp: complex | None = None
+
+    # Coulomb parameters (float)
+    U: float | None = None
+    V: float | None = None
+    Vp: float | None = None
+    V0: float | None = None
+    V0p: float | None = None
+    V0pp: float | None = None
+    V1: float | None = None
+    V1p: float | None = None
+    V1pp: float | None = None
+    V2: float | None = None
+    V2p: float | None = None
+    V2pp: float | None = None
+    Vpp: float | None = None
+
+    # Isotropic/anisotropic diagonal spin couplings (float)
+    JAll: float | None = None
+    JpAll: float | None = None
+    J0All: float | None = None
+    J0pAll: float | None = None
+    J0ppAll: float | None = None
+    J1All: float | None = None
+    J1pAll: float | None = None
+    J1ppAll: float | None = None
+    J2All: float | None = None
+    J2pAll: float | None = None
+    J2ppAll: float | None = None
+    JppAll: float | None = None
+
+    # Spin coupling matrices (3x3 float arrays)
+    J: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    Jp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J0: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J0p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J0pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J1: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J1p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J1pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J2: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J2p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    J2pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    Jpp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    D: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+
+    # Magnetic field parameters
+    h: float | None = None
+    Gamma: float | None = None
+    Gamma_y: float | None = None
+    K: float | None = None
+
+
 @dataclass
 class StdIntList:
     """Main structure containing all parameters and variables for Standard mode.
@@ -594,117 +752,114 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Parameters for LATTICE
     # ------------------------------------------------------------------
-    lattice: str | None = None
-    a: float | None = None
-    length: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    W: int | None = None
-    L: int | None = None
-    Height: int | None = None
-    direct: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    box: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
-    rbox: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
-    NCell: int = 0
-    Cell: None = None
-    NsiteUC: int = 0
-    tau: None = None
+    # C1: lattice geometry lives in a sub-object; the names below are
+    # façade properties delegating to ``self._lattice`` (see _delegate).
+    _lattice: LatticeGeometry = field(default_factory=LatticeGeometry)
+    lattice = _delegate("_lattice", "lattice")
+    a = _delegate("_lattice", "a")
+    length = _delegate("_lattice", "length")
+    W = _delegate("_lattice", "W")
+    L = _delegate("_lattice", "L")
+    Height = _delegate("_lattice", "Height")
+    direct = _delegate("_lattice", "direct")
+    box = _delegate("_lattice", "box")
+    rbox = _delegate("_lattice", "rbox")
+    NCell = _delegate("_lattice", "NCell")
+    Cell = _delegate("_lattice", "Cell")
+    NsiteUC = _delegate("_lattice", "NsiteUC")
+    tau = _delegate("_lattice", "tau")
 
     # ------------------------------------------------------------------
-    #  Parameters for MODEL
+    #  Parameters for MODEL (delegated to _model)
     # ------------------------------------------------------------------
-    model: str | None = None
-    mu: float | None = None
-
-    # Hopping parameters (complex)
-    t: complex | None = None
-    tp: complex | None = None
-    t0: complex | None = None
-    t0p: complex | None = None
-    t0pp: complex | None = None
-    t1: complex | None = None
-    t1p: complex | None = None
-    t1pp: complex | None = None
-    t2: complex | None = None
-    t2p: complex | None = None
-    t2pp: complex | None = None
-    tpp: complex | None = None
-
-    # Coulomb parameters (float)
-    U: float | None = None
-    V: float | None = None
-    Vp: float | None = None
-    V0: float | None = None
-    V0p: float | None = None
-    V0pp: float | None = None
-    V1: float | None = None
-    V1p: float | None = None
-    V1pp: float | None = None
-    V2: float | None = None
-    V2p: float | None = None
-    V2pp: float | None = None
-    Vpp: float | None = None
-
-    # Isotropic/anisotropic diagonal spin couplings (float)
-    JAll: float | None = None
-    JpAll: float | None = None
-    J0All: float | None = None
-    J0pAll: float | None = None
-    J0ppAll: float | None = None
-    J1All: float | None = None
-    J1pAll: float | None = None
-    J1ppAll: float | None = None
-    J2All: float | None = None
-    J2pAll: float | None = None
-    J2ppAll: float | None = None
-    JppAll: float | None = None
-
-    # Spin coupling matrices (3x3 float arrays)
-    J: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    Jp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J0: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J0p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J0pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J1: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J1p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J1pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J2: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J2p: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    J2pp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    Jpp: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    D: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-
-    # Magnetic field parameters
-    h: float | None = None
-    Gamma: float | None = None
-    Gamma_y: float | None = None
-    K: float | None = None
+    _model: ModelInput = field(default_factory=ModelInput)
+    model = _delegate("_model", "model")
+    mu = _delegate("_model", "mu")
+    t = _delegate("_model", "t")
+    tp = _delegate("_model", "tp")
+    t0 = _delegate("_model", "t0")
+    t0p = _delegate("_model", "t0p")
+    t0pp = _delegate("_model", "t0pp")
+    t1 = _delegate("_model", "t1")
+    t1p = _delegate("_model", "t1p")
+    t1pp = _delegate("_model", "t1pp")
+    t2 = _delegate("_model", "t2")
+    t2p = _delegate("_model", "t2p")
+    t2pp = _delegate("_model", "t2pp")
+    tpp = _delegate("_model", "tpp")
+    U = _delegate("_model", "U")
+    V = _delegate("_model", "V")
+    Vp = _delegate("_model", "Vp")
+    V0 = _delegate("_model", "V0")
+    V0p = _delegate("_model", "V0p")
+    V0pp = _delegate("_model", "V0pp")
+    V1 = _delegate("_model", "V1")
+    V1p = _delegate("_model", "V1p")
+    V1pp = _delegate("_model", "V1pp")
+    V2 = _delegate("_model", "V2")
+    V2p = _delegate("_model", "V2p")
+    V2pp = _delegate("_model", "V2pp")
+    Vpp = _delegate("_model", "Vpp")
+    JAll = _delegate("_model", "JAll")
+    JpAll = _delegate("_model", "JpAll")
+    J0All = _delegate("_model", "J0All")
+    J0pAll = _delegate("_model", "J0pAll")
+    J0ppAll = _delegate("_model", "J0ppAll")
+    J1All = _delegate("_model", "J1All")
+    J1pAll = _delegate("_model", "J1pAll")
+    J1ppAll = _delegate("_model", "J1ppAll")
+    J2All = _delegate("_model", "J2All")
+    J2pAll = _delegate("_model", "J2pAll")
+    J2ppAll = _delegate("_model", "J2ppAll")
+    JppAll = _delegate("_model", "JppAll")
+    J = _delegate("_model", "J")
+    Jp = _delegate("_model", "Jp")
+    J0 = _delegate("_model", "J0")
+    J0p = _delegate("_model", "J0p")
+    J0pp = _delegate("_model", "J0pp")
+    J1 = _delegate("_model", "J1")
+    J1p = _delegate("_model", "J1p")
+    J1pp = _delegate("_model", "J1pp")
+    J2 = _delegate("_model", "J2")
+    J2p = _delegate("_model", "J2p")
+    J2pp = _delegate("_model", "J2pp")
+    Jpp = _delegate("_model", "Jpp")
+    D = _delegate("_model", "D")
+    h = _delegate("_model", "h")
+    Gamma = _delegate("_model", "Gamma")
+    Gamma_y = _delegate("_model", "Gamma_y")
+    K = _delegate("_model", "K")
 
     # ------------------------------------------------------------------
-    #  Phase for the boundary
+    #  Phase for the boundary (delegated to _lattice)
     # ------------------------------------------------------------------
-    phase: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    ExpPhase: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=complex))
-    AntiPeriod: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
+    phase = _delegate("_lattice", "phase")
+    ExpPhase = _delegate("_lattice", "ExpPhase")
+    AntiPeriod = _delegate("_lattice", "AntiPeriod")
 
     # ------------------------------------------------------------------
     #  Transfer, Interaction, Locspin
     # ------------------------------------------------------------------
-    nsite: int = 0
+    nsite = _delegate("_lattice", "nsite")
     locspinflag: None = None
-    trans_list: list = field(default_factory=list)
-    Lintr: int = 0
-    intr_list: list = field(default_factory=list)
-    LCintra: int = 0
-    Cintra_list: list = field(default_factory=list)
-    LCinter: int = 0
-    Cinter_list: list = field(default_factory=list)
-    LHund: int = 0
-    Hund_list: list = field(default_factory=list)
-    LEx: int = 0
-    Ex_list: list = field(default_factory=list)
-    LPairLift: int = 0
-    PairLift_list: list = field(default_factory=list)
-    LPairHopp: int = 0
-    PairHopp_list: list = field(default_factory=list)
+    # C1: Hamiltonian terms live in a sub-object; the 15 names below are
+    # façade properties delegating to ``self._terms`` (see _delegate).
+    _terms: HamiltonianTerms = field(default_factory=HamiltonianTerms)
+    trans_list = _delegate("_terms", "trans_list")
+    Lintr = _delegate("_terms", "Lintr")
+    intr_list = _delegate("_terms", "intr_list")
+    LCintra = _delegate("_terms", "LCintra")
+    Cintra_list = _delegate("_terms", "Cintra_list")
+    LCinter = _delegate("_terms", "LCinter")
+    Cinter_list = _delegate("_terms", "Cinter_list")
+    LHund = _delegate("_terms", "LHund")
+    Hund_list = _delegate("_terms", "Hund_list")
+    LEx = _delegate("_terms", "LEx")
+    Ex_list = _delegate("_terms", "Ex_list")
+    LPairLift = _delegate("_terms", "LPairLift")
+    PairLift_list = _delegate("_terms", "PairLift_list")
+    LPairHopp = _delegate("_terms", "LPairHopp")
+    PairHopp_list = _delegate("_terms", "PairHopp_list")
     lBoost: int = 0
 
     # ------------------------------------------------------------------
