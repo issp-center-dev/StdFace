@@ -93,27 +93,13 @@ def _make_stdI_for_interaction(nsiteUC: int = 1, ncell: int = 2) -> StdIntList:
     s.tau = np.zeros((nsiteUC, 3))
 
     # Zero out interaction arrays
-    s.ntrans = 0
-    s.transindx = None
-    s.trans = None
-    s.NCintra = 0
-    s.CintraIndx = None
-    s.Cintra = None
-    s.NCinter = 0
-    s.CinterIndx = None
-    s.Cinter = None
-    s.NHund = 0
-    s.HundIndx = None
-    s.Hund = None
-    s.NEx = 0
-    s.ExIndx = None
-    s.Ex = None
-    s.NPairLift = 0
-    s.PLIndx = None
-    s.PairLift = None
-    s.NPairHopp = 0
-    s.PHIndx = None
-    s.PairHopp = None
+    s.trans_list = []
+    s.Cintra_list = []
+    s.Cinter_list = []
+    s.Hund_list = []
+    s.Ex_list = []
+    s.PairLift_list = []
+    s.PairHopp_list = []
 
     return s
 
@@ -693,9 +679,7 @@ class TestExportInteraction:
         """export_interaction with a single transfer term."""
         monkeypatch.chdir(tmp_path)
         s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
-        s.ntrans = 1
-        s.transindx = np.array([[0, 0, 1, 0]], dtype=int)
-        s.trans = np.array([-1.0 + 0j], dtype=complex)
+        s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
 
         ew.export_interaction(s)
         assert os.path.exists(tmp_path / "transfer.dat")
@@ -705,9 +689,7 @@ class TestExportInteraction:
         monkeypatch.chdir(tmp_path)
         s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
         s.fileprefix = "run1"
-        s.ntrans = 1
-        s.transindx = np.array([[0, 0, 1, 0]], dtype=int)
-        s.trans = np.array([-1.0 + 0j], dtype=complex)
+        s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
 
         ew.export_interaction(s)
         assert os.path.exists(tmp_path / "run1_transfer.dat")

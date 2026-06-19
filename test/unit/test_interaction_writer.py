@@ -41,27 +41,13 @@ def _make_stdi_base(**overrides) -> StdIntList:
 
 def _make_empty_interactions(StdI: StdIntList) -> None:
     """Initialise all interaction arrays to empty."""
-    StdI.NCintra = 0
-    StdI.CintraIndx = []
-    StdI.Cintra = []
-    StdI.NCinter = 0
-    StdI.CinterIndx = []
-    StdI.Cinter = []
-    StdI.NHund = 0
-    StdI.HundIndx = []
-    StdI.Hund = []
-    StdI.NEx = 0
-    StdI.ExIndx = []
-    StdI.Ex = []
-    StdI.NPairLift = 0
-    StdI.PLIndx = []
-    StdI.PairLift = []
-    StdI.NPairHopp = 0
-    StdI.PHIndx = []
-    StdI.PairHopp = []
-    StdI.nintr = 0
-    StdI.intrindx = []
-    StdI.intr = []
+    StdI.Cintra_list = []
+    StdI.Cinter_list = []
+    StdI.Hund_list = []
+    StdI.Ex_list = []
+    StdI.PairLift_list = []
+    StdI.PairHopp_list = []
+    StdI.intr_list = []
 
 
 class TestImportFromInteractionWriter:
@@ -77,18 +63,19 @@ class TestMergeDuplicateCoulombIntra:
     def test_duplicate_site_merged(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.NCintra = 3
-        StdI.CintraIndx = [[0], [1], [0]]  # site 0 appears twice
-        StdI.Cintra = [2.0, 3.0, 5.0]
+        StdI.Cintra_list = [(2.0, 0), (3.0, 1), (5.0, 0)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
                 print_interactions(StdI)
-                assert StdI.Cintra[0] == 7.0  # merged: 2.0 + 5.0
-                assert StdI.Cintra[2] == 0.0  # zeroed
                 assert StdI.LCintra == 1
+                with open("coulombintra.def") as fp:
+                    data = [ln.split() for ln in fp if ln.lstrip()[:1].isdigit()]
+                # site 0 -> 2.0 + 5.0 = 7.0 ; site 1 -> 3.0 ; duplicate dropped
+                coeffs = {int(row[0]): float(row[1]) for row in data}
+                assert coeffs == {0: 7.0, 1: 3.0}
             finally:
                 os.chdir(orig)
 
@@ -99,18 +86,20 @@ class TestMergeDuplicateCoulombInter:
     def test_symmetric_pair_merged(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.NCinter = 2
-        StdI.CinterIndx = [[0, 1], [1, 0]]  # same pair, reversed
-        StdI.Cinter = [1.5, 2.5]
+        StdI.Cinter_list = [(1.5, 0, 1), (2.5, 1, 0)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
                 print_interactions(StdI)
-                assert StdI.Cinter[0] == 4.0  # merged
-                assert StdI.Cinter[1] == 0.0
                 assert StdI.LCinter == 1
+                with open("coulombinter.def") as fp:
+                    data = [ln.split() for ln in fp if ln.lstrip()[:1].isdigit()]
+                # symmetric pair (0,1)/(1,0) merged: 1.5 + 2.5 = 4.0
+                assert len(data) == 1
+                assert int(data[0][0]) == 0 and int(data[0][1]) == 1
+                assert float(data[0][2]) == 4.0
             finally:
                 os.chdir(orig)
 
@@ -121,9 +110,7 @@ class TestBoostSuppressesOutput:
     def test_boost_suppresses_coulomb_intra(self):
         StdI = _make_stdi_base(lBoost=1)
         _make_empty_interactions(StdI)
-        StdI.NCintra = 1
-        StdI.CintraIndx = [[0]]
-        StdI.Cintra = [4.0]
+        StdI.Cintra_list = [(4.0, 0)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -142,9 +129,7 @@ class TestExchangeWritten:
     def test_exchange_file_created(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.NEx = 1
-        StdI.ExIndx = [[0, 1]]
-        StdI.Ex = [0.5]
+        StdI.Ex_list = [(0.5, 0, 1)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -165,9 +150,7 @@ class TestInterAllWritten:
     def test_single_interall_term(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.nintr = 1
-        StdI.intrindx = [[0, 0, 0, 0, 0, 0, 0, 0]]
-        StdI.intr = [1.0 + 0j]
+        StdI.intr_list = [(1.0 + 0j, 0, 0, 0, 0, 0, 0, 0, 0)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -278,8 +261,8 @@ class TestInteractionTypesTable:
             assert spec.n_indices == 2
 
     def test_all_entries_have_required_fields(self):
-        required = {"nterms_attr", "indx_attr", "coeff_attr", "flag_attr",
-                     "filename", "count_label", "banner", "n_indices"}
+        required = {"list_attr", "flag_attr", "filename", "count_label",
+                     "banner", "n_indices"}
         for spec in _INTERACTION_TYPES:
             assert set(spec._fields) == required
 
@@ -551,7 +534,7 @@ class TestWriteInterall:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, 0, [], [])
                 assert StdI.Lintr == 0
                 assert not os.path.exists("interall.def")
             finally:
@@ -560,14 +543,13 @@ class TestWriteInterall:
     def test_boost_suppresses_interall(self):
         StdI = _make_stdi_base(lBoost=1)
         _make_empty_interactions(StdI)
-        StdI.nintr = 1
-        StdI.intrindx = [[0, 0, 1, 0, 2, 0, 3, 0]]
-        StdI.intr = [1.0 + 0j]
+        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0]]
+        _iv_val = [1.0 + 0j]
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
                 assert StdI.Lintr == 0
                 assert not os.path.exists("interall.def")
             finally:
@@ -576,17 +558,13 @@ class TestWriteInterall:
     def test_nonzero_writes_file(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.nintr = 2
-        StdI.intrindx = [
-            [0, 0, 1, 0, 2, 0, 3, 0],
-            [4, 0, 5, 0, 6, 0, 7, 0],
-        ]
-        StdI.intr = [1.5 + 0.5j, 0.0 + 0j]  # one non-zero, one zero
+        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0], [4, 0, 5, 0, 6, 0, 7, 0]]
+        _iv_val = [1.5 + 0.5j, 0.0 + 0j]
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
                 assert StdI.Lintr == 1
                 assert os.path.exists("interall.def")
                 content = open("interall.def").read()
@@ -599,17 +577,13 @@ class TestWriteInterall:
     def test_all_zero_no_file(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.nintr = 2
-        StdI.intrindx = [
-            [0, 0, 1, 0, 2, 0, 3, 0],
-            [4, 0, 5, 0, 6, 0, 7, 0],
-        ]
-        StdI.intr = [0.0 + 0j, 0.0 + 0j]
+        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0], [4, 0, 5, 0, 6, 0, 7, 0]]
+        _iv_val = [0.0 + 0j, 0.0 + 0j]
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
                 assert StdI.Lintr == 0
                 assert not os.path.exists("interall.def")
             finally:

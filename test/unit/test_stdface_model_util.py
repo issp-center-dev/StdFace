@@ -18,10 +18,10 @@ import stdface.core.stdface_model_util as smu
 #  Helpers
 # ---------------------------------------------------------------------------
 
-def _make_allocated(ntrans: int = 100, nintr: int = 100) -> StdIntList:
+def _make_allocated(ntrans: int = 100) -> StdIntList:
     """Return an StdIntList with interaction arrays pre-allocated."""
     s = StdIntList()
-    smu.malloc_interactions(s, ntrans, nintr)
+    smu.malloc_interactions(s, ntrans)
     return s
 
 
@@ -37,24 +37,24 @@ class TestTrans:
         """trans should add an entry to trans/transindx arrays."""
         s = _make_allocated()
         smu.trans(s, 1.0 + 0.5j, 0, 0, 1, 1)
-        assert s.ntrans == 1
-        assert s.trans[0] == pytest.approx(1.0 + 0.5j)
-        assert list(s.transindx[0]) == [0, 0, 1, 1]
+        assert len(s.trans_list) == 1
+        assert s.trans_list[0][0] == pytest.approx(1.0 + 0.5j)
+        assert list(s.trans_list[0][1:]) == [0, 0, 1, 1]
 
     def test_skip_tiny(self):
         """trans should skip entries with |trans0| < 1e-12."""
         s = _make_allocated()
         smu.trans(s, 1e-13, 0, 0, 1, 1)
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
     def test_multiple_entries(self):
         """trans should increment ntrans correctly."""
         s = _make_allocated()
         smu.trans(s, 1.0, 0, 0, 1, 0)
         smu.trans(s, 2.0, 1, 1, 0, 1)
-        assert s.ntrans == 2
-        assert s.trans[0] == 1.0
-        assert s.trans[1] == 2.0
+        assert len(s.trans_list) == 2
+        assert s.trans_list[0][0] == 1.0
+        assert s.trans_list[1][0] == 2.0
 
 
 # ---------------------------------------------------------------------------
@@ -70,14 +70,14 @@ class TestHopping:
         s = _make_allocated()
         dR = np.zeros(3)
         smu.hopping(s, 1.0 + 0j, 0, 1, dR)
-        assert s.ntrans == 4
+        assert len(s.trans_list) == 4
 
     def test_zero_hopping(self):
         """Zero hopping should add no entries."""
         s = _make_allocated()
         dR = np.zeros(3)
         smu.hopping(s, 0.0, 0, 1, dR)
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -94,10 +94,10 @@ class TestHubbardLocal:
         smu.hubbard_local(s, mu0=1.0, h0=0.0, Gamma0=0.0,
                           Gamma0_y=0.0, U0=4.0, isite=0)
         # mu contributes 2 transfers (spin up, spin down)
-        assert s.ntrans == 2
-        assert s.NCintra == 1
-        assert s.Cintra[0] == 4.0
-        assert s.CintraIndx[0, 0] == 0
+        assert len(s.trans_list) == 2
+        assert len(s.Cintra_list) == 1
+        assert s.Cintra_list[0][0] == 4.0
+        assert s.Cintra_list[0][1] == 0
 
     def test_with_magnetic_field(self):
         """hubbard_local with h and Gamma should add more transfers."""
@@ -105,8 +105,8 @@ class TestHubbardLocal:
         smu.hubbard_local(s, mu0=0.0, h0=1.0, Gamma0=0.5,
                           Gamma0_y=0.3, U0=0.0, isite=2)
         # h: 2 transfers, Gamma: 2, Gamma_y: 2 = 6 total
-        assert s.ntrans == 6
-        assert s.NCintra == 1
+        assert len(s.trans_list) == 6
+        assert len(s.Cintra_list) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -122,19 +122,19 @@ class TestMagField:
         s = _make_allocated()
         smu.mag_field(s, S2=1, h=1.0, Gamma=0.5, Gamma_y=0.0, isite=0)
         # S2=1: ispin=0 (Sz=0.5 -> 1 longitudinal), ispin=1 (Sz=-0.5 -> 1 longitudinal + 2 transverse)
-        assert s.ntrans == 4
+        assert len(s.trans_list) == 4
 
     def test_zero_field(self):
         """Zero field should produce no transfers."""
         s = _make_allocated()
         smu.mag_field(s, S2=1, h=0.0, Gamma=0.0, Gamma_y=0.0, isite=0)
-        assert s.ntrans == 0
+        assert len(s.trans_list) == 0
 
     def test_spin_one(self):
         """S=1 (S2=2) should produce more terms."""
         s = _make_allocated()
         smu.mag_field(s, S2=2, h=1.0, Gamma=0.5, Gamma_y=0.0, isite=0)
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -149,15 +149,15 @@ class TestIntr:
         """intr should add an interaction entry."""
         s = _make_allocated()
         smu.intr(s, 1.0 + 0j, 0, 0, 0, 1, 1, 0, 1, 1)
-        assert s.nintr == 1
-        assert s.intr[0] == 1.0
-        assert list(s.intrindx[0]) == [0, 0, 0, 1, 1, 0, 1, 1]
+        assert len(s.intr_list) == 1
+        assert s.intr_list[0][0] == 1.0
+        assert list(s.intr_list[0][1:]) == [0, 0, 0, 1, 1, 0, 1, 1]
 
     def test_skip_tiny(self):
         """intr should skip entries with |intr0| < 1e-12."""
         s = _make_allocated()
         smu.intr(s, 1e-13, 0, 0, 0, 1, 1, 0, 1, 1)
-        assert s.nintr == 0
+        assert len(s.intr_list) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -172,10 +172,10 @@ class TestCoulomb:
         """coulomb should add a Coulomb interaction."""
         s = _make_allocated()
         smu.coulomb(s, V=2.5, isite=0, jsite=1)
-        assert s.NCinter == 1
-        assert s.Cinter[0] == 2.5
-        assert s.CinterIndx[0, 0] == 0
-        assert s.CinterIndx[0, 1] == 1
+        assert len(s.Cinter_list) == 1
+        assert s.Cinter_list[0][0] == 2.5
+        assert s.Cinter_list[0][1] == 0
+        assert s.Cinter_list[0][2] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -194,10 +194,10 @@ class TestGeneralJ:
         J[1, 1] = 1.0
         J[2, 2] = 1.0
         smu.general_j(s, J, Si2=1, Sj2=1, isite=0, jsite=1)
-        assert s.NHund == 1
-        assert s.NCinter == 1
-        assert s.NEx == 1
-        assert s.NPairLift == 1
+        assert len(s.Hund_list) == 1
+        assert len(s.Cinter_list) == 1
+        assert len(s.Ex_list) == 1
+        assert len(s.PairLift_list) == 1
 
     def test_spin_half_off_diagonal(self):
         """S=1/2 with off-diagonal J should use InterAll."""
@@ -208,10 +208,10 @@ class TestGeneralJ:
         J[1, 1] = 1.0
         J[2, 2] = 1.0
         smu.general_j(s, J, Si2=1, Sj2=1, isite=0, jsite=1)
-        assert s.NHund == 1
-        assert s.NCinter == 1
+        assert len(s.Hund_list) == 1
+        assert len(s.Cinter_list) == 1
         # Off-diagonal means ExGeneral stays 1, so nintr is used
-        assert s.nintr > 0
+        assert len(s.intr_list) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -392,31 +392,15 @@ class TestMallocInteractions:
     def test_arrays_allocated(self):
         """All interaction arrays should be properly allocated."""
         s = StdIntList()
-        smu.malloc_interactions(s, ntransMax=50, nintrMax=30)
-        assert s.transindx.shape == (50, 4)
-        assert s.trans.shape == (50,)
-        assert s.ntrans == 0
-        assert s.intrindx.shape == (30, 8)
-        assert s.intr.shape == (30,)
-        assert s.nintr == 0
-        assert s.CintraIndx.shape == (30, 1)
-        assert s.Cintra.shape == (30,)
-        assert s.NCintra == 0
-        assert s.CinterIndx.shape == (30, 2)
-        assert s.Cinter.shape == (30,)
-        assert s.NCinter == 0
-        assert s.HundIndx.shape == (30, 2)
-        assert s.Hund.shape == (30,)
-        assert s.NHund == 0
-        assert s.ExIndx.shape == (30, 2)
-        assert s.Ex.shape == (30,)
-        assert s.NEx == 0
-        assert s.PLIndx.shape == (30, 2)
-        assert s.PairLift.shape == (30,)
-        assert s.NPairLift == 0
-        assert s.PHIndx.shape == (30, 2)
-        assert s.PairHopp.shape == (30,)
-        assert s.NPairHopp == 0
+        smu.malloc_interactions(s, ntransMax=50)
+        assert len(s.trans_list) == 0
+        assert len(s.intr_list) == 0
+        assert len(s.Cintra_list) == 0
+        assert len(s.Cinter_list) == 0
+        assert len(s.Hund_list) == 0
+        assert len(s.Ex_list) == 0
+        assert len(s.PairLift_list) == 0
+        assert len(s.PairHopp_list) == 0
 
     def test_pump_arrays_hphi(self):
         """HPhi time-evolution mode should allocate pump arrays."""
@@ -425,7 +409,7 @@ class TestMallocInteractions:
         s.method = "timeevolution"
         s.PumpBody = 1
         s.Lanczos_max = 5
-        smu.malloc_interactions(s, ntransMax=20, nintrMax=10)
+        smu.malloc_interactions(s, ntransMax=20)
         assert s.npump.shape == (5,)
         assert s.pumpindx.shape == (5, 20, 4)
         assert s.pump.shape == (5, 20)

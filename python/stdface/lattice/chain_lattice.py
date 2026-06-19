@@ -161,20 +161,15 @@ def chain(StdI: StdIntList) -> "GnuplotData | None":
     # (3) Set local spin flag and the number of sites
     set_local_spin_flags(StdI, StdI.L)
 
-    # (4) Compute upper limit of Transfer & Interaction and allocate them
+    # (4) Compute upper limit of Transfer (for pump arrays) and allocate
     if StdI.model == ModelType.SPIN:
         ntransMax = StdI.L * (StdI.S2 + 1 + 2 * StdI.S2)
-        nintrMax = (StdI.L * (StdI.NsiteUC + 1 + 1 + 1)
-                    * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
     else:
         ntransMax = StdI.L * 2 * (2 * StdI.NsiteUC + 2 + 2 + 2)
-        nintrMax = StdI.L * (StdI.NsiteUC + 4 * (1 + 1 + 1))
-
         if StdI.model == ModelType.KONDO:
             ntransMax += StdI.L * (StdI.S2 + 1 + 2 * StdI.S2)
-            nintrMax += StdI.nsite // 2 * (3 * 1 + 1) * (3 * StdI.S2 + 1)
 
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
     for cell_l in range(StdI.L):

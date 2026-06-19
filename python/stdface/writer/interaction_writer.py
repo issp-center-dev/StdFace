@@ -27,6 +27,8 @@ from __future__ import annotations
 import logging
 from typing import NamedTuple
 
+import numpy as np
+
 from ..core.stdface_vals import StdIntList, AMPLITUDE_EPS
 
 logger = logging.getLogger(__name__)
@@ -153,9 +155,7 @@ def _write_interaction_file(
 
 def _process_interaction(
     StdI: StdIntList,
-    nterms_attr: str,
-    indx_attr: str,
-    coeff_attr: str,
+    list_attr: str,
     flag_attr: str,
     filename: str,
     count_label: str,
@@ -171,12 +171,9 @@ def _process_interaction(
     ----------
     StdI : StdIntList
         The central data structure.
-    nterms_attr : str
-        Name of the attribute holding the term count (e.g. ``"NCintra"``).
-    indx_attr : str
-        Name of the index-array attribute (e.g. ``"CintraIndx"``).
-    coeff_attr : str
-        Name of the coefficient-array attribute (e.g. ``"Cintra"``).
+    list_attr : str
+        Name of the term-list attribute (e.g. ``"Cintra_list"``); each entry
+        is ``(coeff, *site_indices)``.
     flag_attr : str
         Name of the output-flag attribute (e.g. ``"LCintra"``).
     filename : str
@@ -188,9 +185,10 @@ def _process_interaction(
     n_indices : int
         Number of site indices per term (1 or 2).
     """
-    nterms = getattr(StdI, nterms_attr)
-    indx = getattr(StdI, indx_attr)
-    coeff = getattr(StdI, coeff_attr)
+    terms = getattr(StdI, list_attr)
+    nterms = len(terms)
+    coeff = [t[0] for t in terms]
+    indx = [list(t[1:]) for t in terms]
 
     # Merge duplicates
     if n_indices == 1:
@@ -223,12 +221,8 @@ class _InteractionMeta(NamedTuple):
 
     Attributes
     ----------
-    nterms_attr : str
-        Name of the StdIntList attribute holding the term count.
-    indx_attr : str
-        Name of the index-array attribute.
-    coeff_attr : str
-        Name of the coefficient-array attribute.
+    list_attr : str
+        Name of the term-list attribute (e.g. ``"Cintra_list"``).
     flag_attr : str
         Name of the output-flag attribute.
     filename : str
@@ -241,9 +235,7 @@ class _InteractionMeta(NamedTuple):
         Number of site indices per term (1 or 2).
     """
 
-    nterms_attr: str
-    indx_attr: str
-    coeff_attr: str
+    list_attr: str
     flag_attr: str
     filename: str
     count_label: str
@@ -252,22 +244,22 @@ class _InteractionMeta(NamedTuple):
 
 
 _INTERACTION_TYPES: list[_InteractionMeta] = [
-    _InteractionMeta("NCintra", "CintraIndx", "Cintra", "LCintra",
+    _InteractionMeta("Cintra_list", "LCintra",
                      "coulombintra.def", "NCoulombIntra",
                      "================== CoulombIntra ================", 1),
-    _InteractionMeta("NCinter", "CinterIndx", "Cinter", "LCinter",
+    _InteractionMeta("Cinter_list", "LCinter",
                      "coulombinter.def", "NCoulombInter",
                      "================== CoulombInter ================", 2),
-    _InteractionMeta("NHund", "HundIndx", "Hund", "LHund",
+    _InteractionMeta("Hund_list", "LHund",
                      "hund.def", "NHund",
                      "=============== Hund coupling ===============", 2),
-    _InteractionMeta("NEx", "ExIndx", "Ex", "LEx",
+    _InteractionMeta("Ex_list", "LEx",
                      "exchange.def", "NExchange",
                      "====== ExchangeCoupling coupling ============", 2),
-    _InteractionMeta("NPairLift", "PLIndx", "PairLift", "LPairLift",
+    _InteractionMeta("PairLift_list", "LPairLift",
                      "pairlift.def", "NPairLift",
                      "====== Pair-Lift term ============", 2),
-    _InteractionMeta("NPairHopp", "PHIndx", "PairHopp", "LPairHopp",
+    _InteractionMeta("PairHopp_list", "LPairHopp",
                      "pairhopp.def", "NPairHopp",
                      "====== Pair-Hopping term ============", 2),
 ]
@@ -459,16 +451,22 @@ def _remove_interall_diagonal(
                 intr[jintr] = 0.0
 
 
-def _write_interall(StdI: StdIntList) -> None:
+def _write_interall(StdI: StdIntList, nintr, intr_indx, intr_val) -> None:
     """Count non-zero InterAll terms, set the flag, and write the file.
 
     Parameters
     ----------
     StdI : StdIntList
-        The central data structure.  ``nintr``, ``intrindx``, ``intr``,
-        ``lBoost``, and ``Lintr`` are accessed / modified.
+        The central data structure.  ``lBoost`` and ``Lintr`` are
+        accessed / modified.
+    nintr : int
+        Number of InterAll terms.
+    intr_indx : np.ndarray
+        ``(nintr, 8)`` site/spin index array.
+    intr_val : np.ndarray
+        ``(nintr,)`` complex coefficient array.
     """
-    nintr0 = _count_nonzero(StdI.nintr, StdI.intr)
+    nintr0 = _count_nonzero(nintr, intr_val)
 
     if nintr0 == 0 or StdI.lBoost == 1:
         StdI.Lintr = 0
@@ -483,10 +481,10 @@ def _write_interall(StdI: StdIntList) -> None:
                  "====================== \n"]
 
         if StdI.lBoost == 0:
-            for kintr in range(StdI.nintr):
-                val = StdI.intr[kintr]
+            for kintr in range(nintr):
+                val = intr_val[kintr]
                 if abs(val) > AMPLITUDE_EPS:
-                    i0, s0, i1, s1, i2, s2, i3, s3 = StdI.intrindx[kintr]
+                    i0, s0, i1, s1, i2, s2, i3, s3 = intr_indx[kintr]
                     lines.append(
                         f"{i0:5d} {s0:5d} "
                         f"{i1:5d} {s1:5d} "
@@ -531,9 +529,12 @@ def print_interactions(StdI: StdIntList) -> None:
         _process_interaction(StdI, **spec._asdict())
 
     # =================================================================
-    #  InterAll
+    #  InterAll (build numpy arrays from the list at the write boundary)
     # =================================================================
-    _merge_interall_equivalent(StdI.nintr, StdI.intrindx, StdI.intr)
-    _reorder_interall_hermitian(StdI.nintr, StdI.intrindx, StdI.intr)
-    _remove_interall_diagonal(StdI.nintr, StdI.intrindx, StdI.intr)
-    _write_interall(StdI)
+    nintr = len(StdI.intr_list)
+    intr_indx = np.array([t[1:9] for t in StdI.intr_list], dtype=int).reshape(nintr, 8)
+    intr_val = np.array([t[0] for t in StdI.intr_list], dtype=complex)
+    _merge_interall_equivalent(nintr, intr_indx, intr_val)
+    _reorder_interall_hermitian(nintr, intr_indx, intr_val)
+    _remove_interall_diagonal(nintr, intr_indx, intr_val)
+    _write_interall(StdI, nintr, intr_indx, intr_val)

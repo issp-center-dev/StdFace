@@ -200,7 +200,7 @@ def _assert_post_spin_setup(s: StdIntList, *, nsite_uc: int) -> None:
     assert s.NsiteUC == nsite_uc
     assert s.nsite == s.NCell * nsite_uc
     assert s.tau.shape == (nsite_uc, 3)
-    assert s.trans is not None and s.intr is not None
+    assert isinstance(s.trans_list, list) and isinstance(s.intr_list, list)
     assert s.locspinflag is not None and len(s.locspinflag) == s.nsite
 
 
@@ -385,7 +385,7 @@ class TestTetragonalHubbard:
         assert s.model == "hubbard"
         assert s.NCell == 4
         assert s.nsite == 4
-        assert s.ntrans > 0
+        assert len(s.trans_list) > 0
 
 
 # ---------------------------------------------------------------------------

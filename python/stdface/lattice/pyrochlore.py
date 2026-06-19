@@ -151,8 +151,8 @@ def pyrochlore(StdI: StdIntList) -> None:
 
     # (4) Compute upper limit of Transfer & Interaction
     #     nn=12 → n_bonds=12
-    ntransMax, nintrMax = compute_max_interactions(StdI, n_bonds=12)
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    ntransMax = compute_max_interactions(StdI, n_bonds=12)
+    malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
     for kCell in range(StdI.NCell):

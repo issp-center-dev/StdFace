@@ -63,8 +63,7 @@ def trans(
 ) -> None:
     """Add a transfer (one-body) term to the list.
 
-    Appends to ``StdI.trans`` and ``StdI.transindx`` and increments
-    ``StdI.ntrans``.
+    Appends ``(trans0, isite, ispin, jsite, jspin)`` to ``StdI.trans_list``.
 
     Parameters
     ----------
@@ -83,10 +82,7 @@ def trans(
     """
     if abs(trans0) < ZERO_BODY_EPS:
         return
-    n = StdI.ntrans
-    StdI.trans[n] = trans0
-    StdI.transindx[n] = [isite, ispin, jsite, jspin]
-    StdI.ntrans = n + 1
+    StdI.trans_list.append((trans0, isite, ispin, jsite, jspin))
 
 
 def hopping(
@@ -171,9 +167,7 @@ def hubbard_local(
     trans(StdI, -0.5 * 1j * Gamma0_y, isite, 1, isite, 0)
     trans(StdI, 0.5 * 1j * Gamma0_y, isite, 0, isite, 1)
 
-    StdI.Cintra[StdI.NCintra] = U0
-    StdI.CintraIndx[StdI.NCintra][0] = isite
-    StdI.NCintra += 1
+    StdI.Cintra_list.append((U0, isite))
 
 
 def mag_field(
@@ -227,8 +221,7 @@ def intr(
 ) -> None:
     """Add a general two-body (InterAll) interaction term to the list.
 
-    Appends to ``StdI.intr`` and ``StdI.intrindx`` and increments
-    ``StdI.nintr``.
+    Appends ``(intr0, i1, s1, i2, s2, i3, s3, i4, s4)`` to ``StdI.intr_list``.
 
     Parameters
     ----------
@@ -247,10 +240,8 @@ def intr(
     """
     if abs(intr0) < ZERO_BODY_EPS:
         return
-    n = StdI.nintr
-    StdI.intr[n] = intr0
-    StdI.intrindx[n] = [site1, spin1, site2, spin2, site3, spin3, site4, spin4]
-    StdI.nintr = n + 1
+    StdI.intr_list.append(
+        (intr0, site1, spin1, site2, spin2, site3, spin3, site4, spin4))
 
 
 def _spin_ladder_factor(S: float, Sz: float) -> float:
@@ -306,16 +297,10 @@ def _add_spin_half_terms(
         respectively.
     """
     # Hund: -0.5 * Jzz
-    n = StdI.NHund
-    StdI.Hund[n] = -0.5 * J[2, 2]
-    StdI.HundIndx[n] = [isite, jsite]
-    StdI.NHund = n + 1
+    StdI.Hund_list.append((-0.5 * J[2, 2], isite, jsite))
 
     # Cinter: -0.25 * Jzz
-    n = StdI.NCinter
-    StdI.Cinter[n] = -0.25 * J[2, 2]
-    StdI.CinterIndx[n] = [isite, jsite]
-    StdI.NCinter = n + 1
+    StdI.Cinter_list.append((-0.25 * J[2, 2], isite, jsite))
 
     # Check whether off-diagonal J elements allow Ex/PairLift shortcut
     cond_offdiag = (abs(J[0, 1]) < AMPLITUDE_EPS and abs(J[1, 0]) < AMPLITUDE_EPS)
@@ -327,17 +312,13 @@ def _add_spin_half_terms(
 
     # Exchange
     if StdI.solver == SolverType.mVMC or StdI.model == ModelType.KONDO:
-        StdI.Ex[StdI.NEx] = -0.25 * (J[0, 0] + J[1, 1])
+        ex_val = -0.25 * (J[0, 0] + J[1, 1])
     else:
-        StdI.Ex[StdI.NEx] = 0.25 * (J[0, 0] + J[1, 1])
-    StdI.ExIndx[StdI.NEx] = [isite, jsite]
-    StdI.NEx += 1
+        ex_val = 0.25 * (J[0, 0] + J[1, 1])
+    StdI.Ex_list.append((ex_val, isite, jsite))
 
     # Pair lift
-    n = StdI.NPairLift
-    StdI.PairLift[n] = 0.25 * (J[0, 0] - J[1, 1])
-    StdI.PLIndx[n] = [isite, jsite]
-    StdI.NPairLift = n + 1
+    StdI.PairLift_list.append((0.25 * (J[0, 0] - J[1, 1]), isite, jsite))
 
     return False, False  # both handled by shortcut
 
@@ -456,22 +437,22 @@ def coulomb(StdI: StdIntList, V: float, isite: int, jsite: int) -> None:
     jsite : int
         Second site index.
     """
-    n = StdI.NCinter
-    StdI.Cinter[n] = V
-    StdI.CinterIndx[n] = [isite, jsite]
-    StdI.NCinter = n + 1
+    StdI.Cinter_list.append((V, isite, jsite))
 
 
 def compute_max_interactions(
     StdI: StdIntList,
     n_bonds: int,
-) -> tuple[int, int]:
-    """Compute upper limits for the transfer and interaction arrays.
+) -> int:
+    """Compute the upper limit on the number of transfer terms.
 
     Uses the standard formula shared by most lattice builders.  The
     lattice-specific information is captured by *n_bonds*, the total
     number of distinct neighbor bond types per unit cell (sum of
     nearest, next-nearest, and third-nearest neighbor bonds).
+
+    The result is only used to size the HPhi time-evolution pump arrays;
+    the transfer and interaction terms themselves are list-based.
 
     Parameters
     ----------
@@ -484,41 +465,32 @@ def compute_max_interactions(
 
     Returns
     -------
-    tuple of (int, int)
-        ``(ntransMax, nintrMax)`` — upper limits for allocation.
+    int
+        ``ntransMax`` — upper limit on the number of transfer terms.
     """
     if StdI.model == ModelType.SPIN:
         ntransMax = StdI.nsite * (StdI.S2 + 1 + 2 * StdI.S2)
-        nintrMax = (StdI.NCell * (StdI.NsiteUC + n_bonds)
-                    * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
     else:
         ntransMax = StdI.NCell * 2 * (2 * StdI.NsiteUC + 2 * n_bonds)
-        nintrMax = StdI.NCell * (StdI.NsiteUC + 4 * n_bonds)
         if StdI.model == ModelType.KONDO:
             ntransMax += StdI.nsite // 2 * (StdI.S2 + 1 + 2 * StdI.S2)
-            nintrMax += (StdI.nsite // 2
-                         * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
-    return ntransMax, nintrMax
+    return ntransMax
 
 
-def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None:
-    """Allocate arrays for interactions.
+def malloc_interactions(StdI: StdIntList, ntransMax: int) -> None:
+    """Allocate the HPhi time-evolution pump arrays, if needed.
+
+    Transfer and interaction terms are list-based (see ``trans_list`` /
+    ``intr_list``), so no allocation is required for them.  ``ntransMax``
+    is only used to size the pump arrays.
 
     Parameters
     ----------
     StdI : StdIntList
         Model parameter structure (modified in-place).
     ntransMax : int
-        Upper limit of the number of transfer terms.
-    nintrMax : int
-        Upper limit of the number of interaction terms.
+        Upper limit on the number of transfer terms.
     """
-    # (1) Transfer
-    StdI.transindx = np.zeros((ntransMax, 4), dtype=int)
-    StdI.trans = np.zeros(ntransMax, dtype=complex)
-    StdI.ntrans = 0
-
-    # HPhi pump arrays
     if (StdI.solver == SolverType.HPhi
             and StdI.method == MethodType.TIME_EVOLUTION
             and StdI.PumpBody == 1):
@@ -526,24 +498,13 @@ def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None
         StdI.pumpindx = np.zeros((StdI.Lanczos_max, ntransMax, 4), dtype=int)
         StdI.pump = np.zeros((StdI.Lanczos_max, ntransMax), dtype=complex)
 
-    # (2) InterAll
-    StdI.intrindx = np.zeros((nintrMax, 8), dtype=int)
-    StdI.intr = np.zeros(nintrMax, dtype=complex)
-    StdI.nintr = 0
-
-    # (3)-(8) Two-body shortcut arrays: (indx_attr, val_attr, count_attr, ncols)
-    _SHORTCUT_ARRAYS = (
-        ("CintraIndx", "Cintra",   "NCintra",    1),
-        ("CinterIndx", "Cinter",   "NCinter",    2),
-        ("HundIndx",   "Hund",     "NHund",      2),
-        ("ExIndx",     "Ex",       "NEx",        2),
-        ("PLIndx",     "PairLift", "NPairLift",  2),
-        ("PHIndx",     "PairHopp", "NPairHopp",  2),
-    )
-    for indx_attr, val_attr, count_attr, ncols in _SHORTCUT_ARRAYS:
-        setattr(StdI, indx_attr, np.zeros((nintrMax, ncols), dtype=int))
-        setattr(StdI, val_attr, np.zeros(nintrMax))
-        setattr(StdI, count_attr, 0)
+    # (3)-(8) Two-body shortcut term lists (A1: list-based)
+    StdI.Cintra_list = []
+    StdI.Cinter_list = []
+    StdI.Hund_list = []
+    StdI.Ex_list = []
+    StdI.PairLift_list = []
+    StdI.PairHopp_list = []
 
 
 def _dispatch_bond_interaction(

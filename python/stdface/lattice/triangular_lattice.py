@@ -162,8 +162,8 @@ def triangular(StdI: StdIntList) -> "GnuplotData | None":
 
     # (4) Compute upper limit of Transfer & Interaction
     #     nn=3, nnn=3, nnnn=3 → n_bonds=9
-    ntransMax, nintrMax = compute_max_interactions(StdI, n_bonds=3 + 3 + 3)
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    ntransMax = compute_max_interactions(StdI, n_bonds=3 + 3 + 3)
+    malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
     for kCell in range(StdI.NCell):

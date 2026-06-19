@@ -146,8 +146,8 @@ def orthorhombic(StdI: StdIntList) -> None:
 
     # (4) Compute upper limit of Transfer & Interaction
     #     nn=3, nnn=6, nnnn=4 → n_bonds=13
-    ntransMax, nintrMax = compute_max_interactions(StdI, n_bonds=3 + 6 + 4)
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    ntransMax = compute_max_interactions(StdI, n_bonds=3 + 6 + 4)
+    malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
     for kCell in range(StdI.NCell):

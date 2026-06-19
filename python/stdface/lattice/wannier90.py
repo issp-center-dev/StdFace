@@ -736,12 +736,8 @@ def _apply_hopping_terms(
             if StdI.model == ModelType.HUBBARD:
                 isite = StdI.NsiteUC * kCell + int(tUJindx[0][it, 3])
                 for ispin in range(2):
-                    StdI.trans[StdI.ntrans] = -tUJ[0][it]
-                    StdI.transindx[StdI.ntrans, 0] = isite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = isite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (-tUJ[0][it], isite, ispin, isite, ispin))
         else:
             # Non-local term
             isite, jsite, Cphase, dR = find_site(
@@ -806,11 +802,10 @@ def _apply_coulomb_terms(
         if (tUJindx[1][it, 0] == 0 and tUJindx[1][it, 1] == 0
                 and tUJindx[1][it, 2] == 0
                 and tUJindx[1][it, 3] == tUJindx[1][it, 4]):
-            StdI.Cintra[StdI.NCintra] = tUJ[1][it].real
-            StdI.CintraIndx[StdI.NCintra, 0] = (
-                StdI.NsiteUC * kCell + int(tUJindx[1][it, 3])
-            )
-            StdI.NCintra += 1
+            StdI.Cintra_list.append((
+                tUJ[1][it].real,
+                StdI.NsiteUC * kCell + int(tUJindx[1][it, 3]),
+            ))
 
             # Double-counting correction
             if idcmode != _DCMode.NOTCORRECT:
@@ -819,14 +814,9 @@ def _apply_coulomb_terms(
                     DenMat0 = DenMat[(0, 0, 0)][
                         int(tUJindx[1][it, 3]), int(tUJindx[1][it, 3])
                     ]
-                    StdI.trans[StdI.ntrans] = (
-                        StdI.alpha * tUJ[1][it].real * DenMat0
-                    )
-                    StdI.transindx[StdI.ntrans, 0] = isite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = isite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (StdI.alpha * tUJ[1][it].real * DenMat0,
+                         isite, ispin, isite, ispin))
         else:
             # Non-local term
             isite, jsite, Cphase, dR = find_site(
@@ -844,23 +834,15 @@ def _apply_coulomb_terms(
                     DenMat0 = DenMat[(0, 0, 0)][
                         int(tUJindx[1][it, 4]), int(tUJindx[1][it, 4])
                     ]
-                    StdI.trans[StdI.ntrans] = tUJ[1][it].real * DenMat0
-                    StdI.transindx[StdI.ntrans, 0] = isite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = isite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (tUJ[1][it].real * DenMat0, isite, ispin, isite, ispin))
 
                     # U_{Rij} D_{0ii} (Local)
                     DenMat0 = DenMat[(0, 0, 0)][
                         int(tUJindx[1][it, 3]), int(tUJindx[1][it, 3])
                     ]
-                    StdI.trans[StdI.ntrans] = tUJ[1][it].real * DenMat0
-                    StdI.transindx[StdI.ntrans, 0] = jsite
-                    StdI.transindx[StdI.ntrans, 1] = ispin
-                    StdI.transindx[StdI.ntrans, 2] = jsite
-                    StdI.transindx[StdI.ntrans, 3] = ispin
-                    StdI.ntrans += 1
+                    StdI.trans_list.append(
+                        (tUJ[1][it].real * DenMat0, jsite, ispin, jsite, ispin))
 
                 # Hartree-Fock correction
                 if idcmode == _DCMode.FULL:
@@ -930,21 +912,11 @@ def _apply_hund_terms(
                 int(tUJindx[2][it, 3]), int(tUJindx[2][it, 4]),
             )
 
-            StdI.Hund[StdI.NHund] = tUJ[2][it].real
-            StdI.HundIndx[StdI.NHund, 0] = isite
-            StdI.HundIndx[StdI.NHund, 1] = jsite
-            StdI.NHund += 1
+            StdI.Hund_list.append((tUJ[2][it].real, isite, jsite))
 
             if StdI.model == ModelType.HUBBARD:
-                StdI.Ex[StdI.NEx] = tUJ[2][it].real
-                StdI.ExIndx[StdI.NEx, 0] = isite
-                StdI.ExIndx[StdI.NEx, 1] = jsite
-                StdI.NEx += 1
-
-                StdI.PairHopp[StdI.NPairHopp] = tUJ[2][it].real
-                StdI.PHIndx[StdI.NPairHopp, 0] = isite
-                StdI.PHIndx[StdI.NPairHopp, 1] = jsite
-                StdI.NPairHopp += 1
+                StdI.Ex_list.append((tUJ[2][it].real, isite, jsite))
+                StdI.PairHopp_list.append((tUJ[2][it].real, isite, jsite))
 
                 # Double-counting correction
                 if idcmode != _DCMode.NOTCORRECT and idcmode != _DCMode.HARTREE_U:
@@ -953,27 +925,17 @@ def _apply_hund_terms(
                         DenMat0 = DenMat[(0, 0, 0)][
                             int(tUJindx[2][it, 4]), int(tUJindx[2][it, 4])
                         ]
-                        StdI.trans[StdI.ntrans] = (
-                            -(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0
-                        )
-                        StdI.transindx[StdI.ntrans, 0] = isite
-                        StdI.transindx[StdI.ntrans, 1] = ispin
-                        StdI.transindx[StdI.ntrans, 2] = isite
-                        StdI.transindx[StdI.ntrans, 3] = ispin
-                        StdI.ntrans += 1
+                        StdI.trans_list.append(
+                            (-(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0,
+                             isite, ispin, isite, ispin))
 
                         # -0.5 J_{Rij} D_{0ii}
                         DenMat0 = DenMat[(0, 0, 0)][
                             int(tUJindx[2][it, 3]), int(tUJindx[2][it, 3])
                         ]
-                        StdI.trans[StdI.ntrans] = (
-                            -(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0
-                        )
-                        StdI.transindx[StdI.ntrans, 0] = jsite
-                        StdI.transindx[StdI.ntrans, 1] = ispin
-                        StdI.transindx[StdI.ntrans, 2] = jsite
-                        StdI.transindx[StdI.ntrans, 3] = ispin
-                        StdI.ntrans += 1
+                        StdI.trans_list.append(
+                            (-(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0,
+                             jsite, ispin, jsite, ispin))
 
                     # Hartree-Fock correction
                     if idcmode == _DCMode.FULL:
@@ -994,12 +956,10 @@ def _apply_hund_terms(
             else:
                 # spin model
                 if StdI.solver == SolverType.mVMC:
-                    StdI.Ex[StdI.NEx] = tUJ[2][it].real
+                    ex_val = tUJ[2][it].real
                 else:
-                    StdI.Ex[StdI.NEx] = -tUJ[2][it].real
-                StdI.ExIndx[StdI.NEx, 0] = isite
-                StdI.ExIndx[StdI.NEx, 1] = jsite
-                StdI.NEx += 1
+                    ex_val = -tUJ[2][it].real
+                StdI.Ex_list.append((ex_val, isite, jsite))
 
 
 # ---------------------------------------------------------------------------
@@ -1063,20 +1023,16 @@ def _build_wannier_interactions(
     DenMat : dict or None
         Density matrix (keyed by ``(R0, R1, R2)``), or ``None``.
     """
-    # Compute upper limits for Transfer & Interaction arrays
+    # Compute upper limit on the number of transfer terms (for pump arrays)
     if StdI.model == ModelType.SPIN:
         ntransMax = StdI.nsite * (StdI.S2 + 1 + 2 * StdI.S2)
-        nintrMax = StdI.NCell * (
-            StdI.NsiteUC + NtUJ[0] + NtUJ[1] + NtUJ[2]
-        ) * (3 * StdI.S2 + 1) * (3 * StdI.S2 + StdI.NsiteUC)
     elif StdI.model == ModelType.HUBBARD:
         ntransMax = StdI.NCell * 2 * (
             2 * StdI.NsiteUC + NtUJ[0] * 2
             + NtUJ[1] * 2 * 3 + NtUJ[2] * 2 * 2
         )
-        nintrMax = StdI.NCell * (NtUJ[1] + NtUJ[2] + StdI.NsiteUC)
 
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    malloc_interactions(StdI, ntransMax)
 
     # For spin systems, compute super-exchange interaction on-site U
     Uspin = None

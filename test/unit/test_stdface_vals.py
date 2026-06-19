@@ -53,8 +53,8 @@ class TestStdIntListDefaults:
         assert s.NCell == 0
         assert s.NsiteUC == 0
         assert s.nsite == 0
-        assert s.ntrans == 0
-        assert s.nintr == 0
+        assert len(s.trans_list) == 0
+        assert len(s.intr_list) == 0
 
     def test_float_defaults(self):
         """Float fields should default to 0.0."""
@@ -81,22 +81,13 @@ class TestStdIntListDefaults:
         assert s.Cell is None
         assert s.tau is None
         assert s.locspinflag is None
-        assert s.transindx is None
-        assert s.trans is None
-        assert s.intrindx is None
-        assert s.intr is None
-        assert s.CintraIndx is None
-        assert s.Cintra is None
-        assert s.CinterIndx is None
-        assert s.Cinter is None
-        assert s.HundIndx is None
-        assert s.Hund is None
-        assert s.ExIndx is None
-        assert s.Ex is None
-        assert s.PLIndx is None
-        assert s.PairLift is None
-        assert s.PHIndx is None
-        assert s.PairHopp is None
+        assert s.trans_list == []
+        assert s.Cintra_list == []
+        assert s.Cinter_list == []
+        assert s.Hund_list == []
+        assert s.Ex_list == []
+        assert s.PairLift_list == []
+        assert s.PairHopp_list == []
 
 
 class TestStdIntListArrayShapes:

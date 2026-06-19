@@ -145,8 +145,8 @@ def fc_ortho(StdI: StdIntList) -> None:
 
     # (4) Compute upper limit of Transfer & Interaction
     #     nn=6, nnn=3 → n_bonds=9
-    ntransMax, nintrMax = compute_max_interactions(StdI, n_bonds=6 + 3)
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    ntransMax = compute_max_interactions(StdI, n_bonds=6 + 3)
+    malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
     for kCell in range(StdI.NCell):

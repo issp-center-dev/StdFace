@@ -154,24 +154,16 @@ def ladder(StdI: StdIntList) -> "GnuplotData | None":
     # 3. Set local spin flags and number of sites
     set_local_spin_flags(StdI, StdI.L * StdI.NsiteUC)
 
-    # 4. Calculate maximum number of interactions and allocate arrays
+    # 4. Calculate maximum number of transfer terms (for pump arrays) and allocate
     if StdI.model == ModelType.SPIN:
         ntransMax = StdI.L * StdI.NsiteUC * (StdI.S2 + 1 + 2 * StdI.S2)
-        nintrMax = (StdI.L * StdI.NsiteUC * (1 + 1 + 1)
-                    * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1)
-                    + StdI.L * (StdI.NsiteUC - 1) * (1 + 1 + 1)
-                    * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
     else:
         ntransMax = (StdI.L * StdI.NsiteUC * 2 * (2 + 2 + 2)
                      + StdI.L * (StdI.NsiteUC - 1) * 2 * (2 + 2 + 2))
-        nintrMax = (StdI.L * StdI.NsiteUC * 1
-                    + StdI.L * StdI.NsiteUC * 4 * (1 + 1)
-                    + StdI.L * (StdI.NsiteUC - 1) * 4 * (1 + 1 + 1))
         if StdI.model == ModelType.KONDO:
             ntransMax += StdI.L * StdI.NsiteUC * (StdI.S2 + 1 + 2 * StdI.S2)
-            nintrMax += StdI.nsite // 2 * (3 * 1 + 1) * (3 * StdI.S2 + 1)
 
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    malloc_interactions(StdI, ntransMax)
 
     # 5. Set all interactions
     for cell_l in range(StdI.L):

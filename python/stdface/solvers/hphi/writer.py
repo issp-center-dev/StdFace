@@ -206,13 +206,13 @@ def large_value(StdI: StdIntList) -> None:
           (unless the user already specified it).
     """
     large_value0 = (
-        np.sum(np.abs(StdI.trans[:StdI.ntrans]))
-        + np.sum(np.abs(StdI.intr[:StdI.nintr]))
-        + np.sum(np.abs(StdI.Cintra[:StdI.NCintra]))
-        + np.sum(np.abs(StdI.Cinter[:StdI.NCinter]))
-        + 2.0 * np.sum(np.abs(StdI.Ex[:StdI.NEx]))
-        + 2.0 * np.sum(np.abs(StdI.PairLift[:StdI.NPairLift]))
-        + 2.0 * np.sum(np.abs(StdI.Hund[:StdI.NHund]))
+        sum(abs(t[0]) for t in StdI.trans_list)
+        + sum(abs(t[0]) for t in StdI.intr_list)
+        + sum(abs(t[0]) for t in StdI.Cintra_list)
+        + sum(abs(t[0]) for t in StdI.Cinter_list)
+        + 2.0 * sum(abs(t[0]) for t in StdI.Ex_list)
+        + 2.0 * sum(abs(t[0]) for t in StdI.PairLift_list)
+        + 2.0 * sum(abs(t[0]) for t in StdI.Hund_list)
     )
 
     large_value0 /= float(StdI.nsite)

@@ -175,12 +175,12 @@ def print_trans(StdI: StdIntList) -> None:
         The global parameter structure.  The following fields are read
         and (for merging) modified **in place**:
 
-        - ``ntrans`` : int -- number of registered transfer terms.
-        - ``transindx`` : 2-D array of int, shape ``(ntrans, 4)`` --
-          site/spin indices ``(i, s_i, j, s_j)`` for each term.
-        - ``trans`` : 1-D array of complex -- transfer amplitudes.
+        - ``trans_list`` : list of ``(amp, i, s_i, j, s_j)`` tuples.
     """
-    ntrans0 = _merge_duplicate_terms(StdI.transindx, StdI.trans, StdI.ntrans)
+    ntrans = len(StdI.trans_list)
+    vals = np.array([t[0] for t in StdI.trans_list], dtype=complex)
+    indx = np.array([t[1:5] for t in StdI.trans_list], dtype=int).reshape(ntrans, 4)
+    ntrans0 = _merge_duplicate_terms(indx, vals, ntrans)
 
     # --- write file ---
     lines = ["======================== \n",
@@ -188,10 +188,10 @@ def print_trans(StdI: StdIntList) -> None:
              "======================== \n",
              "========i_j_s_tijs====== \n",
              "======================== \n"]
-    for ktrans in range(StdI.ntrans):
-        val = StdI.trans[ktrans]
+    for ktrans in range(ntrans):
+        val = vals[ktrans]
         if abs(val) > AMPLITUDE_EPS:
-            i0, s0, i1, s1 = StdI.transindx[ktrans]
+            i0, s0, i1, s1 = indx[ktrans]
             lines.append(
                 f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
                 f"{val.real:25.15f} {val.imag:25.15f}\n"
