@@ -858,10 +858,14 @@ class TestWannier90Hubbard:
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
 
-        assert (tmp_path / "lattice.xsf").exists()
         assert (tmp_path / "wan2site.dat").exists()
-        # geometry.dat is now an independent lattice output (build_geometry,
-        # written by the main flow), no longer a side effect of setup.
+        # lattice.xsf and geometry.dat are now independent lattice outputs
+        # (build_xsf / build_geometry, written by the main flow), no longer
+        # side effects of setup.
+        from stdface.lattice.geometry_output import build_xsf
+        assert not (tmp_path / "lattice.xsf").exists()
+        build_xsf(s).write(tmp_path)
+        assert (tmp_path / "lattice.xsf").exists()
 
     def test_hubbard_defaults(self, tmp_path):
         """Default values should be applied for h, Gamma, etc."""

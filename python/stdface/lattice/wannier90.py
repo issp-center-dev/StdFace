@@ -28,7 +28,6 @@ import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, AMPLITUDE_EPS
 from ..core.param_check import print_val_d, print_val_i, not_used_d
-from .geometry_output import print_geometry, print_xsf
 from .interaction_builder import (
     malloc_interactions, mag_field, general_j, hubbard_local, hopping, coulomb,
 )
@@ -1215,7 +1214,8 @@ def wannier90(StdI: StdIntList) -> None:
     4. Set local spin flags and number of sites.
     5. Allocate memory for interactions.
     6. Set up transfers and interactions between sites.
-    7. Write ``lattice.xsf``, ``geometry.dat`` and ``wan2site.dat``.
+    7. Write ``wan2site.dat`` (``lattice.xsf`` is emitted on the
+       lattice-level independent path in the main flow).
     """
     NtUJ = [0, 0, 0]
     tUJ: list = [None, None, None]
@@ -1267,7 +1267,9 @@ def wannier90(StdI: StdIntList) -> None:
 
     if idcmode != _DCMode.NOTCORRECT:
         _print_uhf_initial(StdI, NtUJ, tUJ, DenMat, tUJindx)
-    print_xsf(StdI)
+
+    # lattice.xsf is emitted on the lattice-level independent path
+    # (build_xsf in the main flow), not here.
 
     # Write wan2site.dat
     _write_wan2site(StdI)
