@@ -8,7 +8,7 @@ The user passes ``--solver HWAVE``; ``_resolve_solver_name`` then maps it to
 from __future__ import annotations
 
 from ...plugin import SolverPlugin, WannierModeSolverPlugin, register
-from ...core.stdface_vals import StdIntList, SolverType, NaN_i, NaN_d
+from ...core.stdface_vals import StdIntList, SolverType, NaN_i
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d, store_with_check_dup_sl,
     _grid3x3_keywords,

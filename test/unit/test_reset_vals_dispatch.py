@@ -23,8 +23,6 @@ from stdface.core.stdface_main import (
     _apply_field_resets,
     _reset_vals,
     NaN_i,
-    NaN_d,
-    NaN_c,
 )
 from stdface.core.stdface_vals import StdIntList, SolverType
 

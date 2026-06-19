@@ -31,12 +31,14 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import logging
+
+import numpy as np
 from collections.abc import Callable
 from typing import NamedTuple
 
 from .stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
-    NaN_i, NaN_d, NaN_c,
+    NaN_i,
 )
 from ..solvers.hphi.writer import (
     vector_potential as _vector_potential,
@@ -190,7 +192,7 @@ METHOD_ALIASES: dict[str, MethodType] = {
 """Maps HPhi method name aliases to their canonical forms."""
 
 # Sentinel constants imported from stdface_vals:
-# NaN_i (int matrices), NaN_d, NaN_c
+# NaN_i (int matrices); float matrices use np.nan
 
 
 # ===================================================================
@@ -208,7 +210,7 @@ METHOD_ALIASES: dict[str, MethodType] = {
 # ===================================================================
 #
 #  _COMMON_RESET_SCALARS lists (field_name, sentinel_value) pairs for
-#  scalar fields that are reset to NaN_d, NaN_i, or NaN_c by every
+#  scalar fields that are reset to None by every
 #  call to _reset_vals().  These replace ~80 individual ``StdI.x = val``
 #  assignments.
 
@@ -288,31 +290,31 @@ _COMMON_RESET_SCALARS: list[tuple[str, object]] = [
 
 _COMMON_RESET_ARRAYS: list[tuple[str, object]] = [
     # Lattice vectors
-    ("length", NaN_d),
+    ("length", np.nan),
     ("box", NaN_i),
-    ("direct", NaN_d),
+    ("direct", np.nan),
     # 3x3 spin coupling matrices
-    ("J", NaN_d),
-    ("Jp", NaN_d),
-    ("Jpp", NaN_d),
-    ("J0", NaN_d),
-    ("J0p", NaN_d),
-    ("J0pp", NaN_d),
-    ("J1", NaN_d),
-    ("J1p", NaN_d),
-    ("J1pp", NaN_d),
-    ("J2", NaN_d),
-    ("J2p", NaN_d),
-    ("J2pp", NaN_d),
+    ("J", np.nan),
+    ("Jp", np.nan),
+    ("Jpp", np.nan),
+    ("J0", np.nan),
+    ("J0p", np.nan),
+    ("J0pp", np.nan),
+    ("J1", np.nan),
+    ("J1p", np.nan),
+    ("J1pp", np.nan),
+    ("J2", np.nan),
+    ("J2p", np.nan),
+    ("J2pp", np.nan),
     # Phase / boundary
-    ("phase", NaN_d),
+    ("phase", np.nan),
     # Wannier90 cutoff vectors
     ("cutoff_tR", NaN_i),
     ("cutoff_UR", NaN_i),
     ("cutoff_JR", NaN_i),
-    ("cutoff_tVec", NaN_d),
-    ("cutoff_UVec", NaN_d),
-    ("cutoff_JVec", NaN_d),
+    ("cutoff_tVec", np.nan),
+    ("cutoff_UVec", np.nan),
+    ("cutoff_JVec", np.nan),
 ]
 """Common array-fill field resets — ``getattr(StdI, name)[...] = value``."""
 
@@ -395,8 +397,8 @@ _SOLVER_RESET_SCALARS: dict[SolverType, list[tuple[str, object]]] = {
 
 _SOLVER_RESET_ARRAYS: dict[SolverType, list[tuple[str, object]]] = {
     SolverType.HPhi: [
-        ("SpectrumQ", NaN_d),
-        ("VecPot", NaN_d),
+        ("SpectrumQ", np.nan),
+        ("VecPot", np.nan),
     ],
     SolverType.mVMC: [
         ("boxsub", NaN_i),
@@ -465,9 +467,9 @@ def _reset_vals(StdI: StdIntList) -> None:
     for name, value in _COMMON_RESET_ARRAYS:
         getattr(StdI, name)[...] = value
 
-    # --- D matrix: zero everywhere except D[2][2] = NaN_d -------------------
+    # --- D matrix: zero everywhere except D[2][2] = NaN -------------------
     StdI.D[:, :] = 0.0
-    StdI.D[2, 2] = NaN_d
+    StdI.D[2, 2] = np.nan
 
     # --- Solver-specific fields (table-driven) ------------------------------
     _apply_field_resets(StdI, StdI.solver)

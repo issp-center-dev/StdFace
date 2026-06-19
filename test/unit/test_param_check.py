@@ -20,7 +20,7 @@ from stdface.core.param_check import (
     not_used_i,
     required_val_i,
 )
-from stdface.core.stdface_vals import NaN_d
+NaN_d = float("nan")
 
 
 class TestPrintValD:

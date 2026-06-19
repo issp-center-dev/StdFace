@@ -9,7 +9,7 @@ import pytest
 
 from stdface.core.stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
-    NaN_i, NaN_d, NaN_c,
+    NaN_i,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
     is_unset_or_trivial_d,
 )
@@ -19,7 +19,10 @@ class TestIsUnsetOrTrivialD:
     """Tests for is_unset_or_trivial_d (helper for SolverPlugin.validate)."""
 
     def test_nan_is_unset(self):
-        assert is_unset_or_trivial_d(NaN_d) is True
+        assert is_unset_or_trivial_d(float("nan")) is True
+
+    def test_none_is_unset(self):
+        assert is_unset_or_trivial_d(None) is True
 
     def test_zero_is_trivial(self):
         assert is_unset_or_trivial_d(0.0) is True
@@ -449,7 +452,11 @@ class TestMethodType:
 
 
 class TestSentinelConstants:
-    """Tests for the module-level sentinel constants."""
+    """Tests for the surviving sentinel constant.
+
+    A2 removed NaN_d / NaN_c / UNSET_STRING; only NaN_i remains, used as
+    the unset marker for integer matrices (box / cutoff_*R / boxsub).
+    """
 
     def test_nan_i_value(self):
         """NaN_i should be INT_MAX (2147483647) -- kept for integer matrices."""
@@ -459,33 +466,12 @@ class TestSentinelConstants:
         """NaN_i should be an int."""
         assert isinstance(NaN_i, int)
 
-    def test_nan_d_is_nan(self):
-        """NaN_d should be IEEE NaN."""
-        import math
-        assert math.isnan(NaN_d)
-
-    def test_nan_d_type(self):
-        """NaN_d should be a float."""
-        assert isinstance(NaN_d, float)
-
-    def test_nan_c_real_is_nan(self):
-        """NaN_c should have NaN real part."""
-        import math
-        assert math.isnan(NaN_c.real)
-
-    def test_nan_c_imag_is_zero(self):
-        """NaN_c should have zero imaginary part."""
-        assert NaN_c.imag == 0.0
-
-    def test_nan_c_type(self):
-        """NaN_c should be a complex."""
-        assert isinstance(NaN_c, complex)
-
-    def test_sentinels_are_distinct(self):
-        """The three numeric sentinels should have different types."""
-        assert type(NaN_i) is int
-        assert type(NaN_d) is float
-        assert type(NaN_c) is complex
+    def test_removed_sentinels_are_gone(self):
+        """NaN_d / NaN_c / UNSET_STRING were removed in A2."""
+        import stdface.core.stdface_vals as vals
+        assert not hasattr(vals, "NaN_d")
+        assert not hasattr(vals, "NaN_c")
+        assert not hasattr(vals, "UNSET_STRING")
 
 
 class TestNumericalTolerances:

@@ -5,8 +5,10 @@ post-lattice hooks (LargeValue, Boost), and Expert-mode file writing.
 """
 from __future__ import annotations
 
+import numpy as np
+
 from ...plugin import ExpertModeSolverPlugin, register
-from ...core.stdface_vals import StdIntList, SolverType, MethodType, NaN_d
+from ...core.stdface_vals import StdIntList, SolverType, MethodType
 from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_sl,
     store_with_check_dup_i, store_with_check_dup_d,
@@ -149,8 +151,8 @@ _RESET_SCALARS: list[tuple[str, object]] = [
 ]
 
 _RESET_ARRAYS: list[tuple[str, object]] = [
-    ("SpectrumQ", NaN_d),
-    ("VecPot", NaN_d),
+    ("SpectrumQ", np.nan),
+    ("VecPot", np.nan),
 ]
 
 

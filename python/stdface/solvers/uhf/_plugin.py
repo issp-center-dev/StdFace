@@ -6,7 +6,7 @@ and Expert-mode file writing.
 from __future__ import annotations
 
 from ...plugin import ExpertModeSolverPlugin, register
-from ...core.stdface_vals import StdIntList, SolverType, NaN_i, NaN_d
+from ...core.stdface_vals import StdIntList, SolverType, NaN_i
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d,
     _grid3x3_keywords,

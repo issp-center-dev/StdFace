@@ -117,18 +117,12 @@ class MethodType(str, Enum):
 NaN_i: int = 2147483647
 """Sentinel for an unset integer parameter (same as ``INT_MAX`` in C)."""
 
-NaN_d: float = float("nan")
-"""Sentinel for an unset float parameter (IEEE NaN)."""
-
-NaN_c: complex = complex(float("nan"), 0.0)
-"""Sentinel for an unset complex parameter (real part is NaN)."""
-
 
 def is_unset_or_trivial_d(val: float, trivial: float = 0.0) -> bool:
     """Return True if a float parameter is unset (NaN) or equals *trivial*.
 
     Helper for :meth:`SolverPlugin.validate` implementations.  An unset
-    float parameter is ``None``; a residual ``NaN_d`` matrix element is
+    float parameter is ``None``; a residual ``NaN`` matrix element is
     also treated as unset.
     """
     import math
