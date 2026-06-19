@@ -1111,7 +1111,7 @@ def _validate_interaction_params(StdI: StdIntList) -> None:
         If ``lambda_U`` or ``lambda_J`` is negative, or ``alpha`` is
         outside [0, 1].
     """
-    if math.isnan(StdI.lambda_):
+    if StdI.lambda_ is None or math.isnan(StdI.lambda_):
         StdI.lambda_U = print_val_d("lambda_U", StdI.lambda_U, 1.0)
         StdI.lambda_J = print_val_d("lambda_J", StdI.lambda_J, 1.0)
     else:

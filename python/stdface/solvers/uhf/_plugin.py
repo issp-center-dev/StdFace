@@ -78,7 +78,7 @@ _UHF_KEYWORDS: dict[str, tuple] = {
 _RESET_SCALARS: list[tuple[str, object]] = [
     ("NMPTrans", None),
     ("RndSeed", None),
-    ("mix", NaN_d),
+    ("mix", None),
     ("eps", None),
     ("eps_slater", None),
     ("Iteration_max", None),

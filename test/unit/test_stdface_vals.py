@@ -59,23 +59,23 @@ class TestStdIntListDefaults:
         assert len(s.intr_list) == 0
 
     def test_float_defaults(self):
-        """Float fields should default to 0.0."""
+        """A2: sentinel-reset float fields default to None (unset)."""
         s = StdIntList()
-        assert s.a == 0.0
-        assert s.mu == 0.0
-        assert s.U == 0.0
-        assert s.h == 0.0
-        assert s.Gamma == 0.0
+        assert s.a is None
+        assert s.mu is None
+        assert s.U is None
+        assert s.h is None
+        assert s.Gamma is None
 
     def test_complex_defaults(self):
-        """Complex hopping fields should default to 0+0j."""
+        """A2: complex hopping fields default to None (unset)."""
         s = StdIntList()
-        assert s.t == 0 + 0j
-        assert s.tp == 0 + 0j
-        assert s.t0 == 0 + 0j
-        assert s.t1 == 0 + 0j
-        assert s.t2 == 0 + 0j
-        assert s.tpp == 0 + 0j
+        assert s.t is None
+        assert s.tp is None
+        assert s.t0 is None
+        assert s.t1 is None
+        assert s.t2 is None
+        assert s.tpp is None
 
     def test_dynamic_arrays_none(self):
         """Dynamic (pointer) arrays should be initialized to None."""
@@ -229,7 +229,7 @@ class TestStdIntListSolverFields:
         """C 'lambda' field should be 'lambda_' in Python."""
         s = StdIntList()
         assert hasattr(s, "lambda_")
-        assert s.lambda_ == 0.0
+        assert s.lambda_ is None
 
 
 # ===================================================================

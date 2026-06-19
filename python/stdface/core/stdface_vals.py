@@ -127,12 +127,12 @@ NaN_c: complex = complex(float("nan"), 0.0)
 def is_unset_or_trivial_d(val: float, trivial: float = 0.0) -> bool:
     """Return True if a float parameter is unset (NaN) or equals *trivial*.
 
-    Helper for :meth:`SolverPlugin.validate` implementations.  Note that
-    ``math.isnan`` correctly detects the ``NaN_d`` sentinel (``== NaN_d``
-    would not, since ``NaN != NaN``).
+    Helper for :meth:`SolverPlugin.validate` implementations.  An unset
+    float parameter is ``None``; a residual ``NaN_d`` matrix element is
+    also treated as unset.
     """
     import math
-    return math.isnan(val) or val == trivial
+    return val is None or math.isnan(val) or val == trivial
 
 
 # ---------------------------------------------------------------------------
@@ -601,7 +601,7 @@ class StdIntList:
     #  Parameters for LATTICE
     # ------------------------------------------------------------------
     lattice: str | None = None
-    a: float = 0.0
+    a: float | None = None
     length: np.ndarray = field(default_factory=lambda: np.zeros(3))
     W: int | None = None
     L: int | None = None
@@ -618,50 +618,50 @@ class StdIntList:
     #  Parameters for MODEL
     # ------------------------------------------------------------------
     model: str | None = None
-    mu: float = 0.0
+    mu: float | None = None
 
     # Hopping parameters (complex)
-    t: complex = 0 + 0j
-    tp: complex = 0 + 0j
-    t0: complex = 0 + 0j
-    t0p: complex = 0 + 0j
-    t0pp: complex = 0 + 0j
-    t1: complex = 0 + 0j
-    t1p: complex = 0 + 0j
-    t1pp: complex = 0 + 0j
-    t2: complex = 0 + 0j
-    t2p: complex = 0 + 0j
-    t2pp: complex = 0 + 0j
-    tpp: complex = 0 + 0j
+    t: complex | None = None
+    tp: complex | None = None
+    t0: complex | None = None
+    t0p: complex | None = None
+    t0pp: complex | None = None
+    t1: complex | None = None
+    t1p: complex | None = None
+    t1pp: complex | None = None
+    t2: complex | None = None
+    t2p: complex | None = None
+    t2pp: complex | None = None
+    tpp: complex | None = None
 
     # Coulomb parameters (float)
-    U: float = 0.0
-    V: float = 0.0
-    Vp: float = 0.0
-    V0: float = 0.0
-    V0p: float = 0.0
-    V0pp: float = 0.0
-    V1: float = 0.0
-    V1p: float = 0.0
-    V1pp: float = 0.0
-    V2: float = 0.0
-    V2p: float = 0.0
-    V2pp: float = 0.0
-    Vpp: float = 0.0
+    U: float | None = None
+    V: float | None = None
+    Vp: float | None = None
+    V0: float | None = None
+    V0p: float | None = None
+    V0pp: float | None = None
+    V1: float | None = None
+    V1p: float | None = None
+    V1pp: float | None = None
+    V2: float | None = None
+    V2p: float | None = None
+    V2pp: float | None = None
+    Vpp: float | None = None
 
     # Isotropic/anisotropic diagonal spin couplings (float)
-    JAll: float = 0.0
-    JpAll: float = 0.0
-    J0All: float = 0.0
-    J0pAll: float = 0.0
-    J0ppAll: float = 0.0
-    J1All: float = 0.0
-    J1pAll: float = 0.0
-    J1ppAll: float = 0.0
-    J2All: float = 0.0
-    J2pAll: float = 0.0
-    J2ppAll: float = 0.0
-    JppAll: float = 0.0
+    JAll: float | None = None
+    JpAll: float | None = None
+    J0All: float | None = None
+    J0pAll: float | None = None
+    J0ppAll: float | None = None
+    J1All: float | None = None
+    J1pAll: float | None = None
+    J1ppAll: float | None = None
+    J2All: float | None = None
+    J2pAll: float | None = None
+    J2ppAll: float | None = None
+    JppAll: float | None = None
 
     # Spin coupling matrices (3x3 float arrays)
     J: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
@@ -679,10 +679,10 @@ class StdIntList:
     D: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
 
     # Magnetic field parameters
-    h: float = 0.0
-    Gamma: float = 0.0
-    Gamma_y: float = 0.0
-    K: float = 0.0
+    h: float | None = None
+    Gamma: float | None = None
+    Gamma_y: float | None = None
+    K: float | None = None
 
     # ------------------------------------------------------------------
     #  Phase for the boundary
@@ -727,23 +727,23 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Wannier90 mode
     # ------------------------------------------------------------------
-    cutoff_t: float = 0.0
-    cutoff_u: float = 0.0
-    cutoff_j: float = 0.0
-    cutoff_length_t: float = 0.0
-    cutoff_length_U: float = 0.0
-    cutoff_length_J: float = 0.0
+    cutoff_t: float | None = None
+    cutoff_u: float | None = None
+    cutoff_j: float | None = None
+    cutoff_length_t: float | None = None
+    cutoff_length_U: float | None = None
+    cutoff_length_J: float | None = None
     cutoff_tR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
     cutoff_UR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
     cutoff_JR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
     cutoff_tVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
     cutoff_UVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
     cutoff_JVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    lambda_: float = 0.0
-    lambda_U: float = 0.0
-    lambda_J: float = 0.0
+    lambda_: float | None = None
+    lambda_U: float | None = None
+    lambda_J: float | None = None
     double_counting_mode: str | None = None
-    alpha: float = 0.0
+    alpha: float | None = None
 
     # ------------------------------------------------------------------
     #  Solver selector
@@ -767,7 +767,7 @@ class StdIntList:
     LanczosTarget: int | None = None
     NumAve: int | None = None
     ExpecInterval: int | None = None
-    LargeValue: float = 0.0
+    LargeValue: float | None = None
     NGPU: int | None = None
     Scalapack: int | None = None
     list_6spin_pair: None = None
@@ -777,18 +777,18 @@ class StdIntList:
     CalcSpec: str | None = None
     SpectrumType: str | None = None
     Nomega: int | None = None
-    OmegaMax: float = 0.0
-    OmegaMin: float = 0.0
-    OmegaOrg: float = 0.0
-    OmegaIm: float = 0.0
+    OmegaMax: float | None = None
+    OmegaMin: float | None = None
+    OmegaOrg: float | None = None
+    OmegaIm: float | None = None
     SpectrumQ: np.ndarray = field(default_factory=lambda: np.zeros(3))
     SpectrumBody: int = 0
     OutputExVec: str | None = None
-    dt: float = 0.0
-    tshift: float = 0.0
-    tdump: float = 0.0
-    freq: float = 0.0
-    Uquench: float = 0.0
+    dt: float | None = None
+    tshift: float | None = None
+    tdump: float | None = None
+    freq: float | None = None
+    Uquench: float | None = None
     VecPot: np.ndarray = field(default_factory=lambda: np.zeros(3))
     PumpType: str | None = None
     PumpBody: int = 0
@@ -811,9 +811,9 @@ class StdIntList:
     NSROptItrStep: int | None = None
     NSROptItrSmp: int | None = None
     NSROptFixSmp: int = 0
-    DSROptRedCut: float = 0.0
-    DSROptStaDel: float = 0.0
-    DSROptStepDt: float = 0.0
+    DSROptRedCut: float | None = None
+    DSROptStaDel: float | None = None
+    DSROptStepDt: float | None = None
     NVMCWarmUp: int | None = None
     NVMCInterval: int | None = None
     NVMCSample: int | None = None
@@ -838,7 +838,7 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  UHF / HWAVE fields
     # ------------------------------------------------------------------
-    mix: float = 0.0
+    mix: float | None = None
     eps: int | None = None
     eps_slater: int | None = None
     Iteration_max: int | None = None

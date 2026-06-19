@@ -181,7 +181,7 @@ def store_with_check_dup_d(keyword: str, value: str, current: float) -> float:
     ValueError
         If *current* is not NaN, indicating a duplicate keyword.
     """
-    if not math.isnan(current):
+    if current is not None and not math.isnan(current):
         _fail_duplicate(keyword)
     return float(value)
 
@@ -239,7 +239,7 @@ def store_with_check_dup_c(keyword: str, value: str, current: complex) -> comple
     ValueError
         If *current* is already set, indicating a duplicate keyword.
     """
-    if not cmath.isnan(current):
+    if current is not None and not cmath.isnan(current):
         _fail_duplicate(keyword)
 
     # Split on comma, mirroring the C strtok(",") logic

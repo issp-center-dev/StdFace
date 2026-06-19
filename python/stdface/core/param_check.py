@@ -74,7 +74,7 @@ def print_val_d(valname: str, val: float, val0: float) -> float:
     float
         The (possibly updated) value.
     """
-    if math.isnan(val):
+    if val is None or math.isnan(val):
         val = val0
         logger.info("  %15s = %-10.5f  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
@@ -105,7 +105,7 @@ def print_val_dd(valname: str, val: float, val0: float, val1: float) -> float:
     float
         The (possibly updated) value.
     """
-    default = val1 if math.isnan(val0) else val0
+    default = val1 if (val0 is None or math.isnan(val0)) else val0
     return print_val_d(valname, val, default)
 
 
@@ -126,7 +126,7 @@ def print_val_c(valname: str, val: complex, val0: complex) -> complex:
     complex
         The (possibly updated) value.
     """
-    if math.isnan(val.real):
+    if val is None or math.isnan(val.real):
         val = val0
         logger.info(
             "  %15s = %-10.5f %-10.5f  ######  DEFAULT VALUE IS USED  ######",
@@ -198,6 +198,8 @@ def not_used_d(valname: str, val: float | complex) -> None:
         is tested (matching the C behaviour of implicitly casting
         ``double complex`` to ``double``).
     """
+    if val is None:
+        return
     check = val.real if isinstance(val, complex) else val
     if not math.isnan(check):
         _fail_not_used(valname)

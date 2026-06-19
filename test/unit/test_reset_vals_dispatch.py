@@ -126,13 +126,13 @@ class TestApplyFieldResetsHPhi:
     """Tests for _apply_field_resets with HPhi solver."""
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("HPhi")
         _apply_field_resets(StdI, SolverType.HPhi)
-        assert math.isnan(StdI.LargeValue)
-        assert math.isnan(StdI.OmegaMax)
-        assert math.isnan(StdI.OmegaMin)
-        assert math.isnan(StdI.dt)
+        assert StdI.LargeValue is None
+        assert StdI.OmegaMax is None
+        assert StdI.OmegaMin is None
+        assert StdI.dt is None
 
     def test_sets_nan_i_fields(self):
         """Test that integer fields are set to None."""
@@ -180,11 +180,11 @@ class TestApplyFieldResetsMVMC:
         assert StdI.RndSeed is None
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("mVMC")
         _apply_field_resets(StdI, SolverType.mVMC)
-        assert math.isnan(StdI.DSROptRedCut)
-        assert math.isnan(StdI.DSROptStaDel)
+        assert StdI.DSROptRedCut is None
+        assert StdI.DSROptStaDel is None
 
     def test_sets_boxsub_scalars(self):
         """Test that Hsub/Lsub/Wsub are set to None."""
@@ -218,10 +218,10 @@ class TestApplyFieldResetsUHF:
         assert StdI.Iteration_max is None
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("UHF")
         _apply_field_resets(StdI, SolverType.UHF)
-        assert math.isnan(StdI.mix)
+        assert StdI.mix is None
 
     def test_fills_boxsub_array(self):
         """Test that boxsub array is filled with NaN_i."""
@@ -256,10 +256,10 @@ class TestApplyFieldResetsHWAVE:
         assert StdI.lattice_gp is None
 
     def test_sets_nan_d_fields(self):
-        """Test that float fields are set to NaN."""
+        """Test that float scalar fields are set to None (A2)."""
         StdI = _make_stdi("HWAVE")
         _apply_field_resets(StdI, SolverType.HWAVE)
-        assert math.isnan(StdI.mix)
+        assert StdI.mix is None
 
     def test_fills_boxsub_array(self):
         """Test that boxsub array is filled with NaN_i."""
@@ -433,35 +433,15 @@ class TestCommonResetTableContent:
 class TestResetVals:
     """Tests for _reset_vals using the data-driven tables."""
 
-    def test_common_float_scalars_are_nan(self):
-        """Test that common float scalar fields are set to NaN."""
+    def test_common_scalars_reset_to_none(self):
+        """A2: all common scalar fields (int/float/complex) reset to None."""
         StdI = StdIntList()
         StdI.solver = "HPhi"
         _reset_vals(StdI)
         for name, value in _COMMON_RESET_SCALARS:
-            if isinstance(value, float):
-                actual = getattr(StdI, name)
-                assert math.isnan(actual), f"{name} = {actual}, expected NaN"
-
-    def test_common_int_scalars_are_nan_i(self):
-        """Test that common integer scalar fields are set to None."""
-        StdI = StdIntList()
-        StdI.solver = "HPhi"
-        _reset_vals(StdI)
-        for name, value in _COMMON_RESET_SCALARS:
-            if isinstance(value, int):
-                actual = getattr(StdI, name)
-                assert actual is None, f"{name} = {actual}, expected None"
-
-    def test_common_complex_scalars_are_nan_c(self):
-        """Test that common complex scalar fields are set to NaN_c."""
-        StdI = StdIntList()
-        StdI.solver = "HPhi"
-        _reset_vals(StdI)
-        for name, value in _COMMON_RESET_SCALARS:
-            if isinstance(value, complex):
-                actual = getattr(StdI, name)
-                assert math.isnan(actual.real), f"{name} = {actual}, expected NaN_c"
+            assert value is None, f"{name} table value should be None, got {value}"
+            actual = getattr(StdI, name)
+            assert actual is None, f"{name} = {actual}, expected None"
 
     def test_common_arrays_filled(self):
         """Test that common array fields are filled with sentinel values."""
@@ -499,5 +479,5 @@ class TestResetVals:
         StdI = StdIntList()
         StdI.solver = "HPhi"
         _reset_vals(StdI)
-        assert math.isnan(StdI.LargeValue)
+        assert StdI.LargeValue is None
         assert StdI.FlgTemp == 1
