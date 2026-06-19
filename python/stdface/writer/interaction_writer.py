@@ -27,6 +27,8 @@ from __future__ import annotations
 import logging
 from typing import NamedTuple
 
+import numpy as np
+
 from ..core.stdface_vals import StdIntList, AMPLITUDE_EPS
 
 logger = logging.getLogger(__name__)
@@ -459,16 +461,22 @@ def _remove_interall_diagonal(
                 intr[jintr] = 0.0
 
 
-def _write_interall(StdI: StdIntList) -> None:
+def _write_interall(StdI: StdIntList, nintr, intr_indx, intr_val) -> None:
     """Count non-zero InterAll terms, set the flag, and write the file.
 
     Parameters
     ----------
     StdI : StdIntList
-        The central data structure.  ``nintr``, ``intrindx``, ``intr``,
-        ``lBoost``, and ``Lintr`` are accessed / modified.
+        The central data structure.  ``lBoost`` and ``Lintr`` are
+        accessed / modified.
+    nintr : int
+        Number of InterAll terms.
+    intr_indx : np.ndarray
+        ``(nintr, 8)`` site/spin index array.
+    intr_val : np.ndarray
+        ``(nintr,)`` complex coefficient array.
     """
-    nintr0 = _count_nonzero(StdI.nintr, StdI.intr)
+    nintr0 = _count_nonzero(nintr, intr_val)
 
     if nintr0 == 0 or StdI.lBoost == 1:
         StdI.Lintr = 0
@@ -483,10 +491,10 @@ def _write_interall(StdI: StdIntList) -> None:
                  "====================== \n"]
 
         if StdI.lBoost == 0:
-            for kintr in range(StdI.nintr):
-                val = StdI.intr[kintr]
+            for kintr in range(nintr):
+                val = intr_val[kintr]
                 if abs(val) > AMPLITUDE_EPS:
-                    i0, s0, i1, s1, i2, s2, i3, s3 = StdI.intrindx[kintr]
+                    i0, s0, i1, s1, i2, s2, i3, s3 = intr_indx[kintr]
                     lines.append(
                         f"{i0:5d} {s0:5d} "
                         f"{i1:5d} {s1:5d} "
@@ -531,9 +539,12 @@ def print_interactions(StdI: StdIntList) -> None:
         _process_interaction(StdI, **spec._asdict())
 
     # =================================================================
-    #  InterAll
+    #  InterAll (build numpy arrays from the list at the write boundary)
     # =================================================================
-    _merge_interall_equivalent(StdI.nintr, StdI.intrindx, StdI.intr)
-    _reorder_interall_hermitian(StdI.nintr, StdI.intrindx, StdI.intr)
-    _remove_interall_diagonal(StdI.nintr, StdI.intrindx, StdI.intr)
-    _write_interall(StdI)
+    nintr = len(StdI.intr_list)
+    intr_indx = np.array([t[1:9] for t in StdI.intr_list], dtype=int).reshape(nintr, 8)
+    intr_val = np.array([t[0] for t in StdI.intr_list], dtype=complex)
+    _merge_interall_equivalent(nintr, intr_indx, intr_val)
+    _reorder_interall_hermitian(nintr, intr_indx, intr_val)
+    _remove_interall_diagonal(nintr, intr_indx, intr_val)
+    _write_interall(StdI, nintr, intr_indx, intr_val)

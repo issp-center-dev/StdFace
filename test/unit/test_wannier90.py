@@ -1062,9 +1062,7 @@ class TestWannier90HrMultilineDegeneracy:
 def _setup_interactions(s: StdIntList, ntransMax: int = 100, nintrMax: int = 100) -> None:
     """Allocate interaction arrays on StdIntList for testing."""
     s.trans_list = []
-    s.intrindx = np.zeros((nintrMax, 8), dtype=int)
-    s.intr = np.zeros(nintrMax, dtype=complex)
-    s.nintr = 0
+    s.intr_list = []
     s.CintraIndx = np.zeros((nintrMax, 1), dtype=int)
     s.Cintra = np.zeros(nintrMax)
     s.NCintra = 0
@@ -1409,7 +1407,7 @@ class TestBuildWannierInteractions:
         w90.wannier90(s)
 
         assert isinstance(s.trans_list, list)
-        assert s.intrindx is not None
+        assert isinstance(s.intr_list, list)
 
 
 # ---------------------------------------------------------------------------

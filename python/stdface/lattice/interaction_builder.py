@@ -223,8 +223,7 @@ def intr(
 ) -> None:
     """Add a general two-body (InterAll) interaction term to the list.
 
-    Appends to ``StdI.intr`` and ``StdI.intrindx`` and increments
-    ``StdI.nintr``.
+    Appends ``(intr0, i1, s1, i2, s2, i3, s3, i4, s4)`` to ``StdI.intr_list``.
 
     Parameters
     ----------
@@ -243,10 +242,8 @@ def intr(
     """
     if abs(intr0) < ZERO_BODY_EPS:
         return
-    n = StdI.nintr
-    StdI.intr[n] = intr0
-    StdI.intrindx[n] = [site1, spin1, site2, spin2, site3, spin3, site4, spin4]
-    StdI.nintr = n + 1
+    StdI.intr_list.append(
+        (intr0, site1, spin1, site2, spin2, site3, spin3, site4, spin4))
 
 
 def _spin_ladder_factor(S: float, Sz: float) -> float:
@@ -520,10 +517,8 @@ def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None
         StdI.pumpindx = np.zeros((StdI.Lanczos_max, ntransMax, 4), dtype=int)
         StdI.pump = np.zeros((StdI.Lanczos_max, ntransMax), dtype=complex)
 
-    # (2) InterAll
-    StdI.intrindx = np.zeros((nintrMax, 8), dtype=int)
-    StdI.intr = np.zeros(nintrMax, dtype=complex)
-    StdI.nintr = 0
+    # (2) InterAll (A1: list-based)
+    StdI.intr_list = []
 
     # (3)-(8) Two-body shortcut arrays: (indx_attr, val_attr, count_attr, ncols)
     _SHORTCUT_ARRAYS = (

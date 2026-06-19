@@ -56,8 +56,7 @@ def _make_stdi_for_large_value(**overrides) -> StdIntList:
     StdI.LargeValue = float("nan")  # as set by _reset_vals
     StdI.nsite = overrides.get("nsite", 4)
     StdI.trans_list = [(v, 0, 0, 0, 0) for v in overrides.get("trans", [])]
-    StdI.nintr = overrides.get("nintr", 0)
-    StdI.intr = overrides.get("intr", [])
+    StdI.intr_list = [(v, 0, 0, 0, 0, 0, 0, 0, 0) for v in overrides.get("intr", [])]
     StdI.NCintra = overrides.get("NCintra", 0)
     StdI.Cintra = overrides.get("Cintra", [])
     StdI.NCinter = overrides.get("NCinter", 0)

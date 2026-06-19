@@ -59,9 +59,7 @@ def _make_empty_interactions(StdI: StdIntList) -> None:
     StdI.NPairHopp = 0
     StdI.PHIndx = []
     StdI.PairHopp = []
-    StdI.nintr = 0
-    StdI.intrindx = []
-    StdI.intr = []
+    StdI.intr_list = []
 
 
 class TestImportFromInteractionWriter:
@@ -165,9 +163,7 @@ class TestInterAllWritten:
     def test_single_interall_term(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.nintr = 1
-        StdI.intrindx = [[0, 0, 0, 0, 0, 0, 0, 0]]
-        StdI.intr = [1.0 + 0j]
+        StdI.intr_list = [(1.0 + 0j, 0, 0, 0, 0, 0, 0, 0, 0)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -551,7 +547,7 @@ class TestWriteInterall:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, 0, [], [])
                 assert StdI.Lintr == 0
                 assert not os.path.exists("interall.def")
             finally:
@@ -560,14 +556,13 @@ class TestWriteInterall:
     def test_boost_suppresses_interall(self):
         StdI = _make_stdi_base(lBoost=1)
         _make_empty_interactions(StdI)
-        StdI.nintr = 1
-        StdI.intrindx = [[0, 0, 1, 0, 2, 0, 3, 0]]
-        StdI.intr = [1.0 + 0j]
+        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0]]
+        _iv_val = [1.0 + 0j]
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
                 assert StdI.Lintr == 0
                 assert not os.path.exists("interall.def")
             finally:
@@ -576,17 +571,13 @@ class TestWriteInterall:
     def test_nonzero_writes_file(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.nintr = 2
-        StdI.intrindx = [
-            [0, 0, 1, 0, 2, 0, 3, 0],
-            [4, 0, 5, 0, 6, 0, 7, 0],
-        ]
-        StdI.intr = [1.5 + 0.5j, 0.0 + 0j]  # one non-zero, one zero
+        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0], [4, 0, 5, 0, 6, 0, 7, 0]]
+        _iv_val = [1.5 + 0.5j, 0.0 + 0j]
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
                 assert StdI.Lintr == 1
                 assert os.path.exists("interall.def")
                 content = open("interall.def").read()
@@ -599,17 +590,13 @@ class TestWriteInterall:
     def test_all_zero_no_file(self):
         StdI = _make_stdi_base()
         _make_empty_interactions(StdI)
-        StdI.nintr = 2
-        StdI.intrindx = [
-            [0, 0, 1, 0, 2, 0, 3, 0],
-            [4, 0, 5, 0, 6, 0, 7, 0],
-        ]
-        StdI.intr = [0.0 + 0j, 0.0 + 0j]
+        _iv_indx = [[0, 0, 1, 0, 2, 0, 3, 0], [4, 0, 5, 0, 6, 0, 7, 0]]
+        _iv_val = [0.0 + 0j, 0.0 + 0j]
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                _write_interall(StdI)
+                _write_interall(StdI, len(_iv_val), _iv_indx, _iv_val)
                 assert StdI.Lintr == 0
                 assert not os.path.exists("interall.def")
             finally:

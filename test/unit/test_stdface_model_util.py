@@ -149,15 +149,15 @@ class TestIntr:
         """intr should add an interaction entry."""
         s = _make_allocated()
         smu.intr(s, 1.0 + 0j, 0, 0, 0, 1, 1, 0, 1, 1)
-        assert s.nintr == 1
-        assert s.intr[0] == 1.0
-        assert list(s.intrindx[0]) == [0, 0, 0, 1, 1, 0, 1, 1]
+        assert len(s.intr_list) == 1
+        assert s.intr_list[0][0] == 1.0
+        assert list(s.intr_list[0][1:]) == [0, 0, 0, 1, 1, 0, 1, 1]
 
     def test_skip_tiny(self):
         """intr should skip entries with |intr0| < 1e-12."""
         s = _make_allocated()
         smu.intr(s, 1e-13, 0, 0, 0, 1, 1, 0, 1, 1)
-        assert s.nintr == 0
+        assert len(s.intr_list) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ class TestGeneralJ:
         assert s.NHund == 1
         assert s.NCinter == 1
         # Off-diagonal means ExGeneral stays 1, so nintr is used
-        assert s.nintr > 0
+        assert len(s.intr_list) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -394,9 +394,7 @@ class TestMallocInteractions:
         s = StdIntList()
         smu.malloc_interactions(s, ntransMax=50, nintrMax=30)
         assert len(s.trans_list) == 0
-        assert s.intrindx.shape == (30, 8)
-        assert s.intr.shape == (30,)
-        assert s.nintr == 0
+        assert len(s.intr_list) == 0
         assert s.CintraIndx.shape == (30, 1)
         assert s.Cintra.shape == (30,)
         assert s.NCintra == 0

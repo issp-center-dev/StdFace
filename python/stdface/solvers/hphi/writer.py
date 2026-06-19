@@ -207,7 +207,7 @@ def large_value(StdI: StdIntList) -> None:
     """
     large_value0 = (
         sum(abs(t[0]) for t in StdI.trans_list)
-        + np.sum(np.abs(StdI.intr[:StdI.nintr]))
+        + sum(abs(t[0]) for t in StdI.intr_list)
         + np.sum(np.abs(StdI.Cintra[:StdI.NCintra]))
         + np.sum(np.abs(StdI.Cinter[:StdI.NCinter]))
         + 2.0 * np.sum(np.abs(StdI.Ex[:StdI.NEx]))

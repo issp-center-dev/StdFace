@@ -71,9 +71,7 @@ class TestMallocInteractions:
         StdI.method = "lanczos"
         StdI.PumpBody = 0
         malloc_interactions(StdI, 50, 80)
-        assert StdI.intr.shape == (80,)
-        assert StdI.intrindx.shape == (80, 8)
-        assert StdI.nintr == 0
+        assert len(StdI.intr_list) == 0
 
     def test_coulomb_arrays_allocated(self):
         """Test that Coulomb arrays are allocated."""
@@ -298,15 +296,15 @@ class TestIntr:
         """Test that a two-body term is added correctly."""
         StdI = _make_stdi()
         intr(StdI, 1.5 + 0j, 0, 0, 0, 0, 1, 0, 1, 0)
-        assert StdI.nintr == 1
-        assert StdI.intr[0] == pytest.approx(1.5 + 0j)
-        assert list(StdI.intrindx[0]) == [0, 0, 0, 0, 1, 0, 1, 0]
+        assert len(StdI.intr_list) == 1
+        assert StdI.intr_list[0][0] == pytest.approx(1.5 + 0j)
+        assert list(StdI.intr_list[0][1:]) == [0, 0, 0, 0, 1, 0, 1, 0]
 
     def test_skips_small_value(self):
         """Test that values below threshold are skipped."""
         StdI = _make_stdi()
         intr(StdI, 1e-13, 0, 0, 0, 0, 1, 0, 1, 0)
-        assert StdI.nintr == 0
+        assert len(StdI.intr_list) == 0
 
 
 # ===================================================================
@@ -346,7 +344,7 @@ class TestGeneralJ:
         general_j(StdI, J, Si2=2, Sj2=2, isite=0, jsite=1)
         # S=1: ZGeneral stays 1, so all terms go through intr()
         assert StdI.NHund == 0  # No Hund shortcut for S>1/2
-        assert StdI.nintr > 0
+        assert len(StdI.intr_list) > 0
 
     def test_kondo_exchange_sign(self):
         """Test that kondo model uses negative exchange sign."""
@@ -692,11 +690,11 @@ class TestAddNeighborInteraction:
         """For hubbard model, general_j (spin-spin) should not be called."""
         StdI = _make_stdi_square_for_neighbor(4, 4, "hubbard")
         J = np.eye(3)  # non-zero J, but should be ignored
-        nintr_before = StdI.nintr
+        nintr_before = len(StdI.intr_list)
         add_neighbor_interaction(
             StdI, None, 0, 0, 1, 0, 0, 0, 1, J, 0.0, 0.0)
         # For hubbard with t=0 and V=0, no interactions added
-        assert StdI.nintr == nintr_before
+        assert len(StdI.intr_list) == nintr_before
 
     def test_fp_none_no_error(self):
         """fp=None does not cause an error."""
@@ -843,10 +841,10 @@ class TestAddNeighborInteraction3D:
         """For hubbard model, general_j (spin-spin) should not be called."""
         StdI = _make_stdi_ortho_for_neighbor(2, 2, 2, "hubbard")
         J = np.eye(3)
-        nintr_before = StdI.nintr
+        nintr_before = len(StdI.intr_list)
         add_neighbor_interaction_3d(
             StdI, 0, 0, 0, 1, 0, 0, 0, 0, J, 0.0, 0.0)
-        assert StdI.nintr == nintr_before
+        assert len(StdI.intr_list) == nintr_before
 
     def test_neighbor_along_height(self):
         """3D neighbor along the H direction returns correct sites."""
@@ -987,9 +985,9 @@ class TestAddLocalTerms:
         StdI.Gamma_y = 0.0
         StdI.D = np.zeros((3, 3))
         StdI.D[2, 2] = 1.0
-        nintr_before = StdI.nintr
+        nintr_before = len(StdI.intr_list)
         add_local_terms(StdI, 0, 0)
-        assert StdI.nintr > nintr_before
+        assert len(StdI.intr_list) > nintr_before
 
     def test_hubbard_model_adds_local_terms(self):
         """For hubbard model, hubbard_local adds transfer + Cintra terms."""
@@ -1014,12 +1012,12 @@ class TestAddLocalTerms:
         StdI.Gamma_y = 0.0
         StdI.U = 0.0
         StdI.J = np.eye(3)  # non-zero J, but should be ignored
-        nintr_before = StdI.nintr
+        nintr_before = len(StdI.intr_list)
         nhund_before = StdI.NHund
         nex_before = StdI.NEx
         add_local_terms(StdI, 0, 0)
         # No interactions from J coupling
-        assert StdI.nintr == nintr_before
+        assert len(StdI.intr_list) == nintr_before
         assert StdI.NHund == nhund_before
         assert StdI.NEx == nex_before
 

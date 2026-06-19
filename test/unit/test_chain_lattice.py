@@ -153,8 +153,7 @@ class TestSpinModel:
         cl.chain(s)
 
         assert isinstance(s.trans_list, list)
-        assert s.intrindx is not None
-        assert s.intr is not None
+        assert isinstance(s.intr_list, list)
 
     def test_spin_chain_tau(self, tmp_path):
         """tau should be set to zeros for a chain lattice."""

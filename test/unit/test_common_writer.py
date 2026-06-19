@@ -575,7 +575,6 @@ class TestPrintInteractions:
         StdI.NEx = 0
         StdI.NPairLift = 0
         StdI.NPairHopp = 0
-        StdI.nintr = 0
         StdI.Cintra = []
         StdI.CintraIndx = []
         StdI.Cinter = []
@@ -588,8 +587,7 @@ class TestPrintInteractions:
         StdI.PLIndx = []
         StdI.PairHopp = []
         StdI.PHIndx = []
-        StdI.intr = []
-        StdI.intrindx = []
+        StdI.intr_list = []
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()
@@ -623,9 +621,7 @@ class TestPrintInteractions:
         StdI.NPairHopp = 0
         StdI.PHIndx = []
         StdI.PairHopp = []
-        StdI.nintr = 0
-        StdI.intrindx = []
-        StdI.intr = []
+        StdI.intr_list = []
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig = os.getcwd()

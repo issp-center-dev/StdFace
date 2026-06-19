@@ -335,14 +335,12 @@ class StdIntList:
         One-body transfer terms as ``(amp, isite, ispin, jsite, jspin)``
         tuples (``amp`` is complex).  Replaces the former
         ``trans`` / ``transindx`` / ``ntrans`` arrays + counter.
-    nintr : int
-        Number of InterAll, counted in each lattice file.
     Lintr : int
         Print ``interall.def`` or not.
-    intrindx : np.ndarray or None
-        ``[nintr][8]`` Site/spin indices of two-body term.
-    intr : np.ndarray or None
-        ``[nintr]`` Coefficient of general two-body term (complex).
+    intr_list : list of tuple
+        General two-body (InterAll) terms as
+        ``(amp, i1, s1, i2, s2, i3, s3, i4, s4)`` tuples.  Replaces the
+        former ``intr`` / ``intrindx`` / ``nintr`` arrays + counter.
     NCintra : int
         Number of intra-site Coulomb interaction.
     LCintra : int
@@ -722,10 +720,8 @@ class StdIntList:
     nsite: int = 0
     locspinflag: None = None
     trans_list: list = field(default_factory=list)
-    nintr: int = 0
     Lintr: int = 0
-    intrindx: None = None
-    intr: None = None
+    intr_list: list = field(default_factory=list)
     NCintra: int = 0
     LCintra: int = 0
     CintraIndx: None = None
