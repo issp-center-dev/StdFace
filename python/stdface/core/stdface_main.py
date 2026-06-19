@@ -535,12 +535,13 @@ def _resolve_model_and_method(StdI: StdIntList, solver: str) -> None:
 # ===================================================================
 
 
-def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> None:
-    """Dispatch to the lattice builder and, for HPhi, apply LargeValue and Boost.
+def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> tuple:
+    """Run the lattice builder (and HPhi LargeValue/Boost) and return aux data.
 
-    Looks up ``StdI.lattice`` in :data:`LATTICE_DISPATCH` to generate
-    the Hamiltonian definition files.  For the HPhi solver, also
-    computes the large value and optionally runs the Boost builder.
+    Looks up ``StdI.lattice``, runs ``setup``, then ``post_lattice`` /
+    ``validate``.  The lattice-level, solver-independent outputs (gnuplot
+    and ``geometry.dat``) are **returned, not written** so the caller
+    decides where/whether to emit them.
 
     Parameters
     ----------
@@ -549,29 +550,34 @@ def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> None:
     solver : str
         Solver name.
 
+    Returns
+    -------
+    tuple
+        ``(gp_data, geo_data)`` — each ``None`` when not applicable.
+
     Raises
     ------
     ValueError
         If the lattice is not recognised.
     """
+    from ..lattice.geometry_output import build_geometry
     lattice = StdI.lattice
     try:
         lattice_plugin = _get_lattice(lattice)
     except KeyError:
-        _unsupported_system(StdI.model, StdI.lattice)
-    else:
-        gp_data = lattice_plugin.setup(StdI)
-        # D2 (output container) will hold this later; for now write directly.
-        if gp_data is not None:
-            gp_data.write()
+        _unsupported_system(StdI.model, StdI.lattice)  # raises
+
+    gp_data = lattice_plugin.setup(StdI)
+    geo_data = build_geometry(StdI)
 
     from ..plugin import get_plugin
     try:
         plugin = get_plugin(solver)
     except KeyError:
-        return
+        return gp_data, geo_data
     plugin.post_lattice(StdI)
     plugin.validate(StdI)
+    return gp_data, geo_data
 
 
 # ===================================================================
@@ -632,6 +638,12 @@ def _apply_keywords(data: dict, StdI: StdIntList, solver: str) -> None:
         If a keyword is unrecognised.
     """
     for keyword, value in data.items():
+        keyword = str(keyword).lower()
+        if keyword == "solver":
+            continue  # solver is selected via the argument, not a keyword
+        # The store helpers parse strings (stan.in values are strings); dict /
+        # TOML / JSON sources may carry native ints/floats, so normalise here.
+        value = str(value)
         logger.info("  KEYWORD : %-20s | VALUE : %s ", keyword, value)
         if not _parse_common_keyword(keyword, value, StdI):
             if not _parse_solver_keyword_via_plugin(keyword, value, StdI, solver):
@@ -752,7 +764,12 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     _resolve_model_and_method(StdI, solver)
 
-    _build_lattice_and_boost(StdI, solver)
+    gp_data, geo_data = _build_lattice_and_boost(StdI, solver)
+    # Lattice-level (solver-independent) outputs on their own path.
+    if gp_data is not None:
+        gp_data.write()
+    if geo_data is not None:
+        geo_data.write()
 
     # ------------------------------------------------------------------
     #  Print Expert input files
@@ -767,3 +784,128 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     #  Finalise
     # ------------------------------------------------------------------
     logger.info("######  Input files are generated.  ######")
+
+
+# ===================================================================
+#  generate() — library API (D5)
+# ===================================================================
+
+
+def _make_source(source):
+    """Select an :class:`InputSource` from a path / dict.
+
+    ``.toml`` / ``.json`` suffixes pick the matching reader; a ``dict``
+    uses :class:`DictSource`; anything else is treated as a ``stan.in``
+    file.
+    """
+    from .input_source import (
+        DictSource, TOMLSource, JSONSource, StanFileSource,
+    )
+    if isinstance(source, dict):
+        return DictSource(source)
+    from pathlib import Path
+    path = Path(source)
+    if path.suffix == ".toml":
+        return TOMLSource(path)
+    if path.suffix == ".json":
+        return JSONSource(path)
+    return StanFileSource(path)
+
+
+def _check_solver_conflict(solver_arg: str, data: dict) -> None:
+    """Raise if *data* names a solver that differs from *solver_arg*."""
+    file_solver = data.get("solver")
+    if file_solver is not None and str(file_solver).lower() != str(solver_arg).lower():
+        msg = (f"solver conflict: argument={solver_arg!r}, file={file_solver!r}. "
+               "Specify solver in only one place.")
+        logger.error(msg)
+        raise ValueError(msg)
+
+
+def _build_stdintlist(data: dict, solver: str) -> StdIntList:
+    """Build and prepare a :class:`StdIntList` from a keyword dict."""
+    StdI = StdIntList()
+    StdI.solver = solver
+    _reset_vals(StdI)
+    _apply_keywords(data, StdI, solver)
+    _resolve_solver_name(StdI)
+    if StdI.CDataFileHead is None:
+        StdI.CDataFileHead = "zvo"
+    _resolve_model_and_method(StdI, StdI.solver)
+    return StdI
+
+
+def _build_output(StdI: StdIntList):
+    """Return the :class:`SolverOutput` for the resolved solver."""
+    from ..plugin import get_plugin, WannierModeSolverPlugin
+    from .output import build_wannier_output
+    plugin = get_plugin(StdI.solver)
+    if isinstance(plugin, WannierModeSolverPlugin):
+        return build_wannier_output(StdI)
+    return plugin.build_output(StdI)
+
+
+def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
+    """Generate solver input from *source* and return a ``SolverOutput``.
+
+    Parameters
+    ----------
+    source : str | Path | dict
+        ``stan.in`` path, ``.toml`` / ``.json`` path, or a keyword dict.
+    solver : str
+        Solver name (``HPhi`` / ``mVMC`` / ``UHF`` / ``UHFR`` / ``UHFK``).
+        Must match any ``solver`` given inside *source*.
+    output_dir : str | Path | None
+        Where to write the files.  ``None`` writes nothing (data-only).
+    output_format : OutputFormat | None
+        Output format strategy; defaults to :class:`DefFileFormat`.
+
+    Returns
+    -------
+    SolverOutput
+        The assembled output container (``ExpertModeOutput`` or
+        ``WannierModeOutput``).
+    """
+    import os
+    import tempfile
+    import contextlib
+    from pathlib import Path
+    from .output import DefFileFormat
+
+    data = _make_source(source).load()
+    _check_solver_conflict(solver, data)
+
+    @contextlib.contextmanager
+    def _chdir(path):
+        prev = os.getcwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(prev)
+
+    def _run():
+        # The build runs with cwd = the target directory so that the
+        # solver-specific files emitted eagerly by ``write_solver_files``
+        # (HPhi excitation/calcmod, mVMC variational) land there too -- not
+        # just the SolverOutput / gnuplot / geometry written explicitly.
+        StdI = _build_stdintlist(data, solver)
+        gp_data, geo_data = _build_lattice_and_boost(StdI, StdI.solver)
+        out = _build_output(StdI)
+        fmt = output_format or DefFileFormat()
+        fmt.write_output(out, Path("."))
+        if gp_data is not None:
+            gp_data.write(Path("."))
+        if geo_data is not None:
+            geo_data.write(Path("."))
+        return out
+
+    if output_dir is None:
+        # Data-only: build in a throwaway directory so nothing lands in cwd.
+        with tempfile.TemporaryDirectory() as tmp, _chdir(tmp):
+            return _run()
+
+    directory = Path(output_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    with _chdir(directory):
+        return _run()

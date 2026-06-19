@@ -12,7 +12,9 @@ import numpy as np
 import pytest
 
 from stdface.core.stdface_vals import StdIntList
-from stdface.lattice.geometry_output import print_xsf, print_geometry, _cell_diff
+from stdface.lattice.geometry_output import (
+    print_xsf, print_geometry, _cell_diff, build_geometry, GeometryData,
+)
 
 
 def _make_stdi(
@@ -308,3 +310,40 @@ class TestBackwardCompatibility:
         from stdface.lattice.geometry_output import print_xsf, print_geometry
         assert pxsf is print_xsf
         assert pg is print_geometry
+
+
+class TestGeometryDataBuildWrite:
+    """D5-1: build_geometry / GeometryData (independent lattice output)."""
+
+    def test_build_returns_data_with_native_types(self):
+        d = build_geometry(_make_stdi(L=4))
+        assert isinstance(d, GeometryData)
+        # JSON-native: plain int/float only
+        assert all(isinstance(x, float) for r in d.direct for x in r)
+        assert all(isinstance(x, int) for r in d.box for x in r)
+        assert all(isinstance(x, int) for s in d.sites for x in s)
+        assert len(d.sites) == 4  # NCell * NsiteUC
+
+    def test_suppressed_for_wannier_modes(self):
+        s = _make_stdi(L=4)
+        s.calcmode = "uhfk"
+        assert build_geometry(s) is None
+        s.calcmode = "rpa"
+        assert build_geometry(s) is None
+
+    def test_to_from_dict_roundtrip(self):
+        d = build_geometry(_make_stdi(L=4))
+        assert GeometryData.from_dict(d.to_dict()).to_dict() == d.to_dict()
+
+    def test_write_parity_with_print(self, tmp_path, monkeypatch):
+        s = _make_stdi(L=4)
+        monkeypatch.chdir(tmp_path)
+        print_geometry(s)
+        via_print = (tmp_path / "geometry.dat").read_text()
+        build_geometry(s).write(tmp_path)
+        via_build = (tmp_path / "geometry.dat").read_text()
+        assert via_print == via_build
+
+    def test_kondo_doubles_sites(self):
+        d = build_geometry(_make_stdi(model="kondo", L=4))
+        assert len(d.sites) == 8  # doubled

@@ -43,17 +43,24 @@ class UHFRPlugin(SolverPlugin):
         from ...writer.common_writer import _check_mod_para_uhf
         _check_mod_para_uhf(StdI)
 
-    def write(self, StdI: StdIntList) -> None:
+    def build_output(self, StdI: StdIntList):
+        """Assemble the UHFR partial output (trans / interactions / green1)."""
         from ...writer.common_writer import (
-            print_trans, print_1_green, check_output_mode, check_mod_para,
+            build_trans, check_output_mode, check_mod_para, build_green_one,
         )
-        from ...writer.interaction_writer import print_interactions
+        from ...writer.interaction_writer import build_interactions
+        from ...core.output import ExpertModeOutput
 
-        print_trans(StdI)
-        print_interactions(StdI)
+        trans = build_trans(StdI)
+        interactions = build_interactions(StdI)
         check_mod_para(StdI)
         check_output_mode(StdI)
-        print_1_green(StdI)
+        green_one = build_green_one(StdI)
+        return ExpertModeOutput(
+            trans=trans, interactions=interactions, green_one=green_one)
+
+    def write(self, StdI: StdIntList) -> None:
+        self.build_output(StdI).write()
 
 
 class UHFKPlugin(WannierModeSolverPlugin):

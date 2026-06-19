@@ -98,41 +98,47 @@ class ExpertModeOutput(SolverOutput):
     (HPhi excitation / calcmod / pump, mVMC variational group) are not
     represented here; they are emitted by the plugin's
     ``write_solver_files`` hook during assembly.
+
+    ``locspn`` / ``modpara`` / ``namelist`` are optional because UHFR
+    emits only ``trans`` / ``interactions`` / ``green_one``.
     """
 
-    locspn: object        # LocSpnData
-    trans: object         # TransData
-    interactions: list    # list[InteractionData | InterAllData]
-    modpara: object       # ModParaData
-    namelist: object      # NamelistData
+    trans: object                     # TransData
+    interactions: list                # list[InteractionData | InterAllData]
+    locspn: object | None = None      # LocSpnData
+    modpara: object | None = None     # ModParaData
+    namelist: object | None = None    # NamelistData
     green_one: object | None = None   # GreenOneData
     green_two: object | None = None   # GreenTwoData
 
     def write(self, directory: Path = Path(".")) -> None:
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
-        self.locspn.write(directory)
+        if self.locspn is not None:
+            self.locspn.write(directory)
         self.trans.write(directory)
         for data in self.interactions:
             data.write(directory)
-        self.modpara.write(directory)
+        if self.modpara is not None:
+            self.modpara.write(directory)
         if self.green_one is not None:
             self.green_one.write(directory)
         if self.green_two is not None:
             self.green_two.write(directory)
-        self.namelist.write(directory)
+        if self.namelist is not None:
+            self.namelist.write(directory)
 
     def to_dict(self) -> dict:
+        def _d(x):
+            return x.to_dict() if x is not None else None
         return {
-            "locspn": self.locspn.to_dict(),
+            "locspn": _d(self.locspn),
             "trans": self.trans.to_dict(),
             "interactions": [d.to_dict() for d in self.interactions],
-            "modpara": self.modpara.to_dict(),
-            "namelist": self.namelist.to_dict(),
-            "green_one": (self.green_one.to_dict()
-                          if self.green_one is not None else None),
-            "green_two": (self.green_two.to_dict()
-                          if self.green_two is not None else None),
+            "modpara": _d(self.modpara),
+            "namelist": _d(self.namelist),
+            "green_one": _d(self.green_one),
+            "green_two": _d(self.green_two),
         }
 
 

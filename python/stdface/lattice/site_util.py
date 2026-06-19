@@ -332,7 +332,6 @@ def close_lattice_xsf(StdI: StdIntList) -> None:
         Model parameter structure.
     """
     print_xsf(StdI)
-    print_geometry(StdI)
 
 
 def _validate_box_params(

@@ -1052,13 +1052,17 @@ class TestCloseLatticeXsf:
         assert (tmp_path / "lattice.xsf").exists()
 
     def test_creates_geometry_dat(self, tmp_path, monkeypatch):
-        """Test that geometry.dat is created on disk."""
+        """geometry.dat is now an independent output (build_geometry)."""
+        from stdface.lattice.geometry_output import build_geometry
         monkeypatch.chdir(tmp_path)
         StdI = _make_stdi_chain(4)
         StdI.nsite = 4
         StdI.NsiteUC = 1
         StdI.locspinflag = np.zeros(4, dtype=int)
+        # close_lattice_xsf no longer writes geometry.dat
         close_lattice_xsf(StdI)
+        assert not (tmp_path / "geometry.dat").exists()
+        build_geometry(StdI).write(tmp_path)
         assert (tmp_path / "geometry.dat").exists()
 
     def test_lattice_xsf_contains_crystal(self, tmp_path, monkeypatch):
@@ -1073,13 +1077,14 @@ class TestCloseLatticeXsf:
         assert "CRYSTAL" in content
 
     def test_geometry_dat_has_content(self, tmp_path, monkeypatch):
-        """Test that geometry.dat is non-empty."""
+        """build_geometry produces a non-empty geometry.dat."""
+        from stdface.lattice.geometry_output import build_geometry
         monkeypatch.chdir(tmp_path)
         StdI = _make_stdi_chain(4)
         StdI.nsite = 4
         StdI.NsiteUC = 1
         StdI.locspinflag = np.zeros(4, dtype=int)
-        close_lattice_xsf(StdI)
+        build_geometry(StdI).write(tmp_path)
         content = (tmp_path / "geometry.dat").read_text()
         assert len(content) > 0
 

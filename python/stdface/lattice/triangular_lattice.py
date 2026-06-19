@@ -194,7 +194,6 @@ def triangular(StdI: StdIntList) -> "GnuplotData | None":
         for dW, dL, si, sj, nn, J, t, V in _BONDS:
             add_neighbor_interaction(
                 StdI, buf, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
-    print_geometry(StdI)
     return buf.build(StdI) if buf else None
 
 

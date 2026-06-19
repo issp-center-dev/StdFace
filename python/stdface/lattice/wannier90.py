@@ -1268,7 +1268,6 @@ def wannier90(StdI: StdIntList) -> None:
     if idcmode != _DCMode.NOTCORRECT:
         _print_uhf_initial(StdI, NtUJ, tUJ, DenMat, tUJindx)
     print_xsf(StdI)
-    print_geometry(StdI)
 
     # Write wan2site.dat
     _write_wan2site(StdI)

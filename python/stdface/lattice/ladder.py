@@ -194,7 +194,6 @@ def ladder(StdI: StdIntList) -> "GnuplotData | None":
                 for dW, dL, nn, J, t, V in _RUNG_BONDS:
                     add_neighbor_interaction(
                         StdI, buf, 0, cell_l, dW, dL, uc_i, uc_i + 1, nn, J, t, V)
-    print_geometry(StdI)
     return buf.build(StdI) if buf else None
 
 

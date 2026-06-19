@@ -860,7 +860,8 @@ class TestWannier90Hubbard:
 
         assert (tmp_path / "lattice.xsf").exists()
         assert (tmp_path / "wan2site.dat").exists()
-        assert (tmp_path / "geometry.dat").exists()
+        # geometry.dat is now an independent lattice output (build_geometry,
+        # written by the main flow), no longer a side effect of setup.
 
     def test_hubbard_defaults(self, tmp_path):
         """Default values should be applied for h, Gamma, etc."""
