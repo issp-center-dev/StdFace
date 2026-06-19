@@ -561,9 +561,13 @@ def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> None:
         _unsupported_system(StdI.model, StdI.lattice)
     else:
         gp_data = lattice_plugin.setup(StdI)
-        # D2 (output container) will hold this later; for now write directly.
+        # Lattice-level (solver-independent) outputs on their own path.
         if gp_data is not None:
             gp_data.write()
+        from ..lattice.geometry_output import build_geometry
+        geo_data = build_geometry(StdI)
+        if geo_data is not None:
+            geo_data.write()
 
     from ..plugin import get_plugin
     try:
