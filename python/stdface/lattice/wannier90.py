@@ -1023,20 +1023,16 @@ def _build_wannier_interactions(
     DenMat : dict or None
         Density matrix (keyed by ``(R0, R1, R2)``), or ``None``.
     """
-    # Compute upper limits for Transfer & Interaction arrays
+    # Compute upper limit on the number of transfer terms (for pump arrays)
     if StdI.model == ModelType.SPIN:
         ntransMax = StdI.nsite * (StdI.S2 + 1 + 2 * StdI.S2)
-        nintrMax = StdI.NCell * (
-            StdI.NsiteUC + NtUJ[0] + NtUJ[1] + NtUJ[2]
-        ) * (3 * StdI.S2 + 1) * (3 * StdI.S2 + StdI.NsiteUC)
     elif StdI.model == ModelType.HUBBARD:
         ntransMax = StdI.NCell * 2 * (
             2 * StdI.NsiteUC + NtUJ[0] * 2
             + NtUJ[1] * 2 * 3 + NtUJ[2] * 2 * 2
         )
-        nintrMax = StdI.NCell * (NtUJ[1] + NtUJ[2] + StdI.NsiteUC)
 
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    malloc_interactions(StdI, ntransMax)
 
     # For spin systems, compute super-exchange interaction on-site U
     Uspin = None

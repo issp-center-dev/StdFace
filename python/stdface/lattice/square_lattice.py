@@ -147,8 +147,8 @@ def tetragonal(StdI: StdIntList) -> "GnuplotData | None":
 
     # (4) Compute upper limit of Transfer & Interaction and malloc them
     #     nn=2, nnn=2, nnnn=2 → n_bonds=6
-    ntransMax, nintrMax = compute_max_interactions(StdI, n_bonds=2 + 2 + 2)
-    malloc_interactions(StdI, ntransMax, nintrMax)
+    ntransMax = compute_max_interactions(StdI, n_bonds=2 + 2 + 2)
+    malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
     for kCell in range(StdI.NCell):

@@ -443,13 +443,16 @@ def coulomb(StdI: StdIntList, V: float, isite: int, jsite: int) -> None:
 def compute_max_interactions(
     StdI: StdIntList,
     n_bonds: int,
-) -> tuple[int, int]:
-    """Compute upper limits for the transfer and interaction arrays.
+) -> int:
+    """Compute the upper limit on the number of transfer terms.
 
     Uses the standard formula shared by most lattice builders.  The
     lattice-specific information is captured by *n_bonds*, the total
     number of distinct neighbor bond types per unit cell (sum of
     nearest, next-nearest, and third-nearest neighbor bonds).
+
+    The result is only used to size the HPhi time-evolution pump arrays;
+    the transfer and interaction terms themselves are list-based.
 
     Parameters
     ----------
@@ -462,48 +465,38 @@ def compute_max_interactions(
 
     Returns
     -------
-    tuple of (int, int)
-        ``(ntransMax, nintrMax)`` — upper limits for allocation.
+    int
+        ``ntransMax`` — upper limit on the number of transfer terms.
     """
     if StdI.model == ModelType.SPIN:
         ntransMax = StdI.nsite * (StdI.S2 + 1 + 2 * StdI.S2)
-        nintrMax = (StdI.NCell * (StdI.NsiteUC + n_bonds)
-                    * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
     else:
         ntransMax = StdI.NCell * 2 * (2 * StdI.NsiteUC + 2 * n_bonds)
-        nintrMax = StdI.NCell * (StdI.NsiteUC + 4 * n_bonds)
         if StdI.model == ModelType.KONDO:
             ntransMax += StdI.nsite // 2 * (StdI.S2 + 1 + 2 * StdI.S2)
-            nintrMax += (StdI.nsite // 2
-                         * (3 * StdI.S2 + 1) * (3 * StdI.S2 + 1))
-    return ntransMax, nintrMax
+    return ntransMax
 
 
-def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None:
-    """Allocate arrays for interactions.
+def malloc_interactions(StdI: StdIntList, ntransMax: int) -> None:
+    """Allocate the HPhi time-evolution pump arrays, if needed.
+
+    Transfer and interaction terms are list-based (see ``trans_list`` /
+    ``intr_list``), so no allocation is required for them.  ``ntransMax``
+    is only used to size the pump arrays.
 
     Parameters
     ----------
     StdI : StdIntList
         Model parameter structure (modified in-place).
     ntransMax : int
-        Upper limit of the number of transfer terms.
-    nintrMax : int
-        Upper limit of the number of interaction terms.
+        Upper limit on the number of transfer terms.
     """
-    # (1) Transfer (A1: list-based; ntransMax no longer needed here)
-    StdI.trans_list = []
-
-    # HPhi pump arrays
     if (StdI.solver == SolverType.HPhi
             and StdI.method == MethodType.TIME_EVOLUTION
             and StdI.PumpBody == 1):
         StdI.npump = np.zeros(StdI.Lanczos_max, dtype=int)
         StdI.pumpindx = np.zeros((StdI.Lanczos_max, ntransMax, 4), dtype=int)
         StdI.pump = np.zeros((StdI.Lanczos_max, ntransMax), dtype=complex)
-
-    # (2) InterAll (A1: list-based)
-    StdI.intr_list = []
 
     # (3)-(8) Two-body shortcut term lists (A1: list-based)
     StdI.Cintra_list = []

@@ -33,15 +33,14 @@ def _make_stdi(
     solver: str = "HPhi",
     model: str = "hubbard",
     ntrans: int = 100,
-    nintr: int = 100,
 ) -> StdIntList:
-    """Create a minimal StdIntList with pre-allocated interaction arrays."""
+    """Create a minimal StdIntList with pump arrays allocated when needed."""
     StdI = StdIntList()
     StdI.solver = solver
     StdI.model = model
     StdI.method = "lanczos"
     StdI.PumpBody = 0
-    malloc_interactions(StdI, ntrans, nintr)
+    malloc_interactions(StdI, ntrans)
     return StdI
 
 
@@ -60,7 +59,7 @@ class TestMallocInteractions:
         StdI.model = "hubbard"
         StdI.method = "lanczos"
         StdI.PumpBody = 0
-        malloc_interactions(StdI, 50, 80)
+        malloc_interactions(StdI, 50)
         assert len(StdI.trans_list) == 0
 
     def test_intr_arrays_allocated(self):
@@ -70,7 +69,7 @@ class TestMallocInteractions:
         StdI.model = "hubbard"
         StdI.method = "lanczos"
         StdI.PumpBody = 0
-        malloc_interactions(StdI, 50, 80)
+        malloc_interactions(StdI, 50)
         assert len(StdI.intr_list) == 0
 
     def test_coulomb_arrays_allocated(self):
@@ -80,7 +79,7 @@ class TestMallocInteractions:
         StdI.model = "hubbard"
         StdI.method = "lanczos"
         StdI.PumpBody = 0
-        malloc_interactions(StdI, 50, 80)
+        malloc_interactions(StdI, 50)
         assert len(StdI.Cintra_list) == 0
         assert len(StdI.Cinter_list) == 0
 
@@ -91,7 +90,7 @@ class TestMallocInteractions:
         StdI.model = "hubbard"
         StdI.method = "lanczos"
         StdI.PumpBody = 0
-        malloc_interactions(StdI, 50, 80)
+        malloc_interactions(StdI, 50)
         assert len(StdI.Hund_list) == 0
         assert len(StdI.Ex_list) == 0
         assert len(StdI.PairLift_list) == 0
@@ -105,7 +104,7 @@ class TestMallocInteractions:
         StdI.method = "timeevolution"
         StdI.PumpBody = 1
         StdI.Lanczos_max = 10
-        malloc_interactions(StdI, 50, 80)
+        malloc_interactions(StdI, 50)
         assert StdI.npump.shape == (10,)
         assert StdI.pumpindx.shape == (10, 50, 4)
         assert StdI.pump.shape == (10, 50)
@@ -160,7 +159,7 @@ class TestHoppingPump:
         StdI.PumpBody = 1
         StdI.Lanczos_max = 1
         StdI.At = np.array([[0.1, 0.0, 0.0]], dtype=float)
-        malloc_interactions(StdI, 50, 80)
+        malloc_interactions(StdI, 50)
         StdI.npump[:] = 0
         dR = np.array([1.0, 0.0, 0.0])
         hopping(StdI, 0.5 + 0.25j, 0, 1, dR)
@@ -625,7 +624,7 @@ def _make_stdi_square_for_neighbor(
     if model == "kondo":
         StdI.nsite *= 2
 
-    malloc_interactions(StdI, 500, 500)
+    malloc_interactions(StdI, 500)
     return StdI
 
 
@@ -778,7 +777,7 @@ def _make_stdi_ortho_for_neighbor(
     if model == "kondo":
         StdI.nsite *= 2
 
-    malloc_interactions(StdI, 500, 500)
+    malloc_interactions(StdI, 500)
     return StdI
 
 
@@ -875,47 +874,27 @@ def _make_stdi_for_max(
 
 
 class TestComputeMaxInteractions:
-    """Tests for compute_max_interactions."""
+    """Tests for compute_max_interactions (returns ntransMax)."""
 
     def test_spin_ntrans(self):
         """Test ntransMax formula for spin model."""
         StdI = _make_stdi_for_max(model="spin", NCell=4, NsiteUC=1, S2=1)
         # nsite = 4, S2 = 1
         # ntransMax = nsite * (S2 + 1 + 2*S2) = 4 * (1 + 1 + 2) = 16
-        ntrans, nintr = compute_max_interactions(StdI, n_bonds=6)
-        assert ntrans == 16
-
-    def test_spin_nintr(self):
-        """Test nintrMax formula for spin model."""
-        StdI = _make_stdi_for_max(model="spin", NCell=4, NsiteUC=1, S2=1)
-        # nintrMax = NCell * (NsiteUC + n_bonds) * (3*S2+1)^2
-        #          = 4 * (1 + 6) * 4^2 = 4 * 7 * 16 = 448
-        ntrans, nintr = compute_max_interactions(StdI, n_bonds=6)
-        assert nintr == 448
+        assert compute_max_interactions(StdI, n_bonds=6) == 16
 
     def test_spin_s1(self):
         """Test spin model with S=1 (S2=2)."""
         StdI = _make_stdi_for_max(model="spin", NCell=4, NsiteUC=1, S2=2)
         # ntransMax = 4 * (2 + 1 + 4) = 28
-        # nintrMax = 4 * (1 + 6) * (7)^2 = 4 * 7 * 49 = 1372
-        ntrans, nintr = compute_max_interactions(StdI, n_bonds=6)
-        assert ntrans == 28
-        assert nintr == 1372
+        assert compute_max_interactions(StdI, n_bonds=6) == 28
 
     def test_hubbard_ntrans(self):
         """Test ntransMax formula for hubbard model."""
         StdI = _make_stdi_for_max(model="hubbard", NCell=4, NsiteUC=1, S2=1)
         # ntransMax = NCell * 2 * (2*NsiteUC + 2*n_bonds)
         #           = 4 * 2 * (2 + 12) = 4 * 2 * 14 = 112
-        ntrans, nintr = compute_max_interactions(StdI, n_bonds=6)
-        assert ntrans == 112
-
-    def test_hubbard_nintr(self):
-        """Test nintrMax formula for hubbard model."""
-        StdI = _make_stdi_for_max(model="hubbard", NCell=4, NsiteUC=1, S2=1)
-        # nintrMax = NCell * (NsiteUC + 4*n_bonds) = 4 * (1 + 24) = 100
-        ntrans, nintr = compute_max_interactions(StdI, n_bonds=6)
-        assert nintr == 100
+        assert compute_max_interactions(StdI, n_bonds=6) == 112
 
     def test_kondo_adds_spin_terms(self):
         """Test kondo model adds extra spin contribution."""
@@ -924,29 +903,19 @@ class TestComputeMaxInteractions:
         # Base: ntransMax = 4 * 2 * (2 + 12) = 112
         # Kondo extra: nsite//2 * (1+1+2) = 4 * 4 = 16
         # Total ntransMax = 128
-        ntrans, nintr = compute_max_interactions(StdI, n_bonds=6)
-        assert ntrans == 128
-        # Base nintrMax = 4 * (1 + 24) = 100
-        # Kondo extra: 4 * (3*1+1)^2 = 4 * 16 = 64
-        # Total nintrMax = 164
-        assert nintr == 164
+        assert compute_max_interactions(StdI, n_bonds=6) == 128
 
     def test_multi_site_uc(self):
         """Test with NsiteUC > 1 (e.g. pyrochlore with 4 sites per UC)."""
         StdI = _make_stdi_for_max(model="spin", NCell=2, NsiteUC=4, S2=1)
         # nsite = 8, S2 = 1
         # ntransMax = 8 * (1+1+2) = 32
-        # nintrMax = 2 * (4 + 12) * 16 = 2 * 16 * 16 = 512
-        ntrans, nintr = compute_max_interactions(StdI, n_bonds=12)
-        assert ntrans == 32
-        assert nintr == 512
+        assert compute_max_interactions(StdI, n_bonds=12) == 32
 
-    def test_returns_tuple(self):
-        """Test that function returns a 2-tuple."""
+    def test_returns_int(self):
+        """Test that function returns an int."""
         StdI = _make_stdi_for_max()
-        result = compute_max_interactions(StdI, n_bonds=6)
-        assert isinstance(result, tuple)
-        assert len(result) == 2
+        assert isinstance(compute_max_interactions(StdI, n_bonds=6), int)
 
 
 # ===================================================================

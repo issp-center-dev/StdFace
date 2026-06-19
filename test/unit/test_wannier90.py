@@ -1059,8 +1059,8 @@ class TestWannier90HrMultilineDegeneracy:
 # ---------------------------------------------------------------------------
 
 
-def _setup_interactions(s: StdIntList, ntransMax: int = 100, nintrMax: int = 100) -> None:
-    """Allocate interaction arrays on StdIntList for testing."""
+def _setup_interactions(s: StdIntList) -> None:
+    """Initialise interaction term lists on StdIntList for testing."""
     s.trans_list = []
     s.intr_list = []
     s.Cintra_list = []

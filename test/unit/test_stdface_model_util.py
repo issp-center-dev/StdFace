@@ -18,10 +18,10 @@ import stdface.core.stdface_model_util as smu
 #  Helpers
 # ---------------------------------------------------------------------------
 
-def _make_allocated(ntrans: int = 100, nintr: int = 100) -> StdIntList:
+def _make_allocated(ntrans: int = 100) -> StdIntList:
     """Return an StdIntList with interaction arrays pre-allocated."""
     s = StdIntList()
-    smu.malloc_interactions(s, ntrans, nintr)
+    smu.malloc_interactions(s, ntrans)
     return s
 
 
@@ -392,7 +392,7 @@ class TestMallocInteractions:
     def test_arrays_allocated(self):
         """All interaction arrays should be properly allocated."""
         s = StdIntList()
-        smu.malloc_interactions(s, ntransMax=50, nintrMax=30)
+        smu.malloc_interactions(s, ntransMax=50)
         assert len(s.trans_list) == 0
         assert len(s.intr_list) == 0
         assert len(s.Cintra_list) == 0
@@ -409,7 +409,7 @@ class TestMallocInteractions:
         s.method = "timeevolution"
         s.PumpBody = 1
         s.Lanczos_max = 5
-        smu.malloc_interactions(s, ntransMax=20, nintrMax=10)
+        smu.malloc_interactions(s, ntransMax=20)
         assert s.npump.shape == (5,)
         assert s.pumpindx.shape == (5, 20, 4)
         assert s.pump.shape == (5, 20)
