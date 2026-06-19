@@ -43,11 +43,8 @@ class UHFPlugin(ExpertModeSolverPlugin):
     def has_two_body_green(self, StdI: StdIntList) -> bool:
         return False
 
-    def write(self, StdI: StdIntList) -> None:
-        """Write UHF Expert-mode files (common files only; no greentwo)."""
-        from ...writer.common_writer import print_namelist
-        self._write_common_files(StdI)
-        print_namelist(StdI)
+    # UHF has no solver-specific files; the base write()/build_output suffice
+    # (write_solver_files is the default no-op).
 
 
 # -----------------------------------------------------------------------

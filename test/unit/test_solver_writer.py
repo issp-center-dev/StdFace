@@ -446,6 +446,34 @@ class TestUHFPlugin:
             finally:
                 os.chdir(orig)
 
+    def test_build_output_returns_container(self):
+        """UHF build_output returns a fully data-backed ExpertModeOutput."""
+        from stdface.core.output import ExpertModeOutput
+        StdI = _make_stdi_for_hphi(nsite=4)
+        StdI.solver = "UHF"
+        StdI.outputmode = None
+        out = get_plugin("UHF").build_output(StdI)
+        assert isinstance(out, ExpertModeOutput)
+        d = out.to_dict()
+        # UHF: no two-body green, but everything else present and serialisable
+        assert d["green_two"] is None
+        assert d["locspn"] and d["trans"] and d["modpara"] and d["namelist"]
+        assert "params" in d["modpara"]
+        assert d["namelist"]["entries"][0] == ["ModPara", "modpara.def"]
+
+    def test_hphi_build_output_emits_solver_files(self, tmp_path, monkeypatch):
+        """HPhi build_output writes solver-specific files via the hook."""
+        from stdface.core.output import ExpertModeOutput
+        monkeypatch.chdir(tmp_path)
+        StdI = _make_stdi_for_hphi(nsite=4)
+        StdI.solver = "HPhi"
+        StdI.outputmode = None
+        out = get_plugin("HPhi").build_output(StdI)
+        assert isinstance(out, ExpertModeOutput)
+        # excitation / calcmod written eagerly by write_solver_files
+        assert os.path.exists("calcmod.def")
+        assert os.path.exists("pair.def") or os.path.exists("single.def")
+
 
 class TestHWaveSplit:
     """Tests for the UHFR / UHFK plugins (the H-wave split)."""
