@@ -194,6 +194,36 @@ class HamiltonianTerms:
 
 
 @dataclass
+class LatticeGeometry:
+    """Lattice geometry: super-cell box, unit-cell data and boundary phase.
+
+    Holds the lattice name, lattice constants/dimensions, the super-cell
+    ``box`` / ``rbox`` / ``direct`` matrices, unit-cell data
+    (``NCell`` / ``Cell`` / ``NsiteUC`` / ``tau`` / ``nsite``) and the
+    boundary phase vectors.  ``StdIntList`` delegates to an instance of
+    this class via façade properties (see :func:`_delegate`).
+    """
+
+    lattice: str | None = None
+    a: float | None = None
+    length: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    W: int | None = None
+    L: int | None = None
+    Height: int | None = None
+    direct: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    box: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
+    rbox: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
+    NCell: int = 0
+    Cell: None = None
+    NsiteUC: int = 0
+    tau: None = None
+    nsite: int = 0
+    phase: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    ExpPhase: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=complex))
+    AntiPeriod: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
+
+
+@dataclass
 class StdIntList:
     """Main structure containing all parameters and variables for Standard mode.
 
@@ -641,19 +671,22 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Parameters for LATTICE
     # ------------------------------------------------------------------
-    lattice: str | None = None
-    a: float | None = None
-    length: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    W: int | None = None
-    L: int | None = None
-    Height: int | None = None
-    direct: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    box: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
-    rbox: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
-    NCell: int = 0
-    Cell: None = None
-    NsiteUC: int = 0
-    tau: None = None
+    # C1: lattice geometry lives in a sub-object; the names below are
+    # façade properties delegating to ``self._lattice`` (see _delegate).
+    _lattice: LatticeGeometry = field(default_factory=LatticeGeometry)
+    lattice = _delegate("_lattice", "lattice")
+    a = _delegate("_lattice", "a")
+    length = _delegate("_lattice", "length")
+    W = _delegate("_lattice", "W")
+    L = _delegate("_lattice", "L")
+    Height = _delegate("_lattice", "Height")
+    direct = _delegate("_lattice", "direct")
+    box = _delegate("_lattice", "box")
+    rbox = _delegate("_lattice", "rbox")
+    NCell = _delegate("_lattice", "NCell")
+    Cell = _delegate("_lattice", "Cell")
+    NsiteUC = _delegate("_lattice", "NsiteUC")
+    tau = _delegate("_lattice", "tau")
 
     # ------------------------------------------------------------------
     #  Parameters for MODEL
@@ -726,16 +759,16 @@ class StdIntList:
     K: float | None = None
 
     # ------------------------------------------------------------------
-    #  Phase for the boundary
+    #  Phase for the boundary (delegated to _lattice)
     # ------------------------------------------------------------------
-    phase: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    ExpPhase: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=complex))
-    AntiPeriod: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
+    phase = _delegate("_lattice", "phase")
+    ExpPhase = _delegate("_lattice", "ExpPhase")
+    AntiPeriod = _delegate("_lattice", "AntiPeriod")
 
     # ------------------------------------------------------------------
     #  Transfer, Interaction, Locspin
     # ------------------------------------------------------------------
-    nsite: int = 0
+    nsite = _delegate("_lattice", "nsite")
     locspinflag: None = None
     # C1: Hamiltonian terms live in a sub-object; the 15 names below are
     # façade properties delegating to ``self._terms`` (see _delegate).

@@ -8,11 +8,48 @@ import numpy as np
 import pytest
 
 from stdface.core.stdface_vals import (
-    StdIntList, HamiltonianTerms, ModelType, SolverType, MethodType,
+    StdIntList, HamiltonianTerms, LatticeGeometry,
+    ModelType, SolverType, MethodType,
     NaN_i,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
     is_unset_or_trivial_d,
 )
+
+
+class TestLatticeGeometrySplit:
+    """C1-2: lattice geometry lives in a LatticeGeometry sub-object,
+    exposed on StdIntList via transparent façade properties."""
+
+    def test_lattice_subobject_present(self):
+        s = StdIntList()
+        assert isinstance(s._lattice, LatticeGeometry)
+
+    def test_facade_reads_subobject(self):
+        s = StdIntList()
+        assert s.box is s._lattice.box
+        assert s.direct is s._lattice.direct
+        assert s.W is None and s.nsite == 0
+
+    def test_facade_inplace_numpy_mutation(self):
+        s = StdIntList()
+        s.box[0, 0] = 5
+        s.direct[1, 2] = 3.0
+        assert s._lattice.box[0, 0] == 5
+        assert s._lattice.direct[1, 2] == 3.0
+
+    def test_facade_scalar_write(self):
+        s = StdIntList()
+        s.W, s.L, s.Height = 2, 3, 4
+        s.nsite = 24
+        assert (s._lattice.W, s._lattice.L, s._lattice.Height) == (2, 3, 4)
+        assert s._lattice.nsite == 24
+
+    def test_instances_independent(self):
+        s1, s2 = StdIntList(), StdIntList()
+        s1.box[0, 0] = 9
+        s1.NCell = 7
+        assert s2.box[0, 0] == 0
+        assert s2.NCell == 0
 
 
 class TestHamiltonianTermsSplit:
