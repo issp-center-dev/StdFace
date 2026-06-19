@@ -76,15 +76,15 @@ _UHF_KEYWORDS: dict[str, tuple] = {
 # -----------------------------------------------------------------------
 
 _RESET_SCALARS: list[tuple[str, object]] = [
-    ("NMPTrans", NaN_i),
-    ("RndSeed", NaN_i),
+    ("NMPTrans", None),
+    ("RndSeed", None),
     ("mix", NaN_d),
-    ("eps", NaN_i),
-    ("eps_slater", NaN_i),
-    ("Iteration_max", NaN_i),
-    ("Hsub", NaN_i),
-    ("Lsub", NaN_i),
-    ("Wsub", NaN_i),
+    ("eps", None),
+    ("eps_slater", None),
+    ("Iteration_max", None),
+    ("Hsub", None),
+    ("Lsub", None),
+    ("Wsub", None),
 ]
 
 _RESET_ARRAYS: list[tuple[str, object]] = [

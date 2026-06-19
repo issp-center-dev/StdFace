@@ -9,7 +9,7 @@ import pytest
 
 from stdface.core.stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
-    NaN_i, NaN_d, NaN_c, UNSET_STRING,
+    NaN_i, NaN_d, NaN_c,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
     is_unset_or_trivial_d,
 )
@@ -36,20 +36,22 @@ class TestStdIntListDefaults:
     """Tests for default initialization of StdIntList."""
 
     def test_string_defaults(self):
-        """String fields should default to UNSET_STRING or empty string."""
+        """String fields should default to None or empty string."""
         s = StdIntList()
-        assert s.lattice == UNSET_STRING
-        assert s.model == UNSET_STRING
-        assert s.outputmode == UNSET_STRING
-        assert s.CDataFileHead == UNSET_STRING
+        assert s.lattice is None
+        assert s.model is None
+        assert s.outputmode is None
+        assert s.CDataFileHead is None
         assert s.solver == ""
 
     def test_int_defaults(self):
-        """Integer fields should default to 0."""
+        """Sentinel-reset int fields default to None; computed ones to 0."""
         s = StdIntList()
-        assert s.W == 0
-        assert s.L == 0
-        assert s.Height == 0
+        # A2: lattice dimensions are unset (None) until specified
+        assert s.W is None
+        assert s.L is None
+        assert s.Height is None
+        # Computed counters keep their 0 default
         assert s.NCell == 0
         assert s.NsiteUC == 0
         assert s.nsite == 0
@@ -450,7 +452,7 @@ class TestSentinelConstants:
     """Tests for the module-level sentinel constants."""
 
     def test_nan_i_value(self):
-        """NaN_i should be INT_MAX (2147483647)."""
+        """NaN_i should be INT_MAX (2147483647) -- kept for integer matrices."""
         assert NaN_i == 2147483647
 
     def test_nan_i_type(self):
@@ -478,14 +480,6 @@ class TestSentinelConstants:
     def test_nan_c_type(self):
         """NaN_c should be a complex."""
         assert isinstance(NaN_c, complex)
-
-    def test_unset_string_value(self):
-        """UNSET_STRING should be '****'."""
-        assert UNSET_STRING == "****"
-
-    def test_unset_string_type(self):
-        """UNSET_STRING should be a str."""
-        assert isinstance(UNSET_STRING, str)
 
     def test_sentinels_are_distinct(self):
         """The three numeric sentinels should have different types."""

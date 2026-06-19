@@ -245,7 +245,7 @@ def _make_wannier_StdI(
     s.K = NaN_d
     s.U = NaN_d
     s.mu = NaN_d
-    s.S2 = NaN_i
+    s.S2 = None
 
     return s
 
@@ -362,9 +362,9 @@ class TestReadW90:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
 
         NtUJ = [0, 0, 0]
         tUJ = [None, None, None]
@@ -415,9 +415,9 @@ class TestReadW90:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
 
         cutoff_R = np.array([10, 10, 10], dtype=int)
         cutoff_Rvec = np.full((3, 3), NaN_i, dtype=float)
@@ -462,9 +462,9 @@ class TestReadW90:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
 
         cutoff_R = np.array([10, 10, 10], dtype=int)
         cutoff_Rvec = np.full((3, 3), NaN_i, dtype=float)
@@ -549,9 +549,9 @@ class TestReadW90WithCutoff:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
         s.CDataFileHead = "test"
 
@@ -585,9 +585,9 @@ class TestReadW90WithCutoff:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
         s.CDataFileHead = "test"
 
@@ -621,9 +621,9 @@ class TestReadW90WithCutoff:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
         s.CDataFileHead = "test"
 
@@ -657,9 +657,9 @@ class TestReadW90WithCutoff:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         s.box = np.array([[4, 0, 0], [0, 6, 0], [0, 0, 2]], dtype=int)
         s.CDataFileHead = "test"
 
@@ -695,9 +695,9 @@ class TestReadW90WithCutoff:
         s.NsiteUC = NsiteUC
         s.direct = np.eye(3)
         s.tau = np.zeros((NsiteUC, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
         s.CDataFileHead = "test"
 
@@ -728,9 +728,9 @@ class TestReadW90WithCutoff:
         s.NsiteUC = 1
         s.direct = np.eye(3)
         s.tau = np.zeros((1, 3))
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         s.box = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]], dtype=int)
         s.CDataFileHead = "nonexistent"
 
@@ -782,9 +782,8 @@ class TestParseDoubleCountingMode:
         assert w90._parse_double_counting_mode("none") == w90._DCMode.NOTCORRECT
 
     def test_unset_string_returns_notcorrect(self):
-        """UNSET_STRING sentinel should map to NOTCORRECT."""
-        from stdface.core.stdface_vals import UNSET_STRING
-        assert w90._parse_double_counting_mode(UNSET_STRING) == w90._DCMode.NOTCORRECT
+        """None sentinel should map to NOTCORRECT."""
+        assert w90._parse_double_counting_mode(None) == w90._DCMode.NOTCORRECT
 
     def test_hartree_returns_hartree(self):
         """'hartree' should map to HARTREE."""
@@ -810,8 +809,7 @@ class TestParseDoubleCountingMode:
 
     def test_dc_mode_map_keys(self):
         """_DC_MODE_MAP should contain exactly the expected keys."""
-        from stdface.core.stdface_vals import UNSET_STRING
-        expected_keys = {"none", UNSET_STRING, "hartree", "hartree_u", "full"}
+        expected_keys = {"none", None, "hartree", "hartree_u", "full"}
         assert set(w90._DC_MODE_MAP.keys()) == expected_keys
 
     def test_dc_mode_map_values(self):
@@ -1320,7 +1318,7 @@ class TestValidateWannierParams:
         s.Gamma = NaN_d
         s.Gamma_y = NaN_d
         s.U = NaN_d
-        s.S2 = NaN_i
+        s.S2 = None
         s.mu = NaN_d
         w90._validate_wannier_params(s)
         assert s.S2 == 1
@@ -1337,7 +1335,7 @@ class TestValidateWannierParams:
         s.Gamma = NaN_d
         s.Gamma_y = NaN_d
         s.U = NaN_d
-        s.S2 = NaN_i
+        s.S2 = None
         s.mu = NaN_d
         w90._validate_wannier_params(s)
         assert s.mu == 0.0
@@ -1351,7 +1349,7 @@ class TestValidateWannierParams:
         s.Gamma = NaN_d
         s.Gamma_y = NaN_d
         s.U = NaN_d
-        s.S2 = NaN_i
+        s.S2 = None
         s.mu = NaN_d
         with pytest.raises(ValueError):
             w90._validate_wannier_params(s)
@@ -1461,9 +1459,9 @@ class TestApplyBoundaryWeights:
         ], dtype=int)
         Weight_tot = np.ones(3)
         s = StdIntList()
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         band = w90._apply_boundary_weights(indx_tot, Weight_tot, 3, s)
         np.testing.assert_array_equal(band, [1, 2, 3])
 
@@ -1472,9 +1470,9 @@ class TestApplyBoundaryWeights:
         indx_tot = np.array([[1, 0, 0], [-1, 0, 0]], dtype=int)
         Weight_tot = np.ones(2)
         s = StdIntList()
-        s.W = NaN_i
-        s.L = NaN_i
-        s.Height = NaN_i
+        s.W = None
+        s.L = None
+        s.Height = None
         w90._apply_boundary_weights(indx_tot, Weight_tot, 2, s)
         np.testing.assert_array_equal(Weight_tot, [1.0, 1.0])
 

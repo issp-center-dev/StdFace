@@ -21,7 +21,6 @@ from stdface.writer import wannier90_writer as ew
 #  Helpers
 # ---------------------------------------------------------------------------
 
-NaN_i = 2147483647
 
 
 def _make_stdI_for_geometry(nsiteUC: int = 2) -> StdIntList:
@@ -69,7 +68,7 @@ def _make_stdI_for_interaction(nsiteUC: int = 1, ncell: int = 2) -> StdIntList:
     s.NsiteUC = nsiteUC
     s.NCell = ncell
     s.fileprefix = ""
-    s.export_all = NaN_i  # use default
+    s.export_all = None  # use default
 
     # Set up identity-like box/rbox
     s.box = np.array([
@@ -269,7 +268,7 @@ class TestPrefix:
 
     def test_stars_sentinel(self):
         s = StdIntList()
-        s.fileprefix = "****"
+        s.fileprefix = None
         assert ew._prefix(s, "geom.dat") == "geom.dat"
 
     def test_with_prefix(self):
@@ -766,7 +765,7 @@ class TestExportAllFlag:
         monkeypatch.chdir(tmp_path)
         ew._is_export_all = 1  # reset
         s = _make_stdI_for_interaction()
-        s.export_all = 0  # not NaN_i, so should be used
+        s.export_all = 0  # not None, so should be used
         ew.export_interaction(s)
         assert ew._is_export_all == 0
         # Reset

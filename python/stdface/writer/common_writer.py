@@ -51,8 +51,8 @@ from typing import NamedTuple
 import numpy as np
 
 from ..core.stdface_vals import (
-    StdIntList, ModelType, SolverType, MethodType, NaN_i, UNSET_STRING,
-    AMPLITUDE_EPS,
+    StdIntList, ModelType, SolverType, MethodType,
+    NaN_i, AMPLITUDE_EPS,
 )
 from ..core.param_check import print_val_i, print_val_d, required_val_i, not_used_i
 
@@ -240,7 +240,7 @@ def _write_namelist_mvmc(fp, StdI: StdIntList) -> None:
     fp.write("      Gutzwiller  gutzwilleridx.def\n")
     fp.write("         Jastrow  jastrowidx.def\n")
     fp.write("         Orbital  orbitalidx.def\n")
-    if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 != NaN_i):
+    if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 is not None):
         fp.write(" OrbitalParallel  orbitalidxpara.def\n")
         fp.write("# OrbitalGeneral  orbitalidxgen.def\n")
     fp.write("        TransSym  qptransidx.def\n")
@@ -318,13 +318,13 @@ def _write_modpara_hphi(fp, StdI: StdIntList) -> None:
     fp.write("CParaFileHead  zqp\n")
     fp.write("--------------------\n")
     fp.write(f"Nsite          {StdI.nsite:<5d}\n")
-    if StdI.Sz2 != NaN_i:
+    if StdI.Sz2 is not None:
         fp.write(f"2Sz            {StdI.Sz2:<5d}\n")
-    if StdI.ncond != NaN_i:
+    if StdI.ncond is not None:
         fp.write(f"Ncond          {StdI.ncond:<5d}\n")
     fp.write(f"Lanczos_max    {StdI.Lanczos_max:<5d}\n")
     fp.write(f"initial_iv     {StdI.initial_iv:<5d}\n")
-    if StdI.nvec != NaN_i:
+    if StdI.nvec is not None:
         fp.write(f"nvec           {StdI.nvec:<5d}\n")
     fp.write(f"exct           {StdI.exct:<5d}\n")
     fp.write(f"LanczosEps     {StdI.LanczosEps:<5d}\n")
@@ -370,11 +370,11 @@ def _write_modpara_mvmc(fp, StdI: StdIntList) -> None:
     fp.write("--------------------\n")
     fp.write(f"Nsite          {StdI.nsite}\n")
     fp.write(f"Ncond          {StdI.ncond:<5d}\n")
-    if StdI.Sz2 != NaN_i:
+    if StdI.Sz2 is not None:
         fp.write(f"2Sz            {StdI.Sz2}\n")
-    if StdI.NSPGaussLeg != NaN_i:
+    if StdI.NSPGaussLeg is not None:
         fp.write(f"NSPGaussLeg    {StdI.NSPGaussLeg}\n")
-    if StdI.NSPStot != NaN_i:
+    if StdI.NSPStot is not None:
         fp.write(f"NSPStot        {StdI.NSPStot}\n")
     fp.write(f"NMPTrans       {StdI.NMPTrans}\n")
     fp.write(f"NSROptItrStep  {StdI.NSROptItrStep}\n")
@@ -413,9 +413,11 @@ def _write_modpara_uhf_hwave(fp, StdI: StdIntList) -> None:
     fp.write("CParaFileHead  zqp\n")
     fp.write("--------------------\n")
     fp.write(f"Nsite          {StdI.nsite}\n")
-    if StdI.Sz2 != NaN_i:
+    if StdI.Sz2 is not None:
         fp.write(f"2Sz            {StdI.Sz2:<5d}\n")
-    fp.write(f"Ncond          {StdI.ncond:<5d}\n")
+    # UHF/HWAVE emit an unset Ncond as the integer sentinel (legacy format).
+    ncond_out = StdI.ncond if StdI.ncond is not None else NaN_i
+    fp.write(f"Ncond          {ncond_out:<5d}\n")
     fp.write(f"IterationMax   {StdI.Iteration_max}\n")
     fp.write(f"EPS            {StdI.eps}\n")
     fp.write(f"Mix            {StdI.mix:.10f}\n")
@@ -833,7 +835,7 @@ def check_output_mode(StdI: StdIntList) -> None:
 
     - ``"non"`` / ``"none"`` / ``"off"`` -> ``ioutputmode = 0``
     - ``"cor"`` / ``"corr"`` / ``"correlation"`` -> ``ioutputmode = 1``
-    - ``"****"`` (default sentinel) -> ``ioutputmode = 1``
+    - ``None`` (unset, default) -> ``ioutputmode = 1``
     - ``"raw"`` / ``"all"`` / ``"full"`` -> ``ioutputmode = 2``
     - anything else -> error and exit
 
@@ -848,7 +850,7 @@ def check_output_mode(StdI: StdIntList) -> None:
     ValueError
         If ``StdI.outputmode`` does not match any recognised keyword.
     """
-    if StdI.outputmode == UNSET_STRING:
+    if StdI.outputmode is None:
         StdI.ioutputmode = 1
         logger.info(
             "      ioutputmode = %-10d  ######  DEFAULT VALUE IS USED  ######",
@@ -909,7 +911,7 @@ def _check_mod_para_mvmc(StdI: StdIntList) -> None:
     StdI : StdIntList
         The global parameter structure, modified in place.
     """
-    if StdI.CParaFileHead == UNSET_STRING:
+    if StdI.CParaFileHead is None:
         StdI.CParaFileHead = "zqp"
         logger.info(
             "    CParaFileHead = %-12s######  DEFAULT VALUE IS USED  ######",
@@ -926,7 +928,7 @@ def _check_mod_para_mvmc(StdI: StdIntList) -> None:
         not_used_i("NDataQtySmp", StdI.NDataQtySmp)
     StdI.NDataQtySmp = print_val_i("NDataQtySmp", StdI.NDataQtySmp, 1)
 
-    if StdI.lGC == 0 and (StdI.Sz2 == 0 or StdI.Sz2 == NaN_i):
+    if StdI.lGC == 0 and (StdI.Sz2 == 0 or StdI.Sz2 is None):
         StdI.NSPGaussLeg = print_val_i("NSPGaussLeg", StdI.NSPGaussLeg, 8)
         StdI.NSPStot = print_val_i("NSPStot", StdI.NSPStot, 0)
     else:

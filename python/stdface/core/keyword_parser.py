@@ -10,7 +10,7 @@ import cmath
 import logging
 import math
 
-from .stdface_vals import StdIntList, SolverType, NaN_i, UNSET_STRING
+from .stdface_vals import StdIntList, SolverType, NaN_i
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +63,8 @@ def _fail_duplicate(keyword: str) -> None:
 def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:
     """Store a string value after checking for duplicate assignment.
 
-    If *current* has already been assigned (i.e. it is not the sentinel
-    ``"****"``), the program prints an error and exits.
+    If *current* has already been assigned (i.e. it is not ``None``),
+    the program prints an error and exits.
 
     Parameters
     ----------
@@ -73,7 +73,7 @@ def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:
     value : str
         The new value read from the input file.
     current : str
-        The current stored value (``"****"`` means unset).
+        The current stored value (``None`` means unset).
 
     Returns
     -------
@@ -85,7 +85,7 @@ def store_with_check_dup_s(keyword: str, value: str, current: str) -> str:
     ValueError
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
-    if current != UNSET_STRING:
+    if current is not None:
         _fail_duplicate(keyword)
     return value
 
@@ -106,7 +106,7 @@ def store_with_check_dup_sl(
     value : str
         The new value read from the input file.
     current : str
-        The current stored value (``"****"`` means unset).
+        The current stored value (``None`` means unset).
     maxlen : int, optional
         Maximum number of characters to keep (default 256).
 
@@ -120,7 +120,7 @@ def store_with_check_dup_sl(
     ValueError
         If *current* is not the sentinel, indicating a duplicate keyword.
     """
-    if current != UNSET_STRING:
+    if current is not None:
         _fail_duplicate(keyword)
     return value[:maxlen].lower()
 
@@ -128,8 +128,9 @@ def store_with_check_dup_sl(
 def store_with_check_dup_i(keyword: str, value: str, current: int) -> int:
     """Store an integer value after checking for duplicate assignment.
 
-    If *current* differs from the integer sentinel (``2147483647``),
-    the program prints an error and exits.
+    Scalar integer fields are unset as ``None``; integer matrix elements
+    (``box`` / ``cutoff_*R`` / ``boxsub``) are unset as the sentinel
+    ``NaN_i`` (``2147483647``).  Either state means "not yet specified".
 
     Parameters
     ----------
@@ -138,7 +139,7 @@ def store_with_check_dup_i(keyword: str, value: str, current: int) -> int:
     value : str
         The new value read from the input file (will be converted to int).
     current : int
-        The current stored value (``NaN_i`` means unset).
+        The current stored value (``None`` or ``NaN_i`` means unset).
 
     Returns
     -------
@@ -148,9 +149,9 @@ def store_with_check_dup_i(keyword: str, value: str, current: int) -> int:
     Raises
     ------
     ValueError
-        If *current* is not the sentinel, indicating a duplicate keyword.
+        If *current* is already set, indicating a duplicate keyword.
     """
-    if current != NaN_i:
+    if current is not None and current != NaN_i:
         _fail_duplicate(keyword)
     # C sscanf("%d") truncates floats like "2.0" -> 2
     return int(float(value))

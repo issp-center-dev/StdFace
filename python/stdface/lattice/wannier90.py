@@ -26,7 +26,7 @@ from typing import NamedTuple, TextIO
 
 import numpy as np
 
-from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, UNSET_STRING, AMPLITUDE_EPS
+from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, AMPLITUDE_EPS
 from ..core.param_check import print_val_d, print_val_i, not_used_d
 from .geometry_output import print_geometry, print_xsf
 from .interaction_builder import (
@@ -155,7 +155,7 @@ def _apply_boundary_weights(
     # Compute max absolute index per dimension
     Band_lattice = np.max(np.abs(indx_tot[:nWSC]), axis=0).astype(int)
 
-    if StdI.W != NaN_i and StdI.L != NaN_i and StdI.Height != NaN_i:
+    if StdI.W is not None and StdI.L is not None and StdI.Height is not None:
         dims = np.array([StdI.W, StdI.L, StdI.Height], dtype=int)
         # Model_lattice[i] = dims[i] // 2 if dims[i] is even, else 0
         Model_lattice = np.where(dims % 2 == 0, dims // 2, 0)
@@ -538,14 +538,14 @@ class _DCMode(IntEnum):
 
 _DC_MODE_MAP: dict[str, _DCMode] = {
     "none":      _DCMode.NOTCORRECT,
-    UNSET_STRING: _DCMode.NOTCORRECT,
+    None: _DCMode.NOTCORRECT,
     "hartree":   _DCMode.HARTREE,
     "hartree_u": _DCMode.HARTREE_U,
     "full":      _DCMode.FULL,
 }
 """Maps double-counting mode strings to :class:`_DCMode` enum members.
 
-The sentinel :data:`UNSET_STRING` (``"****"``) is treated the same as
+The sentinel ``None`` (unset) is treated the same as
 ``"none"`` (no correction).
 """
 
@@ -560,7 +560,7 @@ def _parse_double_counting_mode(mode_str: str) -> _DCMode:
     mode_str : str
         Mode specification from the input file.  Recognised values (case
         sensitive) are ``"none"``, ``"hartree"``, ``"hartree_u"`` and
-        ``"full"``.  The sentinel :data:`UNSET_STRING` is treated the same
+        ``"full"``.  The sentinel ``None`` is treated the same
         as ``"none"``.
 
     Returns
@@ -1235,9 +1235,9 @@ def wannier90(StdI: StdIntList) -> None:
 
     # Read hopping, Coulomb, and Hund interaction files
     hopping_R_defaults = (
-        (StdI.W - 1) // 2 if StdI.W != NaN_i else None,
-        (StdI.L - 1) // 2 if StdI.L != NaN_i else None,
-        (StdI.Height - 1) // 2 if StdI.Height != NaN_i else None,
+        (StdI.W - 1) // 2 if StdI.W is not None else None,
+        (StdI.L - 1) // 2 if StdI.L is not None else None,
+        (StdI.Height - 1) // 2 if StdI.Height is not None else None,
     )
     _W90_CHANNELS = (
         _W90Channel("hopping", "t", "t", "_hr.dat", -1.0, hopping_R_defaults, 0, 1.0),

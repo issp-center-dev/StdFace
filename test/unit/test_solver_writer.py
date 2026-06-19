@@ -65,16 +65,16 @@ def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
 
     # CalcSpec / SpectrumType
     StdI.CalcSpec = "none"
-    StdI.SpectrumType = "****"
+    StdI.SpectrumType = None
     StdI.SpectrumQ[:] = NaN_d
     StdI.Restart = "none"
     StdI.EigenVecIO = "none"
     StdI.InitialVecType = "c"
     StdI.HamIO = "none"
     StdI.OutputExVec = "none"
-    StdI.PumpType = "****"
-    StdI.NGPU = NaN_i
-    StdI.Scalapack = NaN_i
+    StdI.PumpType = None
+    StdI.NGPU = None
+    StdI.Scalapack = None
 
     # Interactions (empty)
     StdI.NCintra = 0
@@ -94,7 +94,7 @@ def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
     StdI.locspinflag = [0] * nsite
 
     # outputmode
-    StdI.outputmode = "****"
+    StdI.outputmode = None
 
     return StdI
 
@@ -117,10 +117,10 @@ def _make_spin_chain(L: int = 16) -> StdIntList:
     s.phase[0] = NaN_d
     s.phase[1] = NaN_d
     s.L = L
-    s.W = NaN_i
-    s.Height = NaN_i
+    s.W = None
+    s.Height = None
     s.box[:, :] = NaN_i
-    s.S2 = NaN_i
+    s.S2 = None
     s.h = NaN_d
     s.Gamma = NaN_d
     s.Gamma_y = NaN_d
@@ -198,20 +198,20 @@ def _make_stdi_for_mvmc_write(
     StdI.AntiPeriod = np.zeros(3, dtype=int)
     StdI.locspinflag = [0] * nsite
     StdI.boxsub[:, :] = NaN_i
-    StdI.Hsub = NaN_i
-    StdI.Lsub = NaN_i
+    StdI.Hsub = None
+    StdI.Lsub = None
     StdI.Wsub = 2
-    StdI.NMPTrans = NaN_i
+    StdI.NMPTrans = None
     if lgc_orb_para:
         StdI.lGC = 1
-        StdI.Sz2 = NaN_i
+        StdI.Sz2 = None
     else:
         StdI.lGC = 0
         StdI.Sz2 = 0
     # ``_check_mod_para_mvmc``: when ``NVMCCalMode == 0``, ``NDataQtySmp`` must stay unset
-    StdI.NDataQtySmp = NaN_i
-    StdI.NSPGaussLeg = NaN_i
-    StdI.NSPStot = NaN_i
+    StdI.NDataQtySmp = None
+    StdI.NSPGaussLeg = None
+    StdI.NSPStot = None
     return StdI
 
 
@@ -222,7 +222,7 @@ def _make_hwave_wannier_export_stdi(nsiteUC: int = 2, ncell: int = 2) -> StdIntL
     s.NsiteUC = nsiteUC
     s.NCell = ncell
     s.fileprefix = ""
-    s.export_all = NaN_i
+    s.export_all = None
     s.box = np.array([
         [ncell, 0, 0],
         [0, 1, 0],
@@ -430,7 +430,7 @@ class TestUHFPlugin:
         """Test that UHFPlugin creates the expected set of files."""
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.solver = "UHF"
-        StdI.outputmode = "****"
+        StdI.outputmode = None
         plugin = get_plugin("UHF")
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -455,7 +455,7 @@ class TestHWaveSplit:
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.solver = "UHFR"
         StdI.calcmode = "uhfr"
-        StdI.outputmode = "****"
+        StdI.outputmode = None
         plugin = get_plugin("UHFR")
 
         with tempfile.TemporaryDirectory() as tmpdir:

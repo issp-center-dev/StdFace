@@ -36,7 +36,7 @@ from typing import NamedTuple
 
 from .stdface_vals import (
     StdIntList, ModelType, SolverType, MethodType,
-    NaN_i, NaN_d, NaN_c, UNSET_STRING,
+    NaN_i, NaN_d, NaN_c,
 )
 from ..solvers.hphi.writer import (
     vector_potential as _vector_potential,
@@ -190,7 +190,7 @@ METHOD_ALIASES: dict[str, MethodType] = {
 """Maps HPhi method name aliases to their canonical forms."""
 
 # Sentinel constants imported from stdface_vals:
-# NaN_i, NaN_d, NaN_c, UNSET_STRING
+# NaN_i (int matrices), NaN_d, NaN_c
 
 
 # ===================================================================
@@ -220,9 +220,9 @@ _COMMON_RESET_SCALARS: list[tuple[str, object]] = [
     ("Gamma_y", NaN_d),
     ("h", NaN_d),
     # Lattice dimensions
-    ("Height", NaN_i),
-    ("L", NaN_i),
-    ("W", NaN_i),
+    ("Height", None),
+    ("L", None),
+    ("W", None),
     # Isotropic scalar spin couplings
     ("JAll", NaN_d),
     ("JpAll", NaN_d),
@@ -240,7 +240,7 @@ _COMMON_RESET_SCALARS: list[tuple[str, object]] = [
     ("K", NaN_d),
     # Chemical potential / spin
     ("mu", NaN_d),
-    ("S2", NaN_i),
+    ("S2", None),
     # Hopping parameters (complex)
     ("t", NaN_c),
     ("tp", NaN_c),
@@ -269,8 +269,8 @@ _COMMON_RESET_SCALARS: list[tuple[str, object]] = [
     ("V2p", NaN_d),
     ("V2pp", NaN_d),
     # Calculation conditions
-    ("ncond", NaN_i),
-    ("Sz2", NaN_i),
+    ("ncond", None),
+    ("Sz2", None),
     # Wannier90 cutoffs
     ("cutoff_t", NaN_d),
     ("cutoff_u", NaN_d),
@@ -318,15 +318,15 @@ _COMMON_RESET_ARRAYS: list[tuple[str, object]] = [
 
 
 _UHF_BASE_SCALARS: list[tuple[str, object]] = [
-    ("NMPTrans", NaN_i),
-    ("RndSeed", NaN_i),
+    ("NMPTrans", None),
+    ("RndSeed", None),
     ("mix", NaN_d),
-    ("eps", NaN_i),
-    ("eps_slater", NaN_i),
-    ("Iteration_max", NaN_i),
-    ("Hsub", NaN_i),
-    ("Lsub", NaN_i),
-    ("Wsub", NaN_i),
+    ("eps", None),
+    ("eps_slater", None),
+    ("Iteration_max", None),
+    ("Hsub", None),
+    ("Lsub", None),
+    ("Wsub", None),
 ]
 
 _UHF_BASE_ARRAYS: list[tuple[str, object]] = [
@@ -340,55 +340,55 @@ _SOLVER_RESET_SCALARS: dict[SolverType, list[tuple[str, object]]] = {
         ("OmegaMin", NaN_d),
         ("OmegaOrg", NaN_d),
         ("OmegaIm", NaN_d),
-        ("Nomega", NaN_i),
+        ("Nomega", None),
         ("FlgTemp", 1),
-        ("Lanczos_max", NaN_i),
-        ("initial_iv", NaN_i),
-        ("nvec", NaN_i),
-        ("exct", NaN_i),
-        ("LanczosEps", NaN_i),
-        ("LanczosTarget", NaN_i),
-        ("NumAve", NaN_i),
-        ("ExpecInterval", NaN_i),
+        ("Lanczos_max", None),
+        ("initial_iv", None),
+        ("nvec", None),
+        ("exct", None),
+        ("LanczosEps", None),
+        ("LanczosTarget", None),
+        ("NumAve", None),
+        ("ExpecInterval", None),
         ("dt", NaN_d),
         ("tdump", NaN_d),
         ("tshift", NaN_d),
         ("freq", NaN_d),
         ("Uquench", NaN_d),
-        ("ExpandCoef", NaN_i),
-        ("NGPU", NaN_i),
-        ("Scalapack", NaN_i),
+        ("ExpandCoef", None),
+        ("NGPU", None),
+        ("Scalapack", None),
     ],
     SolverType.mVMC: [
-        ("NVMCCalMode", NaN_i),
-        ("NLanczosMode", NaN_i),
-        ("NDataIdxStart", NaN_i),
-        ("NDataQtySmp", NaN_i),
-        ("NSPGaussLeg", NaN_i),
-        ("NSPStot", NaN_i),
-        ("NMPTrans", NaN_i),
-        ("NSROptItrStep", NaN_i),
-        ("NSROptItrSmp", NaN_i),
+        ("NVMCCalMode", None),
+        ("NLanczosMode", None),
+        ("NDataIdxStart", None),
+        ("NDataQtySmp", None),
+        ("NSPGaussLeg", None),
+        ("NSPStot", None),
+        ("NMPTrans", None),
+        ("NSROptItrStep", None),
+        ("NSROptItrSmp", None),
         ("DSROptRedCut", NaN_d),
         ("DSROptStaDel", NaN_d),
         ("DSROptStepDt", NaN_d),
-        ("NVMCWarmUp", NaN_i),
-        ("NVMCInterval", NaN_i),
-        ("NVMCSample", NaN_i),
-        ("NExUpdatePath", NaN_i),
-        ("RndSeed", NaN_i),
-        ("NSplitSize", NaN_i),
-        ("NStore", NaN_i),
-        ("NSRCG", NaN_i),
-        ("ComplexType", NaN_i),
-        ("Hsub", NaN_i),
-        ("Lsub", NaN_i),
-        ("Wsub", NaN_i),
+        ("NVMCWarmUp", None),
+        ("NVMCInterval", None),
+        ("NVMCSample", None),
+        ("NExUpdatePath", None),
+        ("RndSeed", None),
+        ("NSplitSize", None),
+        ("NStore", None),
+        ("NSRCG", None),
+        ("ComplexType", None),
+        ("Hsub", None),
+        ("Lsub", None),
+        ("Wsub", None),
     ],
     SolverType.UHF: _UHF_BASE_SCALARS,
     SolverType.HWAVE: _UHF_BASE_SCALARS + [
-        ("export_all", NaN_i),
-        ("lattice_gp", NaN_i),
+        ("export_all", None),
+        ("lattice_gp", None),
     ],
 }
 """Scalar field resets for each solver — ``setattr(StdI, name, value)``."""
@@ -742,7 +742,7 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
     logger.info("#######  Construct Model  #######")
 
     # CDataFileHead default
-    if StdI.CDataFileHead == UNSET_STRING:
+    if StdI.CDataFileHead is None:
         StdI.CDataFileHead = "zvo"
         logger.info("    CDataFileHead = %-12s######  DEFAULT VALUE IS USED  ######", "zvo")
     else:

@@ -45,6 +45,7 @@ import numpy as np
 
 from .stdface_vals import NaN_i
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -155,7 +156,7 @@ def print_val_i(valname: str, val: int, val0: int) -> int:
     int
         The (possibly updated) value.
     """
-    if val == NaN_i:
+    if val is None or val == NaN_i:
         val = val0
         logger.info("  %15s = %-10d  ######  DEFAULT VALUE IS USED  ######", valname, val)
     else:
@@ -239,7 +240,7 @@ def not_used_i(valname: str, val: int) -> None:
     val : int
         Value to check (abort if not the sentinel 2147483647).
     """
-    if val != NaN_i:
+    if val is not None and val != NaN_i:
         _fail_not_used(valname)
 
 
@@ -258,7 +259,7 @@ def required_val_i(valname: str, val: int) -> None:
     ValueError
         If ``val`` equals the sentinel (i.e. the parameter is unset).
     """
-    if val == NaN_i:
+    if val is None or val == NaN_i:
         msg = f"{valname} is NOT specified."
         logger.error(msg)
         raise ValueError(msg)

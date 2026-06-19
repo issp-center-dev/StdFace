@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import logging
 
-from ...core.stdface_vals import StdIntList, ModelType, NaN_i
+from ...core.stdface_vals import StdIntList, ModelType
 
 
 logger = logging.getLogger(__name__)
@@ -479,7 +479,7 @@ def print_gutzwiller(StdI: StdIntList) -> None:
     """
     Gutz = [0] * StdI.nsite
 
-    if abs(StdI.NMPTrans) == 1 or StdI.NMPTrans == NaN_i:
+    if StdI.NMPTrans is None or abs(StdI.NMPTrans) == 1:
         NGutzwiller = _gutzwiller_momentum_projected(StdI, Gutz)
     else:
         NGutzwiller = _gutzwiller_global_optimization(StdI, Gutz)

@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from ..core.stdface_vals import StdIntList, NaN_i, UNSET_STRING
+from ..core.stdface_vals import StdIntList
 from ..lattice.site_util import _cell_vector
 
 # -----------------------------------------------------------------------
@@ -831,7 +831,7 @@ def _prefix(StdI: StdIntList, fname: str) -> str:
     In the C code, the sentinel for "no prefix" is ``"****"``.
     In Python, the sentinel is the empty string ``""``.
     """
-    if StdI.fileprefix == "" or StdI.fileprefix == UNSET_STRING:
+    if StdI.fileprefix == "" or StdI.fileprefix is None:
         return fname
     else:
         return f"{StdI.fileprefix}_{fname}"
@@ -880,7 +880,7 @@ def export_interaction(StdI: StdIntList) -> None:
     """
     global _is_export_all
 
-    if StdI.export_all != NaN_i:
+    if StdI.export_all is not None:
         _is_export_all = StdI.export_all
 
     _ntrans = len(StdI.trans_list)

@@ -52,7 +52,7 @@ class MVMCPlugin(ExpertModeSolverPlugin):
         from ...writer.common_writer import print_namelist
         self._write_common_files(StdI)
 
-        if StdI.lGC == 0 and (StdI.Sz2 == 0 or StdI.Sz2 == NaN_i):
+        if StdI.lGC == 0 and (StdI.Sz2 == 0 or StdI.Sz2 is None):
             StdI.ComplexType = print_val_i("ComplexType", StdI.ComplexType, 0)
         else:
             StdI.ComplexType = print_val_i("ComplexType", StdI.ComplexType, 1)
@@ -60,7 +60,7 @@ class MVMCPlugin(ExpertModeSolverPlugin):
         generate_orb(StdI)
         proj(StdI)
         print_jastrow(StdI)
-        if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 != NaN_i):
+        if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 is not None):
             print_orb_para(StdI)
         print_gutzwiller(StdI)
         print_orb(StdI)
@@ -108,30 +108,30 @@ _MVMC_KEYWORDS: dict[str, tuple] = {
 # -----------------------------------------------------------------------
 
 _RESET_SCALARS: list[tuple[str, object]] = [
-    ("NVMCCalMode", NaN_i),
-    ("NLanczosMode", NaN_i),
-    ("NDataIdxStart", NaN_i),
-    ("NDataQtySmp", NaN_i),
-    ("NSPGaussLeg", NaN_i),
-    ("NSPStot", NaN_i),
-    ("NMPTrans", NaN_i),
-    ("NSROptItrStep", NaN_i),
-    ("NSROptItrSmp", NaN_i),
+    ("NVMCCalMode", None),
+    ("NLanczosMode", None),
+    ("NDataIdxStart", None),
+    ("NDataQtySmp", None),
+    ("NSPGaussLeg", None),
+    ("NSPStot", None),
+    ("NMPTrans", None),
+    ("NSROptItrStep", None),
+    ("NSROptItrSmp", None),
     ("DSROptRedCut", NaN_d),
     ("DSROptStaDel", NaN_d),
     ("DSROptStepDt", NaN_d),
-    ("NVMCWarmUp", NaN_i),
-    ("NVMCInterval", NaN_i),
-    ("NVMCSample", NaN_i),
-    ("NExUpdatePath", NaN_i),
-    ("RndSeed", NaN_i),
-    ("NSplitSize", NaN_i),
-    ("NStore", NaN_i),
-    ("NSRCG", NaN_i),
-    ("ComplexType", NaN_i),
-    ("Hsub", NaN_i),
-    ("Lsub", NaN_i),
-    ("Wsub", NaN_i),
+    ("NVMCWarmUp", None),
+    ("NVMCInterval", None),
+    ("NVMCSample", None),
+    ("NExUpdatePath", None),
+    ("RndSeed", None),
+    ("NSplitSize", None),
+    ("NStore", None),
+    ("NSRCG", None),
+    ("ComplexType", None),
+    ("Hsub", None),
+    ("Lsub", None),
+    ("Wsub", None),
 ]
 
 _RESET_ARRAYS: list[tuple[str, object]] = [
