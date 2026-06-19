@@ -512,7 +512,7 @@ class TestExportInter:
         tbl_value = np.array([1.5 + 0j], dtype=complex)
         fname = str(tmp_path / "inter_test.dat")
 
-        ew._export_inter(s, 1, tbl_index, tbl_value, fname, "TestInter")
+        ew._export_inter(s, 1, tbl_index, tbl_value, fname, "TestInter").write()
         assert os.path.exists(fname)
 
 
@@ -537,7 +537,7 @@ class TestExportInterReal:
         tbl_value = np.array([2.5], dtype=float)
         fname = str(tmp_path / "inter_real_test.dat")
 
-        ew._export_inter_real(s, 1, tbl_index, tbl_value, fname, "TestReal")
+        ew._export_inter_real(s, 1, tbl_index, tbl_value, fname, "TestReal").write()
         assert os.path.exists(fname)
 
         with open(fname) as f:
@@ -569,7 +569,7 @@ class TestExportTransfer:
         fname = str(tmp_path / "transfer_test.dat")
 
         ew._export_transfer(s, 1, tbl_index, tbl_value, fname,
-                            "Transfer", 0)
+                            "Transfer", 0).write()
         assert os.path.exists(fname)
 
     def test_spin_dep_skip(self, tmp_path):
@@ -604,7 +604,7 @@ class TestExportTransfer:
         fname = str(tmp_path / "transfer_neg.dat")
 
         ew._export_transfer(s, 1, tbl_index, tbl_value, fname,
-                            "Transfer", 0)
+                            "Transfer", 0).write()
         assert os.path.exists(fname)
         with open(fname) as f:
             lines = f.readlines()
@@ -642,7 +642,7 @@ class TestExportCoulombIntra:
         fname = str(tmp_path / "cintra_test.dat")
 
         ew._export_coulomb_intra(s, 2, tbl_index, tbl_value, fname,
-                                 "CoulombIntra")
+                                 "CoulombIntra").write()
         assert os.path.exists(fname)
 
     def test_uniform_check(self, tmp_path, caplog):
@@ -1073,3 +1073,53 @@ class TestBuildCoulombIntraTable:
         intr_value = np.array([1.0 + 0j, 9.0 + 0j])
         ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
         assert "WARNING" in caplog.text
+
+
+class TestWannierBuildWriteSplit:
+    """D1-4: build/write separation for Wannier geometry & interactions."""
+
+    def test_geometry_build_and_roundtrip(self):
+        s = _make_stdI_for_geometry(nsiteUC=2)
+        d = ew.build_wannier_geometry(s)
+        assert d.nsiteuc == 2
+        assert len(d.direct) == 3 and len(d.tau) == 2
+        assert ew.WannierGeometryData.from_dict(d.to_dict()).to_dict() == d.to_dict()
+
+    def test_geometry_wrapper_parity(self, tmp_path):
+        s = _make_stdI_for_geometry(nsiteUC=2)
+        a = str(tmp_path / "a.dat")
+        b = str(tmp_path / "b.dat")
+        ew.export_geometry  # smoke: public symbol exists
+        ew._write_geometry(s, a)
+        ew.build_wannier_geometry(s).write(b)
+        assert open(a).read() == open(b).read()
+
+    def test_interactions_build_returns_data(self):
+        s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
+        s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
+        data = ew.build_wannier_interactions(s)
+        assert data and all(isinstance(d, ew.WannierInteractionData) for d in data)
+        d0 = data[0]
+        assert ew.WannierInteractionData.from_dict(d0.to_dict()).items == d0.items
+
+    def test_interactions_write_parity_with_export(self, tmp_path):
+        def setup():
+            s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
+            s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
+            s.Cintra_list = [(4.0, 0), (4.0, 1)]
+            return s
+        d1 = tmp_path / "viaexport"
+        d2 = tmp_path / "viabuild"
+        d1.mkdir(); d2.mkdir()
+        orig = os.getcwd()
+        os.chdir(d1)
+        try:
+            ew.export_interaction(setup())
+        finally:
+            os.chdir(orig)
+        for data in ew.build_wannier_interactions(setup()):
+            data.write(d2)
+        files = sorted(p.name for p in d1.iterdir())
+        assert files  # something was written
+        for f in files:
+            assert (d1 / f).read_text() == (d2 / f).read_text(), f
