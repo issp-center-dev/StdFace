@@ -57,16 +57,11 @@ def _make_stdi_for_large_value(**overrides) -> StdIntList:
     StdI.nsite = overrides.get("nsite", 4)
     StdI.trans_list = [(v, 0, 0, 0, 0) for v in overrides.get("trans", [])]
     StdI.intr_list = [(v, 0, 0, 0, 0, 0, 0, 0, 0) for v in overrides.get("intr", [])]
-    StdI.NCintra = overrides.get("NCintra", 0)
-    StdI.Cintra = overrides.get("Cintra", [])
-    StdI.NCinter = overrides.get("NCinter", 0)
-    StdI.Cinter = overrides.get("Cinter", [])
-    StdI.NEx = overrides.get("NEx", 0)
-    StdI.Ex = overrides.get("Ex", [])
-    StdI.NPairLift = overrides.get("NPairLift", 0)
-    StdI.PairLift = overrides.get("PairLift", [])
-    StdI.NHund = overrides.get("NHund", 0)
-    StdI.Hund = overrides.get("Hund", [])
+    StdI.Cintra_list = [(v, 0) for v in overrides.get("Cintra", [])]
+    StdI.Cinter_list = [(v, 0, 1) for v in overrides.get("Cinter", [])]
+    StdI.Ex_list = [(v, 0, 1) for v in overrides.get("Ex", [])]
+    StdI.PairLift_list = [(v, 0, 1) for v in overrides.get("PairLift", [])]
+    StdI.Hund_list = [(v, 0, 1) for v in overrides.get("Hund", [])]
     return StdI
 
 

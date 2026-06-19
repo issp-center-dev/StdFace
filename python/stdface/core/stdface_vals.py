@@ -341,54 +341,34 @@ class StdIntList:
         General two-body (InterAll) terms as
         ``(amp, i1, s1, i2, s2, i3, s3, i4, s4)`` tuples.  Replaces the
         former ``intr`` / ``intrindx`` / ``nintr`` arrays + counter.
-    NCintra : int
-        Number of intra-site Coulomb interaction.
     LCintra : int
         Print ``coulombintra.def`` or not.
-    CintraIndx : np.ndarray or None
-        ``[NCintra][1]`` Site indices of intra-site Coulomb term.
-    Cintra : np.ndarray or None
-        ``[NCintra]`` Coefficient of intra-site Coulomb term.
-    NCinter : int
-        Number of inter-site Coulomb interaction.
+    Cintra_list : list of tuple
+        Intra-site Coulomb terms as ``(coeff, isite)`` tuples.
     LCinter : int
         Print ``coulombinter.def`` or not.
-    CinterIndx : np.ndarray or None
-        ``[NCinter][2]`` Site indices of inter-site Coulomb term.
-    Cinter : np.ndarray or None
-        ``[NCinter]`` Coefficient of inter-site Coulomb term.
-    NHund : int
-        Number of Hund term.
+    Cinter_list : list of tuple
+        Inter-site Coulomb terms as ``(coeff, isite, jsite)`` tuples.
     LHund : int
         Print ``hund.def`` or not.
-    HundIndx : np.ndarray or None
-        ``[NHund][2]`` Site indices of Hund term.
-    Hund : np.ndarray or None
-        ``[NHund]`` Coefficient of Hund term.
-    NEx : int
-        Number of exchange term.
+    Hund_list : list of tuple
+        Hund terms as ``(coeff, isite, jsite)`` tuples.
     LEx : int
         Print ``exchange.def`` or not.
-    ExIndx : np.ndarray or None
-        ``[NEx][2]`` Site indices of exchange term.
-    Ex : np.ndarray or None
-        ``[NEx]`` Coefficient of exchange term.
-    NPairLift : int
-        Number of pair-lift term.
+    Ex_list : list of tuple
+        Exchange terms as ``(coeff, isite, jsite)`` tuples.
     LPairLift : int
         Print ``pairlift.def`` or not.
-    PLIndx : np.ndarray or None
-        ``[NPairLift][2]`` Site indices of pair-lift term.
-    PairLift : np.ndarray or None
-        ``[NPairLift]`` Coefficient of pair-lift term.
-    NPairHopp : int
-        Number of pair-hopping term.
+    PairLift_list : list of tuple
+        Pair-lift terms as ``(coeff, isite, jsite)`` tuples.
     LPairHopp : int
         Print ``pairhopp.def`` or not.
-    PHIndx : np.ndarray or None
-        ``[NPairHopp][2]`` Site indices of pair-hopping term.
-    PairHopp : np.ndarray or None
-        ``[NPairHopp]`` Coefficient of pair-hopping term.
+    PairHopp_list : list of tuple
+        Pair-hopping terms as ``(coeff, isite, jsite)`` tuples.
+
+    The six lists above replace the former ``X`` / ``XIndx`` / ``NX``
+    arrays + counters.
+
     lBoost : int
         Boost flag.
     ncond : int
@@ -722,30 +702,18 @@ class StdIntList:
     trans_list: list = field(default_factory=list)
     Lintr: int = 0
     intr_list: list = field(default_factory=list)
-    NCintra: int = 0
     LCintra: int = 0
-    CintraIndx: None = None
-    Cintra: None = None
-    NCinter: int = 0
+    Cintra_list: list = field(default_factory=list)
     LCinter: int = 0
-    CinterIndx: None = None
-    Cinter: None = None
-    NHund: int = 0
+    Cinter_list: list = field(default_factory=list)
     LHund: int = 0
-    HundIndx: None = None
-    Hund: None = None
-    NEx: int = 0
+    Hund_list: list = field(default_factory=list)
     LEx: int = 0
-    ExIndx: None = None
-    Ex: None = None
-    NPairLift: int = 0
+    Ex_list: list = field(default_factory=list)
     LPairLift: int = 0
-    PLIndx: None = None
-    PairLift: None = None
-    NPairHopp: int = 0
+    PairLift_list: list = field(default_factory=list)
     LPairHopp: int = 0
-    PHIndx: None = None
-    PairHopp: None = None
+    PairHopp_list: list = field(default_factory=list)
     lBoost: int = 0
 
     # ------------------------------------------------------------------

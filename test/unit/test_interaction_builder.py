@@ -81,10 +81,8 @@ class TestMallocInteractions:
         StdI.method = "lanczos"
         StdI.PumpBody = 0
         malloc_interactions(StdI, 50, 80)
-        assert StdI.Cintra.shape == (80,)
-        assert StdI.Cinter.shape == (80,)
-        assert StdI.NCintra == 0
-        assert StdI.NCinter == 0
+        assert len(StdI.Cintra_list) == 0
+        assert len(StdI.Cinter_list) == 0
 
     def test_exchange_arrays_allocated(self):
         """Test that exchange and pair arrays are allocated."""
@@ -94,14 +92,10 @@ class TestMallocInteractions:
         StdI.method = "lanczos"
         StdI.PumpBody = 0
         malloc_interactions(StdI, 50, 80)
-        assert StdI.Hund.shape == (80,)
-        assert StdI.Ex.shape == (80,)
-        assert StdI.PairLift.shape == (80,)
-        assert StdI.PairHopp.shape == (80,)
-        assert StdI.NHund == 0
-        assert StdI.NEx == 0
-        assert StdI.NPairLift == 0
-        assert StdI.NPairHopp == 0
+        assert len(StdI.Hund_list) == 0
+        assert len(StdI.Ex_list) == 0
+        assert len(StdI.PairLift_list) == 0
+        assert len(StdI.PairHopp_list) == 0
 
     def test_pump_arrays_for_timeevolution(self):
         """Test that pump arrays are allocated for HPhi time-evolution."""
@@ -235,9 +229,9 @@ class TestHubbardLocal:
         StdI = _make_stdi()
         hubbard_local(StdI, mu0=0.0, h0=0.0, Gamma0=0.0, Gamma0_y=0.0,
                       U0=4.0, isite=2)
-        assert StdI.NCintra == 1
-        assert StdI.Cintra[0] == pytest.approx(4.0)
-        assert StdI.CintraIndx[0][0] == 2
+        assert len(StdI.Cintra_list) == 1
+        assert StdI.Cintra_list[0][0] == pytest.approx(4.0)
+        assert StdI.Cintra_list[0][1] == 2
 
     def test_transverse_field(self):
         """Test that transverse field Gamma adds off-diagonal terms."""
@@ -321,12 +315,12 @@ class TestGeneralJ:
         J = np.eye(3) * 1.0
         general_j(StdI, J, Si2=1, Sj2=1, isite=0, jsite=1)
         # For S=1/2, should generate Hund, Cinter, Ex, PairLift terms
-        assert StdI.NHund == 1
-        assert StdI.NCinter == 1
-        assert StdI.NEx == 1
-        assert StdI.NPairLift == 1
+        assert len(StdI.Hund_list) == 1
+        assert len(StdI.Cinter_list) == 1
+        assert len(StdI.Ex_list) == 1
+        assert len(StdI.PairLift_list) == 1
         # Hund = -0.5 * Jzz = -0.5
-        assert StdI.Hund[0] == pytest.approx(-0.5)
+        assert StdI.Hund_list[0][0] == pytest.approx(-0.5)
 
     def test_anisotropic_jzz_only(self):
         """Test Jzz-only interaction for S=1/2."""
@@ -334,8 +328,8 @@ class TestGeneralJ:
         J = np.zeros((3, 3))
         J[2, 2] = 2.0
         general_j(StdI, J, Si2=1, Sj2=1, isite=0, jsite=1)
-        assert StdI.NHund == 1
-        assert StdI.Hund[0] == pytest.approx(-1.0)
+        assert len(StdI.Hund_list) == 1
+        assert StdI.Hund_list[0][0] == pytest.approx(-1.0)
 
     def test_spin_one_uses_general_path(self):
         """Test that S=1 (Si2=2) uses the general ZGeneral=1 path."""
@@ -343,7 +337,7 @@ class TestGeneralJ:
         J = np.eye(3)
         general_j(StdI, J, Si2=2, Sj2=2, isite=0, jsite=1)
         # S=1: ZGeneral stays 1, so all terms go through intr()
-        assert StdI.NHund == 0  # No Hund shortcut for S>1/2
+        assert len(StdI.Hund_list) == 0  # No Hund shortcut for S>1/2
         assert len(StdI.intr_list) > 0
 
     def test_kondo_exchange_sign(self):
@@ -352,7 +346,7 @@ class TestGeneralJ:
         J = np.eye(3)
         general_j(StdI, J, Si2=1, Sj2=1, isite=0, jsite=1)
         # For kondo: Ex = -0.25 * (Jxx + Jyy) = -0.5
-        assert StdI.Ex[0] == pytest.approx(-0.5)
+        assert StdI.Ex_list[0][0] == pytest.approx(-0.5)
 
     def test_non_kondo_exchange_sign(self):
         """Test that non-kondo model uses positive exchange sign."""
@@ -360,7 +354,7 @@ class TestGeneralJ:
         J = np.eye(3)
         general_j(StdI, J, Si2=1, Sj2=1, isite=0, jsite=1)
         # For hubbard: Ex = +0.25 * (Jxx + Jyy) = +0.5
-        assert StdI.Ex[0] == pytest.approx(0.5)
+        assert StdI.Ex_list[0][0] == pytest.approx(0.5)
 
 
 # ===================================================================
@@ -375,17 +369,17 @@ class TestCoulomb:
         """Test that a Coulomb interaction is added."""
         StdI = _make_stdi()
         coulomb(StdI, 2.0, 0, 1)
-        assert StdI.NCinter == 1
-        assert StdI.Cinter[0] == pytest.approx(2.0)
-        assert StdI.CinterIndx[0][0] == 0
-        assert StdI.CinterIndx[0][1] == 1
+        assert len(StdI.Cinter_list) == 1
+        assert StdI.Cinter_list[0][0] == pytest.approx(2.0)
+        assert StdI.Cinter_list[0][1] == 0
+        assert StdI.Cinter_list[0][2] == 1
 
     def test_increments_counter(self):
         """Test that multiple calls increment the counter."""
         StdI = _make_stdi()
         coulomb(StdI, 1.0, 0, 1)
         coulomb(StdI, 2.0, 1, 2)
-        assert StdI.NCinter == 2
+        assert len(StdI.Cinter_list) == 2
 
 
 # ===================================================================
@@ -482,24 +476,24 @@ class TestAddSpinHalfTerms:
         StdI = _make_stdi()
         J = np.eye(3) * 2.0
         _add_spin_half_terms(StdI, J, isite=0, jsite=1)
-        assert StdI.NHund == 1
-        assert StdI.Hund[0] == pytest.approx(-1.0)  # -0.5 * 2.0
+        assert len(StdI.Hund_list) == 1
+        assert StdI.Hund_list[0][0] == pytest.approx(-1.0)  # -0.5 * 2.0
 
     def test_adds_cinter_term(self):
         """Test that Cinter term is always added."""
         StdI = _make_stdi()
         J = np.eye(3) * 4.0
         _add_spin_half_terms(StdI, J, isite=0, jsite=1)
-        assert StdI.NCinter == 1
-        assert StdI.Cinter[0] == pytest.approx(-1.0)  # -0.25 * 4.0
+        assert len(StdI.Cinter_list) == 1
+        assert StdI.Cinter_list[0][0] == pytest.approx(-1.0)  # -0.25 * 4.0
 
     def test_hund_site_indices(self):
         """Test that Hund site indices are recorded."""
         StdI = _make_stdi()
         J = np.eye(3)
         _add_spin_half_terms(StdI, J, isite=3, jsite=7)
-        assert StdI.HundIndx[0][0] == 3
-        assert StdI.HundIndx[0][1] == 7
+        assert StdI.Hund_list[0][1] == 3
+        assert StdI.Hund_list[0][2] == 7
 
     def test_returns_false_false_for_diagonal_j(self):
         """Test return flags for diagonal J (off-diagonal negligible)."""
@@ -523,12 +517,12 @@ class TestAddSpinHalfTerms:
         StdI = _make_stdi()
         J = np.diag([2.0, 2.0, 1.0])
         _add_spin_half_terms(StdI, J, isite=0, jsite=1)
-        assert StdI.NEx == 1
-        assert StdI.NPairLift == 1
+        assert len(StdI.Ex_list) == 1
+        assert len(StdI.PairLift_list) == 1
         # Ex = +0.25 * (2 + 2) = 1.0 (hubbard, non-kondo)
-        assert StdI.Ex[0] == pytest.approx(1.0)
+        assert StdI.Ex_list[0][0] == pytest.approx(1.0)
         # PairLift = 0.25 * (2 - 2) = 0.0
-        assert StdI.PairLift[0] == pytest.approx(0.0)
+        assert StdI.PairLift_list[0][0] == pytest.approx(0.0)
 
     def test_kondo_exchange_sign(self):
         """Test that kondo model uses negative exchange sign."""
@@ -536,7 +530,7 @@ class TestAddSpinHalfTerms:
         J = np.diag([2.0, 2.0, 1.0])
         _add_spin_half_terms(StdI, J, isite=0, jsite=1)
         # Kondo: Ex = -0.25 * (2 + 2) = -1.0
-        assert StdI.Ex[0] == pytest.approx(-1.0)
+        assert StdI.Ex_list[0][0] == pytest.approx(-1.0)
 
     def test_mvmc_exchange_sign(self):
         """Test that mVMC solver uses negative exchange sign."""
@@ -544,7 +538,7 @@ class TestAddSpinHalfTerms:
         J = np.diag([2.0, 2.0, 1.0])
         _add_spin_half_terms(StdI, J, isite=0, jsite=1)
         # mVMC: Ex = -0.25 * (2 + 2) = -1.0
-        assert StdI.Ex[0] == pytest.approx(-1.0)
+        assert StdI.Ex_list[0][0] == pytest.approx(-1.0)
 
     def test_mvmc_requires_jxx_eq_jyy(self):
         """Test that mVMC needs Jxx == Jyy for shortcut path."""
@@ -553,7 +547,7 @@ class TestAddSpinHalfTerms:
         use_z, use_ex = _add_spin_half_terms(StdI, J, isite=0, jsite=1)
         assert use_z is False
         assert use_ex is True  # falls back to general path
-        assert StdI.NEx == 0  # no shortcut Ex added
+        assert len(StdI.Ex_list) == 0  # no shortcut Ex added
 
     def test_no_ex_for_offdiag(self):
         """Test that Ex/PairLift are NOT added for off-diagonal J."""
@@ -561,8 +555,8 @@ class TestAddSpinHalfTerms:
         J = np.eye(3)
         J[0, 1] = 1.0
         _add_spin_half_terms(StdI, J, isite=0, jsite=1)
-        assert StdI.NEx == 0
-        assert StdI.NPairLift == 0
+        assert len(StdI.Ex_list) == 0
+        assert len(StdI.PairLift_list) == 0
 
 
 # ===================================================================
@@ -652,12 +646,12 @@ class TestAddNeighborInteraction:
         """For spin model, general_j adds exchange/Hund terms (S2=1)."""
         StdI = _make_stdi_square_for_neighbor(4, 4, "spin")
         J = np.eye(3)
-        nex_before = StdI.NEx
-        nhund_before = StdI.NHund
+        nex_before = len(StdI.Ex_list)
+        nhund_before = len(StdI.Hund_list)
         add_neighbor_interaction(
             StdI, None, 0, 0, 1, 0, 0, 0, 1, J, 0.0, 0.0)
         # For S2=1 (spin-1/2), general_j uses shortcut path: Ex + Hund
-        assert StdI.NEx > nex_before or StdI.NHund > nhund_before
+        assert len(StdI.Ex_list) > nex_before or len(StdI.Hund_list) > nhund_before
 
     def test_hubbard_model_calls_hopping(self):
         """For hubbard model, hopping is called (ntrans increases)."""
@@ -672,10 +666,10 @@ class TestAddNeighborInteraction:
         """For hubbard model with V != 0, coulomb adds interaction."""
         StdI = _make_stdi_square_for_neighbor(4, 4, "hubbard")
         J = np.zeros((3, 3))
-        ncinter_before = StdI.NCinter
+        ncinter_before = len(StdI.Cinter_list)
         add_neighbor_interaction(
             StdI, None, 0, 0, 1, 0, 0, 0, 1, J, 0.0, 1.5)
-        assert StdI.NCinter > ncinter_before
+        assert len(StdI.Cinter_list) > ncinter_before
 
     def test_spin_model_no_hopping(self):
         """For spin model, ntrans should not change."""
@@ -804,11 +798,11 @@ class TestAddNeighborInteraction3D:
         """For spin model, general_j adds exchange terms."""
         StdI = _make_stdi_ortho_for_neighbor(2, 2, 2, "spin")
         J = np.eye(3)
-        nex_before = StdI.NEx
-        nhund_before = StdI.NHund
+        nex_before = len(StdI.Ex_list)
+        nhund_before = len(StdI.Hund_list)
         add_neighbor_interaction_3d(
             StdI, 0, 0, 0, 1, 0, 0, 0, 0, J, 0.0, 0.0)
-        assert StdI.NEx > nex_before or StdI.NHund > nhund_before
+        assert len(StdI.Ex_list) > nex_before or len(StdI.Hund_list) > nhund_before
 
     def test_hubbard_model_calls_hopping(self):
         """For hubbard model, hopping terms are added."""
@@ -823,10 +817,10 @@ class TestAddNeighborInteraction3D:
         """For hubbard model with V != 0, coulomb adds interaction."""
         StdI = _make_stdi_ortho_for_neighbor(2, 2, 2, "hubbard")
         J = np.zeros((3, 3))
-        ncinter_before = StdI.NCinter
+        ncinter_before = len(StdI.Cinter_list)
         add_neighbor_interaction_3d(
             StdI, 0, 0, 0, 1, 0, 0, 0, 0, J, 0.0, 1.5)
-        assert StdI.NCinter > ncinter_before
+        assert len(StdI.Cinter_list) > ncinter_before
 
     def test_spin_model_no_hopping(self):
         """For spin model, ntrans should not change from neighbor interaction."""
@@ -998,10 +992,10 @@ class TestAddLocalTerms:
         StdI.Gamma_y = 0.0
         StdI.U = 2.0
         ntrans_before = len(StdI.trans_list)
-        ncintra_before = StdI.NCintra
+        ncintra_before = len(StdI.Cintra_list)
         add_local_terms(StdI, 0, 0)
         assert len(StdI.trans_list) > ntrans_before
-        assert StdI.NCintra > ncintra_before
+        assert len(StdI.Cintra_list) > ncintra_before
 
     def test_hubbard_model_no_kondo_coupling(self):
         """For hubbard model, no Kondo J-coupling is added."""
@@ -1013,13 +1007,13 @@ class TestAddLocalTerms:
         StdI.U = 0.0
         StdI.J = np.eye(3)  # non-zero J, but should be ignored
         nintr_before = len(StdI.intr_list)
-        nhund_before = StdI.NHund
-        nex_before = StdI.NEx
+        nhund_before = len(StdI.Hund_list)
+        nex_before = len(StdI.Ex_list)
         add_local_terms(StdI, 0, 0)
         # No interactions from J coupling
         assert len(StdI.intr_list) == nintr_before
-        assert StdI.NHund == nhund_before
-        assert StdI.NEx == nex_before
+        assert len(StdI.Hund_list) == nhund_before
+        assert len(StdI.Ex_list) == nex_before
 
     def test_kondo_model_adds_j_coupling(self):
         """For kondo model, J-coupling terms are added between isite and jsite_kondo."""
@@ -1031,11 +1025,11 @@ class TestAddLocalTerms:
         StdI.Gamma_y = 0.0
         StdI.U = 0.0
         StdI.J = np.eye(3)
-        nhund_before = StdI.NHund
-        nex_before = StdI.NEx
+        nhund_before = len(StdI.Hund_list)
+        nex_before = len(StdI.Ex_list)
         add_local_terms(StdI, 10, 5)
         # S2=1 uses shortcut: Hund + Ex
-        assert StdI.NHund > nhund_before or StdI.NEx > nex_before
+        assert len(StdI.Hund_list) > nhund_before or len(StdI.Ex_list) > nex_before
 
     def test_kondo_model_adds_localized_mag_field(self):
         """For kondo model with h != 0, mag_field is added on jsite_kondo."""
@@ -1060,9 +1054,9 @@ class TestAddLocalTerms:
         StdI.Gamma = 0.0
         StdI.Gamma_y = 0.0
         StdI.D = np.zeros((3, 3))
-        ncintra_before = StdI.NCintra
+        ncintra_before = len(StdI.Cintra_list)
         add_local_terms(StdI, 0, 0)
-        assert StdI.NCintra == ncintra_before
+        assert len(StdI.Cintra_list) == ncintra_before
 
     def test_spin_model_transverse_field(self):
         """For spin model with Gamma != 0, transverse field terms are added."""

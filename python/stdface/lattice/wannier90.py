@@ -802,11 +802,10 @@ def _apply_coulomb_terms(
         if (tUJindx[1][it, 0] == 0 and tUJindx[1][it, 1] == 0
                 and tUJindx[1][it, 2] == 0
                 and tUJindx[1][it, 3] == tUJindx[1][it, 4]):
-            StdI.Cintra[StdI.NCintra] = tUJ[1][it].real
-            StdI.CintraIndx[StdI.NCintra, 0] = (
-                StdI.NsiteUC * kCell + int(tUJindx[1][it, 3])
-            )
-            StdI.NCintra += 1
+            StdI.Cintra_list.append((
+                tUJ[1][it].real,
+                StdI.NsiteUC * kCell + int(tUJindx[1][it, 3]),
+            ))
 
             # Double-counting correction
             if idcmode != _DCMode.NOTCORRECT:
@@ -913,21 +912,11 @@ def _apply_hund_terms(
                 int(tUJindx[2][it, 3]), int(tUJindx[2][it, 4]),
             )
 
-            StdI.Hund[StdI.NHund] = tUJ[2][it].real
-            StdI.HundIndx[StdI.NHund, 0] = isite
-            StdI.HundIndx[StdI.NHund, 1] = jsite
-            StdI.NHund += 1
+            StdI.Hund_list.append((tUJ[2][it].real, isite, jsite))
 
             if StdI.model == ModelType.HUBBARD:
-                StdI.Ex[StdI.NEx] = tUJ[2][it].real
-                StdI.ExIndx[StdI.NEx, 0] = isite
-                StdI.ExIndx[StdI.NEx, 1] = jsite
-                StdI.NEx += 1
-
-                StdI.PairHopp[StdI.NPairHopp] = tUJ[2][it].real
-                StdI.PHIndx[StdI.NPairHopp, 0] = isite
-                StdI.PHIndx[StdI.NPairHopp, 1] = jsite
-                StdI.NPairHopp += 1
+                StdI.Ex_list.append((tUJ[2][it].real, isite, jsite))
+                StdI.PairHopp_list.append((tUJ[2][it].real, isite, jsite))
 
                 # Double-counting correction
                 if idcmode != _DCMode.NOTCORRECT and idcmode != _DCMode.HARTREE_U:
@@ -967,12 +956,10 @@ def _apply_hund_terms(
             else:
                 # spin model
                 if StdI.solver == SolverType.mVMC:
-                    StdI.Ex[StdI.NEx] = tUJ[2][it].real
+                    ex_val = tUJ[2][it].real
                 else:
-                    StdI.Ex[StdI.NEx] = -tUJ[2][it].real
-                StdI.ExIndx[StdI.NEx, 0] = isite
-                StdI.ExIndx[StdI.NEx, 1] = jsite
-                StdI.NEx += 1
+                    ex_val = -tUJ[2][it].real
+                StdI.Ex_list.append((ex_val, isite, jsite))
 
 
 # ---------------------------------------------------------------------------

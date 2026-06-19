@@ -95,9 +95,9 @@ class TestHubbardLocal:
                           Gamma0_y=0.0, U0=4.0, isite=0)
         # mu contributes 2 transfers (spin up, spin down)
         assert len(s.trans_list) == 2
-        assert s.NCintra == 1
-        assert s.Cintra[0] == 4.0
-        assert s.CintraIndx[0, 0] == 0
+        assert len(s.Cintra_list) == 1
+        assert s.Cintra_list[0][0] == 4.0
+        assert s.Cintra_list[0][1] == 0
 
     def test_with_magnetic_field(self):
         """hubbard_local with h and Gamma should add more transfers."""
@@ -106,7 +106,7 @@ class TestHubbardLocal:
                           Gamma0_y=0.3, U0=0.0, isite=2)
         # h: 2 transfers, Gamma: 2, Gamma_y: 2 = 6 total
         assert len(s.trans_list) == 6
-        assert s.NCintra == 1
+        assert len(s.Cintra_list) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -172,10 +172,10 @@ class TestCoulomb:
         """coulomb should add a Coulomb interaction."""
         s = _make_allocated()
         smu.coulomb(s, V=2.5, isite=0, jsite=1)
-        assert s.NCinter == 1
-        assert s.Cinter[0] == 2.5
-        assert s.CinterIndx[0, 0] == 0
-        assert s.CinterIndx[0, 1] == 1
+        assert len(s.Cinter_list) == 1
+        assert s.Cinter_list[0][0] == 2.5
+        assert s.Cinter_list[0][1] == 0
+        assert s.Cinter_list[0][2] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -194,10 +194,10 @@ class TestGeneralJ:
         J[1, 1] = 1.0
         J[2, 2] = 1.0
         smu.general_j(s, J, Si2=1, Sj2=1, isite=0, jsite=1)
-        assert s.NHund == 1
-        assert s.NCinter == 1
-        assert s.NEx == 1
-        assert s.NPairLift == 1
+        assert len(s.Hund_list) == 1
+        assert len(s.Cinter_list) == 1
+        assert len(s.Ex_list) == 1
+        assert len(s.PairLift_list) == 1
 
     def test_spin_half_off_diagonal(self):
         """S=1/2 with off-diagonal J should use InterAll."""
@@ -208,8 +208,8 @@ class TestGeneralJ:
         J[1, 1] = 1.0
         J[2, 2] = 1.0
         smu.general_j(s, J, Si2=1, Sj2=1, isite=0, jsite=1)
-        assert s.NHund == 1
-        assert s.NCinter == 1
+        assert len(s.Hund_list) == 1
+        assert len(s.Cinter_list) == 1
         # Off-diagonal means ExGeneral stays 1, so nintr is used
         assert len(s.intr_list) > 0
 
@@ -395,24 +395,12 @@ class TestMallocInteractions:
         smu.malloc_interactions(s, ntransMax=50, nintrMax=30)
         assert len(s.trans_list) == 0
         assert len(s.intr_list) == 0
-        assert s.CintraIndx.shape == (30, 1)
-        assert s.Cintra.shape == (30,)
-        assert s.NCintra == 0
-        assert s.CinterIndx.shape == (30, 2)
-        assert s.Cinter.shape == (30,)
-        assert s.NCinter == 0
-        assert s.HundIndx.shape == (30, 2)
-        assert s.Hund.shape == (30,)
-        assert s.NHund == 0
-        assert s.ExIndx.shape == (30, 2)
-        assert s.Ex.shape == (30,)
-        assert s.NEx == 0
-        assert s.PLIndx.shape == (30, 2)
-        assert s.PairLift.shape == (30,)
-        assert s.NPairLift == 0
-        assert s.PHIndx.shape == (30, 2)
-        assert s.PairHopp.shape == (30,)
-        assert s.NPairHopp == 0
+        assert len(s.Cintra_list) == 0
+        assert len(s.Cinter_list) == 0
+        assert len(s.Hund_list) == 0
+        assert len(s.Ex_list) == 0
+        assert len(s.PairLift_list) == 0
+        assert len(s.PairHopp_list) == 0
 
     def test_pump_arrays_hphi(self):
         """HPhi time-evolution mode should allocate pump arrays."""

@@ -155,9 +155,7 @@ def _write_interaction_file(
 
 def _process_interaction(
     StdI: StdIntList,
-    nterms_attr: str,
-    indx_attr: str,
-    coeff_attr: str,
+    list_attr: str,
     flag_attr: str,
     filename: str,
     count_label: str,
@@ -173,12 +171,9 @@ def _process_interaction(
     ----------
     StdI : StdIntList
         The central data structure.
-    nterms_attr : str
-        Name of the attribute holding the term count (e.g. ``"NCintra"``).
-    indx_attr : str
-        Name of the index-array attribute (e.g. ``"CintraIndx"``).
-    coeff_attr : str
-        Name of the coefficient-array attribute (e.g. ``"Cintra"``).
+    list_attr : str
+        Name of the term-list attribute (e.g. ``"Cintra_list"``); each entry
+        is ``(coeff, *site_indices)``.
     flag_attr : str
         Name of the output-flag attribute (e.g. ``"LCintra"``).
     filename : str
@@ -190,9 +185,10 @@ def _process_interaction(
     n_indices : int
         Number of site indices per term (1 or 2).
     """
-    nterms = getattr(StdI, nterms_attr)
-    indx = getattr(StdI, indx_attr)
-    coeff = getattr(StdI, coeff_attr)
+    terms = getattr(StdI, list_attr)
+    nterms = len(terms)
+    coeff = [t[0] for t in terms]
+    indx = [list(t[1:]) for t in terms]
 
     # Merge duplicates
     if n_indices == 1:
@@ -225,12 +221,8 @@ class _InteractionMeta(NamedTuple):
 
     Attributes
     ----------
-    nterms_attr : str
-        Name of the StdIntList attribute holding the term count.
-    indx_attr : str
-        Name of the index-array attribute.
-    coeff_attr : str
-        Name of the coefficient-array attribute.
+    list_attr : str
+        Name of the term-list attribute (e.g. ``"Cintra_list"``).
     flag_attr : str
         Name of the output-flag attribute.
     filename : str
@@ -243,9 +235,7 @@ class _InteractionMeta(NamedTuple):
         Number of site indices per term (1 or 2).
     """
 
-    nterms_attr: str
-    indx_attr: str
-    coeff_attr: str
+    list_attr: str
     flag_attr: str
     filename: str
     count_label: str
@@ -254,22 +244,22 @@ class _InteractionMeta(NamedTuple):
 
 
 _INTERACTION_TYPES: list[_InteractionMeta] = [
-    _InteractionMeta("NCintra", "CintraIndx", "Cintra", "LCintra",
+    _InteractionMeta("Cintra_list", "LCintra",
                      "coulombintra.def", "NCoulombIntra",
                      "================== CoulombIntra ================", 1),
-    _InteractionMeta("NCinter", "CinterIndx", "Cinter", "LCinter",
+    _InteractionMeta("Cinter_list", "LCinter",
                      "coulombinter.def", "NCoulombInter",
                      "================== CoulombInter ================", 2),
-    _InteractionMeta("NHund", "HundIndx", "Hund", "LHund",
+    _InteractionMeta("Hund_list", "LHund",
                      "hund.def", "NHund",
                      "=============== Hund coupling ===============", 2),
-    _InteractionMeta("NEx", "ExIndx", "Ex", "LEx",
+    _InteractionMeta("Ex_list", "LEx",
                      "exchange.def", "NExchange",
                      "====== ExchangeCoupling coupling ============", 2),
-    _InteractionMeta("NPairLift", "PLIndx", "PairLift", "LPairLift",
+    _InteractionMeta("PairLift_list", "LPairLift",
                      "pairlift.def", "NPairLift",
                      "====== Pair-Lift term ============", 2),
-    _InteractionMeta("NPairHopp", "PHIndx", "PairHopp", "LPairHopp",
+    _InteractionMeta("PairHopp_list", "LPairHopp",
                      "pairhopp.def", "NPairHopp",
                      "====== Pair-Hopping term ============", 2),
 ]

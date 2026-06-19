@@ -1063,24 +1063,12 @@ def _setup_interactions(s: StdIntList, ntransMax: int = 100, nintrMax: int = 100
     """Allocate interaction arrays on StdIntList for testing."""
     s.trans_list = []
     s.intr_list = []
-    s.CintraIndx = np.zeros((nintrMax, 1), dtype=int)
-    s.Cintra = np.zeros(nintrMax)
-    s.NCintra = 0
-    s.CinterIndx = np.zeros((nintrMax, 2), dtype=int)
-    s.Cinter = np.zeros(nintrMax)
-    s.NCinter = 0
-    s.HundIndx = np.zeros((nintrMax, 2), dtype=int)
-    s.Hund = np.zeros(nintrMax)
-    s.NHund = 0
-    s.ExIndx = np.zeros((nintrMax, 2), dtype=int)
-    s.Ex = np.zeros(nintrMax)
-    s.NEx = 0
-    s.PLIndx = np.zeros((nintrMax, 2), dtype=int)
-    s.PairLift = np.zeros(nintrMax)
-    s.NPairLift = 0
-    s.PHIndx = np.zeros((nintrMax, 2), dtype=int)
-    s.PairHopp = np.zeros(nintrMax)
-    s.NPairHopp = 0
+    s.Cintra_list = []
+    s.Cinter_list = []
+    s.Hund_list = []
+    s.Ex_list = []
+    s.PairLift_list = []
+    s.PairHopp_list = []
 
 
 # ---------------------------------------------------------------------------
@@ -1173,12 +1161,12 @@ class TestApplyCoulombTerms:
         NtUJ = [0, 0, 0]
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
-        ncintra_before = s.NCintra
+        ncintra_before = len(s.Cintra_list)
         w90._apply_coulomb_terms(
             s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
             w90._DCMode.NOTCORRECT, None,
         )
-        assert s.NCintra == ncintra_before
+        assert len(s.Cintra_list) == ncintra_before
 
     def test_local_coulomb_adds_cintra(self):
         """Local Coulomb term should add intra-site Coulomb."""
@@ -1198,9 +1186,9 @@ class TestApplyCoulombTerms:
             w90._DCMode.NOTCORRECT, None,
         )
 
-        assert s.NCintra == 1
-        np.testing.assert_allclose(s.Cintra[0], 4.0, atol=1e-12)
-        assert s.CintraIndx[0, 0] == 0
+        assert len(s.Cintra_list) == 1
+        np.testing.assert_allclose(s.Cintra_list[0][0], 4.0, atol=1e-12)
+        assert s.Cintra_list[0][1] == 0
 
     def test_local_coulomb_dc_adds_transfer(self):
         """Local Coulomb with double-counting adds transfer terms."""
@@ -1223,7 +1211,7 @@ class TestApplyCoulombTerms:
             w90._DCMode.HARTREE, DenMat,
         )
 
-        assert s.NCintra == 1
+        assert len(s.Cintra_list) == 1
         # Should add 2 transfer terms (one per spin)
         assert len(s.trans_list) == 2
         # alpha * U * DenMat = 0.5 * 4.0 * 0.5 = 1.0
@@ -1245,7 +1233,7 @@ class TestApplyCoulombTerms:
             w90._DCMode.NOTCORRECT, None,
         )
 
-        assert s.NCintra == 0
+        assert len(s.Cintra_list) == 0
         assert len(s.trans_list) == 0
 
 
@@ -1265,12 +1253,12 @@ class TestApplyHundTerms:
         NtUJ = [0, 0, 0]
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
-        nhund_before = s.NHund
+        nhund_before = len(s.Hund_list)
         w90._apply_hund_terms(
             s, 0, 0, 0, 0, NtUJ, tUJ, tUJindx,
             w90._DCMode.NOTCORRECT, None,
         )
-        assert s.NHund == nhund_before
+        assert len(s.Hund_list) == nhund_before
 
     def test_local_hund_term_skipped(self):
         """Local Hund term (same site) should be skipped."""
@@ -1290,9 +1278,9 @@ class TestApplyHundTerms:
             w90._DCMode.NOTCORRECT, None,
         )
 
-        assert s.NHund == 0
-        assert s.NEx == 0
-        assert s.NPairHopp == 0
+        assert len(s.Hund_list) == 0
+        assert len(s.Ex_list) == 0
+        assert len(s.PairHopp_list) == 0
 
     def test_zero_terms_is_noop(self):
         """Should do nothing when NtUJ[2] is 0."""
@@ -1310,9 +1298,9 @@ class TestApplyHundTerms:
             w90._DCMode.NOTCORRECT, None,
         )
 
-        assert s.NHund == 0
-        assert s.NEx == 0
-        assert s.NPairHopp == 0
+        assert len(s.Hund_list) == 0
+        assert len(s.Ex_list) == 0
+        assert len(s.PairHopp_list) == 0
 
 
 # ---------------------------------------------------------------------------

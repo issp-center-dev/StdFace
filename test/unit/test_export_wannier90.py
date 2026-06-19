@@ -94,24 +94,12 @@ def _make_stdI_for_interaction(nsiteUC: int = 1, ncell: int = 2) -> StdIntList:
 
     # Zero out interaction arrays
     s.trans_list = []
-    s.NCintra = 0
-    s.CintraIndx = None
-    s.Cintra = None
-    s.NCinter = 0
-    s.CinterIndx = None
-    s.Cinter = None
-    s.NHund = 0
-    s.HundIndx = None
-    s.Hund = None
-    s.NEx = 0
-    s.ExIndx = None
-    s.Ex = None
-    s.NPairLift = 0
-    s.PLIndx = None
-    s.PairLift = None
-    s.NPairHopp = 0
-    s.PHIndx = None
-    s.PairHopp = None
+    s.Cintra_list = []
+    s.Cinter_list = []
+    s.Hund_list = []
+    s.Ex_list = []
+    s.PairLift_list = []
+    s.PairHopp_list = []
 
     return s
 

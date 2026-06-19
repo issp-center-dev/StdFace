@@ -569,24 +569,12 @@ class TestPrintInteractions:
     def test_no_interactions_no_files(self):
         """Test that no files are written when all interaction counts are zero."""
         StdI = _make_stdi_base(nsite=2)
-        StdI.NCintra = 0
-        StdI.NCinter = 0
-        StdI.NHund = 0
-        StdI.NEx = 0
-        StdI.NPairLift = 0
-        StdI.NPairHopp = 0
-        StdI.Cintra = []
-        StdI.CintraIndx = []
-        StdI.Cinter = []
-        StdI.CinterIndx = []
-        StdI.Hund = []
-        StdI.HundIndx = []
-        StdI.Ex = []
-        StdI.ExIndx = []
-        StdI.PairLift = []
-        StdI.PLIndx = []
-        StdI.PairHopp = []
-        StdI.PHIndx = []
+        StdI.Cintra_list = []
+        StdI.Cinter_list = []
+        StdI.Hund_list = []
+        StdI.Ex_list = []
+        StdI.PairLift_list = []
+        StdI.PairHopp_list = []
         StdI.intr_list = []
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -603,24 +591,12 @@ class TestPrintInteractions:
     def test_coulomb_intra_written(self):
         """Test that coulombintra.def is written with non-zero terms."""
         StdI = _make_stdi_base(nsite=2)
-        StdI.NCintra = 2
-        StdI.CintraIndx = [[0], [1]]
-        StdI.Cintra = [4.0, 4.0]
-        StdI.NCinter = 0
-        StdI.CinterIndx = []
-        StdI.Cinter = []
-        StdI.NHund = 0
-        StdI.HundIndx = []
-        StdI.Hund = []
-        StdI.NEx = 0
-        StdI.ExIndx = []
-        StdI.Ex = []
-        StdI.NPairLift = 0
-        StdI.PLIndx = []
-        StdI.PairLift = []
-        StdI.NPairHopp = 0
-        StdI.PHIndx = []
-        StdI.PairHopp = []
+        StdI.Cintra_list = [(4.0, 0), (4.0, 1)]
+        StdI.Cinter_list = []
+        StdI.Hund_list = []
+        StdI.Ex_list = []
+        StdI.PairLift_list = []
+        StdI.PairHopp_list = []
         StdI.intr_list = []
 
         with tempfile.TemporaryDirectory() as tmpdir:

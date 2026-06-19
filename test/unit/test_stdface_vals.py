@@ -82,18 +82,12 @@ class TestStdIntListDefaults:
         assert s.tau is None
         assert s.locspinflag is None
         assert s.trans_list == []
-        assert s.CintraIndx is None
-        assert s.Cintra is None
-        assert s.CinterIndx is None
-        assert s.Cinter is None
-        assert s.HundIndx is None
-        assert s.Hund is None
-        assert s.ExIndx is None
-        assert s.Ex is None
-        assert s.PLIndx is None
-        assert s.PairLift is None
-        assert s.PHIndx is None
-        assert s.PairHopp is None
+        assert s.Cintra_list == []
+        assert s.Cinter_list == []
+        assert s.Hund_list == []
+        assert s.Ex_list == []
+        assert s.PairLift_list == []
+        assert s.PairHopp_list == []
 
 
 class TestStdIntListArrayShapes:

@@ -892,21 +892,28 @@ def export_interaction(StdI: StdIntList) -> None:
         _prefix(StdI, "transfer.dat"), "Transfer",
         0)
 
+    _nci = len(StdI.Cintra_list)
     _export_coulomb_intra(
         StdI,
-        StdI.NCintra, StdI.CintraIndx, StdI.Cintra,
+        _nci,
+        np.array([t[1:] for t in StdI.Cintra_list], dtype=int).reshape(_nci, 1),
+        np.array([t[0] for t in StdI.Cintra_list]),
         _prefix(StdI, "coulombintra.dat"), "CoulombIntra")
 
-    # Two-body shortcut interactions: (count_attr, indx_attr, val_attr, filename, tag)
+    # Two-body shortcut interactions: (list_attr, filename, tag)
     _INTER_REAL_EXPORTS = (
-        ("NCinter",    "CinterIndx", "Cinter",   "coulombinter.dat", "CoulombInter"),
-        ("NHund",      "HundIndx",   "Hund",     "hund.dat",         "Hund"),
-        ("NEx",        "ExIndx",     "Ex",        "exchange.dat",     "Exchange"),
-        ("NPairLift",  "PLIndx",     "PairLift", "pairlift.dat",     "PairLift"),
-        ("NPairHopp",  "PHIndx",     "PairHopp", "pairhopp.dat",     "PairHopp"),
+        ("Cinter_list",   "coulombinter.dat", "CoulombInter"),
+        ("Hund_list",     "hund.dat",         "Hund"),
+        ("Ex_list",       "exchange.dat",     "Exchange"),
+        ("PairLift_list", "pairlift.dat",     "PairLift"),
+        ("PairHopp_list", "pairhopp.dat",     "PairHopp"),
     )
-    for cnt_attr, idx_attr, val_attr, fname_suffix, tag in _INTER_REAL_EXPORTS:
+    for list_attr, fname_suffix, tag in _INTER_REAL_EXPORTS:
+        terms = getattr(StdI, list_attr)
+        n = len(terms)
         _export_inter_real(
             StdI,
-            getattr(StdI, cnt_attr), getattr(StdI, idx_attr), getattr(StdI, val_attr),
+            n,
+            np.array([t[1:] for t in terms], dtype=int).reshape(n, 2),
+            np.array([t[0] for t in terms]),
             _prefix(StdI, fname_suffix), tag)

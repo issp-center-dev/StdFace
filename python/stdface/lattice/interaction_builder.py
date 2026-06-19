@@ -167,9 +167,7 @@ def hubbard_local(
     trans(StdI, -0.5 * 1j * Gamma0_y, isite, 1, isite, 0)
     trans(StdI, 0.5 * 1j * Gamma0_y, isite, 0, isite, 1)
 
-    StdI.Cintra[StdI.NCintra] = U0
-    StdI.CintraIndx[StdI.NCintra][0] = isite
-    StdI.NCintra += 1
+    StdI.Cintra_list.append((U0, isite))
 
 
 def mag_field(
@@ -299,16 +297,10 @@ def _add_spin_half_terms(
         respectively.
     """
     # Hund: -0.5 * Jzz
-    n = StdI.NHund
-    StdI.Hund[n] = -0.5 * J[2, 2]
-    StdI.HundIndx[n] = [isite, jsite]
-    StdI.NHund = n + 1
+    StdI.Hund_list.append((-0.5 * J[2, 2], isite, jsite))
 
     # Cinter: -0.25 * Jzz
-    n = StdI.NCinter
-    StdI.Cinter[n] = -0.25 * J[2, 2]
-    StdI.CinterIndx[n] = [isite, jsite]
-    StdI.NCinter = n + 1
+    StdI.Cinter_list.append((-0.25 * J[2, 2], isite, jsite))
 
     # Check whether off-diagonal J elements allow Ex/PairLift shortcut
     cond_offdiag = (abs(J[0, 1]) < AMPLITUDE_EPS and abs(J[1, 0]) < AMPLITUDE_EPS)
@@ -320,17 +312,13 @@ def _add_spin_half_terms(
 
     # Exchange
     if StdI.solver == SolverType.mVMC or StdI.model == ModelType.KONDO:
-        StdI.Ex[StdI.NEx] = -0.25 * (J[0, 0] + J[1, 1])
+        ex_val = -0.25 * (J[0, 0] + J[1, 1])
     else:
-        StdI.Ex[StdI.NEx] = 0.25 * (J[0, 0] + J[1, 1])
-    StdI.ExIndx[StdI.NEx] = [isite, jsite]
-    StdI.NEx += 1
+        ex_val = 0.25 * (J[0, 0] + J[1, 1])
+    StdI.Ex_list.append((ex_val, isite, jsite))
 
     # Pair lift
-    n = StdI.NPairLift
-    StdI.PairLift[n] = 0.25 * (J[0, 0] - J[1, 1])
-    StdI.PLIndx[n] = [isite, jsite]
-    StdI.NPairLift = n + 1
+    StdI.PairLift_list.append((0.25 * (J[0, 0] - J[1, 1]), isite, jsite))
 
     return False, False  # both handled by shortcut
 
@@ -449,10 +437,7 @@ def coulomb(StdI: StdIntList, V: float, isite: int, jsite: int) -> None:
     jsite : int
         Second site index.
     """
-    n = StdI.NCinter
-    StdI.Cinter[n] = V
-    StdI.CinterIndx[n] = [isite, jsite]
-    StdI.NCinter = n + 1
+    StdI.Cinter_list.append((V, isite, jsite))
 
 
 def compute_max_interactions(
@@ -520,19 +505,13 @@ def malloc_interactions(StdI: StdIntList, ntransMax: int, nintrMax: int) -> None
     # (2) InterAll (A1: list-based)
     StdI.intr_list = []
 
-    # (3)-(8) Two-body shortcut arrays: (indx_attr, val_attr, count_attr, ncols)
-    _SHORTCUT_ARRAYS = (
-        ("CintraIndx", "Cintra",   "NCintra",    1),
-        ("CinterIndx", "Cinter",   "NCinter",    2),
-        ("HundIndx",   "Hund",     "NHund",      2),
-        ("ExIndx",     "Ex",       "NEx",        2),
-        ("PLIndx",     "PairLift", "NPairLift",  2),
-        ("PHIndx",     "PairHopp", "NPairHopp",  2),
-    )
-    for indx_attr, val_attr, count_attr, ncols in _SHORTCUT_ARRAYS:
-        setattr(StdI, indx_attr, np.zeros((nintrMax, ncols), dtype=int))
-        setattr(StdI, val_attr, np.zeros(nintrMax))
-        setattr(StdI, count_attr, 0)
+    # (3)-(8) Two-body shortcut term lists (A1: list-based)
+    StdI.Cintra_list = []
+    StdI.Cinter_list = []
+    StdI.Hund_list = []
+    StdI.Ex_list = []
+    StdI.PairLift_list = []
+    StdI.PairHopp_list = []
 
 
 def _dispatch_bond_interaction(
