@@ -5,9 +5,11 @@ by the ``build_*`` functions into a single value a caller can ``write`` to
 a directory or serialise with ``to_dict``.  This is the unit a library
 ``generate``-style API hands back.
 
-Currently only :class:`WannierModeOutput` (UHFK / RPA) is provided; it is
-fully backed by D1 data objects.  ``ExpertModeOutput`` is deferred until
-``ModParaData`` / ``NamelistData`` exist.
+:class:`WannierModeOutput` (UHFK / RPA) and :class:`ExpertModeOutput`
+(HPhi / mVMC / UHF) are provided.  For UHF the Expert container is fully
+data-backed; HPhi / mVMC additionally emit solver-specific files
+(excitation / calcmod / variational) via a plugin hook, which are not yet
+represented as data.
 
 License
 -------
@@ -86,3 +88,49 @@ def build_wannier_output(StdI: StdIntList) -> WannierModeOutput:
         geom_fname=_prefix(StdI, "geom.dat"),
         interactions=build_wannier_interactions(StdI),
     )
+
+
+@dataclass
+class ExpertModeOutput(SolverOutput):
+    """Expert-mode (.def) output for HPhi / mVMC / UHF.
+
+    Holds the data-backed common files.  Solver-specific files
+    (HPhi excitation / calcmod / pump, mVMC variational group) are not
+    represented here; they are emitted by the plugin's
+    ``write_solver_files`` hook during assembly.
+    """
+
+    locspn: object        # LocSpnData
+    trans: object         # TransData
+    interactions: list    # list[InteractionData | InterAllData]
+    modpara: object       # ModParaData
+    namelist: object      # NamelistData
+    green_one: object | None = None   # GreenOneData
+    green_two: object | None = None   # GreenTwoData
+
+    def write(self, directory: Path = Path(".")) -> None:
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        self.locspn.write(directory)
+        self.trans.write(directory)
+        for data in self.interactions:
+            data.write(directory)
+        self.modpara.write(directory)
+        if self.green_one is not None:
+            self.green_one.write(directory)
+        if self.green_two is not None:
+            self.green_two.write(directory)
+        self.namelist.write(directory)
+
+    def to_dict(self) -> dict:
+        return {
+            "locspn": self.locspn.to_dict(),
+            "trans": self.trans.to_dict(),
+            "interactions": [d.to_dict() for d in self.interactions],
+            "modpara": self.modpara.to_dict(),
+            "namelist": self.namelist.to_dict(),
+            "green_one": (self.green_one.to_dict()
+                          if self.green_one is not None else None),
+            "green_two": (self.green_two.to_dict()
+                          if self.green_two is not None else None),
+        }

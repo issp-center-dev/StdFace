@@ -62,15 +62,12 @@ class HPhiPlugin(ExpertModeSolverPlugin):
             else:
                 lattice_plugin.boost(StdI)
 
-    def write(self, StdI: StdIntList) -> None:
-        """Write HPhi Expert-mode files (common files + excitation/pump/calcmod)."""
-        from ...writer.common_writer import print_namelist
-        self._write_common_files(StdI)
+    def write_solver_files(self, StdI: StdIntList) -> None:
+        """Emit HPhi-specific files (excitation / pump / calcmod)."""
         print_excitation(StdI)
         if StdI.method == MethodType.TIME_EVOLUTION:
             print_pump(StdI)
         print_calc_mod(StdI)
-        print_namelist(StdI)
 
 
 # -----------------------------------------------------------------------

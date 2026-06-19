@@ -187,30 +187,48 @@ class ExpertModeSolverPlugin(SolverPlugin):
         """Whether ``greentwo.def`` is listed in ``namelist.def`` (default True)."""
         return True
 
-    def _write_common_files(self, StdI: StdIntList) -> None:
-        """Write the files common to all Expert-mode solvers.
+    def write_solver_files(self, StdI: StdIntList) -> None:
+        """Hook: emit solver-specific files (default: none, used by UHF).
 
-        Replaces the former ``write()`` template + per-step wrapper methods.
-        ``namelist.def`` is intentionally **not** written here: each solver
-        writes its solver-specific files first (HPhi's excitation/calcmod set
-        ``SpectrumBody`` / ``PumpBody`` that ``print_namelist`` reads) and
-        calls ``print_namelist`` last.
+        Runs after the common data is built and before ``namelist`` is
+        built, because HPhi's excitation / calcmod set ``SpectrumBody`` /
+        ``PumpBody`` which ``build_namelist`` reads.
+        """
+
+    def build_output(self, StdI: StdIntList) -> "ExpertModeOutput":
+        """Assemble the Expert-mode output container for *StdI*.
+
+        Orchestrates the prep / build sequence so that namelist (built
+        last) sees the flags set by the interaction build and the
+        solver-specific hook.
         """
         from .writer.common_writer import (
-            print_loc_spin, print_trans, check_mod_para, print_mod_para,
-            check_output_mode, print_1_green, print_2_green,
+            check_mod_para, build_loc_spn, build_trans, build_modpara,
+            check_output_mode, build_green_one, build_green_two, build_namelist,
         )
-        from .writer.interaction_writer import print_interactions
+        from .writer.interaction_writer import build_interactions
+        from .core.output import ExpertModeOutput
 
-        print_loc_spin(StdI)
-        print_trans(StdI)
-        print_interactions(StdI)
         check_mod_para(StdI)
-        print_mod_para(StdI)
+        locspn = build_loc_spn(StdI)
+        trans = build_trans(StdI)
+        interactions = build_interactions(StdI)   # sets L* flags
+        modpara = build_modpara(StdI)
         check_output_mode(StdI)
-        print_1_green(StdI)
-        if self.has_two_body_green(StdI):
-            print_2_green(StdI)
+        green_one = build_green_one(StdI)
+        green_two = (build_green_two(StdI)
+                     if self.has_two_body_green(StdI) else None)
+        self.write_solver_files(StdI)             # sets SpectrumBody/PumpBody
+        namelist = build_namelist(StdI)
+        return ExpertModeOutput(
+            locspn=locspn, trans=trans, interactions=interactions,
+            modpara=modpara, namelist=namelist,
+            green_one=green_one, green_two=green_two,
+        )
+
+    def write(self, StdI: StdIntList) -> None:
+        """Write all Expert-mode files via the output container."""
+        self.build_output(StdI).write()
 
 
 class WannierModeSolverPlugin(SolverPlugin):

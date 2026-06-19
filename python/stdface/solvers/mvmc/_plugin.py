@@ -47,11 +47,8 @@ class MVMCPlugin(ExpertModeSolverPlugin):
     def reset_arrays(self) -> list[tuple[str, object]]:
         return _RESET_ARRAYS
 
-    def write(self, StdI: StdIntList) -> None:
-        """Write mVMC Expert-mode files (common files + variational params)."""
-        from ...writer.common_writer import print_namelist
-        self._write_common_files(StdI)
-
+    def write_solver_files(self, StdI: StdIntList) -> None:
+        """Emit mVMC-specific variational files."""
         if StdI.lGC == 0 and (StdI.Sz2 == 0 or StdI.Sz2 is None):
             StdI.ComplexType = print_val_i("ComplexType", StdI.ComplexType, 0)
         else:
@@ -64,7 +61,6 @@ class MVMCPlugin(ExpertModeSolverPlugin):
             print_orb_para(StdI)
         print_gutzwiller(StdI)
         print_orb(StdI)
-        print_namelist(StdI)
 
 
 # -----------------------------------------------------------------------
