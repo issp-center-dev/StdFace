@@ -35,9 +35,9 @@ class MVMCPlugin(ExpertModeSolverPlugin):
         from ...writer.common_writer import _modpara_lines_mvmc
         return _modpara_lines_mvmc(StdI)
 
-    def write_namelist_body(self, fp, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _write_namelist_mvmc
-        _write_namelist_mvmc(fp, StdI)
+    def namelist_entries(self, StdI: StdIntList) -> list:
+        from ...writer.common_writer import _namelist_entries_mvmc
+        return _namelist_entries_mvmc(StdI)
 
     @property
     def reset_scalars(self) -> list[tuple[str, object]]:

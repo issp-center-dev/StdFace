@@ -42,8 +42,10 @@ from stdface.writer.common_writer import (
     _modpara_lines_mvmc,
     _modpara_lines_uhf_hwave,
     _MODPARA_BANNER,
-    _write_namelist_hphi,
-    _write_namelist_mvmc,
+    build_namelist,
+    NamelistData,
+    _namelist_entries_hphi,
+    _namelist_entries_mvmc,
     _INTERACTION_FLAGS,
     GreenFunctionIndices,
     _merge_duplicate_terms,
@@ -286,9 +288,9 @@ class TestNamelistBodyDispatch:
         """Test that _INTERACTION_FLAGS has 7 entries with valid attributes."""
         assert len(_INTERACTION_FLAGS) == 7
         stdi = StdIntList()
-        for attr, line in _INTERACTION_FLAGS:
+        for attr, kw, fn in _INTERACTION_FLAGS:
             assert hasattr(stdi, attr), f"StdIntList missing attribute {attr}"
-            assert line.endswith("\n")
+            assert kw and fn.endswith(".def")
 
     def test_hphi_body_calcmod(self):
         """Test that HPhi body writes CalcMod entry."""
@@ -299,9 +301,7 @@ class TestNamelistBodyDispatch:
         StdI.PumpBody = 0
         StdI.CDataFileHead = "zvo"
         StdI.lBoost = 0
-        buf = io.StringIO()
-        _write_namelist_hphi(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_hphi(StdI)).to_text()
         assert "CalcMod  calcmod.def" in content
         assert "SingleExcitation  single.def" in content
         assert "SpectrumVec  zvo_eigenvec_0" in content
@@ -315,9 +315,7 @@ class TestNamelistBodyDispatch:
         StdI.PumpBody = 0
         StdI.CDataFileHead = "zvo"
         StdI.lBoost = 0
-        buf = io.StringIO()
-        _write_namelist_hphi(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_hphi(StdI)).to_text()
         assert "PairExcitation  pair.def" in content
         assert "SingleExcitation" not in content
 
@@ -330,9 +328,7 @@ class TestNamelistBodyDispatch:
         StdI.PumpBody = 1
         StdI.CDataFileHead = "zvo"
         StdI.lBoost = 0
-        buf = io.StringIO()
-        _write_namelist_hphi(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_hphi(StdI)).to_text()
         assert "TEOneBody  teone.def" in content
         assert "TETwoBody" not in content
 
@@ -345,9 +341,7 @@ class TestNamelistBodyDispatch:
         StdI.PumpBody = 2
         StdI.CDataFileHead = "zvo"
         StdI.lBoost = 0
-        buf = io.StringIO()
-        _write_namelist_hphi(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_hphi(StdI)).to_text()
         assert "TETwoBody  tetwo.def" in content
         assert "TEOneBody" not in content
 
@@ -360,9 +354,7 @@ class TestNamelistBodyDispatch:
         StdI.PumpBody = 0
         StdI.CDataFileHead = "zvo"
         StdI.lBoost = 1
-        buf = io.StringIO()
-        _write_namelist_hphi(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_hphi(StdI)).to_text()
         assert "Boost  boost.def" in content
 
     def test_mvmc_body_basic(self):
@@ -371,9 +363,7 @@ class TestNamelistBodyDispatch:
         StdI = _make_stdi_base(solver="mVMC")
         StdI.lGC = 0
         StdI.Sz2 = 0
-        buf = io.StringIO()
-        _write_namelist_mvmc(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_mvmc(StdI)).to_text()
         assert "Gutzwiller  gutzwilleridx.def" in content
         assert "Jastrow  jastrowidx.def" in content
         assert "Orbital  orbitalidx.def" in content
@@ -386,9 +376,7 @@ class TestNamelistBodyDispatch:
         StdI = _make_stdi_base(solver="mVMC")
         StdI.lGC = 1
         StdI.Sz2 = 0
-        buf = io.StringIO()
-        _write_namelist_mvmc(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_mvmc(StdI)).to_text()
         assert "OrbitalParallel  orbitalidxpara.def" in content
         assert "OrbitalGeneral  orbitalidxgen.def" in content
 
@@ -398,9 +386,7 @@ class TestNamelistBodyDispatch:
         StdI = _make_stdi_base(solver="mVMC")
         StdI.lGC = 0
         StdI.Sz2 = 2
-        buf = io.StringIO()
-        _write_namelist_mvmc(buf, StdI)
-        content = buf.getvalue()
+        content = NamelistData(_namelist_entries_mvmc(StdI)).to_text()
         assert "OrbitalParallel  orbitalidxpara.def" in content
 
     def test_uhf_no_solver_specific_entries(self):
@@ -1798,3 +1784,46 @@ class TestModParaDataBuildWrite:
         data = build_modpara(self._hphi_stdi())
         data.write(tmp_path)
         assert (tmp_path / "modpara.def").read_text() == data.to_text()
+
+
+class TestNamelistDataBuildWrite:
+    """D1b-2: build_namelist / NamelistData (data vs format separation)."""
+
+    def _hphi_stdi(self):
+        StdI = _make_stdi_base(solver="HPhi")
+        StdI.SpectrumBody = 1
+        StdI.method = "lanczos"
+        StdI.PumpBody = 0
+        StdI.CDataFileHead = "zvo"
+        StdI.lBoost = 0
+        StdI.ioutputmode = 1
+        # interaction flags (normally set by build_interactions)
+        StdI.LCintra = 1
+        for f in ("LCinter", "LHund", "LEx", "LPairLift", "LPairHopp", "Lintr"):
+            setattr(StdI, f, 0)
+        return StdI
+
+    def test_to_dict_entries_and_roundtrip(self):
+        d = build_namelist(self._hphi_stdi())
+        names = [kw for kw, _ in d.entries]
+        assert names[:3] == ["ModPara", "LocSpin", "Trans"]
+        assert ("CoulombIntra", "coulombintra.def") in d.entries
+        assert ("OneBodyG", "greenone.def") in d.entries
+        assert ("CalcMod", "calcmod.def") in d.entries  # solver entry
+        # clean (kw, fn) data -> from_dict round-trips exactly
+        assert NamelistData.from_dict(d.to_dict()).entries == d.entries
+
+    def test_build_write_parity_with_print(self):
+        s = self._hphi_stdi()
+        with tempfile.TemporaryDirectory() as tmp:
+            orig = os.getcwd()
+            os.chdir(tmp)
+            try:
+                print_namelist(s)
+                via_print = open("namelist.def").read()
+                build_namelist(s).write()
+                via_build = open("namelist.def").read()
+            finally:
+                os.chdir(orig)
+        assert via_print == via_build
+        assert via_print.startswith("         ModPara  modpara.def\n")

@@ -176,11 +176,12 @@ class ExpertModeSolverPlugin(SolverPlugin):
         descriptor format.
         """
 
-    def write_namelist_body(self, fp, StdI: StdIntList) -> None:
-        """Write solver-specific extra entries in ``namelist.def``.
+    def namelist_entries(self, StdI: StdIntList) -> list:
+        """Return solver-specific ``(keyword, filename)`` namelist entries.
 
         Default: no extra entries (used by UHF).
         """
+        return []
 
     def has_two_body_green(self, StdI: StdIntList) -> bool:
         """Whether ``greentwo.def`` is listed in ``namelist.def`` (default True)."""

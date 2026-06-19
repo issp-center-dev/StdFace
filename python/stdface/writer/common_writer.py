@@ -254,104 +254,108 @@ def print_trans(StdI: StdIntList) -> None:
     build_trans(StdI).write()
 
 
-def _write_namelist_hphi(fp, StdI: StdIntList) -> None:
-    """Write HPhi-specific entries in ``namelist.def``.
-
-    Parameters
-    ----------
-    fp : file object
-        Open file handle for ``namelist.def``.
-    StdI : StdIntList
-        The global parameter structure.
-    """
-    fp.write("         CalcMod  calcmod.def\n")
+def _namelist_entries_hphi(StdI: StdIntList) -> list:
+    """Return HPhi-specific ``(keyword, filename)`` namelist entries."""
+    entries: list = [("CalcMod", "calcmod.def")]
     if StdI.SpectrumBody == 1:
-        fp.write("SingleExcitation  single.def\n")
+        entries.append(("SingleExcitation", "single.def"))
     else:
-        fp.write("  PairExcitation  pair.def\n")
+        entries.append(("PairExcitation", "pair.def"))
     if StdI.method == MethodType.TIME_EVOLUTION:
         if StdI.PumpBody == 1:
-            fp.write("       TEOneBody  teone.def\n")
+            entries.append(("TEOneBody", "teone.def"))
         elif StdI.PumpBody == 2:
-            fp.write("       TETwoBody  tetwo.def\n")
-    fp.write(f"     SpectrumVec  {StdI.CDataFileHead}_eigenvec_0\n")
+            entries.append(("TETwoBody", "tetwo.def"))
+    entries.append(("SpectrumVec", f"{StdI.CDataFileHead}_eigenvec_0"))
     if StdI.lBoost == 1:
-        fp.write("           Boost  boost.def\n")
+        entries.append(("Boost", "boost.def"))
+    return entries
 
 
-def _write_namelist_mvmc(fp, StdI: StdIntList) -> None:
-    """Write mVMC-specific entries in ``namelist.def``.
-
-    Parameters
-    ----------
-    fp : file object
-        Open file handle for ``namelist.def``.
-    StdI : StdIntList
-        The global parameter structure.
-    """
-    fp.write("      Gutzwiller  gutzwilleridx.def\n")
-    fp.write("         Jastrow  jastrowidx.def\n")
-    fp.write("         Orbital  orbitalidx.def\n")
+def _namelist_entries_mvmc(StdI: StdIntList) -> list:
+    """Return mVMC-specific ``(keyword, filename)`` namelist entries."""
+    entries: list = [
+        ("Gutzwiller", "gutzwilleridx.def"),
+        ("Jastrow", "jastrowidx.def"),
+        ("Orbital", "orbitalidx.def"),
+    ]
     if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 is not None):
-        fp.write(" OrbitalParallel  orbitalidxpara.def\n")
-        fp.write("# OrbitalGeneral  orbitalidxgen.def\n")
-    fp.write("        TransSym  qptransidx.def\n")
+        entries.append(("OrbitalParallel", "orbitalidxpara.def"))
+        entries.append(("# OrbitalGeneral", "orbitalidxgen.def"))
+    entries.append(("TransSym", "qptransidx.def"))
+    return entries
 
 
-# Interaction file flags and their namelist lines
-_INTERACTION_FLAGS: list[tuple[str, str]] = [
-    ("LCintra",   "    CoulombIntra  coulombintra.def\n"),
-    ("LCinter",   "    CoulombInter  coulombinter.def\n"),
-    ("LHund",     "            Hund  hund.def\n"),
-    ("LEx",       "        Exchange  exchange.def\n"),
-    ("LPairLift", "        PairLift  pairlift.def\n"),
-    ("LPairHopp", "         PairHop  pairhopp.def\n"),
-    ("Lintr",     "        InterAll  interall.def\n"),
+# Interaction output-flag attribute -> (namelist keyword, filename)
+_INTERACTION_FLAGS: list[tuple[str, str, str]] = [
+    ("LCintra",   "CoulombIntra", "coulombintra.def"),
+    ("LCinter",   "CoulombInter", "coulombinter.def"),
+    ("LHund",     "Hund",         "hund.def"),
+    ("LEx",       "Exchange",     "exchange.def"),
+    ("LPairLift", "PairLift",     "pairlift.def"),
+    ("LPairHopp", "PairHop",      "pairhopp.def"),
+    ("Lintr",     "InterAll",     "interall.def"),
 ]
-"""Maps ``StdIntList`` flag attribute names to their namelist entry lines.
+"""Maps each interaction output flag to its namelist ``(keyword, filename)``.
 
-Each flag, when equal to 1, causes the corresponding definition file to be
-listed in ``namelist.def``.
+When the flag equals 1 the corresponding definition file is listed in
+``namelist.def``.
 """
 
 
-def print_namelist(StdI: StdIntList) -> None:
-    """Write ``namelist.def`` that lists all definition files for the solver.
+@dataclass
+class NamelistData:
+    """``namelist.def`` content as ordered ``(keyword, filename)`` entries."""
 
-    This is the Python translation of the C function ``PrintNamelist()``.
-    The content depends on which solver is active (``StdI.solver``).
+    entries: list
 
-    The common prefix (ModPara, LocSpin, Trans, conditional interaction
-    files, Green-function files) is written for all solvers.  Solver-specific
-    entries are delegated to
-    :meth:`ExpertModeSolverPlugin.write_namelist_body`.
+    def to_text(self) -> str:
+        return "".join(f"{kw:>16}  {fn}\n" for kw, fn in self.entries)
 
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure.
+    def write(self, directory: Path = Path(".")) -> None:
+        with open(Path(directory) / "namelist.def", "w") as fp:
+            fp.write(self.to_text())
+        logger.info("    namelist.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"entries": [list(e) for e in self.entries]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "NamelistData":
+        return cls(entries=[tuple(e) for e in data["entries"]])
+
+
+def build_namelist(StdI: StdIntList) -> NamelistData:
+    """Build :class:`NamelistData` from the current build results on *StdI*.
+
+    The interaction entries are selected from the ``L*`` flags (set by
+    :func:`build_interactions`); the Green entries from ``ioutputmode``;
+    solver-specific entries from the plugin.  (When the output container
+    is introduced, these can be derived from the assembled data objects.)
     """
-    with open("namelist.def", "w") as fp:
-        fp.write("         ModPara  modpara.def\n")
-        fp.write("         LocSpin  locspn.def\n")
-        fp.write("           Trans  trans.def\n")
+    from ..plugin import get_plugin, ExpertModeSolverPlugin
+    plugin = get_plugin(StdI.solver)
+    assert isinstance(plugin, ExpertModeSolverPlugin)
 
-        for flag_attr, line in _INTERACTION_FLAGS:
-            if getattr(StdI, flag_attr) == 1:
-                fp.write(line)
+    entries: list = [
+        ("ModPara", "modpara.def"),
+        ("LocSpin", "locspn.def"),
+        ("Trans", "trans.def"),
+    ]
+    for flag_attr, kw, fn in _INTERACTION_FLAGS:
+        if getattr(StdI, flag_attr) == 1:
+            entries.append((kw, fn))
+    if StdI.ioutputmode != 0:
+        entries.append(("OneBodyG", "greenone.def"))
+        if plugin.has_two_body_green(StdI):
+            entries.append(("TwoBodyG", "greentwo.def"))
+    entries += plugin.namelist_entries(StdI)
+    return NamelistData(entries=entries)
 
-        from ..plugin import get_plugin, ExpertModeSolverPlugin
-        plugin = get_plugin(StdI.solver)
-        assert isinstance(plugin, ExpertModeSolverPlugin)
 
-        if StdI.ioutputmode != 0:
-            fp.write("        OneBodyG  greenone.def\n")
-            if plugin.has_two_body_green(StdI):
-                fp.write("        TwoBodyG  greentwo.def\n")
-
-        plugin.write_namelist_body(fp, StdI)
-
-    logger.info("    namelist.def is written.")
+def print_namelist(StdI: StdIntList) -> None:
+    """Write ``namelist.def`` (thin wrapper over :func:`build_namelist`)."""
+    build_namelist(StdI).write()
 
 
 # ---------------------------------------------------------------------------

@@ -35,9 +35,9 @@ class HPhiPlugin(ExpertModeSolverPlugin):
         from ...writer.common_writer import _modpara_lines_hphi
         return _modpara_lines_hphi(StdI)
 
-    def write_namelist_body(self, fp, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _write_namelist_hphi
-        _write_namelist_hphi(fp, StdI)
+    def namelist_entries(self, StdI: StdIntList) -> list:
+        from ...writer.common_writer import _namelist_entries_hphi
+        return _namelist_entries_hphi(StdI)
 
     @property
     def reset_scalars(self) -> list[tuple[str, object]]:
