@@ -14,6 +14,8 @@ from stdface.core.stdface_vals import StdIntList, ModelType, SolverType
 from stdface.writer.common_writer import (
     print_loc_spin,
     print_trans,
+    build_trans,
+    TransData,
     print_namelist,
     print_mod_para,
     print_1_green,
@@ -1624,3 +1626,49 @@ class TestGreenFunctionIndicesGreen2:
         for s1, sp1, s2, sp2, s3, sp3, s4, sp4 in gf.green2_raw():
             assert s1 == s2
             assert s3 == s4
+
+
+class TestTransDataBuildWrite:
+    """D1-1: build_trans / TransData (build/write separation)."""
+
+    def _stdi(self):
+        s = StdIntList()
+        s.trans_list = [
+            (1.0 + 2.0j, 0, 0, 1, 1),
+            (3.0 + 0.0j, 1, 1, 0, 0),
+            (1e-9, 2, 0, 2, 0),   # below AMPLITUDE_EPS -> dropped
+        ]
+        return s
+
+    def test_build_splits_complex_and_drops_tiny(self):
+        d = build_trans(self._stdi())
+        assert d.rows == [
+            (0, 0, 1, 1, 1.0, 2.0),
+            (1, 1, 0, 0, 3.0, 0.0),
+        ]
+        # build is the complex->(re,im) boundary: no complex/numpy leaks
+        for row in d.rows:
+            assert all(isinstance(x, (int, float)) for x in row)
+
+    def test_to_from_dict_roundtrip(self):
+        d = build_trans(self._stdi())
+        assert TransData.from_dict(d.to_dict()).rows == d.rows
+
+    def test_write_and_wrapper_parity(self):
+        s = self._stdi()
+        with tempfile.TemporaryDirectory() as tmp:
+            orig = os.getcwd()
+            os.chdir(tmp)
+            try:
+                print_trans(s)
+                via_wrapper = open("trans.def").read()
+                build_trans(s).write()
+                via_data = open("trans.def").read()
+            finally:
+                os.chdir(orig)
+        assert via_wrapper == via_data
+        assert "NTransfer       2" in via_wrapper
+
+    def test_write_to_directory(self, tmp_path):
+        build_trans(self._stdi()).write(tmp_path)
+        assert (tmp_path / "trans.def").exists()

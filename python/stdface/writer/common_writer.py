@@ -45,7 +45,9 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from itertools import product
+from pathlib import Path
 from typing import NamedTuple
 
 import numpy as np
@@ -162,44 +164,68 @@ def print_loc_spin(StdI: StdIntList) -> None:
     logger.info("    locspn.def is written.")
 
 
-def print_trans(StdI: StdIntList) -> None:
-    """Write ``trans.def`` listing one-body transfer integrals.
+@dataclass
+class TransData:
+    """One-body transfer integrals (``trans.def``).
 
-    This is the Python translation of the C function ``PrintTrans()``.
-    Duplicate index quadruples are merged (their amplitudes summed) and
-    entries whose absolute value is below ``AMPLITUDE_EPS`` are suppressed.
-
-    Parameters
+    Attributes
     ----------
-    StdI : StdIntList
-        The global parameter structure.  The following fields are read
-        and (for merging) modified **in place**:
+    rows : list of tuple
+        ``(i, s_i, j, s_j, re, im)`` per non-zero transfer term, with the
+        amplitude already split into real / imaginary parts.
+    """
 
-        - ``trans_list`` : list of ``(amp, i, s_i, j, s_j)`` tuples.
+    rows: list
+
+    def write(self, directory: Path = Path(".")) -> None:
+        """Write ``trans.def`` to *directory*."""
+        lines = ["======================== \n",
+                 f"NTransfer {len(self.rows):7d}  \n",
+                 "======================== \n",
+                 "========i_j_s_tijs====== \n",
+                 "======================== \n"]
+        for i0, s0, i1, s1, re, im in self.rows:
+            lines.append(
+                f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
+                f"{re:25.15f} {im:25.15f}\n"
+            )
+        with open(Path(directory) / "trans.def", "w") as fp:
+            fp.write("".join(lines))
+        logger.info("      trans.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"rows": [list(r) for r in self.rows]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "TransData":
+        return cls(rows=[tuple(r) for r in data["rows"]])
+
+
+def build_trans(StdI: StdIntList) -> TransData:
+    """Build :class:`TransData` from ``StdI.trans_list``.
+
+    Duplicate index quadruples are merged (amplitudes summed) and entries
+    below ``AMPLITUDE_EPS`` are suppressed.  This is the single
+    ``complex -> (real, imag)`` conversion boundary for transfers.
     """
     ntrans = len(StdI.trans_list)
     vals = np.array([t[0] for t in StdI.trans_list], dtype=complex)
     indx = np.array([t[1:5] for t in StdI.trans_list], dtype=int).reshape(ntrans, 4)
-    ntrans0 = _merge_duplicate_terms(indx, vals, ntrans)
+    _merge_duplicate_terms(indx, vals, ntrans)
 
-    # --- write file ---
-    lines = ["======================== \n",
-             f"NTransfer {ntrans0:7d}  \n",
-             "======================== \n",
-             "========i_j_s_tijs====== \n",
-             "======================== \n"]
+    rows = []
     for ktrans in range(ntrans):
         val = vals[ktrans]
         if abs(val) > AMPLITUDE_EPS:
             i0, s0, i1, s1 = indx[ktrans]
-            lines.append(
-                f"{i0:5d} {s0:5d} {i1:5d} {s1:5d} "
-                f"{val.real:25.15f} {val.imag:25.15f}\n"
-            )
-    with open("trans.def", "w") as fp:
-        fp.write("".join(lines))
+            rows.append((int(i0), int(s0), int(i1), int(s1),
+                         float(val.real), float(val.imag)))
+    return TransData(rows=rows)
 
-    logger.info("      trans.def is written.")
+
+def print_trans(StdI: StdIntList) -> None:
+    """Write ``trans.def`` (thin wrapper over :func:`build_trans`)."""
+    build_trans(StdI).write()
 
 
 def _write_namelist_hphi(fp, StdI: StdIntList) -> None:
