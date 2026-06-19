@@ -82,6 +82,16 @@ class LocalTerms:
         StdI.Ex_list.extend(self.Ex)
         StdI.PairLift_list.extend(self.PairLift)
 
+    def merge(self, other: "LocalTerms") -> None:
+        """Append every term list from *other* into this container."""
+        self.trans += other.trans
+        self.intr += other.intr
+        self.Cintra += other.Cintra
+        self.Cinter += other.Cinter
+        self.Hund += other.Hund
+        self.Ex += other.Ex
+        self.PairLift += other.PairLift
+
 
 def _trans_term(amp: complex, isite: int, ispin: int,
                 jsite: int, jspin: int) -> list:
@@ -785,13 +795,7 @@ def add_local_terms(
         Global site index of the localized spin in the Kondo model.
         Ignored when the model is not KONDO.
     """
-    if StdI.model == ModelType.SPIN:
-        mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, isite)
-        general_j(StdI, StdI.D, StdI.S2, StdI.S2, isite, isite)
-    else:
-        hubbard_local(StdI, StdI.mu, -StdI.h, -StdI.Gamma, -StdI.Gamma_y,
-                      StdI.U, isite)
-        if StdI.model == ModelType.KONDO:
-            general_j(StdI, StdI.J, 1, StdI.S2, isite, jsite_kondo)
-            mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y,
-                      jsite_kondo)
+    # Local import avoids the interaction_builder <-> model_plugin cycle.
+    from ..core.model_plugin import get_model
+    terms = get_model(StdI.model).build_local_terms(StdI, isite, jsite_kondo)
+    terms.extend_into(StdI)
