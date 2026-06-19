@@ -216,9 +216,8 @@ class WannierModeSolverPlugin(SolverPlugin):
     """
 
     def write(self, StdI: StdIntList) -> None:
-        from .writer.wannier90_writer import export_geometry, export_interaction
-        export_geometry(StdI)
-        export_interaction(StdI)
+        from .core.output import build_wannier_output
+        build_wannier_output(StdI).write()
         self.write_wannier_extras(StdI)
 
     def write_wannier_extras(self, StdI: StdIntList) -> None:
