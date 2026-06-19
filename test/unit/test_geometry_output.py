@@ -14,6 +14,7 @@ import pytest
 from stdface.core.stdface_vals import StdIntList
 from stdface.lattice.geometry_output import (
     print_xsf, print_geometry, _cell_diff, build_geometry, GeometryData,
+    build_xsf, XsfData,
 )
 
 
@@ -347,3 +348,34 @@ class TestGeometryDataBuildWrite:
     def test_kondo_doubles_sites(self):
         d = build_geometry(_make_stdi(model="kondo", L=4))
         assert len(d.sites) == 8  # doubled
+
+
+class TestXsfDataBuildWrite:
+    """xsf-1: build_xsf / XsfData (independent lattice output)."""
+
+    def test_build_returns_native_types(self):
+        d = build_xsf(_make_stdi(L=4))
+        assert isinstance(d, XsfData)
+        assert all(isinstance(x, float) for r in d.primvec for x in r)
+        assert all(isinstance(x, float) for c in d.coords for x in c)
+        assert len(d.coords) == 4  # NCell * NsiteUC
+
+    def test_convvec_present_for_orthorhombic(self):
+        assert build_xsf(_make_stdi(lattice="orthorhombic")).convvec is not None
+
+    def test_no_convvec_for_chain(self):
+        assert build_xsf(_make_stdi(lattice="chain")).convvec is None
+
+    def test_to_from_dict_roundtrip(self):
+        d = build_xsf(_make_stdi(lattice="orthorhombic", L=4))
+        assert XsfData.from_dict(d.to_dict()).to_dict() == d.to_dict()
+
+    def test_write_parity_with_print(self, tmp_path, monkeypatch):
+        for lat in ("chain", "orthorhombic"):
+            s = _make_stdi(lattice=lat, L=4)
+            monkeypatch.chdir(tmp_path)
+            print_xsf(s)
+            via_print = (tmp_path / "lattice.xsf").read_text()
+            build_xsf(s).write(tmp_path)
+            via_build = (tmp_path / "lattice.xsf").read_text()
+            assert via_print == via_build, lat

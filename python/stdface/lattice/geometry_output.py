@@ -5,10 +5,12 @@ post-processing tools and visualisation programs.
 
 Functions
 ---------
-print_xsf
-    Write ``lattice.xsf`` in XCrysDen format.
-print_geometry
-    Write ``geometry.dat`` for correlation-function post-processing.
+build_xsf / XsfData
+    Build the ``lattice.xsf`` (XCrysDen) data and write it.
+build_geometry / GeometryData
+    Build the ``geometry.dat`` data and write it.
+print_xsf / print_geometry
+    Backward-compatible thin wrappers over the ``build_*`` builders.
 
 License
 -------
@@ -51,54 +53,99 @@ def _cell_diff(Cell, iCell: int, jCell: int) -> list[int]:
     return (Cell[iCell] - Cell[jCell]).astype(int).tolist()
 
 
+# Lattices whose ``lattice.xsf`` includes a CONVVEC (conventional cell)
+# block; others (e.g. wannier90) emit PRIMVEC/PRIMCOORD only.
+_XSF_CONVVEC_LATTICES = (
+    "orthorhombic", "face-centeredorthorhombic",
+    "fcorthorhombic", "fco", "pyrochlore")
+
+
 def print_xsf(StdI: StdIntList) -> None:
     """Print lattice.xsf file (XCrysDen format).
 
-    Writes a ``lattice.xsf`` file containing primitive vectors,
-    optional conventional vectors (for orthorhombic and face-centred
-    lattices), and atomic coordinates for visualisation.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        Model parameter structure.  The following fields are read:
-
-        - ``lattice`` : str -- lattice type name.
-        - ``box`` : ndarray (3x3) -- supercell box matrix.
-        - ``direct`` : ndarray (3x3) -- direct lattice vectors.
-        - ``length`` : ndarray (3,) -- lattice constant lengths.
-        - ``NCell`` : int -- number of unit cells.
-        - ``NsiteUC`` : int -- sites per unit cell.
-        - ``Cell`` : ndarray (NCell, 3) -- cell fractional coordinates.
-        - ``tau`` : ndarray (NsiteUC, 3) -- basis positions.
+    Thin wrapper kept for backward compatibility; delegates to
+    :func:`build_xsf` and writes the result.
     """
-    do_convvec = StdI.lattice in (
-        "orthorhombic", "face-centeredorthorhombic",
-        "fcorthorhombic", "fco", "pyrochlore")
+    build_xsf(StdI).write()
 
-    with open("lattice.xsf", "w") as fp:
-        fp.write("CRYSTAL\n")
-        fp.write("PRIMVEC\n")
-        # PRIMVEC = box @ direct (each row is a primitive vector)
-        primvec = StdI.box @ StdI.direct
-        for vec in primvec:
-            fp.write(f"{vec[0]:15.5f} {vec[1]:15.5f} {vec[2]:15.5f}\n")
 
-        if do_convvec:
-            fp.write("CONVVEC\n")
-            for ii, length_val in enumerate(StdI.length):
-                row = [0.0, 0.0, 0.0]
-                row[ii] = length_val
-                fp.write(f"{row[0]:15.5f} {row[1]:15.5f} {row[2]:15.5f}\n")
+@dataclass
+class XsfData:
+    """XCrysDen structure (``lattice.xsf``) for visualisation.
 
-        fp.write("PRIMCOORD\n")
-        fp.write(f"{StdI.NCell * StdI.NsiteUC} 1\n")
-        for iCell in range(StdI.NCell):
-            for isite in range(StdI.NsiteUC):
-                # vec = (Cell[iCell] + tau[isite]) @ direct
-                frac_coord = StdI.Cell[iCell, :] + StdI.tau[isite, :]
-                vec = frac_coord @ StdI.direct
-                fp.write(f"H {vec[0]:15.5f} {vec[1]:15.5f} {vec[2]:15.5f}\n")
+    Lattice-level, solver-independent output (an independent path, like
+    the gnuplot and ``geometry.dat`` files).
+
+    Attributes
+    ----------
+    primvec : list of (float, float, float)
+        Primitive lattice vectors (``box @ direct``), 3 rows.
+    convvec : list of (float, float, float) or None
+        Conventional cell vectors (orthorhombic / face-centred /
+        pyrochlore), or ``None`` when not applicable.
+    coords : list of (float, float, float)
+        Atomic Cartesian coordinates (all written as element ``H``).
+    """
+
+    primvec: list
+    convvec: list | None
+    coords: list
+
+    def write(self, directory: Path = Path(".")) -> None:
+        lines = ["CRYSTAL\n", "PRIMVEC\n"]
+        for vec in self.primvec:
+            lines.append(f"{vec[0]:15.5f} {vec[1]:15.5f} {vec[2]:15.5f}\n")
+        if self.convvec is not None:
+            lines.append("CONVVEC\n")
+            for vec in self.convvec:
+                lines.append(f"{vec[0]:15.5f} {vec[1]:15.5f} {vec[2]:15.5f}\n")
+        lines.append("PRIMCOORD\n")
+        lines.append(f"{len(self.coords)} 1\n")
+        for vec in self.coords:
+            lines.append(f"H {vec[0]:15.5f} {vec[1]:15.5f} {vec[2]:15.5f}\n")
+        with open(Path(directory) / "lattice.xsf", "w") as fp:
+            fp.write("".join(lines))
+
+    def to_dict(self) -> dict:
+        return {"primvec": [list(r) for r in self.primvec],
+                "convvec": (None if self.convvec is None
+                            else [list(r) for r in self.convvec]),
+                "coords": [list(c) for c in self.coords]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "XsfData":
+        conv = data["convvec"]
+        return cls(primvec=[tuple(r) for r in data["primvec"]],
+                   convvec=(None if conv is None else [tuple(r) for r in conv]),
+                   coords=[tuple(c) for c in data["coords"]])
+
+
+def build_xsf(StdI: StdIntList) -> "XsfData":
+    """Build :class:`XsfData` from *StdI*.
+
+    Reads ``lattice`` / ``box`` / ``direct`` / ``length`` / ``NCell`` /
+    ``NsiteUC`` / ``Cell`` / ``tau``.  Always returns data; the caller
+    decides whether the lattice warrants an xsf (3-D lattices only).
+    """
+    primvec_arr = StdI.box @ StdI.direct
+    primvec = [(float(v[0]), float(v[1]), float(v[2])) for v in primvec_arr]
+
+    convvec: "list | None" = None
+    if StdI.lattice in _XSF_CONVVEC_LATTICES:
+        convvec = []
+        for ii, length_val in enumerate(StdI.length):
+            row = [0.0, 0.0, 0.0]
+            row[ii] = float(length_val)
+            convvec.append((row[0], row[1], row[2]))
+
+    coords = []
+    for iCell in range(StdI.NCell):
+        for isite in range(StdI.NsiteUC):
+            frac_coord = StdI.Cell[iCell, :] + StdI.tau[isite, :]
+            vec = frac_coord @ StdI.direct
+            coords.append((float(vec[0]), float(vec[1]), float(vec[2])))
+
+    return XsfData(primvec=primvec, convvec=convvec, coords=coords)
 
 
 def print_geometry(StdI: StdIntList) -> None:
