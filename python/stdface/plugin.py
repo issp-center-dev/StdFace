@@ -161,7 +161,7 @@ class ExpertModeSolverPlugin(SolverPlugin):
 
     HPhi, mVMC and UHF inherit from this class.  The solver-specific body
     of ``modpara.def`` and the extra entries of ``namelist.def`` are
-    provided by :meth:`write_modpara_body` and :meth:`write_namelist_body`;
+    provided by :meth:`modpara_lines` and :meth:`write_namelist_body`;
     :meth:`has_two_body_green` controls whether ``greentwo.def`` is listed.
 
     These methods replace the former ``_MODPARA_BODY_DISPATCH`` /
@@ -169,14 +169,19 @@ class ExpertModeSolverPlugin(SolverPlugin):
     """
 
     @abstractmethod
-    def write_modpara_body(self, fp, StdI: StdIntList) -> None:
-        """Write the solver-specific body of ``modpara.def``."""
+    def modpara_lines(self, StdI: StdIntList) -> list:
+        """Return the solver-specific body line descriptors of ``modpara.def``.
 
-    def write_namelist_body(self, fp, StdI: StdIntList) -> None:
-        """Write solver-specific extra entries in ``namelist.def``.
+        See :func:`stdface.writer.common_writer.build_modpara` for the
+        descriptor format.
+        """
+
+    def namelist_entries(self, StdI: StdIntList) -> list:
+        """Return solver-specific ``(keyword, filename)`` namelist entries.
 
         Default: no extra entries (used by UHF).
         """
+        return []
 
     def has_two_body_green(self, StdI: StdIntList) -> bool:
         """Whether ``greentwo.def`` is listed in ``namelist.def`` (default True)."""

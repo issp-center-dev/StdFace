@@ -254,228 +254,289 @@ def print_trans(StdI: StdIntList) -> None:
     build_trans(StdI).write()
 
 
-def _write_namelist_hphi(fp, StdI: StdIntList) -> None:
-    """Write HPhi-specific entries in ``namelist.def``.
-
-    Parameters
-    ----------
-    fp : file object
-        Open file handle for ``namelist.def``.
-    StdI : StdIntList
-        The global parameter structure.
-    """
-    fp.write("         CalcMod  calcmod.def\n")
+def _namelist_entries_hphi(StdI: StdIntList) -> list:
+    """Return HPhi-specific ``(keyword, filename)`` namelist entries."""
+    entries: list = [("CalcMod", "calcmod.def")]
     if StdI.SpectrumBody == 1:
-        fp.write("SingleExcitation  single.def\n")
+        entries.append(("SingleExcitation", "single.def"))
     else:
-        fp.write("  PairExcitation  pair.def\n")
+        entries.append(("PairExcitation", "pair.def"))
     if StdI.method == MethodType.TIME_EVOLUTION:
         if StdI.PumpBody == 1:
-            fp.write("       TEOneBody  teone.def\n")
+            entries.append(("TEOneBody", "teone.def"))
         elif StdI.PumpBody == 2:
-            fp.write("       TETwoBody  tetwo.def\n")
-    fp.write(f"     SpectrumVec  {StdI.CDataFileHead}_eigenvec_0\n")
+            entries.append(("TETwoBody", "tetwo.def"))
+    entries.append(("SpectrumVec", f"{StdI.CDataFileHead}_eigenvec_0"))
     if StdI.lBoost == 1:
-        fp.write("           Boost  boost.def\n")
+        entries.append(("Boost", "boost.def"))
+    return entries
 
 
-def _write_namelist_mvmc(fp, StdI: StdIntList) -> None:
-    """Write mVMC-specific entries in ``namelist.def``.
-
-    Parameters
-    ----------
-    fp : file object
-        Open file handle for ``namelist.def``.
-    StdI : StdIntList
-        The global parameter structure.
-    """
-    fp.write("      Gutzwiller  gutzwilleridx.def\n")
-    fp.write("         Jastrow  jastrowidx.def\n")
-    fp.write("         Orbital  orbitalidx.def\n")
+def _namelist_entries_mvmc(StdI: StdIntList) -> list:
+    """Return mVMC-specific ``(keyword, filename)`` namelist entries."""
+    entries: list = [
+        ("Gutzwiller", "gutzwilleridx.def"),
+        ("Jastrow", "jastrowidx.def"),
+        ("Orbital", "orbitalidx.def"),
+    ]
     if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 is not None):
-        fp.write(" OrbitalParallel  orbitalidxpara.def\n")
-        fp.write("# OrbitalGeneral  orbitalidxgen.def\n")
-    fp.write("        TransSym  qptransidx.def\n")
+        entries.append(("OrbitalParallel", "orbitalidxpara.def"))
+        entries.append(("# OrbitalGeneral", "orbitalidxgen.def"))
+    entries.append(("TransSym", "qptransidx.def"))
+    return entries
 
 
-# Interaction file flags and their namelist lines
-_INTERACTION_FLAGS: list[tuple[str, str]] = [
-    ("LCintra",   "    CoulombIntra  coulombintra.def\n"),
-    ("LCinter",   "    CoulombInter  coulombinter.def\n"),
-    ("LHund",     "            Hund  hund.def\n"),
-    ("LEx",       "        Exchange  exchange.def\n"),
-    ("LPairLift", "        PairLift  pairlift.def\n"),
-    ("LPairHopp", "         PairHop  pairhopp.def\n"),
-    ("Lintr",     "        InterAll  interall.def\n"),
+# Interaction output-flag attribute -> (namelist keyword, filename)
+_INTERACTION_FLAGS: list[tuple[str, str, str]] = [
+    ("LCintra",   "CoulombIntra", "coulombintra.def"),
+    ("LCinter",   "CoulombInter", "coulombinter.def"),
+    ("LHund",     "Hund",         "hund.def"),
+    ("LEx",       "Exchange",     "exchange.def"),
+    ("LPairLift", "PairLift",     "pairlift.def"),
+    ("LPairHopp", "PairHop",      "pairhopp.def"),
+    ("Lintr",     "InterAll",     "interall.def"),
 ]
-"""Maps ``StdIntList`` flag attribute names to their namelist entry lines.
+"""Maps each interaction output flag to its namelist ``(keyword, filename)``.
 
-Each flag, when equal to 1, causes the corresponding definition file to be
-listed in ``namelist.def``.
+When the flag equals 1 the corresponding definition file is listed in
+``namelist.def``.
 """
 
 
+@dataclass
+class NamelistData:
+    """``namelist.def`` content as ordered ``(keyword, filename)`` entries."""
+
+    entries: list
+
+    def to_text(self) -> str:
+        return "".join(f"{kw:>16}  {fn}\n" for kw, fn in self.entries)
+
+    def write(self, directory: Path = Path(".")) -> None:
+        with open(Path(directory) / "namelist.def", "w") as fp:
+            fp.write(self.to_text())
+        logger.info("    namelist.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"entries": [list(e) for e in self.entries]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "NamelistData":
+        return cls(entries=[tuple(e) for e in data["entries"]])
+
+
+def build_namelist(StdI: StdIntList) -> NamelistData:
+    """Build :class:`NamelistData` from the current build results on *StdI*.
+
+    The interaction entries are selected from the ``L*`` flags (set by
+    :func:`build_interactions`); the Green entries from ``ioutputmode``;
+    solver-specific entries from the plugin.  (When the output container
+    is introduced, these can be derived from the assembled data objects.)
+    """
+    from ..plugin import get_plugin, ExpertModeSolverPlugin
+    plugin = get_plugin(StdI.solver)
+    assert isinstance(plugin, ExpertModeSolverPlugin)
+
+    entries: list = [
+        ("ModPara", "modpara.def"),
+        ("LocSpin", "locspn.def"),
+        ("Trans", "trans.def"),
+    ]
+    for flag_attr, kw, fn in _INTERACTION_FLAGS:
+        if getattr(StdI, flag_attr) == 1:
+            entries.append((kw, fn))
+    if StdI.ioutputmode != 0:
+        entries.append(("OneBodyG", "greenone.def"))
+        if plugin.has_two_body_green(StdI):
+            entries.append(("TwoBodyG", "greentwo.def"))
+    entries += plugin.namelist_entries(StdI)
+    return NamelistData(entries=entries)
+
+
 def print_namelist(StdI: StdIntList) -> None:
-    """Write ``namelist.def`` that lists all definition files for the solver.
+    """Write ``namelist.def`` (thin wrapper over :func:`build_namelist`)."""
+    build_namelist(StdI).write()
 
-    This is the Python translation of the C function ``PrintNamelist()``.
-    The content depends on which solver is active (``StdI.solver``).
 
-    The common prefix (ModPara, LocSpin, Trans, conditional interaction
-    files, Green-function files) is written for all solvers.  Solver-specific
-    entries are delegated to
-    :meth:`ExpertModeSolverPlugin.write_namelist_body`.
+# ---------------------------------------------------------------------------
+#  ModParaData: data / format separation for modpara.def
+# ---------------------------------------------------------------------------
+#
+#  A modpara body is generated as an ordered list of *line descriptors*
+#  (tuples).  The descriptor carries the semantic value plus a presentation
+#  hint (format string); ``to_text`` renders the ``.def`` byte-for-byte and
+#  ``to_dict`` exposes only the semantic ``key -> value`` mapping.
+#
+#    ("sep",)                         -> "--------------------"
+#    ("raw", text)                    -> text  (banner, fixed lines)
+#    ("kv",  key, value, fmt)         -> f"{key:<15}{value:{fmt}}"
+#    ("kv2", key, v1, f1, v2, f2)     -> f"{key:<15}{v1:{f1}} {v2:{f2}}"
 
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure.
+_MODPARA_SEP = "--------------------"
+
+
+def _render_modpara_line(line: tuple) -> str:
+    """Render one modpara line descriptor to its ``.def`` text (with newline)."""
+    kind = line[0]
+    if kind == "sep":
+        return _MODPARA_SEP + "\n"
+    if kind == "raw":
+        return f"{line[1]}\n"
+    if kind == "kv":
+        _, key, value, fmt = line
+        return f"{key:<15}{value:{fmt}}\n"
+    if kind == "kv2":
+        _, key, v1, f1, v2, f2 = line
+        return f"{key:<15}{v1:{f1}} {v2:{f2}}\n"
+    raise ValueError(f"unknown modpara line descriptor: {line!r}")
+
+
+@dataclass
+class ModParaData:
+    """``modpara.def`` content as ordered line descriptors.
+
+    ``to_text`` renders the file; ``to_dict`` exposes the semantic
+    parameter mapping (separators / banner / format hints dropped).
     """
-    with open("namelist.def", "w") as fp:
-        fp.write("         ModPara  modpara.def\n")
-        fp.write("         LocSpin  locspn.def\n")
-        fp.write("           Trans  trans.def\n")
 
-        for flag_attr, line in _INTERACTION_FLAGS:
-            if getattr(StdI, flag_attr) == 1:
-                fp.write(line)
+    lines: list
 
-        from ..plugin import get_plugin, ExpertModeSolverPlugin
-        plugin = get_plugin(StdI.solver)
-        assert isinstance(plugin, ExpertModeSolverPlugin)
+    def to_text(self) -> str:
+        return "".join(_render_modpara_line(ln) for ln in self.lines)
 
-        if StdI.ioutputmode != 0:
-            fp.write("        OneBodyG  greenone.def\n")
-            if plugin.has_two_body_green(StdI):
-                fp.write("        TwoBodyG  greentwo.def\n")
+    def write(self, directory: Path = Path(".")) -> None:
+        with open(Path(directory) / "modpara.def", "w") as fp:
+            fp.write(self.to_text())
+        logger.info("     modpara.def is written.")
 
-        plugin.write_namelist_body(fp, StdI)
-
-    logger.info("    namelist.def is written.")
+    def to_dict(self) -> dict:
+        params: dict = {}
+        for ln in self.lines:
+            if ln[0] == "kv":
+                params[ln[1]] = ln[2]
+            elif ln[0] == "kv2":
+                params[ln[1]] = [ln[2], ln[4]]
+        return {"params": params}
 
 
-def _write_modpara_hphi(fp, StdI: StdIntList) -> None:
-    """Write the HPhi-specific body of ``modpara.def``.
+def build_modpara(StdI: StdIntList) -> ModParaData:
+    """Build :class:`ModParaData` (common header + solver-specific body)."""
+    from ..plugin import get_plugin, ExpertModeSolverPlugin
+    plugin = get_plugin(StdI.solver)
+    assert isinstance(plugin, ExpertModeSolverPlugin)
+    lines: list = [("sep",), ("raw", "Model_Parameters   0"), ("sep",)]
+    lines += plugin.modpara_lines(StdI)
+    return ModParaData(lines=lines)
 
-    Parameters
-    ----------
-    fp : file object
-        Open file handle for ``modpara.def``.
-    StdI : StdIntList
-        The global parameter structure.
-    """
-    fp.write("HPhi_Cal_Parameters\n")
-    fp.write("--------------------\n")
-    fp.write(f"CDataFileHead  {StdI.CDataFileHead}\n")
-    fp.write("CParaFileHead  zqp\n")
-    fp.write("--------------------\n")
-    fp.write(f"Nsite          {StdI.nsite:<5d}\n")
+
+def _modpara_lines_hphi(StdI: StdIntList) -> list:
+    """Return the HPhi-specific body line descriptors of ``modpara.def``."""
+    lines: list = [
+        ("raw", "HPhi_Cal_Parameters"),
+        ("sep",),
+        ("kv", "CDataFileHead", StdI.CDataFileHead, ""),
+        ("kv", "CParaFileHead", "zqp", ""),
+        ("sep",),
+        ("kv", "Nsite", StdI.nsite, "<5d"),
+    ]
     if StdI.Sz2 is not None:
-        fp.write(f"2Sz            {StdI.Sz2:<5d}\n")
+        lines.append(("kv", "2Sz", StdI.Sz2, "<5d"))
     if StdI.ncond is not None:
-        fp.write(f"Ncond          {StdI.ncond:<5d}\n")
-    fp.write(f"Lanczos_max    {StdI.Lanczos_max:<5d}\n")
-    fp.write(f"initial_iv     {StdI.initial_iv:<5d}\n")
+        lines.append(("kv", "Ncond", StdI.ncond, "<5d"))
+    lines += [
+        ("kv", "Lanczos_max", StdI.Lanczos_max, "<5d"),
+        ("kv", "initial_iv", StdI.initial_iv, "<5d"),
+    ]
     if StdI.nvec is not None:
-        fp.write(f"nvec           {StdI.nvec:<5d}\n")
-    fp.write(f"exct           {StdI.exct:<5d}\n")
-    fp.write(f"LanczosEps     {StdI.LanczosEps:<5d}\n")
-    fp.write(f"LanczosTarget  {StdI.LanczosTarget:<5d}\n")
-    fp.write(f"LargeValue     {StdI.LargeValue:<25.15e}\n")
-    fp.write(f"NumAve         {StdI.NumAve:<5d}\n")
-    fp.write(f"ExpecInterval  {StdI.ExpecInterval:<5d}\n")
-    fp.write(f"NOmega         {StdI.Nomega:<5d}\n")
-    fp.write(
-        f"OmegaMax       {StdI.OmegaMax:<25.15e} {StdI.OmegaIm:<25.15e}\n"
-    )
-    fp.write(
-        f"OmegaMin       {StdI.OmegaMin:<25.15e} {StdI.OmegaIm:<25.15e}\n"
-    )
-    fp.write(
-        f"OmegaOrg       {StdI.OmegaOrg:<25.15e} {0.0:<25.15e}\n"
-    )
-    fp.write(f"PreCG          {0:<5d}\n")
+        lines.append(("kv", "nvec", StdI.nvec, "<5d"))
+    lines += [
+        ("kv", "exct", StdI.exct, "<5d"),
+        ("kv", "LanczosEps", StdI.LanczosEps, "<5d"),
+        ("kv", "LanczosTarget", StdI.LanczosTarget, "<5d"),
+        ("kv", "LargeValue", StdI.LargeValue, "<25.15e"),
+        ("kv", "NumAve", StdI.NumAve, "<5d"),
+        ("kv", "ExpecInterval", StdI.ExpecInterval, "<5d"),
+        ("kv", "NOmega", StdI.Nomega, "<5d"),
+        ("kv2", "OmegaMax", StdI.OmegaMax, "<25.15e", StdI.OmegaIm, "<25.15e"),
+        ("kv2", "OmegaMin", StdI.OmegaMin, "<25.15e", StdI.OmegaIm, "<25.15e"),
+        ("kv2", "OmegaOrg", StdI.OmegaOrg, "<25.15e", 0.0, "<25.15e"),
+        ("kv", "PreCG", 0, "<5d"),
+    ]
     if StdI.method == MethodType.TIME_EVOLUTION:
-        fp.write(f"ExpandCoef     {StdI.ExpandCoef:<5d}\n")
+        lines.append(("kv", "ExpandCoef", StdI.ExpandCoef, "<5d"))
+    return lines
 
 
-def _write_modpara_mvmc(fp, StdI: StdIntList) -> None:
-    """Write the mVMC-specific body of ``modpara.def``.
-
-    Parameters
-    ----------
-    fp : file object
-        Open file handle for ``modpara.def``.
-    StdI : StdIntList
-        The global parameter structure.
-    """
-    fp.write("VMC_Cal_Parameters\n")
-    fp.write("--------------------\n")
-    fp.write(f"CDataFileHead  {StdI.CDataFileHead}\n")
-    fp.write(f"CParaFileHead  {StdI.CParaFileHead}\n")
-    fp.write("--------------------\n")
-    fp.write(f"NVMCCalMode    {StdI.NVMCCalMode}\n")
-    fp.write(f"NLanczosMode   {StdI.NLanczosMode}\n")
-    fp.write("--------------------\n")
-    fp.write(f"NDataIdxStart  {StdI.NDataIdxStart}\n")
-    fp.write(f"NDataQtySmp    {StdI.NDataQtySmp}\n")
-    fp.write("--------------------\n")
-    fp.write(f"Nsite          {StdI.nsite}\n")
-    fp.write(f"Ncond          {StdI.ncond:<5d}\n")
+def _modpara_lines_mvmc(StdI: StdIntList) -> list:
+    """Return the mVMC-specific body line descriptors of ``modpara.def``."""
+    lines: list = [
+        ("raw", "VMC_Cal_Parameters"),
+        ("sep",),
+        ("kv", "CDataFileHead", StdI.CDataFileHead, ""),
+        ("kv", "CParaFileHead", StdI.CParaFileHead, ""),
+        ("sep",),
+        ("kv", "NVMCCalMode", StdI.NVMCCalMode, ""),
+        ("kv", "NLanczosMode", StdI.NLanczosMode, ""),
+        ("sep",),
+        ("kv", "NDataIdxStart", StdI.NDataIdxStart, ""),
+        ("kv", "NDataQtySmp", StdI.NDataQtySmp, ""),
+        ("sep",),
+        ("kv", "Nsite", StdI.nsite, ""),
+        ("kv", "Ncond", StdI.ncond, "<5d"),
+    ]
     if StdI.Sz2 is not None:
-        fp.write(f"2Sz            {StdI.Sz2}\n")
+        lines.append(("kv", "2Sz", StdI.Sz2, ""))
     if StdI.NSPGaussLeg is not None:
-        fp.write(f"NSPGaussLeg    {StdI.NSPGaussLeg}\n")
+        lines.append(("kv", "NSPGaussLeg", StdI.NSPGaussLeg, ""))
     if StdI.NSPStot is not None:
-        fp.write(f"NSPStot        {StdI.NSPStot}\n")
-    fp.write(f"NMPTrans       {StdI.NMPTrans}\n")
-    fp.write(f"NSROptItrStep  {StdI.NSROptItrStep}\n")
-    fp.write(f"NSROptItrSmp   {StdI.NSROptItrSmp}\n")
-    fp.write(f"DSROptRedCut   {StdI.DSROptRedCut:.10f}\n")
-    fp.write(f"DSROptStaDel   {StdI.DSROptStaDel:.10f}\n")
-    fp.write(f"DSROptStepDt   {StdI.DSROptStepDt:.10f}\n")
-    fp.write(f"NVMCWarmUp     {StdI.NVMCWarmUp}\n")
-    fp.write(f"NVMCInterval   {StdI.NVMCInterval}\n")
-    fp.write(f"NVMCSample     {StdI.NVMCSample}\n")
-    fp.write(f"NExUpdatePath  {StdI.NExUpdatePath}\n")
-    fp.write(f"RndSeed        {StdI.RndSeed}\n")
-    fp.write(f"NSplitSize     {StdI.NSplitSize}\n")
-    fp.write(f"NStore         {StdI.NStore}\n")
-    fp.write(f"NSRCG          {StdI.NSRCG}\n")
+        lines.append(("kv", "NSPStot", StdI.NSPStot, ""))
+    lines += [
+        ("kv", "NMPTrans", StdI.NMPTrans, ""),
+        ("kv", "NSROptItrStep", StdI.NSROptItrStep, ""),
+        ("kv", "NSROptItrSmp", StdI.NSROptItrSmp, ""),
+        ("kv", "DSROptRedCut", StdI.DSROptRedCut, ".10f"),
+        ("kv", "DSROptStaDel", StdI.DSROptStaDel, ".10f"),
+        ("kv", "DSROptStepDt", StdI.DSROptStepDt, ".10f"),
+        ("kv", "NVMCWarmUp", StdI.NVMCWarmUp, ""),
+        ("kv", "NVMCInterval", StdI.NVMCInterval, ""),
+        ("kv", "NVMCSample", StdI.NVMCSample, ""),
+        ("kv", "NExUpdatePath", StdI.NExUpdatePath, ""),
+        ("kv", "RndSeed", StdI.RndSeed, ""),
+        ("kv", "NSplitSize", StdI.NSplitSize, ""),
+        ("kv", "NStore", StdI.NStore, ""),
+        ("kv", "NSRCG", StdI.NSRCG, ""),
+    ]
+    return lines
 
 
-def _write_modpara_uhf_hwave(fp, StdI: StdIntList) -> None:
-    """Write the UHF / H-wave body of ``modpara.def``.
+def _modpara_lines_uhf_hwave(StdI: StdIntList) -> list:
+    """Return the UHF / H-wave body line descriptors of ``modpara.def``.
 
-    UHF and H-wave share identical file content except for the header
-    banner line.  The correct banner is selected from
-    :data:`_MODPARA_BANNER`.
-
-    Parameters
-    ----------
-    fp : file object
-        Open file handle for ``modpara.def``.
-    StdI : StdIntList
-        The global parameter structure.
+    UHF and H-wave share identical content except the banner line, which
+    is selected from :data:`_MODPARA_BANNER`.
     """
-    banner = _MODPARA_BANNER[StdI.solver]
-    fp.write(f"{banner}\n")
-    fp.write("--------------------\n")
-    fp.write(f"CDataFileHead  {StdI.CDataFileHead}\n")
-    fp.write("CParaFileHead  zqp\n")
-    fp.write("--------------------\n")
-    fp.write(f"Nsite          {StdI.nsite}\n")
+    lines: list = [
+        ("raw", _MODPARA_BANNER[StdI.solver]),
+        ("sep",),
+        ("kv", "CDataFileHead", StdI.CDataFileHead, ""),
+        ("kv", "CParaFileHead", "zqp", ""),
+        ("sep",),
+        ("kv", "Nsite", StdI.nsite, ""),
+    ]
     if StdI.Sz2 is not None:
-        fp.write(f"2Sz            {StdI.Sz2:<5d}\n")
+        lines.append(("kv", "2Sz", StdI.Sz2, "<5d"))
     # UHF/HWAVE emit an unset Ncond as the integer sentinel (legacy format).
     ncond_out = StdI.ncond if StdI.ncond is not None else NaN_i
-    fp.write(f"Ncond          {ncond_out:<5d}\n")
-    fp.write(f"IterationMax   {StdI.Iteration_max}\n")
-    fp.write(f"EPS            {StdI.eps}\n")
-    fp.write(f"Mix            {StdI.mix:.10f}\n")
-    fp.write(f"RndSeed        {StdI.RndSeed}\n")
-    fp.write(f"EpsSlater      {StdI.eps_slater}\n")
-    fp.write(f"NMPTrans       {StdI.NMPTrans}\n")
+    lines += [
+        ("kv", "Ncond", ncond_out, "<5d"),
+        ("kv", "IterationMax", StdI.Iteration_max, ""),
+        ("kv", "EPS", StdI.eps, ""),
+        ("kv", "Mix", StdI.mix, ".10f"),
+        ("kv", "RndSeed", StdI.RndSeed, ""),
+        ("kv", "EpsSlater", StdI.eps_slater, ""),
+        ("kv", "NMPTrans", StdI.NMPTrans, ""),
+    ]
+    return lines
 
 
 _MODPARA_BANNER: dict[str, str] = {
@@ -486,29 +547,8 @@ _MODPARA_BANNER: dict[str, str] = {
 
 
 def print_mod_para(StdI: StdIntList) -> None:
-    """Write ``modpara.def`` containing model / calculation parameters.
-
-    This is the Python translation of the C function ``PrintModPara()``.
-    The common header is written here; the solver-specific body is provided
-    by :meth:`ExpertModeSolverPlugin.write_modpara_body`.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure.  A large number of solver-specific
-        fields are read; see the individual body-writer functions for details.
-    """
-    from ..plugin import get_plugin, ExpertModeSolverPlugin
-    plugin = get_plugin(StdI.solver)
-    assert isinstance(plugin, ExpertModeSolverPlugin)
-
-    with open("modpara.def", "w") as fp:
-        fp.write("--------------------\n")
-        fp.write("Model_Parameters   0\n")
-        fp.write("--------------------\n")
-        plugin.write_modpara_body(fp, StdI)
-
-    logger.info("     modpara.def is written.")
+    """Write ``modpara.def`` (thin wrapper over :func:`build_modpara`)."""
+    build_modpara(StdI).write()
 
 
 class GreenFunctionIndices:
