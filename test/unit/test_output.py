@@ -10,6 +10,7 @@ import pytest
 from stdface.core.stdface_vals import StdIntList
 from stdface.core.output import (
     SolverOutput, WannierModeOutput, build_wannier_output, ExpertModeOutput,
+    OutputFormat, DefFileFormat, JSONFormat,
 )
 from stdface.writer.common_writer import (
     LocSpnData, TransData, NamelistData, ModParaData, GreenOneData,
@@ -130,3 +131,38 @@ class TestWannierModeOutput:
         target = tmp_path / "nested" / "out"
         build_wannier_output(_make_uhfk_stdi()).write(target)
         assert (target / "geom.dat").exists()
+
+
+class TestOutputFormats:
+    """D3: OutputFormat strategies (DefFileFormat / JSONFormat)."""
+
+    def test_outputformat_is_abstract(self):
+        with pytest.raises(TypeError):
+            OutputFormat()
+
+    def test_deffileformat_writes_def_files(self, tmp_path):
+        DefFileFormat().write_output(_make_expert_output(), tmp_path)
+        assert (tmp_path / "modpara.def").exists()
+        assert (tmp_path / "namelist.def").exists()
+        assert (tmp_path / "trans.def").exists()
+
+    def test_jsonformat_writes_single_json(self, tmp_path):
+        out = _make_expert_output()
+        JSONFormat().write_output(out, tmp_path)
+        path = tmp_path / "stdface_output.json"
+        assert path.exists()
+        import json
+        assert json.loads(path.read_text()) == out.to_dict()
+        # no .def files emitted by the JSON format
+        assert not (tmp_path / "modpara.def").exists()
+
+    def test_jsonformat_custom_filename_and_nested_dir(self, tmp_path):
+        target = tmp_path / "sub"
+        JSONFormat("out.json").write_output(_make_expert_output(), target)
+        assert (target / "out.json").exists()
+
+    def test_jsonformat_on_wannier_output(self, tmp_path):
+        out = build_wannier_output(_make_uhfk_stdi())
+        JSONFormat().write_output(out, tmp_path)
+        import json
+        assert json.loads((tmp_path / "stdface_output.json").read_text()) == out.to_dict()

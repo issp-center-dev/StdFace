@@ -134,3 +134,49 @@ class ExpertModeOutput(SolverOutput):
             "green_two": (self.green_two.to_dict()
                           if self.green_two is not None else None),
         }
+
+
+# ---------------------------------------------------------------------------
+#  Output formats (D3): how a SolverOutput is serialised
+# ---------------------------------------------------------------------------
+
+
+class OutputFormat(ABC):
+    """Strategy for rendering a :class:`SolverOutput` to *directory*.
+
+    Separates *what* to output (the :class:`SolverOutput` data) from *how*
+    it is serialised (``.def`` files vs a single JSON document).
+    """
+
+    @abstractmethod
+    def write_output(self, output: SolverOutput,
+                     directory: Path = Path(".")) -> None:
+        """Serialise *output* into *directory*."""
+        raise NotImplementedError
+
+
+class DefFileFormat(OutputFormat):
+    """Legacy ``.def`` / ``.dat`` file format (delegates to ``output.write``)."""
+
+    def write_output(self, output: SolverOutput,
+                     directory: Path = Path(".")) -> None:
+        output.write(directory)
+
+
+class JSONFormat(OutputFormat):
+    """Bundle the whole output into a single JSON document.
+
+    ``complex`` values are already split into ``[re, im]`` lists inside
+    each ``XxxData.to_dict()``, so the standard ``json`` encoder suffices.
+    """
+
+    def __init__(self, filename: str = "stdface_output.json") -> None:
+        self.filename = filename
+
+    def write_output(self, output: SolverOutput,
+                     directory: Path = Path(".")) -> None:
+        import json
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        with open(directory / self.filename, "w") as fp:
+            json.dump(output.to_dict(), fp, indent=2, ensure_ascii=False)
