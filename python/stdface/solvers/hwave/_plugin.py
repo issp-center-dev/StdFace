@@ -16,6 +16,27 @@ from ...core.keyword_parser import (
 )
 
 
+# ---------------------------------------------------------------------------
+#  Output strategies (C4-1: extracted so HWavePlugin can dispatch by calcmode)
+# ---------------------------------------------------------------------------
+
+def build_uhfr_output(StdI: StdIntList):
+    """Assemble the UHFR real-space ``.def`` output (trans / interactions / green1)."""
+    from ...writer.common_writer import (
+        build_trans, check_output_mode, check_mod_para, build_green_one,
+    )
+    from ...writer.interaction_writer import build_interactions
+    from ...core.output import ExpertModeOutput
+
+    trans = build_trans(StdI)
+    interactions = build_interactions(StdI)
+    check_mod_para(StdI)
+    check_output_mode(StdI)
+    green_one = build_green_one(StdI)
+    return ExpertModeOutput(
+        trans=trans, interactions=interactions, green_one=green_one)
+
+
 class UHFRPlugin(SolverPlugin):
     """H-wave real-space UHF mode (``uhfr``).
 
@@ -46,19 +67,7 @@ class UHFRPlugin(SolverPlugin):
 
     def build_output(self, StdI: StdIntList):
         """Assemble the UHFR partial output (trans / interactions / green1)."""
-        from ...writer.common_writer import (
-            build_trans, check_output_mode, check_mod_para, build_green_one,
-        )
-        from ...writer.interaction_writer import build_interactions
-        from ...core.output import ExpertModeOutput
-
-        trans = build_trans(StdI)
-        interactions = build_interactions(StdI)
-        check_mod_para(StdI)
-        check_output_mode(StdI)
-        green_one = build_green_one(StdI)
-        return ExpertModeOutput(
-            trans=trans, interactions=interactions, green_one=green_one)
+        return build_uhfr_output(StdI)
 
     def write(self, StdI: StdIntList) -> None:
         self.build_output(StdI).write()
