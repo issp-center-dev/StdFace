@@ -181,15 +181,22 @@ class TestResolveModelAndMethod:
 
 
 class TestParseSolverKeywordViaPlugin:
-    """Tests for _parse_solver_keyword_via_plugin plugin / legacy fallback."""
+    """Tests for _parse_solver_keyword_via_plugin (plugin dispatch)."""
 
-    def test_fallback_when_solver_plugin_missing(self):
-        """KeyError from get_plugin falls back to parse_solver_keyword."""
+    def test_dispatches_to_plugin_table(self):
+        """A known solver keyword is applied via the plugin keyword table."""
         StdI = StdIntList()
-        result = _parse_solver_keyword_via_plugin(
-            "lanczos_max", "100", StdI, "__no_such_solver__"
-        )
-        assert result is False
+        StdI.solver = "HPhi"
+        assert _parse_solver_keyword_via_plugin(
+            "lanczos_max", "100", StdI, "HPhi") is True
+        assert StdI.Lanczos_max == 100
+
+    def test_unknown_solver_raises(self):
+        """C4-3: an unknown solver fails fast (no silent core fallback)."""
+        StdI = StdIntList()
+        with pytest.raises(KeyError):
+            _parse_solver_keyword_via_plugin(
+                "lanczos_max", "100", StdI, "__no_such_solver__")
 
 
 class TestStdfaceMainIntegration:

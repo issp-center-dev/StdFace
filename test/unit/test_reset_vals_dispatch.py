@@ -1,10 +1,10 @@
 """Unit tests for data-driven field reset tables and functions.
 
 Tests for the common (solver-independent) reset tables
-``_COMMON_RESET_SCALARS``, ``_COMMON_RESET_ARRAYS``, the solver-specific
-tables ``_SOLVER_RESET_SCALARS``, ``_SOLVER_RESET_ARRAYS``,
-``_UHF_BASE_SCALARS``, ``_UHF_BASE_ARRAYS``, the ``_apply_field_resets``
-function, and the refactored ``_reset_vals`` function in ``stdface_main``.
+``_COMMON_RESET_SCALARS`` / ``_COMMON_RESET_ARRAYS`` and the
+``_apply_field_resets`` / ``_reset_vals`` functions in ``stdface_main``.
+Solver-specific reset tables now live in the solver plugins (C4-3), so
+``_apply_field_resets`` drives them through ``get_plugin(solver)``.
 """
 from __future__ import annotations
 
@@ -16,10 +16,6 @@ import pytest
 from stdface.core.stdface_main import (
     _COMMON_RESET_SCALARS,
     _COMMON_RESET_ARRAYS,
-    _SOLVER_RESET_SCALARS,
-    _SOLVER_RESET_ARRAYS,
-    _UHF_BASE_SCALARS,
-    _UHF_BASE_ARRAYS,
     _apply_field_resets,
     _reset_vals,
     NaN_i,
@@ -36,85 +32,6 @@ def _make_stdi(solver: str) -> StdIntList:
     StdI.pi = math.acos(-1.0)
     return StdI
 
-
-# -------------------------------------------------------------------
-#  Table-structure tests
-# -------------------------------------------------------------------
-
-
-class TestResetTableStructure:
-    """Tests for the reset-field data tables."""
-
-    def test_scalars_has_four_solvers(self):
-        """Test that scalar table has exactly 4 solver entries."""
-        assert len(_SOLVER_RESET_SCALARS) == 4
-
-    def test_arrays_has_four_solvers(self):
-        """Test that array table has exactly 4 solver entries."""
-        assert len(_SOLVER_RESET_ARRAYS) == 4
-
-    def test_all_solvers_present_in_scalars(self):
-        """Test that HPhi, mVMC, UHF, HWAVE are all in scalars table."""
-        for solver in (SolverType.HPhi, SolverType.mVMC,
-                       SolverType.UHF, SolverType.HWAVE):
-            assert solver in _SOLVER_RESET_SCALARS
-
-    def test_all_solvers_present_in_arrays(self):
-        """Test that HPhi, mVMC, UHF, HWAVE are all in arrays table."""
-        for solver in (SolverType.HPhi, SolverType.mVMC,
-                       SolverType.UHF, SolverType.HWAVE):
-            assert solver in _SOLVER_RESET_ARRAYS
-
-    def test_scalar_entries_are_name_value_tuples(self):
-        """Test that every scalar entry is a (str, value) tuple."""
-        for solver, entries in _SOLVER_RESET_SCALARS.items():
-            for entry in entries:
-                assert isinstance(entry, tuple), f"{solver}: {entry}"
-                assert len(entry) == 2, f"{solver}: {entry}"
-                assert isinstance(entry[0], str), f"{solver}: {entry}"
-
-    def test_array_entries_are_name_value_tuples(self):
-        """Test that every array entry is a (str, value) tuple."""
-        for solver, entries in _SOLVER_RESET_ARRAYS.items():
-            for entry in entries:
-                assert isinstance(entry, tuple), f"{solver}: {entry}"
-                assert len(entry) == 2, f"{solver}: {entry}"
-                assert isinstance(entry[0], str), f"{solver}: {entry}"
-
-
-# -------------------------------------------------------------------
-#  UHF/HWAVE base sharing tests
-# -------------------------------------------------------------------
-
-
-class TestUHFBaseSharing:
-    """Tests for UHF/HWAVE shared base tables."""
-
-    def test_uhf_uses_base_scalars(self):
-        """Test that UHF solver scalars is exactly _UHF_BASE_SCALARS."""
-        assert _SOLVER_RESET_SCALARS[SolverType.UHF] is _UHF_BASE_SCALARS
-
-    def test_uhf_uses_base_arrays(self):
-        """Test that UHF solver arrays is exactly _UHF_BASE_ARRAYS."""
-        assert _SOLVER_RESET_ARRAYS[SolverType.UHF] is _UHF_BASE_ARRAYS
-
-    def test_hwave_scalars_extend_uhf(self):
-        """Test that HWAVE scalars start with the UHF base entries."""
-        hwave = _SOLVER_RESET_SCALARS[SolverType.HWAVE]
-        uhf = _UHF_BASE_SCALARS
-        assert hwave[:len(uhf)] == uhf
-
-    def test_hwave_has_extra_scalars(self):
-        """Test that HWAVE adds export_all and lattice_gp beyond UHF."""
-        hwave = _SOLVER_RESET_SCALARS[SolverType.HWAVE]
-        uhf = _UHF_BASE_SCALARS
-        extra_names = [name for name, _ in hwave[len(uhf):]]
-        assert "export_all" in extra_names
-        assert "lattice_gp" in extra_names
-
-    def test_hwave_arrays_same_as_uhf(self):
-        """Test that HWAVE arrays is exactly _UHF_BASE_ARRAYS."""
-        assert _SOLVER_RESET_ARRAYS[SolverType.HWAVE] is _UHF_BASE_ARRAYS
 
 
 # -------------------------------------------------------------------
@@ -283,17 +200,11 @@ class TestApplyFieldResetsHWAVE:
 class TestApplyFieldResetsUnknown:
     """Tests for _apply_field_resets with an unknown solver."""
 
-    def test_unknown_solver_no_error(self):
-        """Test that unknown solver type does not raise."""
+    def test_unknown_solver_raises(self):
+        """C4-3: an unknown solver fails fast (no silent core fallback)."""
         StdI = _make_stdi("unknown")
-        _apply_field_resets(StdI, "unknown")  # should be a no-op
-
-    def test_unknown_solver_leaves_fields_unchanged(self):
-        """Test that unknown solver does not modify any fields."""
-        StdI = _make_stdi("unknown")
-        original_h = StdI.h
-        _apply_field_resets(StdI, "unknown")
-        assert StdI.h == original_h
+        with pytest.raises(KeyError):
+            _apply_field_resets(StdI, "unknown")
 
 
 # -------------------------------------------------------------------

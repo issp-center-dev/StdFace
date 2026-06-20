@@ -10,7 +10,7 @@ import cmath
 import logging
 import math
 
-from .stdface_vals import StdIntList, SolverType, NaN_i
+from .stdface_vals import StdIntList, NaN_i
 
 logger = logging.getLogger(__name__)
 
@@ -459,129 +459,6 @@ def parse_common_keyword(keyword: str, value: str, StdI: StdIntList) -> bool:
     return _apply_keyword_table(_COMMON_KEYWORDS, keyword, value, StdI)
 
 
-# =====================================================================
-#  Solver-specific keyword dispatch tables
-# =====================================================================
-#
-# Each entry maps a lowered keyword string to a descriptor:
-#   - Scalar field:  (store_func, "field_name")
-#   - Array element: (store_func, "array_name", index, cast)
-#
-# ``_apply_keyword_table`` applies the matching entry generically.
-
-# Shared boxsub keywords (mVMC, UHF, HWAVE all accept these).
-_BOXSUB_KEYWORDS: dict[str, tuple] = _grid3x3_keywords(
-    "{a}{c}sub", "boxsub", store_with_check_dup_i, int
-)
-
-# Shared UHF base keywords (UHF and HWAVE both accept these).
-_UHF_BASE_KEYWORDS: dict[str, tuple] = {
-    "iteration_max": (store_with_check_dup_i, "Iteration_max"),
-    "rndseed":       (store_with_check_dup_i, "RndSeed"),
-    "nmptrans":      (store_with_check_dup_i, "NMPTrans"),
-    **_BOXSUB_KEYWORDS,
-    "hsub":          (store_with_check_dup_i, "Hsub"),
-    "lsub":          (store_with_check_dup_i, "Lsub"),
-    "wsub":          (store_with_check_dup_i, "Wsub"),
-    "eps":           (store_with_check_dup_i, "eps"),
-    "epsslater":     (store_with_check_dup_i, "eps_slater"),
-    "mix":           (store_with_check_dup_d, "mix"),
-}
-
-_HPHI_KEYWORDS: dict[str, tuple] = {
-    "calcspec":        (store_with_check_dup_sl, "CalcSpec"),
-    "exct":            (store_with_check_dup_i,  "exct"),
-    "eigenvecio":      (store_with_check_dup_sl, "EigenVecIO"),
-    "expandcoef":      (store_with_check_dup_i,  "ExpandCoef"),
-    "expecinterval":   (store_with_check_dup_i,  "ExpecInterval"),
-    "cdatafilehead":   (store_with_check_dup_s,  "CDataFileHead"),
-    "dt":              (store_with_check_dup_d,  "dt"),
-    "flgtemp":         (store_with_check_dup_i,  "FlgTemp"),
-    "freq":            (store_with_check_dup_d,  "freq"),
-    "hamio":           (store_with_check_dup_sl, "HamIO"),
-    "initialvectype":  (store_with_check_dup_sl, "InitialVecType"),
-    "initial_iv":      (store_with_check_dup_i,  "initial_iv"),
-    "lanczoseps":      (store_with_check_dup_i,  "LanczosEps"),
-    "lanczostarget":   (store_with_check_dup_i,  "LanczosTarget"),
-    "lanczos_max":     (store_with_check_dup_i,  "Lanczos_max"),
-    "largevalue":      (store_with_check_dup_d,  "LargeValue"),
-    "method":          (store_with_check_dup_sl, "method"),
-    "nomega":          (store_with_check_dup_i,  "Nomega"),
-    "numave":          (store_with_check_dup_i,  "NumAve"),
-    "nvec":            (store_with_check_dup_i,  "nvec"),
-    "omegamax":        (store_with_check_dup_d,  "OmegaMax"),
-    "omegamin":        (store_with_check_dup_d,  "OmegaMin"),
-    "omegaorg":        (store_with_check_dup_d,  "OmegaOrg"),
-    "omegaim":         (store_with_check_dup_d,  "OmegaIm"),
-    "outputexcitedvec": (store_with_check_dup_sl, "OutputExVec"),
-    "pumptype":        (store_with_check_dup_sl, "PumpType"),
-    "restart":         (store_with_check_dup_sl, "Restart"),
-    "spectrumqh":      (store_with_check_dup_d, "SpectrumQ", 2, float),
-    "spectrumql":      (store_with_check_dup_d, "SpectrumQ", 1, float),
-    "spectrumqw":      (store_with_check_dup_d, "SpectrumQ", 0, float),
-    "spectrumtype":    (store_with_check_dup_sl, "SpectrumType"),
-    "tdump":           (store_with_check_dup_d,  "tdump"),
-    "tshift":          (store_with_check_dup_d,  "tshift"),
-    "uquench":         (store_with_check_dup_d,  "Uquench"),
-    "vecpoth":         (store_with_check_dup_d, "VecPot", 2, float),
-    "vecpotl":         (store_with_check_dup_d, "VecPot", 1, float),
-    "vecpotw":         (store_with_check_dup_d, "VecPot", 0, float),
-    "2s":              (store_with_check_dup_i,  "S2"),
-    "ngpu":            (store_with_check_dup_i,  "NGPU"),
-    "scalapack":       (store_with_check_dup_i,  "Scalapack"),
-}
-"""HPhi-specific keyword → (store_func, field_name[, index, cast]) map."""
-
-_MVMC_KEYWORDS: dict[str, tuple] = {
-    **_BOXSUB_KEYWORDS,
-    "complextype":    (store_with_check_dup_i, "ComplexType"),
-    "cparafilehead":  (store_with_check_dup_s, "CParaFileHead"),
-    "dsroptredcut":   (store_with_check_dup_d, "DSROptRedCut"),
-    "dsroptstadel":   (store_with_check_dup_d, "DSROptStaDel"),
-    "dsroptstepdt":   (store_with_check_dup_d, "DSROptStepDt"),
-    "hsub":           (store_with_check_dup_i, "Hsub"),
-    "lsub":           (store_with_check_dup_i, "Lsub"),
-    "nvmccalmode":    (store_with_check_dup_i, "NVMCCalMode"),
-    "ndataidxstart":  (store_with_check_dup_i, "NDataIdxStart"),
-    "ndataqtysmp":    (store_with_check_dup_i, "NDataQtySmp"),
-    "nlanczosmode":   (store_with_check_dup_i, "NLanczosMode"),
-    "nmptrans":       (store_with_check_dup_i, "NMPTrans"),
-    "nspgaussleg":    (store_with_check_dup_i, "NSPGaussLeg"),
-    "nsplitsize":     (store_with_check_dup_i, "NSplitSize"),
-    "nspstot":        (store_with_check_dup_i, "NSPStot"),
-    "nsroptitrsmp":   (store_with_check_dup_i, "NSROptItrSmp"),
-    "nsroptitrstep":  (store_with_check_dup_i, "NSROptItrStep"),
-    "nstore":         (store_with_check_dup_i, "NStore"),
-    "nsrcg":          (store_with_check_dup_i, "NSRCG"),
-    "nvmcinterval":   (store_with_check_dup_i, "NVMCInterval"),
-    "nvmcsample":     (store_with_check_dup_i, "NVMCSample"),
-    "nvmcwarmup":     (store_with_check_dup_i, "NVMCWarmUp"),
-    "rndseed":        (store_with_check_dup_i, "RndSeed"),
-    "wsub":           (store_with_check_dup_i, "Wsub"),
-}
-"""mVMC-specific keyword → (store_func, field_name) map."""
-
-_UHF_KEYWORDS: dict[str, tuple] = _UHF_BASE_KEYWORDS
-"""UHF-specific keyword map (identical to the shared base)."""
-
-_HWAVE_KEYWORDS: dict[str, tuple] = {
-    **_UHF_BASE_KEYWORDS,
-    "calcmode":   (store_with_check_dup_sl, "calcmode"),
-    "fileprefix": (store_with_check_dup_sl, "fileprefix"),
-    "exportall":  (store_with_check_dup_i,  "export_all"),
-    "lattice_gp": (store_with_check_dup_i,  "lattice_gp"),
-}
-"""HWAVE-specific keyword map (extends UHF base with 4 extra keywords)."""
-
-_SOLVER_KEYWORD_TABLES: dict[str, dict[str, tuple]] = {
-    SolverType.HPhi:  _HPHI_KEYWORDS,
-    SolverType.mVMC:  _MVMC_KEYWORDS,
-    SolverType.UHF:   _UHF_KEYWORDS,
-    SolverType.HWAVE: _HWAVE_KEYWORDS,
-}
-"""Maps solver type to its keyword dispatch table."""
-
-
 def _apply_keyword_table(
     table: dict[str, tuple],
     keyword: str,
@@ -622,34 +499,5 @@ def _apply_keyword_table(
         arr = getattr(StdI, array_name)
         arr[index] = store_func(keyword, value, cast(arr[index]))
     return True
-
-
-def parse_solver_keyword(keyword: str, value: str, StdI: StdIntList,
-                         solver: str) -> bool:
-    """Parse a solver-specific keyword.
-
-    Looks up the keyword in the dispatch table for *solver* and applies
-    the corresponding store operation to *StdI*.
-
-    Parameters
-    ----------
-    keyword : str
-        The lowered keyword string.
-    value : str
-        The raw value string from the input file.
-    StdI : StdIntList
-        The global parameter structure, modified in place.
-    solver : str
-        The solver type (one of ``SolverType`` values).
-
-    Returns
-    -------
-    bool
-        True if the keyword was recognised, False otherwise.
-    """
-    table = _SOLVER_KEYWORD_TABLES.get(solver)
-    if table is None:
-        return False
-    return _apply_keyword_table(table, keyword, value, StdI)
 
 
