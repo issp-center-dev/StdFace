@@ -254,24 +254,28 @@ class WannierModeSolverPlugin(SolverPlugin):
 _plugins: dict[str, SolverPlugin] = {}
 
 
-def register(plugin: SolverPlugin) -> None:
-    """Register a solver plugin.
+def register(plugin: SolverPlugin, *aliases: str) -> None:
+    """Register a solver plugin under its name and any extra *aliases*.
 
     Parameters
     ----------
     plugin : SolverPlugin
         The plugin instance to register.
+    *aliases : str
+        Additional names the same instance answers to (e.g. ``HWavePlugin``
+        is registered under ``HWAVE`` plus ``UHFR`` / ``UHFK``).
 
     Raises
     ------
     ValueError
-        If a plugin with the same name is already registered.
+        If any of the names is already registered.
     """
-    if plugin.name in _plugins:
-        raise ValueError(
-            f"Solver plugin {plugin.name!r} is already registered"
-        )
-    _plugins[plugin.name] = plugin
+    for name in (plugin.name, *aliases):
+        if name in _plugins:
+            raise ValueError(
+                f"Solver plugin {name!r} is already registered"
+            )
+        _plugins[name] = plugin
 
 
 def get_plugin(name: str) -> SolverPlugin:

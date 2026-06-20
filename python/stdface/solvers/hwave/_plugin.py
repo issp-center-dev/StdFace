@@ -216,13 +216,11 @@ _RESET_ARRAYS: list[tuple[str, object]] = [
 
 
 # Auto-register on import
-register(UHFRPlugin())
-register(UHFKPlugin())
-# C4-2a: HWavePlugin owns H-wave input (keyword/reset).  Registering it under
-# HWAVE means parse/reset (which run while solver == "HWAVE", before
-# _resolve_solver_name) go through the plugin instead of the core fallback.
-# Output still flows through UHFR/UHFK after resolution until C4-2b.
-register(HWavePlugin())
+# C4-2b: HWavePlugin is the single H-wave plugin, registered under HWAVE plus
+# the UHFR/UHFK aliases (external API may pass those directly).  It owns input
+# (keyword/reset/config) and dispatches output by calcmode to the UHFR (.def) /
+# UHFK (Wannier90) strategies, so no solver-name resolution is needed.
+register(HWavePlugin(), SolverType.UHFR, SolverType.UHFK)
 # One config shared by UHFR/UHFK; also registered under the raw HWAVE alias so
 # it attaches before _resolve_solver_name splits HWAVE into UHFR/UHFK.
 register_config(SolverType.HWAVE, HWaveConfig)

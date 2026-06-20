@@ -701,24 +701,6 @@ def _parse_input_file(fname: str, StdI: StdIntList, solver: str) -> None:
     _apply_keywords(data, StdI, solver)
 
 
-def _resolve_solver_name(StdI: StdIntList) -> None:
-    """Normalise ``HWAVE`` to ``UHFR`` / ``UHFK`` based on ``calcmode``.
-
-    ``calcmode = "uhfr"`` -> ``UHFR`` (real-space ``.def`` output);
-    everything else (``uhfk`` / ``rpa`` / **unset**) -> ``UHFK`` (Wannier90
-    export).  This mirrors the original ``if calcmode == "uhfr": ... else:
-    export`` branching, where an unspecified calcmode took the export path.
-
-    ``geometry.dat`` suppression remains keyed on ``calcmode`` (only
-    ``uhfk`` / ``rpa`` suppress it; an unset calcmode still writes it).
-
-    Must be called after keyword parsing and before ``get_plugin``.
-    """
-    if StdI.solver == SolverType.HWAVE:
-        StdI.solver = (SolverType.UHFR if StdI.calcmode == "uhfr"
-                       else SolverType.UHFK)
-
-
 # ===================================================================
 #  stdface_main -- top-level entry point
 # ===================================================================
@@ -766,10 +748,6 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     _reset_vals(StdI)
     _parse_input_file(fname, StdI, solver)
-
-    # HWAVE -> UHFR / UHFK (before any get_plugin call below)
-    _resolve_solver_name(StdI)
-    solver = StdI.solver
 
     # ------------------------------------------------------------------
     #  Construct Model
@@ -851,7 +829,6 @@ def _build_stdintlist(data: dict, solver: str) -> StdIntList:
     StdI.solver = solver
     _reset_vals(StdI)
     _apply_keywords(data, StdI, solver)
-    _resolve_solver_name(StdI)
     if StdI.CDataFileHead is None:
         StdI.CDataFileHead = "zvo"
     _resolve_model_and_method(StdI, StdI.solver)
@@ -859,13 +836,13 @@ def _build_stdintlist(data: dict, solver: str) -> StdIntList:
 
 
 def _build_output(StdI: StdIntList):
-    """Return the :class:`SolverOutput` for the resolved solver."""
-    from ..plugin import get_plugin, WannierModeSolverPlugin
-    from .output import build_wannier_output
-    plugin = get_plugin(StdI.solver)
-    if isinstance(plugin, WannierModeSolverPlugin):
-        return build_wannier_output(StdI)
-    return plugin.build_output(StdI)
+    """Return the :class:`SolverOutput` for the active solver.
+
+    Each plugin's ``build_output`` returns the right container (the H-wave
+    plugin dispatches UHFR ``.def`` vs UHFK Wannier90 by ``calcmode``).
+    """
+    from ..plugin import get_plugin
+    return get_plugin(StdI.solver).build_output(StdI)
 
 
 def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):

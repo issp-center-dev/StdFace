@@ -294,17 +294,12 @@ class TestGetPlugin:
         assert isinstance(plugin, UHFPlugin)
         assert plugin.name == "UHF"
 
-    def test_returns_uhfr_plugin(self):
-        """Test that 'UHFR' returns a UHFRPlugin."""
-        plugin = get_plugin("UHFR")
-        assert isinstance(plugin, UHFRPlugin)
-        assert plugin.name == "UHFR"
-
-    def test_returns_uhfk_plugin(self):
-        """Test that 'UHFK' returns a UHFKPlugin."""
-        plugin = get_plugin("UHFK")
-        assert isinstance(plugin, UHFKPlugin)
-        assert plugin.name == "UHFK"
+    def test_uhfr_uhfk_resolve_to_hwave_plugin(self):
+        """C4-2b: UHFR/UHFK/HWAVE all resolve to the single HWavePlugin."""
+        from stdface.solvers.hwave._plugin import HWavePlugin
+        assert isinstance(get_plugin("UHFR"), HWavePlugin)
+        assert isinstance(get_plugin("UHFK"), HWavePlugin)
+        assert isinstance(get_plugin("HWAVE"), HWavePlugin)
 
     def test_raises_on_unknown_solver(self):
         """Test that an unknown solver raises KeyError."""
