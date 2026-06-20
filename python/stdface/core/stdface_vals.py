@@ -305,6 +305,36 @@ class ModelInput:
 
 
 @dataclass
+class Wannier90Cutoff:
+    """Wannier90 cutoff / tuning parameters (W1: lattice-axis grouping).
+
+    These are inputs to the ``wannier90`` lattice reader (cutoffs on the
+    hopping / Coulomb / Hund channels, the ``lambda`` / ``alpha`` tuning and
+    the double-counting mode).  They are not solver-specific; ``StdIntList``
+    delegates to an instance of this class via façade properties (see
+    :func:`_delegate`), mirroring the C1 sub-objects.
+    """
+
+    cutoff_t: float | None = None
+    cutoff_u: float | None = None
+    cutoff_j: float | None = None
+    cutoff_length_t: float | None = None
+    cutoff_length_U: float | None = None
+    cutoff_length_J: float | None = None
+    cutoff_tR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
+    cutoff_UR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
+    cutoff_JR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
+    cutoff_tVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    cutoff_UVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    cutoff_JVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
+    lambda_: float | None = None
+    lambda_U: float | None = None
+    lambda_J: float | None = None
+    double_counting_mode: str | None = None
+    alpha: float | None = None
+
+
+@dataclass
 class StdIntList:
     """Main structure containing all parameters and variables for Standard mode.
 
@@ -313,22 +343,22 @@ class StdIntList:
     The attributes below remain accessible as ``StdI.<name>`` but most are no
     longer stored directly on this class:
 
-    * **Lattice / model / Hamiltonian terms** live in the C1 sub-objects
-      :class:`LatticeGeometry` (``_lattice``), :class:`ModelInput` (``_model``)
-      and :class:`HamiltonianTerms` (``_terms``); the names are façade
-      properties delegating to them (see :func:`_delegate`).
+    * **Lattice / model / Hamiltonian terms / Wannier90 cutoffs** live in the
+      sub-objects :class:`LatticeGeometry` (``_lattice``),
+      :class:`ModelInput` (``_model``), :class:`HamiltonianTerms` (``_terms``)
+      and :class:`Wannier90Cutoff` (``_w90``); the names are façade properties
+      delegating to them (see :func:`_delegate`).  (C1 + W1)
     * **Solver-specific parameters** live in the per-solver config attached to
       ``_solver_cfg`` (``HPhiConfig`` / ``MVMCConfig`` / ``UHFConfig`` /
       ``HWaveConfig`` under ``solvers/<name>/config.py``).  Setting ``solver``
       attaches the matching config (C3); the names resolve through
       ``__getattr__`` / ``__setattr__``.  They are present only while that
       solver's config is attached.
-    * Held directly here: ``_lattice`` / ``_model`` / ``_terms`` / ``_solver_cfg``,
-      the common calculation selectors (``lGC`` / ``S2`` / ``Sz2`` / ``ncond`` /
-      ``outputmode`` / ``CDataFileHead`` / ``ioutputmode`` / ``locspinflag`` /
-      ``lBoost``), the Wannier90 cutoff group (``cutoff_*`` / ``lambda_*`` /
-      ``double_counting_mode`` / ``alpha``), and the solver-selection metadata
-      ``solver`` / ``calcmode``.
+    * Held directly here: the sub-objects ``_lattice`` / ``_model`` /
+      ``_terms`` / ``_w90`` / ``_solver_cfg``, the common calculation selectors
+      (``lGC`` / ``S2`` / ``Sz2`` / ``ncond`` / ``outputmode`` /
+      ``CDataFileHead`` / ``ioutputmode`` / ``locspinflag`` / ``lBoost``), and
+      the solver-selection metadata ``solver`` / ``calcmode``.
 
     The per-field documentation below is kept as a reference for the
     delegated names.
@@ -899,25 +929,27 @@ class StdIntList:
     ioutputmode: int = 0
 
     # ------------------------------------------------------------------
-    #  Wannier90 mode
+    #  Wannier90 mode (W1: grouped into the _w90 sub-object; the names below
+    #  are façade properties delegating to ``self._w90`` — see _delegate)
     # ------------------------------------------------------------------
-    cutoff_t: float | None = None
-    cutoff_u: float | None = None
-    cutoff_j: float | None = None
-    cutoff_length_t: float | None = None
-    cutoff_length_U: float | None = None
-    cutoff_length_J: float | None = None
-    cutoff_tR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
-    cutoff_UR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
-    cutoff_JR: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=int))
-    cutoff_tVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    cutoff_UVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    cutoff_JVec: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))
-    lambda_: float | None = None
-    lambda_U: float | None = None
-    lambda_J: float | None = None
-    double_counting_mode: str | None = None
-    alpha: float | None = None
+    _w90: Wannier90Cutoff = field(default_factory=Wannier90Cutoff)
+    cutoff_t = _delegate("_w90", "cutoff_t")
+    cutoff_u = _delegate("_w90", "cutoff_u")
+    cutoff_j = _delegate("_w90", "cutoff_j")
+    cutoff_length_t = _delegate("_w90", "cutoff_length_t")
+    cutoff_length_U = _delegate("_w90", "cutoff_length_U")
+    cutoff_length_J = _delegate("_w90", "cutoff_length_J")
+    cutoff_tR = _delegate("_w90", "cutoff_tR")
+    cutoff_UR = _delegate("_w90", "cutoff_UR")
+    cutoff_JR = _delegate("_w90", "cutoff_JR")
+    cutoff_tVec = _delegate("_w90", "cutoff_tVec")
+    cutoff_UVec = _delegate("_w90", "cutoff_UVec")
+    cutoff_JVec = _delegate("_w90", "cutoff_JVec")
+    lambda_ = _delegate("_w90", "lambda_")
+    lambda_U = _delegate("_w90", "lambda_U")
+    lambda_J = _delegate("_w90", "lambda_J")
+    double_counting_mode = _delegate("_w90", "double_counting_mode")
+    alpha = _delegate("_w90", "alpha")
 
     # ------------------------------------------------------------------
     #  Solver selector
