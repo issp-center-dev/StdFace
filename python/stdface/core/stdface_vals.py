@@ -900,6 +900,16 @@ class StdIntList:
     solver: str = ""
 
     # ------------------------------------------------------------------
+    #  Active solver config (C3: dynamic single-active delegation)
+    # ------------------------------------------------------------------
+    # Set by ``_attach_solver_config`` (top of ``_reset_vals``) from the
+    # config registry, keyed on the raw solver name.  While solver-specific
+    # fields still live on this dataclass (pre-C3-5) this stays effectively
+    # dormant: with no config registered for a solver it remains ``None`` and
+    # attribute access falls through to the normal dataclass fields.
+    _solver_cfg: object | None = None
+
+    # ------------------------------------------------------------------
     #  HPhi fields
     # ------------------------------------------------------------------
     method: str | None = None
@@ -999,3 +1009,39 @@ class StdIntList:
     fileprefix: str | None = None
     export_all: int | None = None
     lattice_gp: int | None = None
+
+    # ------------------------------------------------------------------
+    #  C3: dynamic delegation to the active solver config
+    # ------------------------------------------------------------------
+    def __getattr__(self, name: str):
+        # Called only when normal lookup fails (dataclass fields and the C1
+        # _delegate properties are resolved first).  Route to the active
+        # solver config if it owns the name; otherwise behave like a normal
+        # missing attribute.
+        cfg = self.__dict__.get("_solver_cfg")
+        if cfg is not None and hasattr(cfg, name):
+            return getattr(cfg, name)
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}")
+
+    def __setattr__(self, name: str, value) -> None:
+        cfg = self.__dict__.get("_solver_cfg")
+        if (cfg is not None
+                and name not in _STDI_OWN_FIELDS
+                and hasattr(cfg, name)):
+            setattr(cfg, name, value)
+        else:
+            object.__setattr__(self, name, value)
+
+
+# Names that belong to StdIntList itself (dataclass fields + C1 _delegate
+# façade properties) and must never be routed to the solver config.
+# Computed once at import; reflects whatever fields currently live on the
+# class, so it shrinks automatically as solver fields move out in C3-2..C3-5.
+import dataclasses as _dataclasses  # noqa: E402
+
+_STDI_OWN_FIELDS: frozenset[str] = frozenset(
+    {f.name for f in _dataclasses.fields(StdIntList)}
+    | {name for name, val in vars(StdIntList).items()
+       if isinstance(val, property)}
+)
