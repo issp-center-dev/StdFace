@@ -101,3 +101,42 @@ def test_unregistered_solver_attaches_no_config():
     s.solver = "_no_such_solver"
     _attach_solver_config(s)
     assert s._solver_cfg is None
+
+
+# --- Duplication-drift guard (dev/solver_config_split.md §2-2) ---------------
+#
+# The sublattice / symmetry block is duplicated across MVMCConfig / UHFConfig /
+# HWaveConfig on purpose (per-solver separability).  No shared constant binds
+# them, so this invariant test catches any future drift in field set or
+# defaults instead.
+
+_SUBLATTICE_FIELDS = (
+    "NMPTrans", "RndSeed", "Lsub", "Wsub", "Hsub", "NCellsub", "boxsub", "rboxsub",
+)
+
+
+def test_sublattice_block_consistent_across_configs():
+    from stdface.solvers.mvmc.config import MVMCConfig
+    from stdface.solvers.uhf.config import UHFConfig
+    from stdface.solvers.hwave.config import HWaveConfig
+
+    configs = [MVMCConfig(), UHFConfig(), HWaveConfig()]
+    for name in _SUBLATTICE_FIELDS:
+        values = [getattr(c, name) for c in configs]
+        for v in values:
+            assert np.array_equal(v, values[0]), f"{name} default drift: {values}"
+    # boxsub / rboxsub must be (3,3) int arrays on every config
+    for c in configs:
+        for arr_name in ("boxsub", "rboxsub"):
+            arr = getattr(c, arr_name)
+            assert arr.shape == (3, 3)
+            assert np.issubdtype(arr.dtype, np.integer)
+
+
+def test_hphi_config_has_no_sublattice_block():
+    """HPhi does not use the sublattice block, so HPhiConfig must not carry it."""
+    from stdface.solvers.hphi.config import HPhiConfig
+
+    cfg = HPhiConfig()
+    for name in _SUBLATTICE_FIELDS:
+        assert not hasattr(cfg, name)

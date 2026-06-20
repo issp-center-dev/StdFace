@@ -308,6 +308,31 @@ class ModelInput:
 class StdIntList:
     """Main structure containing all parameters and variables for Standard mode.
 
+    Field organisation (C1 / C3 refactors)
+    --------------------------------------
+    The attributes below remain accessible as ``StdI.<name>`` but most are no
+    longer stored directly on this class:
+
+    * **Lattice / model / Hamiltonian terms** live in the C1 sub-objects
+      :class:`LatticeGeometry` (``_lattice``), :class:`ModelInput` (``_model``)
+      and :class:`HamiltonianTerms` (``_terms``); the names are façade
+      properties delegating to them (see :func:`_delegate`).
+    * **Solver-specific parameters** live in the per-solver config attached to
+      ``_solver_cfg`` (``HPhiConfig`` / ``MVMCConfig`` / ``UHFConfig`` /
+      ``HWaveConfig`` under ``solvers/<name>/config.py``).  Setting ``solver``
+      attaches the matching config (C3); the names resolve through
+      ``__getattr__`` / ``__setattr__``.  They are present only while that
+      solver's config is attached.
+    * Held directly here: ``_lattice`` / ``_model`` / ``_terms`` / ``_solver_cfg``,
+      the common calculation selectors (``lGC`` / ``S2`` / ``Sz2`` / ``ncond`` /
+      ``outputmode`` / ``CDataFileHead`` / ``ioutputmode`` / ``locspinflag`` /
+      ``lBoost``), the Wannier90 cutoff group (``cutoff_*`` / ``lambda_*`` /
+      ``double_counting_mode`` / ``alpha``), and the solver-selection metadata
+      ``solver`` / ``calcmode``.
+
+    The per-field documentation below is kept as a reference for the
+    delegated names.
+
     Attributes
     ----------
     lattice : str
