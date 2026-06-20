@@ -12,16 +12,10 @@ import pytest
 
 from stdface.core.stdface_vals import StdIntList, ModelType, SolverType
 from stdface.writer.common_writer import (
-    print_loc_spin,
     build_loc_spn,
     LocSpnData,
-    print_trans,
     build_trans,
     TransData,
-    print_namelist,
-    print_mod_para,
-    print_1_green,
-    print_2_green,
     build_green_one,
     build_green_two,
     GreenOneData,
@@ -50,7 +44,43 @@ from stdface.writer.common_writer import (
     GreenFunctionIndices,
     _merge_duplicate_terms,
 )
-from stdface.writer.interaction_writer import print_interactions
+from stdface.writer.interaction_writer import build_interactions
+
+
+# The production print_* entry points were removed (they were thin wrappers
+# over build_*().write()).  These local shims preserve the behaviour the
+# tests below exercise: build the data and write it to the current directory.
+def print_loc_spin(StdI):
+    build_loc_spn(StdI).write()
+
+
+def print_trans(StdI):
+    build_trans(StdI).write()
+
+
+def print_namelist(StdI):
+    build_namelist(StdI).write()
+
+
+def print_mod_para(StdI):
+    build_modpara(StdI).write()
+
+
+def print_1_green(StdI):
+    data = build_green_one(StdI)
+    if data is not None:
+        data.write()
+
+
+def print_2_green(StdI):
+    data = build_green_two(StdI)
+    if data is not None:
+        data.write()
+
+
+def print_interactions(StdI):
+    for data in build_interactions(StdI):
+        data.write()
 
 # Sentinel values matching what _reset_vals sets at runtime
 

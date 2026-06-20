@@ -16,8 +16,6 @@ GnuplotBuffer / GnuplotData
     Accumulate gnuplot bonds and render the ``lattice.gp`` script (2-D).
 new_gnuplot_buffer
     Return a GnuplotBuffer or None depending on solver/lattice_gp settings.
-close_lattice_xsf
-    Write ``lattice.xsf``, ``geometry.dat``, and finalise 3-D lattice output.
 
 The private helper ``_fold_site`` is also available for use by other
 modules that need to fold a coordinate into the original cell.
@@ -46,7 +44,6 @@ import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, AMPLITUDE_EPS
 from ..core.param_check import print_val_i
-from .geometry_output import print_geometry, print_xsf
 
 
 logger = logging.getLogger(__name__)
@@ -317,21 +314,6 @@ def new_gnuplot_buffer(StdI: StdIntList) -> "GnuplotBuffer | None":
     if StdI.solver not in _HWAVE_SOLVERS or StdI.lattice_gp == 1:
         return GnuplotBuffer()
     return None
-
-
-def close_lattice_xsf(StdI: StdIntList) -> None:
-    """Write ``lattice.xsf``, ``geometry.dat``, and print geometry.
-
-    This is the 3-D counterpart of the 2-D gnuplot path.  It writes
-    the XCrySDen structure file via :func:`print_xsf` and the
-    ``geometry.dat`` file via :func:`print_geometry`.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        Model parameter structure.
-    """
-    print_xsf(StdI)
 
 
 def _validate_box_params(

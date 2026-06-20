@@ -503,47 +503,6 @@ class TestInputHopp:
         assert result == 0.0 + 0j
 
 
-# ---------------------------------------------------------------------------
-#  print_geometry (smoke test)
-# ---------------------------------------------------------------------------
-
-
-class TestPrintGeometry:
-    """Tests for print_geometry."""
-
-    def test_hwave_uhfk_suppressed(self, tmp_path, monkeypatch):
-        """HWAVE uhfk mode should not create geometry.dat."""
-        monkeypatch.chdir(tmp_path)
-        s = StdIntList()
-        s.solver = "HWAVE"
-        s.calcmode = "uhfk"
-        smu.print_geometry(s)
-        assert not (tmp_path / "geometry.dat").exists()
-
-
-# ---------------------------------------------------------------------------
-#  print_xsf (smoke test)
-# ---------------------------------------------------------------------------
-
-
-class TestPrintXSF:
-    """Tests for print_xsf."""
-
-    def test_creates_xsf(self, tmp_path, monkeypatch):
-        """print_xsf should create lattice.xsf."""
-        monkeypatch.chdir(tmp_path)
-        s = StdIntList()
-        s.lattice = "chain"
-        s.NCell = 2
-        s.NsiteUC = 1
-        s.direct = np.eye(3)
-        s.box = np.array([[2, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=int)
-        s.Cell = np.array([[0, 0, 0], [1, 0, 0]], dtype=int)
-        s.tau = np.zeros((1, 3))
-        s.length = np.array([1.0, 1.0, 1.0])
-        smu.print_xsf(s)
-        assert (tmp_path / "lattice.xsf").exists()
-        content = (tmp_path / "lattice.xsf").read_text()
-        assert "CRYSTAL" in content
-        assert "PRIMVEC" in content
-        assert "PRIMCOORD" in content
+# lattice.xsf / geometry.dat coverage now lives in test_geometry_output
+# (build_xsf / build_geometry); the stdface_model_util re-exports of
+# print_xsf / print_geometry were removed.

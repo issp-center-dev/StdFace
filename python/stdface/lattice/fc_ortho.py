@@ -28,7 +28,7 @@ from .interaction_builder import (
     mag_field, general_j, hubbard_local,
     add_neighbor_interaction_3d,
 )
-from .site_util import init_site, set_local_spin_flags, close_lattice_xsf
+from .site_util import init_site, set_local_spin_flags
 
 
 logger = logging.getLogger(__name__)
@@ -185,8 +185,6 @@ def fc_ortho(StdI: StdIntList) -> None:
         for dW, dL, dH, si, sj, J, t, V in _BONDS:
             add_neighbor_interaction_3d(
                 StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
-
-    close_lattice_xsf(StdI)
 
 
 # ---------------------------------------------------------------------------

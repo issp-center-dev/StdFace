@@ -289,6 +289,11 @@ class TestOrthorhombicSpin:
         assert s.NCell == 8
         assert s.NsiteUC == 1
         _assert_post_spin_setup(s, nsite_uc=1)
+        # lattice.xsf is now an independent lattice output (build_xsf,
+        # written by the main flow), no longer a side effect of setup.
+        from stdface.lattice.geometry_output import build_xsf
+        assert not (tmp_path / "lattice.xsf").exists()
+        build_xsf(s).write(tmp_path)
         assert (tmp_path / "lattice.xsf").exists()
 
 

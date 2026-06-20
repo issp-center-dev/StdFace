@@ -1,6 +1,6 @@
 """Unit tests for geometry_output module.
 
-Tests for ``print_xsf`` and ``print_geometry``.
+Tests for ``build_xsf`` / ``build_geometry`` and their data classes.
 """
 from __future__ import annotations
 
@@ -13,8 +13,21 @@ import pytest
 
 from stdface.core.stdface_vals import StdIntList
 from stdface.lattice.geometry_output import (
-    print_xsf, print_geometry, _cell_diff, build_geometry, GeometryData,
+    _cell_diff, build_geometry, GeometryData, build_xsf, XsfData,
 )
+
+
+# The production print_xsf / print_geometry entry points were removed (they
+# were thin wrappers over build_*().write()).  These local shims preserve the
+# behaviour the content tests below exercise.
+def print_xsf(StdI):
+    build_xsf(StdI).write()
+
+
+def print_geometry(StdI):
+    data = build_geometry(StdI)
+    if data is not None:
+        data.write()
 
 
 def _make_stdi(
@@ -298,20 +311,6 @@ class TestCellDiff:
         assert diff == [1, 2, 3]
 
 
-class TestBackwardCompatibility:
-    """Test that functions are still importable from stdface_model_util."""
-
-    def test_import_from_stdface_model_util(self):
-        """Test that both functions are re-exported."""
-        from stdface.core.stdface_model_util import (
-            print_xsf as pxsf,
-            print_geometry as pg,
-        )
-        from stdface.lattice.geometry_output import print_xsf, print_geometry
-        assert pxsf is print_xsf
-        assert pg is print_geometry
-
-
 class TestGeometryDataBuildWrite:
     """D5-1: build_geometry / GeometryData (independent lattice output)."""
 
@@ -347,3 +346,34 @@ class TestGeometryDataBuildWrite:
     def test_kondo_doubles_sites(self):
         d = build_geometry(_make_stdi(model="kondo", L=4))
         assert len(d.sites) == 8  # doubled
+
+
+class TestXsfDataBuildWrite:
+    """xsf-1: build_xsf / XsfData (independent lattice output)."""
+
+    def test_build_returns_native_types(self):
+        d = build_xsf(_make_stdi(L=4))
+        assert isinstance(d, XsfData)
+        assert all(isinstance(x, float) for r in d.primvec for x in r)
+        assert all(isinstance(x, float) for c in d.coords for x in c)
+        assert len(d.coords) == 4  # NCell * NsiteUC
+
+    def test_convvec_present_for_orthorhombic(self):
+        assert build_xsf(_make_stdi(lattice="orthorhombic")).convvec is not None
+
+    def test_no_convvec_for_chain(self):
+        assert build_xsf(_make_stdi(lattice="chain")).convvec is None
+
+    def test_to_from_dict_roundtrip(self):
+        d = build_xsf(_make_stdi(lattice="orthorhombic", L=4))
+        assert XsfData.from_dict(d.to_dict()).to_dict() == d.to_dict()
+
+    def test_write_parity_with_print(self, tmp_path, monkeypatch):
+        for lat in ("chain", "orthorhombic"):
+            s = _make_stdi(lattice=lat, L=4)
+            monkeypatch.chdir(tmp_path)
+            print_xsf(s)
+            via_print = (tmp_path / "lattice.xsf").read_text()
+            build_xsf(s).write(tmp_path)
+            via_build = (tmp_path / "lattice.xsf").read_text()
+            assert via_print == via_build, lat

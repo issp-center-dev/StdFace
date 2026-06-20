@@ -20,7 +20,7 @@ from stdface.lattice.site_util import (
     _validate_box_params,
     _det_and_cofactor, _compute_reciprocal_box, _enumerate_cells,
     _LATTICE_GP_FOOTER,
-    GnuplotBuffer, new_gnuplot_buffer, close_lattice_xsf,
+    GnuplotBuffer, new_gnuplot_buffer,
     init_site, find_site, set_label,
     set_local_spin_flags,
 )
@@ -1032,60 +1032,5 @@ class TestNewGnuplotBuffer:
         assert "end" in _LATTICE_GP_FOOTER
         assert "pause -1" in _LATTICE_GP_FOOTER
 
-
-# ===================================================================
-#  close_lattice_xsf
-# ===================================================================
-
-
-class TestCloseLatticeXsf:
-    """Tests for close_lattice_xsf (3D counterpart of close_lattice_gp)."""
-
-    def test_creates_lattice_xsf(self, tmp_path, monkeypatch):
-        """Test that lattice.xsf is created on disk."""
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.nsite = 4
-        StdI.NsiteUC = 1
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        close_lattice_xsf(StdI)
-        assert (tmp_path / "lattice.xsf").exists()
-
-    def test_creates_geometry_dat(self, tmp_path, monkeypatch):
-        """geometry.dat is now an independent output (build_geometry)."""
-        from stdface.lattice.geometry_output import build_geometry
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.nsite = 4
-        StdI.NsiteUC = 1
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        # close_lattice_xsf no longer writes geometry.dat
-        close_lattice_xsf(StdI)
-        assert not (tmp_path / "geometry.dat").exists()
-        build_geometry(StdI).write(tmp_path)
-        assert (tmp_path / "geometry.dat").exists()
-
-    def test_lattice_xsf_contains_crystal(self, tmp_path, monkeypatch):
-        """Test that lattice.xsf has XCrySDen CRYSTAL header."""
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.nsite = 4
-        StdI.NsiteUC = 1
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        close_lattice_xsf(StdI)
-        content = (tmp_path / "lattice.xsf").read_text()
-        assert "CRYSTAL" in content
-
-    def test_geometry_dat_has_content(self, tmp_path, monkeypatch):
-        """build_geometry produces a non-empty geometry.dat."""
-        from stdface.lattice.geometry_output import build_geometry
-        monkeypatch.chdir(tmp_path)
-        StdI = _make_stdi_chain(4)
-        StdI.nsite = 4
-        StdI.NsiteUC = 1
-        StdI.locspinflag = np.zeros(4, dtype=int)
-        build_geometry(StdI).write(tmp_path)
-        content = (tmp_path / "geometry.dat").read_text()
-        assert len(content) > 0
 
 

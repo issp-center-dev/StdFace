@@ -5,4 +5,4 @@ Solver-specific writers have moved to ``stdface.solvers``.
 """
 from __future__ import annotations
 
-from .interaction_writer import print_interactions  # noqa: F401
+from .interaction_writer import build_interactions  # noqa: F401

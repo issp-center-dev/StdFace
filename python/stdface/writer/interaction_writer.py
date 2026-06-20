@@ -1,15 +1,14 @@
 """Interaction-term merge and file-output functions.
 
-This module contains the :func:`print_interactions` function that was
-extracted from ``common_writer.py``.  It processes all interaction types
-(CoulombIntra, CoulombInter, Hund, Exchange, PairLift, PairHopp, InterAll),
-merging duplicate terms, counting non-zero terms, and writing the
-corresponding ``.def`` files.
+This module contains :func:`build_interactions`, which processes all
+interaction types (CoulombIntra, CoulombInter, Hund, Exchange, PairLift,
+PairHopp, InterAll) -- merging duplicate terms and counting non-zero
+terms -- and returns the corresponding ``XxxData`` objects.
 
 Functions
 ---------
-print_interactions
-    Merge duplicate interaction terms and write ``.def`` files.
+build_interactions
+    Merge duplicate interaction terms and return the interaction data.
 
 License
 -------
@@ -240,7 +239,7 @@ _INTERACTION_TYPES: list[_InteractionMeta] = [
                      "====== Pair-Hopping term ============", 2),
 ]
 """Metadata for the 6 standard interaction types processed by
-:func:`print_interactions`.  Each entry maps attribute names, file
+:func:`build_interactions`.  Each entry maps attribute names, file
 names, and header strings so that :func:`_process_interaction` can
 handle all types generically.
 """
@@ -493,34 +492,6 @@ def _build_interall(StdI: StdIntList) -> "InterAllData | None":
                          int(i2), int(s2), int(i3), int(s3),
                          float(val.real), float(val.imag)))
     return InterAllData(rows=rows)
-
-
-def print_interactions(StdI: StdIntList) -> None:
-    """Process and write definition files for all interaction types.
-
-    For each interaction type (CoulombIntra, CoulombInter, Hund, Exchange,
-    PairLift, PairHopp, InterAll), this function:
-
-    1. Merges duplicate terms by summing their coefficients and zeroing
-       out the duplicate entry.
-    2. Counts the number of non-zero terms.
-    3. Sets a flag (e.g. ``LCintra``, ``LCinter``, ...) based on the count
-       and whether boost mode is active.
-    4. If the flag is set, writes the corresponding ``.def`` file.
-
-    The first six interaction types are handled generically via
-    :data:`_INTERACTION_TYPES` and :func:`_process_interaction`.
-    The InterAll section is more complex, involving three merge/reorder
-    passes before file output, and is handled inline.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The central data structure holding all interaction arrays, index
-        arrays, counts, and flags.  Modified in place.
-    """
-    for data in build_interactions(StdI):
-        data.write()
 
 
 def build_interactions(StdI: StdIntList):

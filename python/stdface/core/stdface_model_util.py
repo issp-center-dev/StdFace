@@ -52,10 +52,6 @@ from ..lattice.input_params import (  # noqa: F401 – re-exported for backward 
     input_coulomb_v,
     input_hopp,
 )
-from ..lattice.geometry_output import (  # noqa: F401 – re-exported for backward compatibility
-    print_xsf,
-    print_geometry,
-)
 from ..lattice.interaction_builder import (  # noqa: F401 – re-exported for backward compatibility
     trans,
     hopping,

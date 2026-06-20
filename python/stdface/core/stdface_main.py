@@ -553,14 +553,16 @@ def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> tuple:
     Returns
     -------
     tuple
-        ``(gp_data, geo_data)`` — each ``None`` when not applicable.
+        ``(gp_data, geo_data, xsf_data)`` — each ``None`` when not
+        applicable.  ``xsf_data`` (``lattice.xsf``) is produced only for
+        3-D lattices (``ndim == 3``).
 
     Raises
     ------
     ValueError
         If the lattice is not recognised.
     """
-    from ..lattice.geometry_output import build_geometry
+    from ..lattice.geometry_output import build_geometry, build_xsf
     lattice = StdI.lattice
     try:
         lattice_plugin = _get_lattice(lattice)
@@ -569,15 +571,16 @@ def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> tuple:
 
     gp_data = lattice_plugin.setup(StdI)
     geo_data = build_geometry(StdI)
+    xsf_data = build_xsf(StdI) if lattice_plugin.ndim == 3 else None
 
     from ..plugin import get_plugin
     try:
         plugin = get_plugin(solver)
     except KeyError:
-        return gp_data, geo_data
+        return gp_data, geo_data, xsf_data
     plugin.post_lattice(StdI)
     plugin.validate(StdI)
-    return gp_data, geo_data
+    return gp_data, geo_data, xsf_data
 
 
 # ===================================================================
@@ -764,12 +767,14 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     _resolve_model_and_method(StdI, solver)
 
-    gp_data, geo_data = _build_lattice_and_boost(StdI, solver)
+    gp_data, geo_data, xsf_data = _build_lattice_and_boost(StdI, solver)
     # Lattice-level (solver-independent) outputs on their own path.
     if gp_data is not None:
         gp_data.write()
     if geo_data is not None:
         geo_data.write()
+    if xsf_data is not None:
+        xsf_data.write()
 
     # ------------------------------------------------------------------
     #  Print Expert input files
@@ -890,7 +895,7 @@ def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
         # (HPhi excitation/calcmod, mVMC variational) land there too -- not
         # just the SolverOutput / gnuplot / geometry written explicitly.
         StdI = _build_stdintlist(data, solver)
-        gp_data, geo_data = _build_lattice_and_boost(StdI, StdI.solver)
+        gp_data, geo_data, xsf_data = _build_lattice_and_boost(StdI, StdI.solver)
         out = _build_output(StdI)
         fmt = output_format or DefFileFormat()
         fmt.write_output(out, Path("."))
@@ -898,6 +903,8 @@ def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
             gp_data.write(Path("."))
         if geo_data is not None:
             geo_data.write(Path("."))
+        if xsf_data is not None:
+            xsf_data.write(Path("."))
         return out
 
     if output_dir is None:

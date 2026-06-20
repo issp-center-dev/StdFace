@@ -11,18 +11,10 @@ GreenFunctionIndices
 
 Functions
 ---------
-print_loc_spin
-    Write ``locspn.def`` listing local-spin flags for every site.
-print_trans
-    Write ``trans.def`` listing one-body transfer integrals.
-print_namelist
-    Write ``namelist.def`` that lists all definition files for the solver.
-print_mod_para
-    Write ``modpara.def`` containing model / calculation parameters.
-print_1_green
-    Write ``greenone.def`` listing one-body Green-function indices.
-print_2_green
-    Write ``greentwo.def`` listing two-body Green-function indices.
+build_loc_spn / build_trans / build_namelist / build_modpara
+    Build the corresponding ``XxxData`` for the common definition files.
+build_green_one / build_green_two
+    Build the one-/two-body Green-function index data.
 unsupported_system
     Print an error message and abort for an unsupported model/lattice pair.
 check_output_mode
@@ -135,23 +127,6 @@ def _merge_duplicate_terms(indx, vals, n: int) -> int:
     return sum(1 for k in range(n) if abs(vals[k]) > AMPLITUDE_EPS)
 
 
-def print_loc_spin(StdI: StdIntList) -> None:
-    """Write ``locspn.def`` listing local-spin flags for every site.
-
-    This is the Python translation of the C function ``PrintLocSpin()``.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure.  The following fields are read:
-
-        - ``nsite`` : int -- total number of sites.
-        - ``locspinflag`` : list of int -- per-site flag (0 = itinerant
-          electron, nonzero = local spin with :math:`S` given by the value).
-    """
-    build_loc_spn(StdI).write()
-
-
 @dataclass
 class LocSpnData:
     """Per-site local-spin flags (``locspn.def``).
@@ -247,11 +222,6 @@ def build_trans(StdI: StdIntList) -> TransData:
             rows.append((int(i0), int(s0), int(i1), int(s1),
                          float(val.real), float(val.imag)))
     return TransData(rows=rows)
-
-
-def print_trans(StdI: StdIntList) -> None:
-    """Write ``trans.def`` (thin wrapper over :func:`build_trans`)."""
-    build_trans(StdI).write()
 
 
 def _namelist_entries_hphi(StdI: StdIntList) -> list:
@@ -351,11 +321,6 @@ def build_namelist(StdI: StdIntList) -> NamelistData:
             entries.append(("TwoBodyG", "greentwo.def"))
     entries += plugin.namelist_entries(StdI)
     return NamelistData(entries=entries)
-
-
-def print_namelist(StdI: StdIntList) -> None:
-    """Write ``namelist.def`` (thin wrapper over :func:`build_namelist`)."""
-    build_namelist(StdI).write()
 
 
 # ---------------------------------------------------------------------------
@@ -544,11 +509,6 @@ _MODPARA_BANNER: dict[str, str] = {
     SolverType.HWAVE: "HWAVE_Cal_Parameters",
 }
 """Maps UHF/HWAVE solver type to the ``modpara.def`` banner line."""
-
-
-def print_mod_para(StdI: StdIntList) -> None:
-    """Write ``modpara.def`` (thin wrapper over :func:`build_modpara`)."""
-    build_modpara(StdI).write()
 
 
 class GreenFunctionIndices:
@@ -794,28 +754,6 @@ class GreenFunctionIndices:
         return indices
 
 
-def print_1_green(StdI: StdIntList) -> None:
-    """Write ``greenone.def`` listing one-body Green-function indices.
-
-    This is the Python translation of the C function ``Print1Green()``.
-    Index generation is delegated to :class:`GreenFunctionIndices`.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure.  The following fields are read:
-
-        - ``ioutputmode`` : int -- 0 (none), 1 (correlation), or 2 (raw).
-        - ``model`` : ModelType -- model type (Kondo triggers doubled UC).
-        - ``NsiteUC`` : int -- number of sites in the unit cell.
-        - ``nsite`` : int -- total number of sites.
-        - ``locspinflag`` : list of int -- per-site local-spin flag.
-    """
-    data = build_green_one(StdI)
-    if data is not None:
-        data.write()
-
-
 @dataclass
 class GreenOneData:
     """One-body Green-function indices (``greenone.def``)."""
@@ -855,29 +793,6 @@ def build_green_one(StdI: StdIntList) -> "GreenOneData | None":
     )
     greenindx = gf.green1_corr() if StdI.ioutputmode == 1 else gf.green1_raw()
     return GreenOneData(rows=[tuple(int(x) for x in idx) for idx in greenindx])
-
-
-def print_2_green(StdI: StdIntList) -> None:
-    """Write ``greentwo.def`` listing two-body Green-function indices.
-
-    This is the Python translation of the C function ``Print2Green()``.
-    Index generation is delegated to :class:`GreenFunctionIndices`.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure.  The following fields are read:
-
-        - ``ioutputmode`` : int
-        - ``model`` : ModelType
-        - ``solver`` : SolverType
-        - ``NsiteUC`` : int
-        - ``nsite`` : int
-        - ``locspinflag`` : list of int
-    """
-    data = build_green_two(StdI)
-    if data is not None:
-        data.write()
 
 
 @dataclass
