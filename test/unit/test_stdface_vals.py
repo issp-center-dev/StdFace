@@ -378,6 +378,19 @@ class TestStdIntListSolverFields:
         assert hasattr(s, "lambda_")
         assert s.lambda_ is None
 
+    def test_wannier90_cutoffs_delegate_to_w90(self):
+        """W1: cutoff/lambda/alpha fields live in the _w90 sub-object."""
+        from stdface.core.stdface_vals import Wannier90Cutoff
+        s = StdIntList()
+        assert isinstance(s._w90, Wannier90Cutoff)
+        # scalar facade: write reaches the sub-object
+        s.alpha = 0.5
+        assert s._w90.alpha == 0.5
+        # in-place numpy mutation through the getter
+        s.cutoff_tR[1] = 3
+        assert s._w90.cutoff_tR[1] == 3
+        assert s.cutoff_tVec.shape == (3, 3)
+
 
 # ===================================================================
 #  ModelType enum
