@@ -441,6 +441,21 @@ def _apply_field_resets(StdI: StdIntList, solver: SolverType) -> None:
 # ===================================================================
 
 
+def _attach_solver_config(StdI: StdIntList) -> None:
+    """Attach the active solver's config container to *StdI* (C3).
+
+    Keyed on the *raw* solver name (``StdI.solver``) so it runs before
+    ``_resolve_solver_name`` — at which point ``HWAVE`` is not yet split
+    into ``UHFR`` / ``UHFK`` (both share the same H-wave config).  A no-op
+    when no config is registered for the solver (pre-C3-2 state), leaving
+    ``StdI._solver_cfg`` as ``None`` so attribute access falls through to
+    the flat dataclass fields.
+    """
+    # Idempotent: StdIntList.__setattr__ already attaches on solver-set, so
+    # this just ensures the config matches the current solver (type-guarded).
+    StdI._sync_solver_config(StdI.solver)
+
+
 def _reset_vals(StdI: StdIntList) -> None:
     """Clear / initialize every field in *StdI* to its sentinel value.
 
@@ -459,6 +474,9 @@ def _reset_vals(StdI: StdIntList) -> None:
         The global parameter structure whose fields are reset **in
         place**.
     """
+    # --- Active solver config container (C3; no-op until configs exist) -----
+    _attach_solver_config(StdI)
+
     # --- Common scalar fields (table-driven) --------------------------------
     for name, value in _COMMON_RESET_SCALARS:
         setattr(StdI, name, value)

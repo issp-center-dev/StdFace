@@ -7,8 +7,9 @@ The user passes ``--solver HWAVE``; ``_resolve_solver_name`` then maps it to
 """
 from __future__ import annotations
 
-from ...plugin import SolverPlugin, WannierModeSolverPlugin, register
+from ...plugin import SolverPlugin, WannierModeSolverPlugin, register, register_config
 from ...core.stdface_vals import StdIntList, SolverType, NaN_i
+from .config import HWaveConfig
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d, store_with_check_dup_sl,
     _grid3x3_keywords,
@@ -147,3 +148,8 @@ _RESET_ARRAYS: list[tuple[str, object]] = [
 # Auto-register on import
 register(UHFRPlugin())
 register(UHFKPlugin())
+# One config shared by UHFR/UHFK; also registered under the raw HWAVE alias so
+# it attaches before _resolve_solver_name splits HWAVE into UHFR/UHFK.
+register_config(SolverType.HWAVE, HWaveConfig)
+register_config(SolverType.UHFR, HWaveConfig)
+register_config(SolverType.UHFK, HWaveConfig)

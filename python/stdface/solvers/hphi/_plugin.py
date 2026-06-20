@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from ...plugin import ExpertModeSolverPlugin, register
+from ...plugin import ExpertModeSolverPlugin, register, register_config
 from ...core.stdface_vals import StdIntList, SolverType, MethodType
+from .config import HPhiConfig
 from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_sl,
     store_with_check_dup_i, store_with_check_dup_d,
@@ -155,3 +156,4 @@ _RESET_ARRAYS: list[tuple[str, object]] = [
 
 # Auto-register on import
 register(HPhiPlugin())
+register_config(SolverType.HPhi, HPhiConfig)

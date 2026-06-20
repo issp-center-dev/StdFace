@@ -128,6 +128,7 @@ class TestResolveModelAndMethod:
     def test_hubbard_canonical(self):
         """Test hubbard resolves to ModelType.HUBBARD with lGC=0."""
         StdI = StdIntList()
+        StdI.solver = SolverType.HPhi  # attaches HPhiConfig (provides .method)
         StdI.model = "hubbard"
         StdI.lattice = "chain"
         _resolve_model_and_method(StdI, SolverType.HPhi)
@@ -148,6 +149,7 @@ class TestResolveModelAndMethod:
     def test_spingcboost_hphi_only(self):
         """Test spingcboost resolves only for HPhi solver."""
         StdI = StdIntList()
+        StdI.solver = SolverType.HPhi  # attaches HPhiConfig (provides .method)
         StdI.model = "spingcboost"
         StdI.lattice = "chain"
         _resolve_model_and_method(StdI, SolverType.HPhi)
@@ -193,6 +195,7 @@ class TestResolveModelAndMethod:
     def test_kondo_gc(self):
         """Test kondogc resolves correctly."""
         StdI = StdIntList()
+        StdI.solver = SolverType.HPhi  # attaches HPhiConfig (provides .method)
         StdI.model = "kondogc"
         StdI.lattice = "chain"
         _resolve_model_and_method(StdI, SolverType.HPhi)

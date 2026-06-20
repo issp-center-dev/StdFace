@@ -293,42 +293,80 @@ class TestStdIntListIndependence:
 class TestStdIntListSolverFields:
     """Tests for solver-specific fields."""
 
-    def test_hphi_fields_exist(self):
-        """HPhi-specific fields should exist."""
+    def test_hphi_fields_resolve_via_config(self):
+        """HPhi-unique fields moved to HPhiConfig (C3-5)."""
+        bare = StdIntList()
+        assert not hasattr(bare, "method")
+        assert not hasattr(bare, "Lanczos_max")
+
         s = StdIntList()
-        assert hasattr(s, "method")
-        assert hasattr(s, "Lanczos_max")
-        assert hasattr(s, "CalcSpec")
-        assert hasattr(s, "SpectrumQ")
+        s.solver = "HPhi"  # auto-attaches HPhiConfig
+        assert s.method is None
+        assert s.CalcSpec is None
         assert s.SpectrumQ.shape == (3,)
 
-    def test_mvmc_fields_exist(self):
-        """mVMC-specific fields should exist."""
+    def test_mvmc_fields_resolve_via_config(self):
+        """mVMC-unique fields moved to MVMCConfig (C3-4).
+
+        They are absent on a bare StdIntList; an mVMC run resolves them
+        through the attached config.
+        """
+        from stdface.core.stdface_main import _reset_vals
+
+        bare = StdIntList()
+        assert not hasattr(bare, "CParaFileHead")
+        assert not hasattr(bare, "NVMCCalMode")
+        assert not hasattr(bare, "Orb")
+
         s = StdIntList()
-        assert hasattr(s, "CParaFileHead")
-        assert hasattr(s, "NVMCCalMode")
-        assert hasattr(s, "NSROptItrStep")
-        assert hasattr(s, "Orb")
+        s.solver = "mVMC"
+        _reset_vals(s)
+        assert s.NVMCCalMode is None
         assert s.Orb is None
+        assert s.NSROptFixSmp == 0  # non-None default preserved
 
-    def test_uhf_hwave_fields_exist(self):
-        """UHF/HWAVE shared fields should exist."""
+    def test_uhf_hwave_fields_resolve_via_config(self):
+        """UHF/HWAVE shared fields (mix/eps/...) moved to the solver configs."""
+        bare = StdIntList()
+        assert not hasattr(bare, "mix")
+        assert not hasattr(bare, "eps")
+
         s = StdIntList()
-        assert hasattr(s, "mix")
-        assert hasattr(s, "eps")
-        assert hasattr(s, "Iteration_max")
+        s.solver = "UHF"  # auto-attaches UHFConfig
+        assert s.mix is None
+        assert s.eps is None
+        assert s.Iteration_max is None
 
-    def test_hwave_only_fields_exist(self):
-        """HWAVE-only fields should exist."""
+    def test_calcmode_stays_on_core(self):
+        """calcmode is solver-selection metadata and stays on StdIntList."""
         s = StdIntList()
         assert hasattr(s, "calcmode")
-        assert hasattr(s, "fileprefix")
-        assert hasattr(s, "export_all")
-        assert hasattr(s, "lattice_gp")
+
+    def test_hwave_only_fields_resolve_via_config(self):
+        """fileprefix/export_all/lattice_gp moved to HWaveConfig (C3-3).
+
+        They no longer live on a bare StdIntList; for an H-wave run the
+        attached config provides them.
+        """
+        from stdface.core.stdface_main import _reset_vals
+
+        bare = StdIntList()
+        assert not hasattr(bare, "fileprefix")
+        assert not hasattr(bare, "export_all")
+        assert not hasattr(bare, "lattice_gp")
+
+        s = StdIntList()
+        s.solver = "HWAVE"
+        _reset_vals(s)
+        # resolved via the attached HWaveConfig
+        assert s.fileprefix is None
+        assert s.export_all is None
+        assert s.lattice_gp is None
 
     def test_boxsub_shape(self):
-        """boxsub and rboxsub should be (3,3) int arrays."""
+        """boxsub/rboxsub (shared sublattice block) moved to the solver configs."""
         s = StdIntList()
+        s.solver = "mVMC"  # auto-attaches MVMCConfig carrying the sublattice copy
         assert s.boxsub.shape == (3, 3)
         assert np.issubdtype(s.boxsub.dtype, np.integer)
         assert s.rboxsub.shape == (3, 3)

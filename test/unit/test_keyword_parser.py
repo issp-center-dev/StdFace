@@ -42,8 +42,10 @@ NaN_c = complex(float("nan"), 0.0)
 
 def _make_stdi(solver: str = "HPhi") -> StdIntList:
     """Create a StdIntList with sentinel values for testing parsers."""
+    from stdface.core.stdface_main import _attach_solver_config
     StdI = StdIntList()
     StdI.solver = solver
+    _attach_solver_config(StdI)  # C3: solver-specific fields live on the config
     StdI.pi = math.acos(-1.0)
 
     # Lattice scalars / vectors

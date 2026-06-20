@@ -308,6 +308,31 @@ class ModelInput:
 class StdIntList:
     """Main structure containing all parameters and variables for Standard mode.
 
+    Field organisation (C1 / C3 refactors)
+    --------------------------------------
+    The attributes below remain accessible as ``StdI.<name>`` but most are no
+    longer stored directly on this class:
+
+    * **Lattice / model / Hamiltonian terms** live in the C1 sub-objects
+      :class:`LatticeGeometry` (``_lattice``), :class:`ModelInput` (``_model``)
+      and :class:`HamiltonianTerms` (``_terms``); the names are façade
+      properties delegating to them (see :func:`_delegate`).
+    * **Solver-specific parameters** live in the per-solver config attached to
+      ``_solver_cfg`` (``HPhiConfig`` / ``MVMCConfig`` / ``UHFConfig`` /
+      ``HWaveConfig`` under ``solvers/<name>/config.py``).  Setting ``solver``
+      attaches the matching config (C3); the names resolve through
+      ``__getattr__`` / ``__setattr__``.  They are present only while that
+      solver's config is attached.
+    * Held directly here: ``_lattice`` / ``_model`` / ``_terms`` / ``_solver_cfg``,
+      the common calculation selectors (``lGC`` / ``S2`` / ``Sz2`` / ``ncond`` /
+      ``outputmode`` / ``CDataFileHead`` / ``ioutputmode`` / ``locspinflag`` /
+      ``lBoost``), the Wannier90 cutoff group (``cutoff_*`` / ``lambda_*`` /
+      ``double_counting_mode`` / ``alpha``), and the solver-selection metadata
+      ``solver`` / ``calcmode``.
+
+    The per-field documentation below is kept as a reference for the
+    delegated names.
+
     Attributes
     ----------
     lattice : str
@@ -900,102 +925,93 @@ class StdIntList:
     solver: str = ""
 
     # ------------------------------------------------------------------
-    #  HPhi fields
+    #  Active solver config (C3: dynamic single-active delegation)
     # ------------------------------------------------------------------
-    method: str | None = None
-    Restart: str | None = None
-    InitialVecType: str | None = None
-    EigenVecIO: str | None = None
-    HamIO: str | None = None
-    FlgTemp: int = 0
-    Lanczos_max: int | None = None
-    initial_iv: int | None = None
-    nvec: int | None = None
-    exct: int | None = None
-    LanczosEps: int | None = None
-    LanczosTarget: int | None = None
-    NumAve: int | None = None
-    ExpecInterval: int | None = None
-    LargeValue: float | None = None
-    NGPU: int | None = None
-    Scalapack: int | None = None
-    list_6spin_pair: None = None
-    list_6spin_star: None = None
-    num_pivot: int = 0
-    ishift_nspin: int = 0
-    CalcSpec: str | None = None
-    SpectrumType: str | None = None
-    Nomega: int | None = None
-    OmegaMax: float | None = None
-    OmegaMin: float | None = None
-    OmegaOrg: float | None = None
-    OmegaIm: float | None = None
-    SpectrumQ: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    SpectrumBody: int = 0
-    OutputExVec: str | None = None
-    dt: float | None = None
-    tshift: float | None = None
-    tdump: float | None = None
-    freq: float | None = None
-    Uquench: float | None = None
-    VecPot: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    PumpType: str | None = None
-    PumpBody: int = 0
-    npump: None = None
-    pumpindx: None = None
-    pump: None = None
-    At: None = None
-    ExpandCoef: int | None = None
+    # Set by ``_attach_solver_config`` (top of ``_reset_vals``) from the
+    # config registry, keyed on the raw solver name.  While solver-specific
+    # fields still live on this dataclass (pre-C3-5) this stays effectively
+    # dormant: with no config registered for a solver it remains ``None`` and
+    # attribute access falls through to the normal dataclass fields.
+    _solver_cfg: object | None = None
 
     # ------------------------------------------------------------------
-    #  mVMC fields
+    #  Per-solver fields now live in solver configs (C3)
     # ------------------------------------------------------------------
-    CParaFileHead: str | None = None
-    NVMCCalMode: int | None = None
-    NLanczosMode: int | None = None
-    NDataIdxStart: int | None = None
-    NDataQtySmp: int | None = None
-    NSPGaussLeg: int | None = None
-    NMPTrans: int | None = None
-    NSROptItrStep: int | None = None
-    NSROptItrSmp: int | None = None
-    NSROptFixSmp: int = 0
-    DSROptRedCut: float | None = None
-    DSROptStaDel: float | None = None
-    DSROptStepDt: float | None = None
-    NVMCWarmUp: int | None = None
-    NVMCInterval: int | None = None
-    NVMCSample: int | None = None
-    NExUpdatePath: int | None = None
-    RndSeed: int | None = None
-    NSplitSize: int | None = None
-    NSPStot: int | None = None
-    NStore: int | None = None
-    NSRCG: int | None = None
-    ComplexType: int | None = None
-    Lsub: int | None = None
-    Wsub: int | None = None
-    Hsub: int | None = None
-    NCellsub: int = 0
-    boxsub: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
-    rboxsub: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
-    Orb: None = None
-    AntiOrb: None = None
-    NOrb: int = 0
-    NSym: int = 0
+    # C3-3/4/5 moved every solver-specific field into per-solver configs
+    # (solvers/<name>/config.py), attached to ``_solver_cfg`` and reached
+    # through __getattr__/__setattr__:
+    #   - HPhiConfig  : method / Lanczos* / spectrum / pump / Boost / …
+    #   - MVMCConfig  : NVMC* / NSROpt* / Orb / NSym / …
+    #   - UHFConfig   : mix / eps / eps_slater / Iteration_max  (+ sublattice)
+    #   - HWaveConfig : fileprefix / export_all / lattice_gp     (+ shared)
+    # The sublattice / symmetry block (NMPTrans / RndSeed / Lsub / Wsub /
+    # Hsub / NCellsub / boxsub / rboxsub), shared by mVMC / UHF / HWAVE, is
+    # carried as a duplicated copy by each of those configs.  HPhi does not
+    # use it.  ``calcmode`` stays below as solver-selection metadata.
 
     # ------------------------------------------------------------------
-    #  UHF / HWAVE fields
+    #  HWAVE solver-selection metadata (read before config attach)
     # ------------------------------------------------------------------
-    mix: float | None = None
-    eps: int | None = None
-    eps_slater: int | None = None
-    Iteration_max: int | None = None
-
-    # ------------------------------------------------------------------
-    #  HWAVE-only fields
-    # ------------------------------------------------------------------
+    # ``calcmode`` stays here as solver-selection metadata (read by
+    # _resolve_solver_name before the config is attached).  C3-3 moved
+    # ``fileprefix`` / ``export_all`` / ``lattice_gp`` into HWaveConfig
+    # (solvers/hwave/config.py); they now resolve via _solver_cfg.
     calcmode: str | None = None
-    fileprefix: str | None = None
-    export_all: int | None = None
-    lattice_gp: int | None = None
+
+    # ------------------------------------------------------------------
+    #  C3: dynamic delegation to the active solver config
+    # ------------------------------------------------------------------
+    def __getattr__(self, name: str):
+        # Called only when normal lookup fails (dataclass fields and the C1
+        # _delegate properties are resolved first).  Route to the active
+        # solver config if it owns the name; otherwise behave like a normal
+        # missing attribute.
+        cfg = self.__dict__.get("_solver_cfg")
+        if cfg is not None and hasattr(cfg, name):
+            return getattr(cfg, name)
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}")
+
+    def __setattr__(self, name: str, value) -> None:
+        cfg = self.__dict__.get("_solver_cfg")
+        if (cfg is not None
+                and name not in _STDI_OWN_FIELDS
+                and hasattr(cfg, name)):
+            setattr(cfg, name, value)
+            return
+        object.__setattr__(self, name, value)
+        # Setting the solver attaches its config so solver-specific fields
+        # resolve immediately (C3).  ``_reset_vals`` no longer has to be the
+        # only attach point, which keeps lightweight ``StdIntList(); .solver=…``
+        # construction working.
+        if name == "solver" and value:
+            self._sync_solver_config(value)
+
+    def _sync_solver_config(self, solver) -> None:
+        """Attach the config matching *solver* (C3).
+
+        Type-guarded: re-resolving ``HWAVE`` to ``UHFR`` / ``UHFK`` (which
+        share ``HWaveConfig``) keeps the already-populated config instead of
+        wiping it with a fresh one.  No-op for solvers with no registered
+        config.
+        """
+        from ..plugin import get_config_factory  # lazy: avoid import cycle
+        factory = get_config_factory(solver)
+        if factory is None:
+            return
+        cur = self.__dict__.get("_solver_cfg")
+        if cur is None or type(cur) is not factory:
+            object.__setattr__(self, "_solver_cfg", factory())
+
+
+# Names that belong to StdIntList itself (dataclass fields + C1 _delegate
+# façade properties) and must never be routed to the solver config.
+# Computed once at import; reflects whatever fields currently live on the
+# class, so it shrinks automatically as solver fields move out in C3-2..C3-5.
+import dataclasses as _dataclasses  # noqa: E402
+
+_STDI_OWN_FIELDS: frozenset[str] = frozenset(
+    {f.name for f in _dataclasses.fields(StdIntList)}
+    | {name for name, val in vars(StdIntList).items()
+       if isinstance(val, property)}
+)

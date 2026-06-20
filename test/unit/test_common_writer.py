@@ -87,9 +87,13 @@ def print_interactions(StdI):
 
 def _make_stdi_base(**overrides) -> StdIntList:
     """Create a minimal StdIntList with common fields."""
+    from stdface.core.stdface_main import _attach_solver_config
     StdI = StdIntList()
     StdI.nsite = overrides.get("nsite", 4)
     StdI.solver = overrides.get("solver", "HPhi")
+    # Attach the active solver config (C3) so solver-specific fields that
+    # moved off StdIntList resolve, mirroring the production reset path.
+    _attach_solver_config(StdI)
     StdI.model = overrides.get("model", "hubbard")
     StdI.lGC = overrides.get("lGC", 0)
     StdI.lBoost = overrides.get("lBoost", 0)

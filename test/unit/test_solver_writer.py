@@ -17,6 +17,7 @@ from stdface.solvers.mvmc import MVMCPlugin
 from stdface.solvers.uhf import UHFPlugin
 from stdface.solvers.hwave import UHFRPlugin, UHFKPlugin
 from stdface.core.stdface_vals import StdIntList
+from stdface.core.stdface_main import _attach_solver_config
 from stdface.lattice import chain_lattice as cl
 
 # Sentinel values matching the C code
@@ -27,8 +28,10 @@ NaN_c = complex(float("nan"), 0.0)
 
 def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
     """Create a minimal StdIntList ready for HPhi writer."""
+    from stdface.core.stdface_main import _attach_solver_config
     StdI = StdIntList()
     StdI.solver = "HPhi"
+    _attach_solver_config(StdI)  # C3: solver-specific fields live on the config
     StdI.pi = math.acos(-1.0)
     StdI.nsite = nsite
     StdI.model = "hubbard"
@@ -174,6 +177,9 @@ def _make_stdi_for_mvmc_write(
     """Build StdIntList for :meth:`MVMCPlugin.write` (1D Hubbard chain + subcell)."""
     StdI = _make_stdi_for_hphi(nsite=nsite)
     StdI.solver = "mVMC"
+    # Attach MVMCConfig (C3) so mVMC-only fields resolve off the config.
+    from stdface.core.stdface_main import _attach_solver_config
+    _attach_solver_config(StdI)
     StdI.lattice = "chain"
     StdI.model = "hubbard"
     L = nsite
@@ -217,8 +223,10 @@ def _make_stdi_for_mvmc_write(
 
 def _make_hwave_wannier_export_stdi(nsiteUC: int = 2, ncell: int = 2) -> StdIntList:
     """StdIntList for HWave Wannier export (geometry + empty interactions)."""
+    from stdface.core.stdface_main import _attach_solver_config
     s = StdIntList()
     s.solver = "HWAVE"
+    _attach_solver_config(s)  # C3: H-wave fields (fileprefix/...) live on the config
     s.NsiteUC = nsiteUC
     s.NCell = ncell
     s.fileprefix = ""
@@ -430,6 +438,7 @@ class TestUHFPlugin:
         """Test that UHFPlugin creates the expected set of files."""
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.solver = "UHF"
+        _attach_solver_config(StdI)
         StdI.outputmode = None
         plugin = get_plugin("UHF")
 
@@ -451,6 +460,7 @@ class TestUHFPlugin:
         from stdface.core.output import ExpertModeOutput
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.solver = "UHF"
+        _attach_solver_config(StdI)
         StdI.outputmode = None
         out = get_plugin("UHF").build_output(StdI)
         assert isinstance(out, ExpertModeOutput)
@@ -482,6 +492,7 @@ class TestHWaveSplit:
         """UHFR writes trans.def / greenone.def."""
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.solver = "UHFR"
+        _attach_solver_config(StdI)
         StdI.calcmode = "uhfr"
         StdI.outputmode = None
         plugin = get_plugin("UHFR")

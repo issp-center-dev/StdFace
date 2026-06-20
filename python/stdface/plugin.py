@@ -315,3 +315,29 @@ def _discover_plugins() -> None:
         # dependencies, or corrupted package). Plugin lookup will fail
         # with a helpful KeyError listing available plugins.
         pass
+
+
+# ---------------------------------------------------------------------------
+#  Solver config registry (C3: per-solver field containers)
+# ---------------------------------------------------------------------------
+#
+# Maps a *raw* solver name (incl. the pre-resolution ``HWAVE`` alias, which
+# shares ``UHFRPlugin``/``UHFKPlugin``'s config) to a zero-arg factory.  This
+# is separate from the plugin registry because the config must be attached to
+# StdIntList *before* solver-name resolution (``_reset_vals`` runs before
+# ``_resolve_solver_name``), when ``HWAVE`` has no registered plugin yet.
+# Solver modules populate it on import via :func:`register_config`.
+
+_config_factories: dict[str, object] = {}
+
+
+def register_config(name: str, factory) -> None:
+    """Register a zero-arg config factory for a (raw) solver name."""
+    _config_factories[name] = factory
+
+
+def get_config_factory(name: str):
+    """Return the config factory for *name*, or ``None`` if none registered."""
+    if name not in _config_factories:
+        _discover_plugins()
+    return _config_factories.get(name)

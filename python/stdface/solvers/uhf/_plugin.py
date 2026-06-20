@@ -5,8 +5,9 @@ and Expert-mode file writing.
 """
 from __future__ import annotations
 
-from ...plugin import ExpertModeSolverPlugin, register
+from ...plugin import ExpertModeSolverPlugin, register, register_config
 from ...core.stdface_vals import StdIntList, SolverType, NaN_i
+from .config import UHFConfig
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d,
     _grid3x3_keywords,
@@ -91,3 +92,4 @@ _RESET_ARRAYS: list[tuple[str, object]] = [
 
 # Auto-register on import
 register(UHFPlugin())
+register_config(SolverType.UHF, UHFConfig)
