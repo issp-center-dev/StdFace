@@ -958,41 +958,20 @@ class StdIntList:
     ExpandCoef: int | None = None
 
     # ------------------------------------------------------------------
-    #  mVMC fields
+    #  Sublattice / symmetry — shared by mVMC / UHF / HWAVE
     # ------------------------------------------------------------------
-    CParaFileHead: str | None = None
-    NVMCCalMode: int | None = None
-    NLanczosMode: int | None = None
-    NDataIdxStart: int | None = None
-    NDataQtySmp: int | None = None
-    NSPGaussLeg: int | None = None
+    # C3-4 moved the mVMC-unique fields (NVMC*/NSROpt*/DSROpt*/Orb/NSym/…)
+    # into MVMCConfig (solvers/mvmc/config.py).  The sublattice block below
+    # is shared with UHF/HWAVE and stays here until C3-5 removes it once all
+    # three solver configs carry their duplicated copies.
     NMPTrans: int | None = None
-    NSROptItrStep: int | None = None
-    NSROptItrSmp: int | None = None
-    NSROptFixSmp: int = 0
-    DSROptRedCut: float | None = None
-    DSROptStaDel: float | None = None
-    DSROptStepDt: float | None = None
-    NVMCWarmUp: int | None = None
-    NVMCInterval: int | None = None
-    NVMCSample: int | None = None
-    NExUpdatePath: int | None = None
     RndSeed: int | None = None
-    NSplitSize: int | None = None
-    NSPStot: int | None = None
-    NStore: int | None = None
-    NSRCG: int | None = None
-    ComplexType: int | None = None
     Lsub: int | None = None
     Wsub: int | None = None
     Hsub: int | None = None
     NCellsub: int = 0
     boxsub: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
     rboxsub: np.ndarray = field(default_factory=lambda: np.zeros((3, 3), dtype=int))
-    Orb: None = None
-    AntiOrb: None = None
-    NOrb: int = 0
-    NSym: int = 0
 
     # ------------------------------------------------------------------
     #  UHF / HWAVE fields

@@ -174,6 +174,9 @@ def _make_stdi_for_mvmc_write(
     """Build StdIntList for :meth:`MVMCPlugin.write` (1D Hubbard chain + subcell)."""
     StdI = _make_stdi_for_hphi(nsite=nsite)
     StdI.solver = "mVMC"
+    # Attach MVMCConfig (C3) so mVMC-only fields resolve off the config.
+    from stdface.core.stdface_main import _attach_solver_config
+    _attach_solver_config(StdI)
     StdI.lattice = "chain"
     StdI.model = "hubbard"
     L = nsite

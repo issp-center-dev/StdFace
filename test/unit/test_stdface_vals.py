@@ -302,14 +302,25 @@ class TestStdIntListSolverFields:
         assert hasattr(s, "SpectrumQ")
         assert s.SpectrumQ.shape == (3,)
 
-    def test_mvmc_fields_exist(self):
-        """mVMC-specific fields should exist."""
+    def test_mvmc_fields_resolve_via_config(self):
+        """mVMC-unique fields moved to MVMCConfig (C3-4).
+
+        They are absent on a bare StdIntList; an mVMC run resolves them
+        through the attached config.
+        """
+        from stdface.core.stdface_main import _reset_vals
+
+        bare = StdIntList()
+        assert not hasattr(bare, "CParaFileHead")
+        assert not hasattr(bare, "NVMCCalMode")
+        assert not hasattr(bare, "Orb")
+
         s = StdIntList()
-        assert hasattr(s, "CParaFileHead")
-        assert hasattr(s, "NVMCCalMode")
-        assert hasattr(s, "NSROptItrStep")
-        assert hasattr(s, "Orb")
+        s.solver = "mVMC"
+        _reset_vals(s)
+        assert s.NVMCCalMode is None
         assert s.Orb is None
+        assert s.NSROptFixSmp == 0  # non-None default preserved
 
     def test_uhf_hwave_fields_exist(self):
         """UHF/HWAVE shared fields should exist."""
