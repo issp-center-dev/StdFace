@@ -45,6 +45,23 @@ Both registries use **auto-registration**: when a module is imported it creates
 a plugin instance and registers it.  No central dispatch table needs to be
 edited.
 
+Data Model: ``StdIntList`` and Per-Solver Configs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``StdIntList`` (``core/stdface_vals.py``) is the parameter structure threaded
+through the run.  It holds only **solver-independent** data — lattice geometry,
+model couplings, Hamiltonian term lists and common selectors — grouped into
+sub-objects (``_lattice`` / ``_model`` / ``_terms`` / ``_w90``) reached through
+façade properties.
+
+**Solver-specific** parameters live in a per-solver *config* dataclass
+(``solvers/<name>/config.py``) registered with ``register_config``.  Setting
+``StdI.solver`` attaches the matching config to ``StdI._solver_cfg``; reads and
+writes of solver fields (``StdI.method``, ``StdI.NVMCCalMode``, …) are routed to
+it by ``StdIntList.__getattr__`` / ``__setattr__``.  Consequently ``core/``
+contains no solver-specific fields, keyword tables or reset tables, and a new
+solver is fully contained under ``solvers/<name>/``.
+
 Part 1: Adding a New Lattice
 -----------------------------
 
@@ -60,80 +77,75 @@ Create ``python/stdface/lattice/dice.py``:
 
 .. code-block:: python
 
-   """
-   Standard mode for the dice (T3) lattice.
-
-   License
-   -------
-   HPhi-mVMC-StdFace - Common input generator
-   Copyright (C) 2015 The University of Tokyo
-   (GPL v3)
-   """
+   """Standard mode for the dice (T3) lattice."""
    from __future__ import annotations
 
+   import logging
    import math
-   import numpy as np
 
    from ..core.stdface_vals import StdIntList, ModelType
-   from ..core.param_check import (
-       print_val_d, print_val_i,
-       not_used_j, not_used_d, not_used_i,
-   )
+   from ..core.param_check import print_val_d, print_val_i, not_used_d
    from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
    from .interaction_builder import (
        compute_max_interactions, malloc_interactions,
        add_neighbor_interaction, add_local_terms,
    )
-   from .site_util import init_site, set_label, set_local_spin_flags, lattice_gp
+   from .site_util import (
+       init_site, set_local_spin_flags, new_gnuplot_buffer, GnuplotData,
+   )
+
+   logger = logging.getLogger(__name__)
 
 
-   def dice(StdI: StdIntList) -> None:
+   def dice(StdI: StdIntList) -> "GnuplotData | None":
        """Set up the Hamiltonian for the dice (T3) lattice."""
-       with lattice_gp(StdI) as fp:
+       # gnuplot buffer is None unless this lattice emits a lattice.gp preview
+       buf = new_gnuplot_buffer(StdI)
 
-           # --- (1) Geometry ---
-           StdI.NsiteUC = 3  # 3 sites per unit cell
+       # --- (1) Geometry ---
+       StdI.NsiteUC = 3  # 3 sites per unit cell
+       logger.info("  @ Lattice Size & Shape\n")
 
-           print("  @ Lattice Size & Shape\n")
+       StdI.a = print_val_d("a", StdI.a, 1.0)
+       StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
+       StdI.length[1] = print_val_d("Llength", StdI.length[1], StdI.a)
+       StdI.direct[0, 0] = print_val_d("Wx", StdI.direct[0, 0], StdI.length[0])
+       StdI.direct[0, 1] = print_val_d("Wy", StdI.direct[0, 1], 0.0)
+       StdI.direct[1, 0] = print_val_d("Lx", StdI.direct[1, 0], StdI.length[1] * 0.5)
+       StdI.direct[1, 1] = print_val_d("Ly", StdI.direct[1, 1],
+                                       StdI.length[1] * math.sqrt(3.0) / 2.0)
 
-           StdI.a = print_val_d("a", StdI.a, 1.0)
-           StdI.length[0] = print_val_d("Wlength", StdI.length[0], StdI.a)
-           StdI.length[1] = print_val_d("Llength", StdI.length[1], StdI.a)
-           StdI.direct[0, 0] = print_val_d("Wx", StdI.direct[0, 0], StdI.length[0])
-           StdI.direct[0, 1] = print_val_d("Wy", StdI.direct[0, 1], 0.0)
-           StdI.direct[1, 0] = print_val_d("Lx", StdI.direct[1, 0],
-                                             StdI.length[1] * 0.5)
-           StdI.direct[1, 1] = print_val_d("Ly", StdI.direct[1, 1],
-                                             StdI.length[1] * math.sqrt(3.0) / 2.0)
+       StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)
+       StdI.phase[1] = print_val_d("phase1", StdI.phase[1], 0.0)
 
-           StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)
-           StdI.phase[1] = print_val_d("phase1", StdI.phase[1], 0.0)
+       init_site(StdI, 2)
+       StdI.tau[0, :] = [0.0, 0.0, 0.0]
+       StdI.tau[1, :] = [1.0 / 3.0, 1.0 / 3.0, 0.0]
+       StdI.tau[2, :] = [2.0 / 3.0, 2.0 / 3.0, 0.0]
 
-           init_site(StdI, fp, 2)
+       # --- (2) Hamiltonian parameters ---
+       logger.info("\n  @ Hamiltonian \n")
+       # ... validate and store parameters, same pattern as honeycomb.py ...
 
-           # tau positions for 3 sites in the unit cell
-           StdI.tau[0, :] = [0.0, 0.0, 0.0]
-           StdI.tau[1, :] = [1.0 / 3.0, 1.0 / 3.0, 0.0]
-           StdI.tau[2, :] = [2.0 / 3.0, 2.0 / 3.0, 0.0]
+       # --- (3) Local spin flags ---
+       logger.info("\n  @ Numerical conditions\n")
+       set_local_spin_flags(StdI, StdI.NsiteUC * StdI.NCell)
 
-           # --- (2) Hamiltonian parameters ---
-           print("\n  @ Hamiltonian \n")
-           # ... (validate and set parameters, same pattern as kagome.py)
+       # --- (4) Allocate interactions (n_bonds = neighbour bonds per cell) ---
+       ntransMax = compute_max_interactions(StdI, n_bonds=6)
+       malloc_interactions(StdI, ntransMax)
 
-           # --- (3) Local spin flags ---
-           print("\n  @ Numerical conditions\n")
-           set_local_spin_flags(StdI, StdI.W * StdI.L)
+       # --- (5) Build interactions ---
+       for kCell in range(StdI.NCell):
+           cell_w = StdI.Cell[kCell, 0]
+           cell_l = StdI.Cell[kCell, 1]
+           isite = StdI.NsiteUC * kCell
+           for uc_i in range(StdI.NsiteUC):
+               add_local_terms(StdI, isite + uc_i, isite + uc_i)
+           # for each bond: add_neighbor_interaction(
+           #     StdI, buf, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
 
-           # --- (4) Allocate interactions ---
-           ntransMax, nintrMax = compute_max_interactions(StdI, nbond=6)
-           malloc_interactions(StdI, ntransMax, nintrMax)
-
-           # --- (5) Build interactions ---
-           for iW in range(StdI.W):
-               for iL in range(StdI.L):
-                   isite = iW + iL * StdI.W
-                   add_local_terms(StdI, isite, iL)
-                   # add_neighbor_interaction(StdI, fp, iW, iL, ...)
+       return buf.build(StdI) if buf else None
 
 
    # ---------------------------------------------------------------------------
@@ -158,8 +170,8 @@ Create ``python/stdface/lattice/dice.py``:
        def ndim(self) -> int:
            return 2
 
-       def setup(self, StdI: StdIntList) -> None:
-           dice(StdI)
+       def setup(self, StdI: StdIntList) -> "GnuplotData | None":
+           return dice(StdI)
 
 
    register_lattice(DicePlugin())
@@ -240,6 +252,11 @@ Part 2: Adding a New Solver
 Example: Adding a "MySolver" Solver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+A solver is **self-contained**: every solver-specific parameter lives in a
+per-solver *config* dataclass (``config.py``), and the plugin
+(``_plugin.py``) owns the input keyword/reset tables and the output.  Nothing
+in ``core/`` has to be edited to add a solver.
+
 Step 1: Create the solver package
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -247,25 +264,52 @@ Step 1: Create the solver package
 
    python/stdface/solvers/mysolver/
      __init__.py
-     _plugin.py
-     writer.py       # (optional) solver-specific output functions
+     config.py       # per-solver field container (a @dataclass)
+     _plugin.py      # plugin: keyword/reset tables + output
 
-Step 2: Implement the plugin
+Step 2: Declare the solver's fields (config)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Solver-specific fields no longer live on ``StdIntList``; each solver owns a
+``@dataclass`` that is attached to ``StdI`` for the duration of a run.  Create
+``python/stdface/solvers/mysolver/config.py``:
+
+.. code-block:: python
+
+   """MySolver field container."""
+   from __future__ import annotations
+
+   from dataclasses import dataclass
+
+
+   @dataclass
+   class MySolverConfig:
+       MaxIter: int | None = None
+       Threshold: float | None = None
+       OutputFile: str | None = None
+
+Unset optional fields use ``None`` as the sentinel (numpy integer arrays use
+the ``NaN_i`` sentinel instead, since ``None`` cannot be stored in them).
+
+Step 3: Implement the plugin
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create ``python/stdface/solvers/mysolver/_plugin.py``:
+Create ``python/stdface/solvers/mysolver/_plugin.py``.  Reading or writing
+``StdI.MaxIter`` transparently reaches the attached ``MySolverConfig`` (via
+``StdIntList.__getattr__`` / ``__setattr__``):
 
 .. code-block:: python
 
    """MySolver plugin."""
    from __future__ import annotations
 
-   from ...plugin import SolverPlugin, register
-   from ...core.stdface_vals import StdIntList, NaN_i, NaN_d
+   from ...plugin import SolverPlugin, register, register_config
+   from ...core.stdface_vals import StdIntList
    from ...core.keyword_parser import (
        store_with_check_dup_i, store_with_check_dup_d,
        store_with_check_dup_s,
    )
+   from .config import MySolverConfig
 
 
    class MySolverPlugin(SolverPlugin):
@@ -285,38 +329,39 @@ Create ``python/stdface/solvers/mysolver/_plugin.py``:
 
        @property
        def reset_scalars(self) -> list[tuple[str, object]]:
-           return [
-               ("MaxIter", NaN_i),
-               ("Threshold", NaN_d),
-           ]
+           return [("MaxIter", None), ("Threshold", None)]
 
        @property
        def reset_arrays(self) -> list[tuple[str, object]]:
            return []
 
-       def write_solver_specific(self, StdI: StdIntList) -> None:
-           _write_mysolver_config(StdI)
-
-       def write_green(self, StdI: StdIntList) -> None:
-           from ...writer.common_writer import print_1_green
-           print_1_green(StdI)
-
-       def post_lattice(self, StdI: StdIntList) -> None:
-           if StdI.MaxIter == NaN_i:
+       def set_defaults(self, StdI: StdIntList) -> None:
+           if StdI.MaxIter is None:
                StdI.MaxIter = 500
 
+       def write(self, StdI: StdIntList) -> None:
+           with open("mysolver_config.def", "w") as fp:
+               fp.write(f"MaxIter = {StdI.MaxIter}\n")
+               fp.write(f"Threshold = {StdI.Threshold}\n")
+               if StdI.OutputFile is not None:
+                   fp.write(f"OutputFile = {StdI.OutputFile}\n")
 
-   def _write_mysolver_config(StdI: StdIntList) -> None:
-       with open("mysolver_config.def", "w") as fp:
-           fp.write(f"MaxIter = {StdI.MaxIter}\n")
-           fp.write(f"Threshold = {StdI.Threshold}\n")
-           if hasattr(StdI, 'OutputFile'):
-               fp.write(f"OutputFile = {StdI.OutputFile}\n")
 
-
+   # Auto-register on import: plugin under its name, config under the same name.
    register(MySolverPlugin())
+   register_config("MySolver", MySolverConfig)
 
-Step 3: Make it discoverable
+.. note::
+
+   Solvers that emit the standard HPhi/mVMC-style files (``locspn.def`` /
+   ``trans.def`` / ``modpara.def`` / ``namelist.def`` / Green's functions)
+   should subclass :class:`ExpertModeSolverPlugin` instead of
+   ``SolverPlugin`` and implement :meth:`modpara_lines` (and optionally
+   ``namelist_entries`` / ``has_two_body_green`` / ``write_solver_files``);
+   the base class assembles them into an ``ExpertModeOutput`` and writes it.
+   See ``solvers/uhf/`` for a minimal example.
+
+Step 4: Make it discoverable
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Create ``python/stdface/solvers/mysolver/__init__.py``:
@@ -336,7 +381,7 @@ Edit ``python/stdface/solvers/__init__.py``:
    from . import hphi, mvmc, uhf, hwave  # noqa: F401
    from . import mysolver  # noqa: F401  <-- Add this line
 
-Step 4: Add tests
+Step 5: Add tests
 ~~~~~~~~~~~~~~~~~
 
 Create ``test/unit/test_mysolver_plugin.py``:
@@ -348,29 +393,26 @@ Create ``test/unit/test_mysolver_plugin.py``:
 
    import pytest
    from stdface.plugin import get_plugin, SolverPlugin
+   from stdface.core.stdface_vals import StdIntList
 
 
    class TestMySolverPlugin:
 
        def test_registered(self):
-           plugin = get_plugin("MySolver")
-           assert isinstance(plugin, SolverPlugin)
-
-       def test_name(self):
-           assert get_plugin("MySolver").name == "MySolver"
+           assert isinstance(get_plugin("MySolver"), SolverPlugin)
 
        def test_keyword_table(self):
-           plugin = get_plugin("MySolver")
-           assert "maxiter" in plugin.keyword_table
-           assert "threshold" in plugin.keyword_table
+           kw = get_plugin("MySolver").keyword_table
+           assert "maxiter" in kw and "threshold" in kw
 
-       def test_reset_scalars(self):
-           plugin = get_plugin("MySolver")
-           names = [name for name, _ in plugin.reset_scalars]
-           assert "MaxIter" in names
-           assert "Threshold" in names
+       def test_config_attached_by_solver(self):
+           # Setting the solver auto-attaches MySolverConfig; its fields resolve.
+           s = StdIntList()
+           s.solver = "MySolver"
+           s.MaxIter = 10
+           assert s.MaxIter == 10
 
-Step 5: Use it
+Step 6: Use it
 ~~~~~~~~~~~~~~
 
 .. code-block:: bash
@@ -408,7 +450,7 @@ Defined in ``python/stdface/lattice/__init__.py``.
    * - ``setup(StdI)``
      - method
      - Yes
-     - Build lattice geometry and interactions
+     - Build geometry/interactions; return ``GnuplotData | None``
    * - ``boost(StdI)``
      - method
      - No
@@ -419,7 +461,8 @@ Registration: call ``register_lattice(MyPlugin())`` at module level.
 SolverPlugin
 ^^^^^^^^^^^^
 
-Defined in ``python/stdface/plugin.py``.
+Defined in ``python/stdface/plugin.py``.  A solver implements the four
+required members plus ``write``; the optional hooks default to no-ops.
 
 .. list-table::
    :header-rows: 1
@@ -440,67 +483,93 @@ Defined in ``python/stdface/plugin.py``.
    * - ``reset_scalars``
      - ``list[tuple]`` property
      - Yes
-     - Scalar field reset table
+     - Scalar field reset table (``(name, value)``)
    * - ``reset_arrays``
      - ``list[tuple]`` property
      - Yes
-     - Array field reset table
+     - Array-fill reset table (``(name, fill_value)``)
    * - ``write(StdI)``
      - method
-     - No
-     - Template method (calls steps below)
-   * - ``write_locspn(StdI)``
+     - Yes
+     - Emit this solver's output files
+   * - ``set_defaults(StdI)``
      - method
      - No
-     - Write ``locspn.def``
-   * - ``write_trans(StdI)``
-     - method
-     - No
-     - Write ``trans.def``
-   * - ``write_interactions(StdI)``
-     - method
-     - No
-     - Write interaction files
-   * - ``check_and_write_modpara(StdI)``
-     - method
-     - No
-     - Write ``modpara.def``
-   * - ``write_solver_specific(StdI)``
-     - method
-     - No
-     - Solver-specific files
-   * - ``write_green(StdI)``
-     - method
-     - No
-     - Write Green's function files
-   * - ``write_namelist(StdI)``
-     - method
-     - No
-     - Write ``namelist.def``
+     - Apply default parameter values (called from ``check_mod_para``)
    * - ``post_lattice(StdI)``
      - method
      - No
-     - Hook after lattice construction
+     - Hook after lattice construction (e.g. HPhi Boost / LargeValue)
+   * - ``init_fields(StdI)``
+     - method
+     - No
+     - Hook to attach extra dynamic attributes
+   * - ``validate(StdI)``
+     - method
+     - No
+     - Reject unsupported parameter combinations (raise ``ValueError``)
 
-Registration: call ``register(MyPlugin())`` at module level.
+Registration: call ``register(MyPlugin())`` and ``register_config("Name",
+MyConfig)`` at module level.
 
-Template Method Flow (SolverPlugin.write)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ExpertModeSolverPlugin
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Base class for solvers that emit the HPhi/mVMC-style files (HPhi, mVMC, UHF).
+It implements ``write`` via ``build_output`` and adds:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 10 45
+
+   * - Member
+     - Type
+     - Required
+     - Description
+   * - ``modpara_lines(StdI)``
+     - method
+     - Yes
+     - Solver-specific body lines of ``modpara.def``
+   * - ``namelist_entries(StdI)``
+     - method
+     - No
+     - Extra ``(keyword, filename)`` namelist entries (default: none)
+   * - ``has_two_body_green(StdI)``
+     - method
+     - No
+     - List ``greentwo.def`` in the namelist (default: ``True``)
+   * - ``write_solver_files(StdI)``
+     - method
+     - No
+     - Emit solver-specific extra files (e.g. mVMC variational files)
+   * - ``build_output(StdI)``
+     - method
+     - No
+     - Assemble an ``ExpertModeOutput`` (override for a custom container)
+
+Output Flow (ExpertModeSolverPlugin)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Output is built into a data container first, then written — there is no
+per-file template method.  ``write()`` calls ``build_output()``:
 
 .. code-block:: text
 
-   write()
-     |-- write_locspn()              # locspn.def
-     |-- write_trans()               # trans.def
-     |-- write_interactions()        # coulombinter.def, etc.
-     |-- check_and_write_modpara()   # modpara.def
-     |-- write_solver_specific()     # solver-specific files
-     |-- check_output_mode()         # validate output settings
-     |-- write_green()               # greenone.def, greentwo.def
-     |-- write_namelist()            # namelist.def
+   build_output()                     # -> ExpertModeOutput
+     |-- check_mod_para() / set_defaults()
+     |-- build_loc_spn()              # locspn.def
+     |-- build_trans()                # trans.def
+     |-- build_interactions()         # coulomb*/hund/exchange/... (sets L* flags)
+     |-- build_modpara()              # modpara.def
+     |-- build_green_one() / build_green_two()
+     |-- write_solver_files()         # solver-specific extra files
+     |-- build_namelist()             # namelist.def
+   write() = build_output(StdI).write()
 
-Override individual steps to customise output.  Override ``write()`` entirely
-for a completely different output sequence.
+A plain ``SolverPlugin`` (no modpara/namelist) just overrides ``write``
+directly, or builds its own output container.  See ``solvers/hwave/`` for a
+plugin that returns either an ``ExpertModeOutput`` (UHFR ``.def``) or a
+``WannierModeOutput`` (UHFK Wannier90) depending on ``calcmode``.
 
 Existing Plugins Reference
 --------------------------
@@ -591,4 +660,9 @@ Solver Plugins
      - ``UHF``
    * - ``HWavePlugin``
      - ``solvers/hwave/_plugin.py``
-     - ``HWAVE``
+     - ``HWAVE`` (also ``UHFR`` / ``UHFK``)
+
+Each solver also has a ``config.py`` (``HPhiConfig`` / ``MVMCConfig`` /
+``UHFConfig`` / ``HWaveConfig``).  ``HWavePlugin`` is registered under
+``HWAVE`` plus the ``UHFR`` / ``UHFK`` aliases and picks its output mode
+(real-space ``.def`` vs Wannier90) from ``calcmode`` at write time.

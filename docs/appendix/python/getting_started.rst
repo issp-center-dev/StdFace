@@ -46,14 +46,24 @@ The input file format is identical to the C version (see :doc:`/user/reference/i
 Python API
 ^^^^^^^^^^
 
-.. code-block:: python
+The simplest entry point mirrors the command line and writes files to the
+current directory:
 
-   import sys
-   sys.path.insert(0, "python")
+.. code-block:: python
 
    from stdface.core.stdface_main import stdface_main
 
    stdface_main("stan.in", solver="HPhi")
+
+For library use, ``generate()`` returns the output as an object and can write
+to a chosen directory (or not write at all):
+
+.. code-block:: python
+
+   from stdface.core.stdface_main import generate
+
+   output = generate("stan.in", solver="HPhi", output_dir="run1")
+   data = output.to_dict()        # output_dir=None to skip writing files
 
 Running Tests
 -------------

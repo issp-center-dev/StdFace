@@ -60,6 +60,12 @@ self-registering modules discovered at import time.  A new solver or lattice
 can be added without touching existing code — only a new module and an entry in
 the discovery list are required.
 
+Each solver is **self-contained** under ``solvers/<name>/``: a config
+dataclass (``config.py``) holds its parameters and the plugin (``_plugin.py``)
+owns its input keyword/reset tables and output.  ``core/`` carries no
+solver-specific data; solver fields are reached through ``StdIntList``'s
+delegation to the active config.
+
 See :doc:`plugin_tutorial` for step-by-step instructions.
 
 Source-to-Module Mapping
@@ -105,4 +111,4 @@ Python counterparts.
    * - ``Wannier90.c``
      - ``stdface/lattice/wannier90.py``
    * - ``export_wannier90.c``
-     - ``stdface/writer/export_wannier90.py``
+     - ``stdface/solvers/hwave/export_wannier90.py``
