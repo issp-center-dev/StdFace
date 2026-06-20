@@ -9,8 +9,6 @@ build_xsf / XsfData
     Build the ``lattice.xsf`` (XCrysDen) data and write it.
 build_geometry / GeometryData
     Build the ``geometry.dat`` data and write it.
-print_xsf / print_geometry
-    Backward-compatible thin wrappers over the ``build_*`` builders.
 
 License
 -------
@@ -58,15 +56,6 @@ def _cell_diff(Cell, iCell: int, jCell: int) -> list[int]:
 _XSF_CONVVEC_LATTICES = (
     "orthorhombic", "face-centeredorthorhombic",
     "fcorthorhombic", "fco", "pyrochlore")
-
-
-def print_xsf(StdI: StdIntList) -> None:
-    """Print lattice.xsf file (XCrysDen format).
-
-    Thin wrapper kept for backward compatibility; delegates to
-    :func:`build_xsf` and writes the result.
-    """
-    build_xsf(StdI).write()
 
 
 @dataclass
@@ -146,33 +135,6 @@ def build_xsf(StdI: StdIntList) -> "XsfData":
             coords.append((float(vec[0]), float(vec[1]), float(vec[2])))
 
     return XsfData(primvec=primvec, convvec=convvec, coords=coords)
-
-
-def print_geometry(StdI: StdIntList) -> None:
-    """Print geometry.dat for post-processing of correlation functions.
-
-    Writes a ``geometry.dat`` file containing direct lattice vectors,
-    boundary phases, the supercell box matrix, and site coordinates
-    relative to the first cell.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        Model parameter structure.  The following fields are read:
-
-        - ``solver`` : str -- solver name.
-        - ``calcmode`` : str -- calculation mode (HWAVE only).
-        - ``direct`` : ndarray (3x3) -- direct lattice vectors.
-        - ``phase`` : ndarray (3,) -- boundary phase angles.
-        - ``box`` : ndarray (3x3) -- supercell box matrix.
-        - ``NCell`` : int -- number of unit cells.
-        - ``NsiteUC`` : int -- sites per unit cell.
-        - ``Cell`` : ndarray (NCell, 3) -- cell fractional coordinates.
-        - ``model`` : str -- model name (``"kondo"`` doubles sites).
-    """
-    data = build_geometry(StdI)
-    if data is not None:
-        data.write()
 
 
 @dataclass

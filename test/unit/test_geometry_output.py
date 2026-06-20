@@ -1,6 +1,6 @@
 """Unit tests for geometry_output module.
 
-Tests for ``print_xsf`` and ``print_geometry``.
+Tests for ``build_xsf`` / ``build_geometry`` and their data classes.
 """
 from __future__ import annotations
 
@@ -13,9 +13,21 @@ import pytest
 
 from stdface.core.stdface_vals import StdIntList
 from stdface.lattice.geometry_output import (
-    print_xsf, print_geometry, _cell_diff, build_geometry, GeometryData,
-    build_xsf, XsfData,
+    _cell_diff, build_geometry, GeometryData, build_xsf, XsfData,
 )
+
+
+# The production print_xsf / print_geometry entry points were removed (they
+# were thin wrappers over build_*().write()).  These local shims preserve the
+# behaviour the content tests below exercise.
+def print_xsf(StdI):
+    build_xsf(StdI).write()
+
+
+def print_geometry(StdI):
+    data = build_geometry(StdI)
+    if data is not None:
+        data.write()
 
 
 def _make_stdi(
@@ -297,20 +309,6 @@ class TestCellDiff:
         diff = _cell_diff(Cell, 1, 0)
         # int() truncates towards zero
         assert diff == [1, 2, 3]
-
-
-class TestBackwardCompatibility:
-    """Test that functions are still importable from stdface_model_util."""
-
-    def test_import_from_stdface_model_util(self):
-        """Test that both functions are re-exported."""
-        from stdface.core.stdface_model_util import (
-            print_xsf as pxsf,
-            print_geometry as pg,
-        )
-        from stdface.lattice.geometry_output import print_xsf, print_geometry
-        assert pxsf is print_xsf
-        assert pg is print_geometry
 
 
 class TestGeometryDataBuildWrite:

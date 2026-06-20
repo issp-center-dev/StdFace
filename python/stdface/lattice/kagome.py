@@ -31,7 +31,7 @@ from .interaction_builder import (
 )
 from .site_util import (
     init_site, set_local_spin_flags,
-    new_gnuplot_buffer, GnuplotData, print_geometry,
+    new_gnuplot_buffer, GnuplotData,
 )
 from .boost_output import (
     write_boost_mag_field, write_boost_j_symmetric,

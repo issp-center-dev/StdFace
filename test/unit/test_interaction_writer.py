@@ -1,6 +1,6 @@
 """Unit tests for the interaction_writer module.
 
-Tests for the :func:`print_interactions` function which was extracted from
+Tests for the :func:`build_interactions` function which was extracted from
 ``common_writer.py`` into its own module.
 """
 from __future__ import annotations
@@ -10,7 +10,6 @@ import tempfile
 
 from stdface.core.stdface_vals import StdIntList
 from stdface.writer.interaction_writer import (
-    print_interactions,
     build_interactions,
     InteractionData,
     InterAllData,
@@ -23,6 +22,14 @@ from stdface.writer.interaction_writer import (
     _reorder_interall_hermitian,
     _remove_interall_diagonal,
 )
+
+
+# print_interactions (production) was removed; it was a thin wrapper that
+# wrote every build_interactions() result.  This local shim preserves the
+# behaviour exercised by the tests below.
+def print_interactions(StdI):
+    for data in build_interactions(StdI):
+        data.write()
 
 
 # Sentinel values matching what _reset_vals sets at runtime

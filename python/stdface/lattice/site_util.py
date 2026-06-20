@@ -44,7 +44,6 @@ import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, AMPLITUDE_EPS
 from ..core.param_check import print_val_i
-from .geometry_output import print_geometry  # noqa: F401  (re-exported)
 
 
 logger = logging.getLogger(__name__)
