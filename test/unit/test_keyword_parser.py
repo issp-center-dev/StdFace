@@ -18,21 +18,36 @@ from stdface.core.keyword_parser import (
     store_with_check_dup_d,
     store_with_check_dup_c,
     parse_common_keyword,
-    parse_solver_keyword,
     _COMMON_KEYWORDS,
-    _HPHI_KEYWORDS,
-    _MVMC_KEYWORDS,
-    _UHF_KEYWORDS,
-    _HWAVE_KEYWORDS,
-    _UHF_BASE_KEYWORDS,
-    _BOXSUB_KEYWORDS,
-    _SOLVER_KEYWORD_TABLES,
     _apply_keyword_table,
     _j_matrix_keywords,
     _grid3x3_keywords,
     NaN_i,
 )
 from stdface.core.stdface_vals import StdIntList, SolverType
+from stdface.plugin import get_plugin
+from stdface.core.stdface_main import _parse_solver_keyword_via_plugin
+
+# C4-3: solver keyword tables moved from core into the solver plugins.  These
+# shims point the existing tests at the live plugin tables (and the plugin
+# dispatch), so the tests now verify the real source instead of the removed
+# core fallback tables.
+_HPHI_KEYWORDS = get_plugin("HPhi").keyword_table
+_MVMC_KEYWORDS = get_plugin("mVMC").keyword_table
+_UHF_KEYWORDS = get_plugin("UHF").keyword_table
+_HWAVE_KEYWORDS = get_plugin("HWAVE").keyword_table
+_UHF_BASE_KEYWORDS = _UHF_KEYWORDS  # UHF table == the shared UHF base
+_BOXSUB_KEYWORDS = _grid3x3_keywords(
+    "{a}{c}sub", "boxsub", store_with_check_dup_i, int)
+_SOLVER_KEYWORD_TABLES = {
+    "HPhi": _HPHI_KEYWORDS, "mVMC": _MVMC_KEYWORDS,
+    "UHF": _UHF_KEYWORDS, "HWAVE": _HWAVE_KEYWORDS,
+}
+
+
+def parse_solver_keyword(keyword, value, StdI, solver):
+    """Test shim: dispatch a solver keyword via the plugin registry."""
+    return _parse_solver_keyword_via_plugin(keyword, value, StdI, solver)
 
 import numpy as np
 
@@ -532,11 +547,11 @@ class TestParseSolverKeyword:
         assert result is True
         assert StdI.calcmode == "uhfr"
 
-    def test_unknown_solver_returns_false(self):
-        """Test that an unknown solver returns False."""
+    def test_unknown_solver_raises(self):
+        """C4-3: an unknown solver now fails fast (no silent core fallback)."""
         StdI = _make_stdi("HPhi")
-        result = parse_solver_keyword("method", "lanczos", StdI, "unknown")
-        assert result is False
+        with pytest.raises(KeyError):
+            parse_solver_keyword("method", "lanczos", StdI, "unknown")
 
 
 # =====================================================================

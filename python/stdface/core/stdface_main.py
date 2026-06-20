@@ -48,7 +48,6 @@ from ..writer.common_writer import (
 )
 from .keyword_parser import (
     parse_common_keyword as _parse_common_keyword,
-    parse_solver_keyword as _parse_solver_keyword,
     _apply_keyword_table,
 )
 from .input_source import StanFileSource
@@ -319,96 +318,6 @@ _COMMON_RESET_ARRAYS: list[tuple[str, object]] = [
 """Common array-fill field resets — ``getattr(StdI, name)[...] = value``."""
 
 
-_UHF_BASE_SCALARS: list[tuple[str, object]] = [
-    ("NMPTrans", None),
-    ("RndSeed", None),
-    ("mix", None),
-    ("eps", None),
-    ("eps_slater", None),
-    ("Iteration_max", None),
-    ("Hsub", None),
-    ("Lsub", None),
-    ("Wsub", None),
-]
-
-_UHF_BASE_ARRAYS: list[tuple[str, object]] = [
-    ("boxsub", NaN_i),
-]
-
-_SOLVER_RESET_SCALARS: dict[SolverType, list[tuple[str, object]]] = {
-    SolverType.HPhi: [
-        ("LargeValue", None),
-        ("OmegaMax", None),
-        ("OmegaMin", None),
-        ("OmegaOrg", None),
-        ("OmegaIm", None),
-        ("Nomega", None),
-        ("FlgTemp", 1),
-        ("Lanczos_max", None),
-        ("initial_iv", None),
-        ("nvec", None),
-        ("exct", None),
-        ("LanczosEps", None),
-        ("LanczosTarget", None),
-        ("NumAve", None),
-        ("ExpecInterval", None),
-        ("dt", None),
-        ("tdump", None),
-        ("tshift", None),
-        ("freq", None),
-        ("Uquench", None),
-        ("ExpandCoef", None),
-        ("NGPU", None),
-        ("Scalapack", None),
-    ],
-    SolverType.mVMC: [
-        ("NVMCCalMode", None),
-        ("NLanczosMode", None),
-        ("NDataIdxStart", None),
-        ("NDataQtySmp", None),
-        ("NSPGaussLeg", None),
-        ("NSPStot", None),
-        ("NMPTrans", None),
-        ("NSROptItrStep", None),
-        ("NSROptItrSmp", None),
-        ("DSROptRedCut", None),
-        ("DSROptStaDel", None),
-        ("DSROptStepDt", None),
-        ("NVMCWarmUp", None),
-        ("NVMCInterval", None),
-        ("NVMCSample", None),
-        ("NExUpdatePath", None),
-        ("RndSeed", None),
-        ("NSplitSize", None),
-        ("NStore", None),
-        ("NSRCG", None),
-        ("ComplexType", None),
-        ("Hsub", None),
-        ("Lsub", None),
-        ("Wsub", None),
-    ],
-    SolverType.UHF: _UHF_BASE_SCALARS,
-    SolverType.HWAVE: _UHF_BASE_SCALARS + [
-        ("export_all", None),
-        ("lattice_gp", None),
-    ],
-}
-"""Scalar field resets for each solver — ``setattr(StdI, name, value)``."""
-
-_SOLVER_RESET_ARRAYS: dict[SolverType, list[tuple[str, object]]] = {
-    SolverType.HPhi: [
-        ("SpectrumQ", np.nan),
-        ("VecPot", np.nan),
-    ],
-    SolverType.mVMC: [
-        ("boxsub", NaN_i),
-    ],
-    SolverType.UHF: _UHF_BASE_ARRAYS,
-    SolverType.HWAVE: _UHF_BASE_ARRAYS,
-}
-"""Array-fill field resets for each solver — ``getattr(StdI, name)[...] = value``."""
-
-
 def _apply_field_resets(StdI: StdIntList, solver: SolverType) -> None:
     """Apply solver-specific field resets from the plugin registry.
 
@@ -420,18 +329,10 @@ def _apply_field_resets(StdI: StdIntList, solver: SolverType) -> None:
         The solver whose field-reset tables to apply.
     """
     from ..plugin import get_plugin
-    try:
-        plugin = get_plugin(solver)
-        scalars = plugin.reset_scalars
-        arrays = plugin.reset_arrays
-    except KeyError:
-        # No registered plugin (e.g. HWAVE before _resolve_solver_name).
-        # Fall back to the legacy reset tables.
-        scalars = _SOLVER_RESET_SCALARS.get(solver, [])
-        arrays = _SOLVER_RESET_ARRAYS.get(solver, [])
-    for name, value in scalars:
+    plugin = get_plugin(solver)
+    for name, value in plugin.reset_scalars:
         setattr(StdI, name, value)
-    for name, value in arrays:
+    for name, value in plugin.reset_arrays:
         arr = getattr(StdI, name)
         arr[...] = value
 
@@ -611,8 +512,6 @@ def _parse_solver_keyword_via_plugin(
 ) -> bool:
     """Parse a solver-specific keyword using the plugin registry.
 
-    Falls back to the legacy ``parse_solver_keyword`` if no plugin is found.
-
     Parameters
     ----------
     keyword : str
@@ -630,11 +529,7 @@ def _parse_solver_keyword_via_plugin(
         True if the keyword was recognised, False otherwise.
     """
     from ..plugin import get_plugin
-    try:
-        plugin = get_plugin(solver)
-        return _apply_keyword_table(plugin.keyword_table, keyword, value, StdI)
-    except KeyError:
-        return _parse_solver_keyword(keyword, value, StdI, solver)
+    return _apply_keyword_table(get_plugin(solver).keyword_table, keyword, value, StdI)
 
 
 def _apply_keywords(data: dict, StdI: StdIntList, solver: str) -> None:
@@ -701,24 +596,6 @@ def _parse_input_file(fname: str, StdI: StdIntList, solver: str) -> None:
     _apply_keywords(data, StdI, solver)
 
 
-def _resolve_solver_name(StdI: StdIntList) -> None:
-    """Normalise ``HWAVE`` to ``UHFR`` / ``UHFK`` based on ``calcmode``.
-
-    ``calcmode = "uhfr"`` -> ``UHFR`` (real-space ``.def`` output);
-    everything else (``uhfk`` / ``rpa`` / **unset**) -> ``UHFK`` (Wannier90
-    export).  This mirrors the original ``if calcmode == "uhfr": ... else:
-    export`` branching, where an unspecified calcmode took the export path.
-
-    ``geometry.dat`` suppression remains keyed on ``calcmode`` (only
-    ``uhfk`` / ``rpa`` suppress it; an unset calcmode still writes it).
-
-    Must be called after keyword parsing and before ``get_plugin``.
-    """
-    if StdI.solver == SolverType.HWAVE:
-        StdI.solver = (SolverType.UHFR if StdI.calcmode == "uhfr"
-                       else SolverType.UHFK)
-
-
 # ===================================================================
 #  stdface_main -- top-level entry point
 # ===================================================================
@@ -766,10 +643,6 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
 
     _reset_vals(StdI)
     _parse_input_file(fname, StdI, solver)
-
-    # HWAVE -> UHFR / UHFK (before any get_plugin call below)
-    _resolve_solver_name(StdI)
-    solver = StdI.solver
 
     # ------------------------------------------------------------------
     #  Construct Model
@@ -851,7 +724,6 @@ def _build_stdintlist(data: dict, solver: str) -> StdIntList:
     StdI.solver = solver
     _reset_vals(StdI)
     _apply_keywords(data, StdI, solver)
-    _resolve_solver_name(StdI)
     if StdI.CDataFileHead is None:
         StdI.CDataFileHead = "zvo"
     _resolve_model_and_method(StdI, StdI.solver)
@@ -859,13 +731,13 @@ def _build_stdintlist(data: dict, solver: str) -> StdIntList:
 
 
 def _build_output(StdI: StdIntList):
-    """Return the :class:`SolverOutput` for the resolved solver."""
-    from ..plugin import get_plugin, WannierModeSolverPlugin
-    from .output import build_wannier_output
-    plugin = get_plugin(StdI.solver)
-    if isinstance(plugin, WannierModeSolverPlugin):
-        return build_wannier_output(StdI)
-    return plugin.build_output(StdI)
+    """Return the :class:`SolverOutput` for the active solver.
+
+    Each plugin's ``build_output`` returns the right container (the H-wave
+    plugin dispatches UHFR ``.def`` vs UHFK Wannier90 by ``calcmode``).
+    """
+    from ..plugin import get_plugin
+    return get_plugin(StdI.solver).build_output(StdI)
 
 
 def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
