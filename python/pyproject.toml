@@ -21,8 +21,9 @@ stdface = "stdface.__main__:main"
 hphi = "stdface.solvers.hphi:HPhiPlugin"
 mvmc = "stdface.solvers.mvmc:MVMCPlugin"
 uhf = "stdface.solvers.uhf:UHFPlugin"
-uhfr = "stdface.solvers.hwave:UHFRPlugin"
-uhfk = "stdface.solvers.hwave:UHFKPlugin"
+hwave = "stdface.solvers.hwave:HWavePlugin"
+uhfr = "stdface.solvers.hwave:HWavePlugin"
+uhfk = "stdface.solvers.hwave:HWavePlugin"
 
 [project.entry-points."stdface.lattices"]
 chain = "stdface.lattice.chain_lattice:ChainPlugin"
