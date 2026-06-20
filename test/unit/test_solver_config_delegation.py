@@ -73,3 +73,31 @@ def test_config_registry_register_and_get():
         assert plugin.get_config_factory("_c3_unregistered_solver") is None
     finally:
         plugin._config_factories.pop(name, None)
+
+
+# --- C3-2: UHFConfig attaches in the live flow (dormant / shadowed) ---------
+
+def test_uhf_config_attached_by_reset_vals():
+    """A UHF run attaches a UHFConfig; shared fields still shadow it (no removal yet)."""
+    from stdface.core.stdface_main import _reset_vals
+    from stdface.solvers.uhf.config import UHFConfig
+
+    s = StdIntList()
+    s.solver = "UHF"
+    _reset_vals(s)
+    assert isinstance(s._solver_cfg, UHFConfig)
+    # mix is still an StdIntList field (not removed until C3-5), so it shadows
+    # the config copy: writes land on StdIntList, the config stays dormant.
+    s.mix = 0.25
+    assert s.mix == 0.25
+    assert s._solver_cfg.mix is None
+
+
+def test_non_uhf_solver_attaches_no_config_yet():
+    """Solvers without a registered config (pre C3-3/4/5) keep _solver_cfg None."""
+    from stdface.core.stdface_main import _reset_vals
+
+    s = StdIntList()
+    s.solver = "HPhi"
+    _reset_vals(s)
+    assert s._solver_cfg is None
