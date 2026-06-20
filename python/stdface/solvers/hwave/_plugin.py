@@ -1,13 +1,14 @@
-"""H-wave solver plugins (UHFR / UHFK).
+"""H-wave solver plugin (C4).
 
-The user passes ``--solver HWAVE``; ``_resolve_solver_name`` then maps it to
-:class:`UHFRPlugin` (real-space ``.def`` output) or :class:`UHFKPlugin`
-(Wannier90 export) based on ``calcmode``.  UHFR is **not** an
-``ExpertModeSolverPlugin`` (it writes no modpara/namelist/locspn).
+The user passes ``--solver HWAVE``; :class:`HWavePlugin` owns the H-wave
+input (keyword/reset/config union) and dispatches output by ``calcmode``
+to the UHFR real-space ``.def`` strategy (:func:`build_uhfr_output`) or the
+UHFK Wannier90 export (:func:`stdface.core.output.build_wannier_output`).
+Registered under ``HWAVE`` plus the ``UHFR`` / ``UHFK`` aliases.
 """
 from __future__ import annotations
 
-from ...plugin import SolverPlugin, WannierModeSolverPlugin, register, register_config
+from ...plugin import SolverPlugin, register, register_config
 from ...core.stdface_vals import StdIntList, SolverType, NaN_i
 from .config import HWaveConfig
 from ...core.keyword_parser import (
@@ -35,62 +36,6 @@ def build_uhfr_output(StdI: StdIntList):
     green_one = build_green_one(StdI)
     return ExpertModeOutput(
         trans=trans, interactions=interactions, green_one=green_one)
-
-
-class UHFRPlugin(SolverPlugin):
-    """H-wave real-space UHF mode (``uhfr``).
-
-    Writes ``.def`` files but, unlike Expert mode, no ``modpara.def`` /
-    ``namelist.def`` / ``locspn.def`` — so it inherits ``SolverPlugin``
-    directly rather than ``ExpertModeSolverPlugin``.
-    """
-
-    @property
-    def name(self) -> str:
-        return SolverType.UHFR
-
-    @property
-    def keyword_table(self) -> dict[str, tuple]:
-        return _UHFR_KEYWORDS
-
-    @property
-    def reset_scalars(self) -> list[tuple[str, object]]:
-        return _RESET_SCALARS
-
-    @property
-    def reset_arrays(self) -> list[tuple[str, object]]:
-        return _RESET_ARRAYS
-
-    def set_defaults(self, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _check_mod_para_uhf
-        _check_mod_para_uhf(StdI)
-
-    def build_output(self, StdI: StdIntList):
-        """Assemble the UHFR partial output (trans / interactions / green1)."""
-        return build_uhfr_output(StdI)
-
-    def write(self, StdI: StdIntList) -> None:
-        self.build_output(StdI).write()
-
-
-class UHFKPlugin(WannierModeSolverPlugin):
-    """H-wave Wannier90 mode (``uhfk`` / ``rpa``); writes geom/transfer files."""
-
-    @property
-    def name(self) -> str:
-        return SolverType.UHFK
-
-    @property
-    def keyword_table(self) -> dict[str, tuple]:
-        return _UHFK_KEYWORDS
-
-    @property
-    def reset_scalars(self) -> list[tuple[str, object]]:
-        return _RESET_SCALARS
-
-    @property
-    def reset_arrays(self) -> list[tuple[str, object]]:
-        return _RESET_ARRAYS
 
 
 def _hwave_output_mode(StdI: StdIntList) -> str:
@@ -167,10 +112,7 @@ _UHF_BASE_KEYWORDS: dict[str, tuple] = {
     "mix":           (store_with_check_dup_d, "mix"),
 }
 
-# UHFR accepts the same keywords as UHF; UHFK only the Wannier-export keys.
-# (``calcmode`` is parsed via the pre-resolution HWAVE table in keyword_parser.)
-_UHFR_KEYWORDS: dict[str, tuple] = _UHF_BASE_KEYWORDS
-
+# UHFK adds only the Wannier-export keys on top of the UHF base.
 _UHFK_KEYWORDS: dict[str, tuple] = {
     "fileprefix": (store_with_check_dup_sl, "fileprefix"),
     "exportall":  (store_with_check_dup_i,  "export_all"),

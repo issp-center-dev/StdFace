@@ -231,22 +231,6 @@ class ExpertModeSolverPlugin(SolverPlugin):
         self.build_output(StdI).write()
 
 
-class WannierModeSolverPlugin(SolverPlugin):
-    """Base class for solvers that emit Wannier90-format files (UHFK / RPA).
-
-    Writes ``geometry``/``transfer``/``coulombintra`` files via the
-    Wannier90 writer instead of the Expert-mode ``.def`` files.
-    """
-
-    def write(self, StdI: StdIntList) -> None:
-        from .core.output import build_wannier_output
-        build_wannier_output(StdI).write()
-        self.write_wannier_extras(StdI)
-
-    def write_wannier_extras(self, StdI: StdIntList) -> None:
-        """Write additional Wannier-mode files (default: none)."""
-
-
 # ---------------------------------------------------------------------------
 #  Plugin registry
 # ---------------------------------------------------------------------------
@@ -325,12 +309,11 @@ def _discover_plugins() -> None:
 #  Solver config registry (C3: per-solver field containers)
 # ---------------------------------------------------------------------------
 #
-# Maps a *raw* solver name (incl. the pre-resolution ``HWAVE`` alias, which
-# shares ``UHFRPlugin``/``UHFKPlugin``'s config) to a zero-arg factory.  This
-# is separate from the plugin registry because the config must be attached to
-# StdIntList *before* solver-name resolution (``_reset_vals`` runs before
-# ``_resolve_solver_name``), when ``HWAVE`` has no registered plugin yet.
-# Solver modules populate it on import via :func:`register_config`.
+# Maps a solver name (HWAVE / UHFR / UHFK all share the H-wave config) to a
+# zero-arg factory.  This is separate from the plugin registry because the
+# config must be attached to StdIntList during ``_reset_vals`` (top of the
+# parse flow), keyed on the raw solver name.  Solver modules populate it on
+# import via :func:`register_config`.
 
 _config_factories: dict[str, object] = {}
 

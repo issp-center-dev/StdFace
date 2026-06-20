@@ -15,7 +15,7 @@ from stdface.plugin import SolverPlugin, get_plugin
 from stdface.solvers.hphi import HPhiPlugin
 from stdface.solvers.mvmc import MVMCPlugin
 from stdface.solvers.uhf import UHFPlugin
-from stdface.solvers.hwave import UHFRPlugin, UHFKPlugin
+from stdface.solvers.hwave import HWavePlugin
 from stdface.core.stdface_vals import StdIntList
 from stdface.core.stdface_main import _attach_solver_config
 from stdface.lattice import chain_lattice as cl
