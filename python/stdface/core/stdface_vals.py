@@ -1005,10 +1005,11 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  HWAVE-only fields
     # ------------------------------------------------------------------
+    # ``calcmode`` stays here as solver-selection metadata (read by
+    # _resolve_solver_name before the config is attached).  C3-3 moved
+    # ``fileprefix`` / ``export_all`` / ``lattice_gp`` into HWaveConfig
+    # (solvers/hwave/config.py); they now resolve via _solver_cfg.
     calcmode: str | None = None
-    fileprefix: str | None = None
-    export_all: int | None = None
-    lattice_gp: int | None = None
 
     # ------------------------------------------------------------------
     #  C3: dynamic delegation to the active solver config
