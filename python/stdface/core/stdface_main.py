@@ -451,10 +451,9 @@ def _attach_solver_config(StdI: StdIntList) -> None:
     ``StdI._solver_cfg`` as ``None`` so attribute access falls through to
     the flat dataclass fields.
     """
-    from ..plugin import get_config_factory
-    factory = get_config_factory(StdI.solver)
-    if factory is not None:
-        StdI._solver_cfg = factory()
+    # Idempotent: StdIntList.__setattr__ already attaches on solver-set, so
+    # this just ensures the config matches the current solver (type-guarded).
+    StdI._sync_solver_config(StdI.solver)
 
 
 def _reset_vals(StdI: StdIntList) -> None:

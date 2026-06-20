@@ -44,9 +44,9 @@ def test_own_fields_never_route_to_config():
     """A C1 façade property and a flat field stay on StdIntList even with a config."""
     s = StdIntList()
     s._solver_cfg = _DummyConfig()
-    # flat own field
-    s.solver = "mVMC"
-    assert s.solver == "mVMC"
+    # flat own field (avoid 'solver', which would auto-attach a real config)
+    s.lGC = 1
+    assert s.lGC == 1
     assert s._solver_cfg.bar is None  # untouched
     # C1 façade property (delegates to _lattice); in-place numpy still works
     s.box[0, 0] = 7
@@ -78,7 +78,7 @@ def test_config_registry_register_and_get():
 # --- C3-2: UHFConfig attaches in the live flow (dormant / shadowed) ---------
 
 def test_uhf_config_attached_by_reset_vals():
-    """A UHF run attaches a UHFConfig; shared fields still shadow it (no removal yet)."""
+    """A UHF run attaches a UHFConfig; its fields now resolve via the config."""
     from stdface.core.stdface_main import _reset_vals
     from stdface.solvers.uhf.config import UHFConfig
 
@@ -86,18 +86,18 @@ def test_uhf_config_attached_by_reset_vals():
     s.solver = "UHF"
     _reset_vals(s)
     assert isinstance(s._solver_cfg, UHFConfig)
-    # mix is still an StdIntList field (not removed until C3-5), so it shadows
-    # the config copy: writes land on StdIntList, the config stays dormant.
+    # mix moved off StdIntList (C3-5): writes and reads route to the config.
     s.mix = 0.25
     assert s.mix == 0.25
-    assert s._solver_cfg.mix is None
+    assert s._solver_cfg.mix == 0.25
+    assert "mix" not in s.__dict__
 
 
-def test_non_uhf_solver_attaches_no_config_yet():
-    """Solvers without a registered config (pre C3-3/4/5) keep _solver_cfg None."""
-    from stdface.core.stdface_main import _reset_vals
+def test_unregistered_solver_attaches_no_config():
+    """A solver name with no registered config keeps _solver_cfg None."""
+    from stdface.core.stdface_main import _attach_solver_config
 
     s = StdIntList()
-    s.solver = "HPhi"
-    _reset_vals(s)
+    s.solver = "_no_such_solver"
+    _attach_solver_config(s)
     assert s._solver_cfg is None
