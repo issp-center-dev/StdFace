@@ -485,6 +485,37 @@ class TestUHFPlugin:
         assert os.path.exists("pair.def") or os.path.exists("single.def")
 
 
+class TestHWaveFamilyPlugin:
+    """C4-2a: HWavePlugin owns H-wave input; output mode resolves by calcmode."""
+
+    def test_hwave_registered_and_owns_input(self):
+        from stdface.solvers.hwave._plugin import HWavePlugin
+        plugin = get_plugin("HWAVE")
+        assert isinstance(plugin, HWavePlugin)
+        kw = plugin.keyword_table
+        # union: UHF base + calcmode + UHFK Wannier-export keys
+        assert "calcmode" in kw and "fileprefix" in kw and "mix" in kw
+        reset_names = {n for n, _ in plugin.reset_scalars}
+        assert {"export_all", "lattice_gp", "mix", "NMPTrans"} <= reset_names
+
+    def test_output_mode_resolution(self):
+        from stdface.solvers.hwave._plugin import _hwave_output_mode
+        from stdface.core.stdface_vals import SolverType
+
+        def mode(solver, calcmode):
+            s = StdIntList()
+            s.solver = solver
+            s.calcmode = calcmode
+            return _hwave_output_mode(s)
+
+        assert mode("HWAVE", "uhfr") == SolverType.UHFR
+        assert mode("HWAVE", "uhfk") == SolverType.UHFK
+        assert mode("HWAVE", "rpa") == SolverType.UHFK
+        assert mode("HWAVE", None) == SolverType.UHFK
+        assert mode("UHFR", None) == SolverType.UHFR
+        assert mode("UHFK", None) == SolverType.UHFK
+
+
 class TestHWaveSplit:
     """Tests for the UHFR / UHFK plugins (the H-wave split)."""
 

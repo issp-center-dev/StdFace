@@ -93,6 +93,59 @@ class UHFKPlugin(WannierModeSolverPlugin):
         return _RESET_ARRAYS
 
 
+def _hwave_output_mode(StdI: StdIntList) -> str:
+    """Resolve the H-wave output mode from the solver name and ``calcmode``.
+
+    Equivalent to the legacy ``_resolve_solver_name`` mapping:
+    ``UHFR`` iff the solver is UHFR, or HWAVE with ``calcmode == "uhfr"``;
+    everything else (uhfk / rpa / unset) selects the UHFK Wannier export.
+    """
+    if (StdI.solver == SolverType.UHFR
+            or (StdI.solver == SolverType.HWAVE and StdI.calcmode == "uhfr")):
+        return SolverType.UHFR
+    return SolverType.UHFK
+
+
+class HWavePlugin(SolverPlugin):
+    """H-wave family plugin (C4).
+
+    Owns the H-wave *input* (keyword / reset / config = the UHFR/UHFK union)
+    and dispatches *output* by ``calcmode`` to the UHFR (.def) or UHFK
+    (Wannier90) strategy.  Registered under ``HWAVE`` (and, from C4-2b, also
+    ``UHFR`` / ``UHFK``) so parsing and reset run before solver-name
+    resolution without a core fallback.
+    """
+
+    @property
+    def name(self) -> str:
+        return SolverType.HWAVE
+
+    @property
+    def keyword_table(self) -> dict[str, tuple]:
+        return _HWAVE_KEYWORDS
+
+    @property
+    def reset_scalars(self) -> list[tuple[str, object]]:
+        return _RESET_SCALARS
+
+    @property
+    def reset_arrays(self) -> list[tuple[str, object]]:
+        return _RESET_ARRAYS
+
+    def set_defaults(self, StdI: StdIntList) -> None:
+        from ...writer.common_writer import _check_mod_para_uhf
+        _check_mod_para_uhf(StdI)
+
+    def build_output(self, StdI: StdIntList):
+        if _hwave_output_mode(StdI) == SolverType.UHFR:
+            return build_uhfr_output(StdI)
+        from ...core.output import build_wannier_output
+        return build_wannier_output(StdI)
+
+    def write(self, StdI: StdIntList) -> None:
+        self.build_output(StdI).write()
+
+
 # -----------------------------------------------------------------------
 #  Keyword table
 # -----------------------------------------------------------------------
@@ -122,6 +175,14 @@ _UHFK_KEYWORDS: dict[str, tuple] = {
     "fileprefix": (store_with_check_dup_sl, "fileprefix"),
     "exportall":  (store_with_check_dup_i,  "export_all"),
     "lattice_gp": (store_with_check_dup_i,  "lattice_gp"),
+}
+
+# H-wave family union: UHF base + calcmode + the UHFK Wannier-export keys.
+# Used by HWavePlugin (parse runs while solver == "HWAVE", before resolution).
+_HWAVE_KEYWORDS: dict[str, tuple] = {
+    **_UHF_BASE_KEYWORDS,
+    "calcmode":   (store_with_check_dup_sl, "calcmode"),
+    **_UHFK_KEYWORDS,
 }
 
 # -----------------------------------------------------------------------
@@ -157,6 +218,11 @@ _RESET_ARRAYS: list[tuple[str, object]] = [
 # Auto-register on import
 register(UHFRPlugin())
 register(UHFKPlugin())
+# C4-2a: HWavePlugin owns H-wave input (keyword/reset).  Registering it under
+# HWAVE means parse/reset (which run while solver == "HWAVE", before
+# _resolve_solver_name) go through the plugin instead of the core fallback.
+# Output still flows through UHFR/UHFK after resolution until C4-2b.
+register(HWavePlugin())
 # One config shared by UHFR/UHFK; also registered under the raw HWAVE alias so
 # it attaches before _resolve_solver_name splits HWAVE into UHFR/UHFK.
 register_config(SolverType.HWAVE, HWaveConfig)
