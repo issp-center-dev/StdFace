@@ -27,7 +27,7 @@ from ..core.param_check import (
 from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
 from .interaction_builder import (
     compute_max_interactions, malloc_interactions,
-    add_neighbor_interaction, add_local_terms,
+    expand_bonds_2d,
 )
 from .site_util import (
     init_site, set_label, set_local_spin_flags,
@@ -162,39 +162,25 @@ def honeycomb(StdI: StdIntList) -> "GnuplotData | None":
     malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
-    for kCell in range(StdI.NCell):
-        cell_w = StdI.Cell[kCell, 0]
-        cell_l = StdI.Cell[kCell, 1]
-
-        # Local term
-        isite = StdI.NsiteUC * kCell
-        if StdI.model == ModelType.KONDO:
-            isite += StdI.NsiteUC * StdI.NCell
-        jsite_base = StdI.NsiteUC * kCell
-        for uc_i in range(StdI.NsiteUC):
-            add_local_terms(StdI, isite + uc_i, jsite_base + uc_i)
-
-        # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
-        _BONDS = (
-            # Nearest neighbor (nn=1)
-            (0, 0, 0, 1, 1, StdI.J0, StdI.t0, StdI.V0),     # intra cell
-            (1, 0, 1, 0, 1, StdI.J1, StdI.t1, StdI.V1),     # along W
-            (0, 1, 1, 0, 1, StdI.J2, StdI.t2, StdI.V2),     # along L
-            # Second nearest neighbor (nn=2)
-            (1, 0, 0, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p),  # along W, 0->0
-            (1, 0, 1, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p),  # along W, 1->1
-            (0, 1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),  # along L, 0->0
-            (0, 1, 1, 1, 2, StdI.J1p, StdI.t1p, StdI.V1p),  # along L, 1->1
-            (1, -1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p), # along W-L, 0->0
-            (1, -1, 1, 1, 2, StdI.J0p, StdI.t0p, StdI.V0p), # along W-L, 1->1
-            # Third nearest neighbor (nn=3)
-            (1, -1, 0, 1, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp),  # along W-L
-            (-1, -1, 0, 1, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # along -W-L
-            (-1, 1, 0, 1, 3, StdI.J2pp, StdI.t2pp, StdI.V2pp),  # along -W+L
-        )
-        for dW, dL, si, sj, nn, J, t, V in _BONDS:
-            add_neighbor_interaction(
-                StdI, buf, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
+    # Relative bond table: (dW, dL, site_i, site_j, nn_level, J, t, V)
+    _BONDS = (
+        # Nearest neighbor (nn=1)
+        (0, 0, 0, 1, 1, StdI.J0, StdI.t0, StdI.V0),     # intra cell
+        (1, 0, 1, 0, 1, StdI.J1, StdI.t1, StdI.V1),     # along W
+        (0, 1, 1, 0, 1, StdI.J2, StdI.t2, StdI.V2),     # along L
+        # Second nearest neighbor (nn=2)
+        (1, 0, 0, 0, 2, StdI.J2p, StdI.t2p, StdI.V2p),  # along W, 0->0
+        (1, 0, 1, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p),  # along W, 1->1
+        (0, 1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),  # along L, 0->0
+        (0, 1, 1, 1, 2, StdI.J1p, StdI.t1p, StdI.V1p),  # along L, 1->1
+        (1, -1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p), # along W-L, 0->0
+        (1, -1, 1, 1, 2, StdI.J0p, StdI.t0p, StdI.V0p), # along W-L, 1->1
+        # Third nearest neighbor (nn=3)
+        (1, -1, 0, 1, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp),  # along W-L
+        (-1, -1, 0, 1, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # along -W-L
+        (-1, 1, 0, 1, 3, StdI.J2pp, StdI.t2pp, StdI.V2pp),  # along -W+L
+    )
+    expand_bonds_2d(StdI, buf, _BONDS)
     return buf.build(StdI) if buf else None
 
 

@@ -82,3 +82,30 @@ class TestGenerate:
     def test_conflict_propagates(self):
         with pytest.raises(ValueError):
             generate({**_HPHI, "solver": "mVMC"}, solver="HPhi", output_dir=None)
+
+
+class TestUHFkPhaseGuard:
+    """UHFk / RPA assume translational symmetry, so a boundary twist
+    (``phase``) must be rejected; the real-space UHFR mode is unaffected."""
+
+    _UHFK = {**_HUB, "calcmode": "uhfk"}
+
+    def test_uhfk_without_phase_ok(self):
+        out = generate(self._UHFK, solver="HWAVE", output_dir=None)
+        assert isinstance(out, WannierModeOutput)
+
+    def test_uhfk_with_phase_raises(self):
+        with pytest.raises(ValueError, match="phase"):
+            generate({**self._UHFK, "phase0": 180}, solver="HWAVE",
+                     output_dir=None)
+
+    def test_rpa_with_phase_raises(self):
+        with pytest.raises(ValueError, match="phase"):
+            generate({**self._UHFK, "calcmode": "rpa", "phase0": 180},
+                     solver="HWAVE", output_dir=None)
+
+    def test_uhfr_with_phase_ok(self):
+        # UHFR is real-space (.def); a boundary twist is allowed.
+        out = generate({**self._UHFK, "calcmode": "uhfr", "phase0": 180},
+                       solver="HWAVE", output_dir=None)
+        assert isinstance(out, ExpertModeOutput)

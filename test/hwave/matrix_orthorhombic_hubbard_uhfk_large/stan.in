@@ -1,0 +1,9 @@
+lattice = "orthorhombic"
+model = "FermionHubbard"
+W = 6
+L = 6
+Height = 6
+calcmode = "uhfk"
+t = 1.0
+U = 4.0
+V = 0.5

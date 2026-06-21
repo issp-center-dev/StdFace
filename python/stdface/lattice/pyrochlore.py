@@ -26,7 +26,7 @@ from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
 from .interaction_builder import (
     compute_max_interactions, malloc_interactions,
     mag_field, general_j, hubbard_local,
-    add_neighbor_interaction_3d,
+    expand_bonds_3d,
 )
 from .site_util import init_site, set_local_spin_flags
 
@@ -155,12 +155,7 @@ def pyrochlore(StdI: StdIntList) -> None:
     malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
-    for kCell in range(StdI.NCell):
-        cell_w = StdI.Cell[kCell, 0]
-        cell_l = StdI.Cell[kCell, 1]
-        iH = StdI.Cell[kCell, 2]
-
-        # Local term
+    def _local(StdI, kCell):
         isite = StdI.NsiteUC * kCell
         if StdI.model == ModelType.KONDO:
             isite += StdI.nsite // 2
@@ -178,26 +173,24 @@ def pyrochlore(StdI: StdIntList) -> None:
                     general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + uc_i)
                     mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite + uc_i)
 
-        # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
-        _BONDS = (
-            # Intra-cell
-            (0, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),    # along W
-            (0, 0, 0, 0, 2, StdI.J1, StdI.t1, StdI.V1),    # along L
-            (0, 0, 0, 0, 3, StdI.J2, StdI.t2, StdI.V2),    # along H
-            (0, 0, 0, 2, 3, StdI.J0p, StdI.t0p, StdI.V0p), # along L-H
-            (0, 0, 0, 3, 1, StdI.J1p, StdI.t1p, StdI.V1p), # along H-W
-            (0, 0, 0, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p), # along W-L
-            # Inter-cell
-            (1, 0, 0, 1, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
-            (0, 1, 0, 2, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
-            (0, 0, 1, 3, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
-            (0, -1, 1, 3, 2, StdI.J0p, StdI.t0p, StdI.V0p),  # along L-H
-            (1, 0, -1, 1, 3, StdI.J1p, StdI.t1p, StdI.V1p),  # along H-W
-            (-1, 1, 0, 2, 1, StdI.J2p, StdI.t2p, StdI.V2p),  # along W-L
-        )
-        for dW, dL, dH, si, sj, J, t, V in _BONDS:
-            add_neighbor_interaction_3d(
-                StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
+    # Relative bond table: (dW, dL, dH, site_i, site_j, J, t, V)
+    _BONDS = (
+        # Intra-cell
+        (0, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),    # along W
+        (0, 0, 0, 0, 2, StdI.J1, StdI.t1, StdI.V1),    # along L
+        (0, 0, 0, 0, 3, StdI.J2, StdI.t2, StdI.V2),    # along H
+        (0, 0, 0, 2, 3, StdI.J0p, StdI.t0p, StdI.V0p), # along L-H
+        (0, 0, 0, 3, 1, StdI.J1p, StdI.t1p, StdI.V1p), # along H-W
+        (0, 0, 0, 1, 2, StdI.J2p, StdI.t2p, StdI.V2p), # along W-L
+        # Inter-cell
+        (1, 0, 0, 1, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
+        (0, 1, 0, 2, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
+        (0, 0, 1, 3, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
+        (0, -1, 1, 3, 2, StdI.J0p, StdI.t0p, StdI.V0p),  # along L-H
+        (1, 0, -1, 1, 3, StdI.J1p, StdI.t1p, StdI.V1p),  # along H-W
+        (-1, 1, 0, 2, 1, StdI.J2p, StdI.t2p, StdI.V2p),  # along W-L
+    )
+    expand_bonds_3d(StdI, _BONDS, _local)
 
 
 # ---------------------------------------------------------------------------

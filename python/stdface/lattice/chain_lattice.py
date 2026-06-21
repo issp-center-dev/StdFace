@@ -28,7 +28,7 @@ from ..core.param_check import (
 from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
 from .interaction_builder import (
     malloc_interactions,
-    add_neighbor_interaction, add_local_terms,
+    expand_bonds_2d,
 )
 from .site_util import (
     init_site, set_label, set_local_spin_flags,
@@ -172,24 +172,13 @@ def chain(StdI: StdIntList) -> "GnuplotData | None":
     malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
-    for cell_l in range(StdI.L):
-
-        isite = cell_l
-        if StdI.model == ModelType.KONDO:
-            isite += StdI.L
-
-        # Local term
-        add_local_terms(StdI, isite, cell_l)
-
-        # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
-        _BONDS = (
-            (0, 1, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn
-            (0, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn
-            (0, 3, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn
-        )
-        for dW, dL, si, sj, nn, J, t, V in _BONDS:
-            add_neighbor_interaction(
-                StdI, buf, 0, cell_l, dW, dL, si, sj, nn, J, t, V)
+    # Relative bond table: (dW, dL, site_i, site_j, nn_level, J, t, V)
+    _BONDS = (
+        (0, 1, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn
+        (0, 2, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn
+        (0, 3, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn
+    )
+    expand_bonds_2d(StdI, buf, _BONDS)
     return buf.build(StdI) if buf else None
 
 

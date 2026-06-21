@@ -799,3 +799,152 @@ def add_local_terms(
     from ..core.model_plugin import get_model
     terms = get_model(StdI.model).build_local_terms(StdI, isite, jsite_kondo)
     terms.extend_into(StdI)
+
+
+def expand_bonds_2d(
+    StdI: StdIntList,
+    buf: "GnuplotBuffer | None",
+    bonds,
+) -> None:
+    """Expand a 2-D lattice's relative bond table over the whole super-cell.
+
+    Generic Layer-2 expander shared by the 2-D lattice builders (L1).  For
+    each cell it adds the model-dependent on-site (local) terms for every
+    unit-cell sublattice, then walks the relative *bonds* table, deferring
+    the absolute-index / boundary-phase work to
+    :func:`add_neighbor_interaction` (i.e. :func:`find_site`).
+
+    The traversal order — cell-outer, local-terms-then-bonds, bond-inner —
+    matches the hand-written per-lattice loops it replaces, so the produced
+    ``trans_list`` / interaction-list ordering is byte-identical.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Model parameter structure (modified in place).
+    buf : GnuplotBuffer or None
+        Gnuplot bond buffer (``None`` suppresses gnuplot output).
+    bonds : iterable of tuple
+        Relative bond table; each entry is
+        ``(delta_w, delta_l, uc_i, uc_j, connect, J, t, V)`` — the same shape
+        as the ``_BONDS`` tables in the lattice modules.
+    """
+    StdI._rel_bonds = bonds
+    StdI._rel_dim = 2
+    StdI._rel_local_fn = None
+    kondo_off = (StdI.NsiteUC * StdI.NCell
+                 if StdI.model == ModelType.KONDO else 0)
+    for kCell in range(StdI.NCell):
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
+        base = StdI.NsiteUC * kCell
+        for uc in range(StdI.NsiteUC):
+            add_local_terms(StdI, base + uc + kondo_off, base + uc)
+        for dW, dL, si, sj, nn, J, t, V in bonds:
+            add_neighbor_interaction(
+                StdI, buf, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
+
+
+def expand_bonds_3d(
+    StdI: StdIntList,
+    bonds,
+    local_fn,
+) -> None:
+    """Expand a 3-D lattice's relative bond table over the whole super-cell.
+
+    Generic Layer-2 expander shared by the 3-D lattice builders (L1).  For
+    each cell it runs the lattice-supplied *local_fn* (which adds the
+    model-dependent on-site terms — these differ between 3-D lattices, e.g.
+    pyrochlore's Kondo coupling), then walks the relative *bonds* table via
+    :func:`add_neighbor_interaction_3d` (i.e. :func:`find_site`).
+
+    The traversal order — cell-outer, local-then-bonds, bond-inner — matches
+    the hand-written per-lattice loops it replaces, so the produced
+    ``trans_list`` / interaction-list ordering is byte-identical.  3-D
+    lattices have no gnuplot output, so there is no buffer argument.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Model parameter structure (modified in place).
+    bonds : iterable of tuple
+        Relative bond table; each entry is
+        ``(delta_w, delta_l, delta_h, uc_i, uc_j, J, t, V)`` — the same shape
+        as the ``_BONDS`` tables in the 3-D lattice modules.
+    local_fn : callable
+        ``local_fn(StdI, kCell)`` adds the on-site (local) terms for cell
+        *kCell*.  Supplied by each lattice so its exact local-term handling
+        is preserved.
+    """
+    StdI._rel_bonds = bonds
+    StdI._rel_dim = 3
+    StdI._rel_local_fn = local_fn
+    for kCell in range(StdI.NCell):
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
+        iH = StdI.Cell[kCell, 2]
+        local_fn(StdI, kCell)
+        for dW, dL, dH, si, sj, J, t, V in bonds:
+            add_neighbor_interaction_3d(
+                StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
+
+
+# ---------------------------------------------------------------------------
+#  UHFk supercell normalization (L1)
+# ---------------------------------------------------------------------------
+
+_TERM_LIST_ATTRS = (
+    "trans_list", "intr_list", "Cintra_list", "Cinter_list",
+    "Hund_list", "Ex_list", "PairLift_list", "PairHopp_list",
+)
+
+
+def normalize_supercell_for_wannier(StdI: StdIntList) -> None:
+    """Re-expand on a supercell large enough that no bond wraps (L1, UHFk).
+
+    UHFk emits a Wannier90 unit-cell Hamiltonian.  On a small supercell,
+    several lattice bonds fold onto the same ``(R, a, b)`` and accumulate
+    (e.g. 2x2 square: ``+W`` and ``-W`` both connect the same pair -> 2t),
+    making the output depend on the supercell size.  The correct,
+    size-independent result needs each cell dimension larger than twice the
+    longest bond range in that direction.
+
+    This rebuilds the interaction terms on such a normalized (diagonal)
+    supercell, derived from the relative bond model recorded by the expander.
+    Dimensions with no bond extent (e.g. the chain's W) are kept at size 1.
+    The unit cell (``NsiteUC`` / ``tau`` / ``direct``) and therefore
+    ``geom.dat`` are untouched.
+
+    No-op when no relative model was recorded (the ``wannier90`` lattice,
+    which reads ``*_hr.dat``; the hand-written ladder).  A boundary phase is
+    already rejected upstream (``HWavePlugin.validate``), so ``Cphase == 1``.
+    """
+    bonds = getattr(StdI, "_rel_bonds", None)
+    if bonds is None:
+        return
+    from .site_util import _compute_reciprocal_box, _enumerate_cells
+
+    dim = StdI._rel_dim
+    ndelta = 3 if dim == 3 else 2
+    # Index of (delta_w, delta_l[, delta_h]) within each bond tuple.
+    maxd = [0, 0, 0]
+    for b in bonds:
+        for i in range(ndelta):
+            maxd[i] = max(maxd[i], abs(int(b[i])))
+
+    box = np.zeros((3, 3), dtype=int)
+    for i in range(3):
+        if i < ndelta and maxd[i] > 0:
+            box[i, i] = 2 * maxd[i] + 1   # no two deltas coincide mod size
+        else:
+            box[i, i] = max(1, int(StdI.box[i, i]))
+    StdI.box = box
+    _compute_reciprocal_box(StdI)
+    _enumerate_cells(StdI)
+
+    for attr in _TERM_LIST_ATTRS:
+        setattr(StdI, attr, [])
+    if dim == 2:
+        expand_bonds_2d(StdI, None, bonds)
+    else:
+        expand_bonds_3d(StdI, bonds, StdI._rel_local_fn)

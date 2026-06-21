@@ -26,7 +26,7 @@ from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
 from .interaction_builder import (
     compute_max_interactions, malloc_interactions,
     mag_field, general_j, hubbard_local,
-    add_neighbor_interaction_3d,
+    expand_bonds_3d,
 )
 from .site_util import init_site, set_local_spin_flags
 
@@ -149,12 +149,7 @@ def fc_ortho(StdI: StdIntList) -> None:
     malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
-    for kCell in range(StdI.NCell):
-        cell_w = StdI.Cell[kCell, 0]
-        cell_l = StdI.Cell[kCell, 1]
-        iH = StdI.Cell[kCell, 2]
-
-        # Local term
+    def _local(StdI, kCell):
         isite = kCell
         if StdI.model == ModelType.KONDO:
             isite += StdI.NCell
@@ -168,23 +163,21 @@ def fc_ortho(StdI: StdIntList) -> None:
                 jsite = kCell
                 general_j(StdI, StdI.J, 1, StdI.S2, isite, jsite)
 
-        # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
-        _BONDS = (
-            # Nearest neighbor (6 equivalent pairs)
-            (1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
-            (0, 1, -1, 0, 0, StdI.J0, StdI.t0, StdI.V0),     # along W (equiv)
-            (0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
-            (-1, 0, 1, 0, 0, StdI.J1, StdI.t1, StdI.V1),     # along L (equiv)
-            (0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
-            (1, -1, 0, 0, 0, StdI.J2, StdI.t2, StdI.V2),     # along H (equiv)
-            # Second nearest neighbor
-            (-1, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),  # -W+L+H
-            (1, -1, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),  # -L+H+W
-            (1, 1, -1, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),  # -H+W+L
-        )
-        for dW, dL, dH, si, sj, J, t, V in _BONDS:
-            add_neighbor_interaction_3d(
-                StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
+    # Relative bond table: (dW, dL, dH, site_i, site_j, J, t, V)
+    _BONDS = (
+        # Nearest neighbor (6 equivalent pairs)
+        (1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
+        (0, 1, -1, 0, 0, StdI.J0, StdI.t0, StdI.V0),     # along W (equiv)
+        (0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
+        (-1, 0, 1, 0, 0, StdI.J1, StdI.t1, StdI.V1),     # along L (equiv)
+        (0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
+        (1, -1, 0, 0, 0, StdI.J2, StdI.t2, StdI.V2),     # along H (equiv)
+        # Second nearest neighbor
+        (-1, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),  # -W+L+H
+        (1, -1, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),  # -L+H+W
+        (1, 1, -1, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),  # -H+W+L
+    )
+    expand_bonds_3d(StdI, _BONDS, _local)
 
 
 # ---------------------------------------------------------------------------
