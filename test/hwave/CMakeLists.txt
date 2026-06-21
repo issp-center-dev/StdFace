@@ -419,3 +419,13 @@ add_test(
   NAME matrix_orthorhombic_spin_uhfk_large
   COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_orthorhombic_spin_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
 )
+
+# L2: large W=3 ladder UHFk cases (general W-leg path; size-independent).
+add_test(
+  NAME matrix_ladder_w3_hubbard_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_ladder_w3_hubbard_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_ladder_w3_spin_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_ladder_w3_spin_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
