@@ -82,10 +82,22 @@ class WannierModeOutput(SolverOutput):
 
 
 def build_wannier_output(StdI: StdIntList) -> WannierModeOutput:
-    """Assemble a :class:`WannierModeOutput` from *StdI*."""
+    """Assemble a :class:`WannierModeOutput` from *StdI*.
+
+    UHFk emits a Wannier90 unit-cell Hamiltonian, which must be independent
+    of the (arbitrary) super-cell size the user chose.  Geometry is built
+    first from the unit cell; the interaction terms are then rebuilt on a
+    normalized, large-enough super-cell (see
+    :func:`normalize_supercell_for_wannier`) so no bond wraps and the output
+    is size-independent.
+    """
+    geometry = build_wannier_geometry(StdI)
+    geom_fname = _prefix(StdI, "geom.dat")
+    from ..lattice.interaction_builder import normalize_supercell_for_wannier
+    normalize_supercell_for_wannier(StdI)
     return WannierModeOutput(
-        geometry=build_wannier_geometry(StdI),
-        geom_fname=_prefix(StdI, "geom.dat"),
+        geometry=geometry,
+        geom_fname=geom_fname,
         interactions=build_wannier_interactions(StdI),
     )
 
