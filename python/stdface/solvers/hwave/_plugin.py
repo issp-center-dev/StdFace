@@ -8,13 +8,19 @@ Registered under ``HWAVE`` plus the ``UHFR`` / ``UHFK`` aliases.
 """
 from __future__ import annotations
 
+import logging
+
+import numpy as np
+
 from ...plugin import SolverPlugin, register, register_config
-from ...core.stdface_vals import StdIntList, SolverType, NaN_i
+from ...core.stdface_vals import StdIntList, SolverType, NaN_i, AMPLITUDE_EPS
 from .config import HWaveConfig
 from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d, store_with_check_dup_sl,
     _grid3x3_keywords,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +86,21 @@ class HWavePlugin(SolverPlugin):
     def set_defaults(self, StdI: StdIntList) -> None:
         from ...writer.common_writer import _check_mod_para_uhf
         _check_mod_para_uhf(StdI)
+
+    def validate(self, StdI: StdIntList) -> None:
+        """Reject a boundary twist (``phase``) in UHFk / RPA output mode.
+
+        UHFk / RPA emit a Wannier90 unit-cell Hamiltonian, which assumes
+        translational symmetry; a non-trivial boundary phase breaks it.
+        (The real-space UHFR mode is unaffected.)
+        """
+        if _hwave_output_mode(StdI) != SolverType.UHFK:
+            return
+        if np.any(np.abs(StdI.ExpPhase - 1.0) > AMPLITUDE_EPS):
+            msg = ("phase (boundary twist) is not available with UHFk / RPA: "
+                   "the Wannier90 output assumes translational symmetry.")
+            logger.error(msg)
+            raise ValueError(msg)
 
     def build_output(self, StdI: StdIntList):
         if _hwave_output_mode(StdI) == SolverType.UHFR:
