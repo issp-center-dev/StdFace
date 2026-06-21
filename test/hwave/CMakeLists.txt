@@ -392,3 +392,30 @@ add_test(
   NAME matrix_fco_kondogc_uhfr
   COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_fco_kondogc_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
 )
+
+# L1: large-lattice UHFk cases (correct-usage regime; no boundary wrap-around).
+# Verify the size-independent Wannier output and anchor the relative-model refactor.
+add_test(
+  NAME matrix_square_hubbard_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_square_hubbard_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_square_spin_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_square_spin_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_honeycomb_hubbard_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_honeycomb_hubbard_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_honeycomb_spin_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_honeycomb_spin_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_orthorhombic_hubbard_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_orthorhombic_hubbard_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_orthorhombic_spin_uhfk_large
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_orthorhombic_spin_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)

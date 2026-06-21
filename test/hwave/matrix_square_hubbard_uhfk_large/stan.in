@@ -1,0 +1,8 @@
+lattice = "square"
+model = "FermionHubbard"
+W = 8
+L = 8
+calcmode = "uhfk"
+t = 1.0
+U = 4.0
+V = 0.5

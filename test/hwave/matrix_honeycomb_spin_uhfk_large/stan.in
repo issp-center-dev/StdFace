@@ -1,0 +1,7 @@
+lattice = "honeycomb"
+model = "Spin"
+W = 8
+L = 8
+calcmode = "uhfk"
+J = 1.0
+2Sz = 0
