@@ -799,3 +799,44 @@ def add_local_terms(
     from ..core.model_plugin import get_model
     terms = get_model(StdI.model).build_local_terms(StdI, isite, jsite_kondo)
     terms.extend_into(StdI)
+
+
+def expand_bonds_2d(
+    StdI: StdIntList,
+    buf: "GnuplotBuffer | None",
+    bonds,
+) -> None:
+    """Expand a 2-D lattice's relative bond table over the whole super-cell.
+
+    Generic Layer-2 expander shared by the 2-D lattice builders (L1).  For
+    each cell it adds the model-dependent on-site (local) terms for every
+    unit-cell sublattice, then walks the relative *bonds* table, deferring
+    the absolute-index / boundary-phase work to
+    :func:`add_neighbor_interaction` (i.e. :func:`find_site`).
+
+    The traversal order — cell-outer, local-terms-then-bonds, bond-inner —
+    matches the hand-written per-lattice loops it replaces, so the produced
+    ``trans_list`` / interaction-list ordering is byte-identical.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Model parameter structure (modified in place).
+    buf : GnuplotBuffer or None
+        Gnuplot bond buffer (``None`` suppresses gnuplot output).
+    bonds : iterable of tuple
+        Relative bond table; each entry is
+        ``(delta_w, delta_l, uc_i, uc_j, connect, J, t, V)`` — the same shape
+        as the ``_BONDS`` tables in the lattice modules.
+    """
+    kondo_off = (StdI.NsiteUC * StdI.NCell
+                 if StdI.model == ModelType.KONDO else 0)
+    for kCell in range(StdI.NCell):
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
+        base = StdI.NsiteUC * kCell
+        for uc in range(StdI.NsiteUC):
+            add_local_terms(StdI, base + uc + kondo_off, base + uc)
+        for dW, dL, si, sj, nn, J, t, V in bonds:
+            add_neighbor_interaction(
+                StdI, buf, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)

@@ -25,7 +25,7 @@ from ..core.param_check import (
 from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
 from .interaction_builder import (
     compute_max_interactions, malloc_interactions,
-    add_neighbor_interaction, add_local_terms,
+    expand_bonds_2d,
 )
 from .site_util import (
     init_site, set_label, set_local_spin_flags,
@@ -151,28 +151,16 @@ def tetragonal(StdI: StdIntList) -> "GnuplotData | None":
     malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
-    for kCell in range(StdI.NCell):
-        cell_w = StdI.Cell[kCell, 0]
-        cell_l = StdI.Cell[kCell, 1]
-
-        # Local term
-        isite = kCell
-        if StdI.model == ModelType.KONDO:
-            isite += StdI.NCell
-        add_local_terms(StdI, isite, kCell)
-
-        # Neighbor bonds: (dW, dL, site_i, site_j, nn_level, J, t, V)
-        _BONDS = (
-            (1, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn along W
-            (0, 1, 0, 0, 1, StdI.J1, StdI.t1, StdI.V1),       # nn along L
-            (1, 1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn W+L
-            (1, -1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),   # nnn W-L
-            (2, 0, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn 2W
-            (0, 2, 0, 0, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp), # nnnn 2L
-        )
-        for dW, dL, si, sj, nn, J, t, V in _BONDS:
-            add_neighbor_interaction(
-                StdI, buf, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
+    # Relative bond table: (dW, dL, site_i, site_j, nn_level, J, t, V)
+    _BONDS = (
+        (1, 0, 0, 0, 1, StdI.J0, StdI.t0, StdI.V0),       # nn along W
+        (0, 1, 0, 0, 1, StdI.J1, StdI.t1, StdI.V1),       # nn along L
+        (1, 1, 0, 0, 2, StdI.J0p, StdI.t0p, StdI.V0p),    # nnn W+L
+        (1, -1, 0, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p),   # nnn W-L
+        (2, 0, 0, 0, 3, StdI.J0pp, StdI.t0pp, StdI.V0pp), # nnnn 2W
+        (0, 2, 0, 0, 3, StdI.J1pp, StdI.t1pp, StdI.V1pp), # nnnn 2L
+    )
+    expand_bonds_2d(StdI, buf, _BONDS)
     return buf.build(StdI) if buf else None
 
 
