@@ -25,7 +25,7 @@ from ..core.param_check import (
 from .input_params import input_spin, input_hopp, input_coulomb_v
 from .interaction_builder import (
     malloc_interactions,
-    add_neighbor_interaction, add_local_terms,
+    expand_bonds_2d,
 )
 from .site_util import (
     init_site, set_label, set_local_spin_flags,
@@ -166,34 +166,24 @@ def ladder(StdI: StdIntList) -> "GnuplotData | None":
     malloc_interactions(StdI, ntransMax)
 
     # 5. Set all interactions
-    for cell_l in range(StdI.L):
-        for uc_i in range(StdI.NsiteUC):
-            isite = uc_i + cell_l * StdI.NsiteUC
-            if StdI.model == ModelType.KONDO:
-                isite += StdI.L * StdI.NsiteUC
-
-            # Local terms
-            add_local_terms(StdI, isite, uc_i + cell_l * StdI.NsiteUC)
-
-            # Leg bonds: (dW, dL, sj_offset, nn, J, t, V)
-            _LEG_BONDS = (
-                (0, 1, 0, 1, StdI.J1, StdI.t1, StdI.V1),   # nn along ladder
-                (0, 2, 0, 2, StdI.J1p, StdI.t1p, StdI.V1p), # nnn along ladder
-            )
-            for dW, dL, sj_off, nn, J, t, V in _LEG_BONDS:
-                add_neighbor_interaction(
-                    StdI, buf, 0, cell_l, dW, dL, uc_i, uc_i + sj_off, nn, J, t, V)
-
-            # Rung/diagonal bonds (only between adjacent legs)
-            if uc_i < StdI.NsiteUC - 1:
-                _RUNG_BONDS = (
-                    (0, 0, 1, StdI.J0, StdI.t0, StdI.V0),    # vertical
-                    (0, 1, 1, StdI.J2, StdI.t2, StdI.V2),    # diagonal 1
-                    (0, -1, 1, StdI.J2p, StdI.t2p, StdI.V2p), # diagonal 2
-                )
-                for dW, dL, nn, J, t, V in _RUNG_BONDS:
-                    add_neighbor_interaction(
-                        StdI, buf, 0, cell_l, dW, dL, uc_i, uc_i + 1, nn, J, t, V)
+    # The W legs are the unit-cell sublattices (NsiteUC = W; W is a Layer-1 /
+    # unit-cell parameter, not a super-cell size).  Flatten the leg / rung /
+    # diagonal structure into a fixed (si, sj) bond table so the generic 2-D
+    # expander handles it like the other lattices (L2).  Relative bond entry:
+    # (dW, dL, site_i, site_j, nn_level, J, t, V).
+    _BONDS = []
+    for uc_i in range(StdI.NsiteUC):
+        # leg bonds along the ladder (same leg, dL direction); W is open so
+        # there is no dW offset — the leg index is the sublattice index.
+        _BONDS.append((0, 1, uc_i, uc_i, 1, StdI.J1, StdI.t1, StdI.V1))    # nn
+        _BONDS.append((0, 2, uc_i, uc_i, 2, StdI.J1p, StdI.t1p, StdI.V1p))  # nnn
+        # rung + diagonals to the next leg (only between adjacent legs);
+        # the two diagonals (L+1 / L-1) carry J2 / J2' respectively.
+        if uc_i < StdI.NsiteUC - 1:
+            _BONDS.append((0, 0, uc_i, uc_i + 1, 1, StdI.J0, StdI.t0, StdI.V0))    # rung
+            _BONDS.append((0, 1, uc_i, uc_i + 1, 1, StdI.J2, StdI.t2, StdI.V2))    # diag L+1
+            _BONDS.append((0, -1, uc_i, uc_i + 1, 1, StdI.J2p, StdI.t2p, StdI.V2p))  # diag L-1
+    expand_bonds_2d(StdI, buf, _BONDS)
     return buf.build(StdI) if buf else None
 
 
