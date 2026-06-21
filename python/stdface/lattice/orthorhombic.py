@@ -25,7 +25,7 @@ from ..core.param_check import (
 from .input_params import input_spin_nn, input_spin, input_hopp, input_coulomb_v
 from .interaction_builder import (
     compute_max_interactions, malloc_interactions,
-    add_neighbor_interaction_3d, add_local_terms,
+    expand_bonds_3d, add_local_terms,
 )
 from .site_util import init_site, set_local_spin_flags
 
@@ -150,39 +150,32 @@ def orthorhombic(StdI: StdIntList) -> None:
     malloc_interactions(StdI, ntransMax)
 
     # (5) Set Transfer & Interaction
-    for kCell in range(StdI.NCell):
-        cell_w = StdI.Cell[kCell, 0]
-        cell_l = StdI.Cell[kCell, 1]
-        iH = StdI.Cell[kCell, 2]
-
-        # Local term
+    def _local(StdI, kCell):
         isite = kCell
         if StdI.model == ModelType.KONDO:
             isite += StdI.NCell
         add_local_terms(StdI, isite, kCell)
 
-        # Neighbor bonds: (dW, dL, dH, site_i, site_j, J, t, V)
-        _BONDS = (
-            # Nearest neighbor
-            (1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
-            (0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
-            (0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
-            # Second nearest neighbor
-            (0, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),   # +L+H
-            (0, 1, -1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),  # +L-H
-            (1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),   # +H+W
-            (-1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),  # +H-W
-            (1, 1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),   # +W+L
-            (1, -1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),  # +W-L
-            # Third nearest neighbor
-            (1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),   # +W+L+H
-            (-1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # -W+L+H
-            (1, -1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # +W-L+H
-            (1, 1, -1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # +W+L-H
-        )
-        for dW, dL, dH, si, sj, J, t, V in _BONDS:
-            add_neighbor_interaction_3d(
-                StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
+    # Relative bond table: (dW, dL, dH, site_i, site_j, J, t, V)
+    _BONDS = (
+        # Nearest neighbor
+        (1, 0, 0, 0, 0, StdI.J0, StdI.t0, StdI.V0),      # along W
+        (0, 1, 0, 0, 0, StdI.J1, StdI.t1, StdI.V1),      # along L
+        (0, 0, 1, 0, 0, StdI.J2, StdI.t2, StdI.V2),      # along H
+        # Second nearest neighbor
+        (0, 1, 1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),   # +L+H
+        (0, 1, -1, 0, 0, StdI.J0p, StdI.t0p, StdI.V0p),  # +L-H
+        (1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),   # +H+W
+        (-1, 0, 1, 0, 0, StdI.J1p, StdI.t1p, StdI.V1p),  # +H-W
+        (1, 1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),   # +W+L
+        (1, -1, 0, 0, 0, StdI.J2p, StdI.t2p, StdI.V2p),  # +W-L
+        # Third nearest neighbor
+        (1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),   # +W+L+H
+        (-1, 1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # -W+L+H
+        (1, -1, 1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # +W-L+H
+        (1, 1, -1, 0, 0, StdI.Jpp, StdI.tpp, StdI.Vpp),  # +W+L-H
+    )
+    expand_bonds_3d(StdI, _BONDS, _local)
 
 
 # ---------------------------------------------------------------------------

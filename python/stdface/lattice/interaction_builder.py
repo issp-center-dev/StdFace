@@ -840,3 +840,44 @@ def expand_bonds_2d(
         for dW, dL, si, sj, nn, J, t, V in bonds:
             add_neighbor_interaction(
                 StdI, buf, cell_w, cell_l, dW, dL, si, sj, nn, J, t, V)
+
+
+def expand_bonds_3d(
+    StdI: StdIntList,
+    bonds,
+    local_fn,
+) -> None:
+    """Expand a 3-D lattice's relative bond table over the whole super-cell.
+
+    Generic Layer-2 expander shared by the 3-D lattice builders (L1).  For
+    each cell it runs the lattice-supplied *local_fn* (which adds the
+    model-dependent on-site terms — these differ between 3-D lattices, e.g.
+    pyrochlore's Kondo coupling), then walks the relative *bonds* table via
+    :func:`add_neighbor_interaction_3d` (i.e. :func:`find_site`).
+
+    The traversal order — cell-outer, local-then-bonds, bond-inner — matches
+    the hand-written per-lattice loops it replaces, so the produced
+    ``trans_list`` / interaction-list ordering is byte-identical.  3-D
+    lattices have no gnuplot output, so there is no buffer argument.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        Model parameter structure (modified in place).
+    bonds : iterable of tuple
+        Relative bond table; each entry is
+        ``(delta_w, delta_l, delta_h, uc_i, uc_j, J, t, V)`` — the same shape
+        as the ``_BONDS`` tables in the 3-D lattice modules.
+    local_fn : callable
+        ``local_fn(StdI, kCell)`` adds the on-site (local) terms for cell
+        *kCell*.  Supplied by each lattice so its exact local-term handling
+        is preserved.
+    """
+    for kCell in range(StdI.NCell):
+        cell_w = StdI.Cell[kCell, 0]
+        cell_l = StdI.Cell[kCell, 1]
+        iH = StdI.Cell[kCell, 2]
+        local_fn(StdI, kCell)
+        for dW, dL, dH, si, sj, J, t, V in bonds:
+            add_neighbor_interaction_3d(
+                StdI, cell_w, cell_l, iH, dW, dL, dH, si, sj, J, t, V)
