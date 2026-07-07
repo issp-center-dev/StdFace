@@ -1972,6 +1972,8 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_d("OmegaOrg", &StdI->OmegaOrg, 0.0);
   StdFace_PrintVal_d("OmegaIm", &StdI->OmegaIm, 0.01* (int)StdI->LargeValue);
 #elif defined(_mVMC)
+  int nSROptItrSmpDefault;
+
   if (strcmp(StdI->CParaFileHead, "****") == 0) {
     strcpy(StdI->CParaFileHead, "zqp\0");
     fprintf(stdout, "    CParaFileHead = %-12s######  DEFAULT VALUE IS USED  ######\n", StdI->CParaFileHead);
@@ -1999,7 +2001,9 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1000);
   
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrSmp", StdI->NSROptItrSmp);
-  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, StdI->NSROptItrStep/10);
+  nSROptItrSmpDefault = StdI->NSROptItrStep/10;
+  if (nSROptItrSmpDefault < 1) nSROptItrSmpDefault = 1;
+  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, nSROptItrSmpDefault);
 
   StdFace_PrintVal_i("NVMCWarmUp", &StdI->NVMCWarmUp, 10);
   StdFace_PrintVal_i("NVMCInterval", &StdI->NVMCInterval, 1);

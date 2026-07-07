@@ -951,8 +951,9 @@ def _check_mod_para_mvmc(StdI: StdIntList) -> None:
 
     if StdI.NVMCCalMode == 1:
         not_used_i("NSROptItrSmp", StdI.NSROptItrSmp)
+    sropt_itr_smp_default = max(1, StdI.NSROptItrStep // 10)
     StdI.NSROptItrSmp = print_val_i(
-        "NSROptItrSmp", StdI.NSROptItrSmp, StdI.NSROptItrStep // 10
+        "NSROptItrSmp", StdI.NSROptItrSmp, sropt_itr_smp_default
     )
 
     StdI.NVMCWarmUp = print_val_i("NVMCWarmUp", StdI.NVMCWarmUp, 10)
