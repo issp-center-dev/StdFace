@@ -1445,6 +1445,24 @@ static int StdFace_IsChainLattice(struct StdIntList *StdI)
          strcmp(StdI->lattice, "chainlattice") == 0;
 }
 
+static int StdFace_HasNonZeroRealTerms(double *terms, int nterms, double eps)
+{
+  int iterm;
+  for (iterm = 0; iterm < nterms; iterm++) {
+    if (fabs(terms[iterm]) > eps) return 1;
+  }
+  return 0;
+}
+
+static int StdFace_HasNonZeroComplexTerms(double complex *terms, int nterms, double eps)
+{
+  int iterm;
+  for (iterm = 0; iterm < nterms; iterm++) {
+    if (cabs(terms[iterm]) > eps) return 1;
+  }
+  return 0;
+}
+
 static void CheckMomentumSymmetry(struct StdIntList *StdI)
 {
   double eps = 1.0e-12;
@@ -1475,6 +1493,15 @@ static void CheckMomentumSymmetry(struct StdIntList *StdI)
       fprintf(stdout, "\n ERROR ! MomentumIndex does not support boundary phase in v1.\n");
       StdFace_exit(-1);
     }
+  }
+  if (StdFace_HasNonZeroComplexTerms(StdI->trans, StdI->ntrans, eps) ||
+      StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only exchange-only Spin-1/2 chain with Jz = 0 and no field/general/pair terms.\n");
+    StdFace_exit(-1);
   }
 }
 
