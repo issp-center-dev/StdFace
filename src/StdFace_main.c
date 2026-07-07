@@ -1078,6 +1078,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->exct = StdI->NaN_i;
   StdI->LanczosEps = StdI->NaN_i;
   StdI->LanczosTarget = StdI->NaN_i;
+  StdI->MomentumIndex = StdI->NaN_i;
   StdI->NumAve = StdI->NaN_i;
   StdI->ExpecInterval = StdI->NaN_i;
   StdI->dt = NaN_d;
@@ -1432,6 +1433,82 @@ static void PrintTrans(struct StdIntList *StdI){
   fclose(fp);
   fprintf(stdout, "      trans.def is written.\n");
 }/*static void PrintTrans*/
+#if defined(_HPhi)
+static int StdFace_UsesMomentumSymmetry(struct StdIntList *StdI)
+{
+  return StdI->MomentumIndex != StdI->NaN_i;
+}
+
+static int StdFace_IsChainLattice(struct StdIntList *StdI)
+{
+  return strcmp(StdI->lattice, "chain") == 0 ||
+         strcmp(StdI->lattice, "chainlattice") == 0;
+}
+
+static void CheckMomentumSymmetry(struct StdIntList *StdI)
+{
+  double eps = 1.0e-12;
+  int idim;
+  if (!StdFace_UsesMomentumSymmetry(StdI)) return;
+  if (!StdFace_IsChainLattice(StdI)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only chain lattice.\n");
+    StdFace_exit(-1);
+  }
+  if (strcmp(StdI->model, "spin") != 0 || StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Spin model.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->S2 != 1) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin-1/2.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->L <= 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex requires positive L.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->MomentumIndex < 0 || StdI->MomentumIndex >= StdI->L) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex must satisfy 0 <= MomentumIndex < L.\n");
+    StdFace_exit(-1);
+  }
+  for (idim = 0; idim < 3; idim++) {
+    if (fabs(StdI->phase[idim]) > eps || StdI->AntiPeriod[idim] != 0) {
+      fprintf(stdout, "\n ERROR ! MomentumIndex does not support boundary phase in v1.\n");
+      StdFace_exit(-1);
+    }
+  }
+}
+
+static void PrintMomentumTransSym(struct StdIntList *StdI)
+{
+  FILE *fp;
+  int op, site;
+  if (!StdFace_UsesMomentumSymmetry(StdI)) return;
+
+  fp = fopen("qptransidx.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NQPTrans %10d\n", StdI->L);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n");
+  fprintf(fp, "=============================================\n");
+  for (op = 0; op < StdI->L; op++) {
+    double angle = -2.0 * StdI->pi * (double)StdI->MomentumIndex * (double)op / (double)StdI->L;
+    double re = cos(angle);
+    double im = sin(angle);
+    if (fabs(re) < 1.0e-14) re = 0.0;
+    if (fabs(im) < 1.0e-14) im = 0.0;
+    fprintf(fp, "%d %25.15f %25.15f\n", op, re, im);
+  }
+  for (op = 0; op < StdI->L; op++) {
+    for (site = 0; site < StdI->L; site++) {
+      fprintf(fp, "%5d  %5d  %5d  %5d\n", op, site, (site + op) % StdI->L, 1);
+    }
+  }
+
+  fflush(fp);
+  fclose(fp);
+  fprintf(stdout, " qptransidx.def is written for MomentumIndex = %d.\n", StdI->MomentumIndex);
+}/*static void PrintMomentumTransSym*/
+#endif
 /**
  * @brief Print namelist.def
  * @author Mitsuaki Kawamura (The University of Tokyo)
@@ -1471,6 +1548,8 @@ static void PrintNamelist(struct StdIntList *StdI){
     else if (StdI->PumpBody == 2)
       fprintf(fp, "       TETwoBody  tetwo.def\n");
   }/*if (strcmp(StdI->method, "timeevolution") == 0)*/
+  if (StdFace_UsesMomentumSymmetry(StdI))
+    fprintf(                       fp, "        TransSym  qptransidx.def\n");
   fprintf(                         fp, "     SpectrumVec  %s_eigenvec_0\n",
                                    StdI->CDataFileHead);
   if (StdI->lBoost == 1) fprintf(  fp, "           Boost  boost.def\n");
@@ -2819,6 +2898,7 @@ void StdFace_main(
     else if (strcmp(keyword, "lanczos_max") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lanczos_max);
     else if (strcmp(keyword, "largevalue") == 0) StoreWithCheckDup_d(keyword, value, &StdI->LargeValue);
     else if (strcmp(keyword, "method") == 0) StoreWithCheckDup_sl(keyword, value, StdI->method);
+    else if (strcmp(keyword, "momentumindex") == 0) StoreWithCheckDup_i(keyword, value, &StdI->MomentumIndex);
     else if (strcmp(keyword, "nomega") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Nomega);
     else if (strcmp(keyword, "numave") == 0) StoreWithCheckDup_i(keyword, value, &StdI->NumAve);
     else if (strcmp(keyword, "nvec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nvec);
@@ -3021,6 +3101,7 @@ void StdFace_main(
   /**/
 #if defined(_HPhi)
   StdFace_LargeValue(StdI);
+  CheckMomentumSymmetry(StdI);
   /*
   Generate Hamiltonian for Boost
   */
@@ -3045,6 +3126,7 @@ void StdFace_main(
   PrintLocSpin(StdI);
   PrintTrans(StdI);
   PrintInteractions(StdI);
+  PrintMomentumTransSym(StdI);
   CheckModPara(StdI);
   PrintModPara(StdI);
 

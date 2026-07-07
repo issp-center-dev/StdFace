@@ -289,6 +289,7 @@ struct StdIntList {
   int exct;/**<@brief The number of eigenvectors to be computed. input from file*/
   int LanczosEps;/**<@brief Convergence threshold for the Lanczos method.*/
   int LanczosTarget;/**<@brief Which eigenvector is used for the convergence check.*/
+  int MomentumIndex;/**<@brief Momentum index for HPhi TransSym generation.*/
   int NumAve;/**<@brief Number of trials for TPQ calculation.*/
   int ExpecInterval;/**<@brief Interval for the iteration when the expectation 
                     value is computed.*/
