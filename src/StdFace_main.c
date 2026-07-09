@@ -1467,25 +1467,114 @@ static int StdFace_HasNonZeroComplexTerms(double complex *terms, int nterms, dou
   return 0;
 }
 
+static int StdFace_HasNonZeroReal(double term, double eps)
+{
+  return isnan(term) == 0 && fabs(term) > eps;
+}
+
+static int StdFace_HasNonZeroComplex(double complex term, double eps)
+{
+  return isnan(creal(term)) == 0 && cabs(term) > eps;
+}
+
+static int StdFace_IsLanczosOrCGMethod(struct StdIntList *StdI)
+{
+  return strcmp(StdI->method, "****") == 0 ||
+         strcmp(StdI->method, "lanczos") == 0 ||
+         strcmp(StdI->method, "lanczosenergy") == 0 ||
+         strcmp(StdI->method, "cg") == 0;
+}
+
+static void CheckMomentumSpinSymmetry(struct StdIntList *StdI, double eps)
+{
+  if (StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Spin model.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->S2 != 1) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin-1/2.\n");
+    StdFace_exit(-1);
+  }
+  if (!StdFace_IsLanczosOrCGMethod(StdI)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Lanczos and CG.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroComplexTerms(StdI->trans, StdI->ntrans, eps) ||
+      StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only exchange-only Spin-1/2 chain with Jz = 0 and no field/general/pair terms.\n");
+    StdFace_exit(-1);
+  }
+}
+
+static void CheckMomentumHubbardSymmetry(struct StdIntList *StdI, double eps)
+{
+  if (StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Hubbard model.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->ncond == StdI->NaN_i || StdI->Sz2 == StdI->NaN_i) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard requires nelec and 2Sz.\n");
+    StdFace_exit(-1);
+  }
+  if (!StdFace_IsLanczosOrCGMethod(StdI)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Lanczos and CG.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroReal(StdI->mu, eps) ||
+      StdFace_HasNonZeroReal(StdI->h, eps) ||
+      StdFace_HasNonZeroReal(StdI->Gamma, eps) ||
+      StdFace_HasNonZeroReal(StdI->Gamma_y, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard does not support mu/h/Gamma/Gamma_y terms.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroComplex(StdI->t0p, eps) ||
+      StdFace_HasNonZeroComplex(StdI->t0pp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard does not support next-neighbor hopping terms.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroReal(StdI->V0, eps) ||
+      StdFace_HasNonZeroReal(StdI->V0p, eps) ||
+      StdFace_HasNonZeroReal(StdI->V0pp, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard does not support V/CoulombInter terms.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard supports only nearest-neighbor hopping and onsite U.\n");
+    StdFace_exit(-1);
+  }
+}
+
+static void CheckMomentumSpinlessSymmetry(struct StdIntList *StdI, double eps)
+{
+  if (StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical SpinlessFermion model.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only hopping-only SpinlessFermion chain with no density/general/pair terms.\n");
+    StdFace_exit(-1);
+  }
+}
+
 static void CheckMomentumSymmetry(struct StdIntList *StdI)
 {
   double eps = 1.0e-12;
   int idim;
-  int is_spin;
-  int is_spinless;
   if (!StdFace_UsesMomentumSymmetry(StdI)) return;
-  is_spin = (strcmp(StdI->model, "spin") == 0);
-  is_spinless = (strcmp(StdI->model, "spinlessfermion") == 0);
   if (!StdFace_IsChainLattice(StdI)) {
     fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only chain lattice.\n");
-    StdFace_exit(-1);
-  }
-  if ((!is_spin && !is_spinless) || StdI->lGC != 0) {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Spin or SpinlessFermion model.\n");
-    StdFace_exit(-1);
-  }
-  if (is_spin && StdI->S2 != 1) {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin-1/2.\n");
     StdFace_exit(-1);
   }
   if (StdI->L <= 0) {
@@ -1502,23 +1591,17 @@ static void CheckMomentumSymmetry(struct StdIntList *StdI)
       StdFace_exit(-1);
     }
   }
-  if (is_spin &&
-      (StdFace_HasNonZeroComplexTerms(StdI->trans, StdI->ntrans, eps) ||
-       StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps))) {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only exchange-only Spin-1/2 chain with Jz = 0 and no field/general/pair terms.\n");
-    StdFace_exit(-1);
+  if (strcmp(StdI->model, "spin") == 0) {
+    CheckMomentumSpinSymmetry(StdI, eps);
   }
-  if (is_spinless &&
-      (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
-       StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps))) {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only hopping-only SpinlessFermion chain with no density/general/pair terms.\n");
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+    CheckMomentumSpinlessSymmetry(StdI, eps);
+  }
+  else if (strcmp(StdI->model, "hubbard") == 0) {
+    CheckMomentumHubbardSymmetry(StdI, eps);
+  }
+  else {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin, SpinlessFermion, and Hubbard models.\n");
     StdFace_exit(-1);
   }
 }
