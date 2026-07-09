@@ -130,6 +130,10 @@ static void PrintCalcMod(struct StdIntList *StdI)
     if (StdI->lGC == 0)iCalcModel = 2;
     else iCalcModel = 5;
   }/*if (strcmp(StdI->model, "kondo") == 0)*/
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+    if (StdI->lGC == 0)iCalcModel = 7;
+    else iCalcModel = 8;
+  }/*if (strcmp(StdI->model, "spinlessfermion") == 0)*/
   /*
   Restart
   */
@@ -1548,6 +1552,22 @@ static void CheckMomentumHubbardSymmetry(struct StdIntList *StdI, double eps)
   }
 }
 
+static void CheckMomentumSpinlessSymmetry(struct StdIntList *StdI, double eps)
+{
+  if (StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical SpinlessFermion model.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only hopping-only SpinlessFermion chain with no density/general/pair terms.\n");
+    StdFace_exit(-1);
+  }
+}
+
 static void CheckMomentumSymmetry(struct StdIntList *StdI)
 {
   double eps = 1.0e-12;
@@ -1574,11 +1594,14 @@ static void CheckMomentumSymmetry(struct StdIntList *StdI)
   if (strcmp(StdI->model, "spin") == 0) {
     CheckMomentumSpinSymmetry(StdI, eps);
   }
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+    CheckMomentumSpinlessSymmetry(StdI, eps);
+  }
   else if (strcmp(StdI->model, "hubbard") == 0) {
     CheckMomentumHubbardSymmetry(StdI, eps);
   }
   else {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin and Hubbard models.\n");
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin, SpinlessFermion, and Hubbard models.\n");
     StdFace_exit(-1);
   }
 }
@@ -2156,6 +2179,8 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_d("OmegaOrg", &StdI->OmegaOrg, 0.0);
   StdFace_PrintVal_d("OmegaIm", &StdI->OmegaIm, 0.01* (int)StdI->LargeValue);
 #elif defined(_mVMC)
+  int nSROptItrSmpDefault;
+
   if (strcmp(StdI->CParaFileHead, "****") == 0) {
     strcpy(StdI->CParaFileHead, "zqp\0");
     fprintf(stdout, "    CParaFileHead = %-12s######  DEFAULT VALUE IS USED  ######\n", StdI->CParaFileHead);
@@ -2183,7 +2208,9 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1000);
   
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrSmp", StdI->NSROptItrSmp);
-  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, StdI->NSROptItrStep/10);
+  nSROptItrSmpDefault = StdI->NSROptItrStep/10;
+  if (nSROptItrSmpDefault < 1) nSROptItrSmpDefault = 1;
+  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, nSROptItrSmpDefault);
 
   StdFace_PrintVal_i("NVMCWarmUp", &StdI->NVMCWarmUp, 10);
   StdFace_PrintVal_i("NVMCInterval", &StdI->NVMCInterval, 1);
@@ -2257,6 +2284,17 @@ static void CheckModPara(struct StdIntList *StdI)
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+#if defined(_HPhi)
+    if (StdI->lGC == 0) StdFace_RequiredVal_i("ncond", StdI->ncond);
+    else {
+      StdFace_NotUsed_i("nelec", StdI->ncond);
+    }
+    StdFace_NotUsed_i("2Sz", StdI->Sz2);
+#else
+    UnsupportedSystem(StdI->model, StdI->lattice);
+#endif
+  }/*else if (strcmp(StdI->model, "spinlessfermion") == 0)*/
 }/*static void CheckModPara*/
 /**
  * @brief Output .def files for specific interactions (Coulomb, Hund, Exchange, etc.)
@@ -3156,6 +3194,11 @@ void StdFace_main(
     strcpy(StdI->model, "kondo\0");
     StdI->lGC = 1;
   }
+#if defined(_HPhi)
+  else if (strcmp(StdI->model, "spinlessfermion") == 0
+    || strcmp(StdI->model, "spinless") == 0)
+    strcpy(StdI->model, "spinlessfermion\0");
+#endif
   else UnsupportedSystem(StdI->model, StdI->lattice);
 #if defined(_HPhi)
   /*
@@ -3172,6 +3215,11 @@ void StdFace_main(
   Compute vector potential and electrical field
   */
   if (strcmp(StdI->method, "timeevolution") == 0) VectorPotential(StdI);
+  if (strcmp(StdI->model, "spinlessfermion") == 0 &&
+      !StdFace_IsChainLattice(StdI)) {
+    fprintf(stdout, "\n ERROR ! SpinlessFermion Standard mode currently supports only chain lattice.\n");
+    StdFace_exit(-1);
+  }
 #endif
   /*>>
   Generate Hamiltonian definition files

@@ -28,6 +28,17 @@
 #include <complex.h>
 #include <string.h>
 
+static void StdFace_SpinlessHopping(
+  struct StdIntList *StdI,
+  double complex trans0,
+  int isite,
+  int jsite
+)
+{
+  StdFace_trans(StdI, trans0, jsite, 0, isite, 0);
+  StdFace_trans(StdI, conj(trans0), isite, 0, jsite, 0);
+}
+
 /**
 @brief Setup a Hamiltonian for the Hubbard model on a Chain lattice
 @author Mitsuaki Kawamura (The University of Tokyo)
@@ -66,8 +77,11 @@ void StdFace_Chain(
   FILE *fp = NULL;
   int isite, jsite, ntransMax, nintrMax;
   int iL;
+  int is_spinless;
   double complex Cphase;
   double dR[3];
+
+  is_spinless = (strcmp(StdI->model, "spinlessfermion") == 0);
 
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
@@ -116,11 +130,11 @@ void StdFace_Chain(
   StdFace_NotUsed_d("V1'", StdI->V1p);
   StdFace_NotUsed_d("V2'", StdI->V2p);
   StdFace_NotUsed_d("K", StdI->K);
-  StdFace_PrintVal_d("h", &StdI->h, 0.0);
-  StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
-  StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
   /**/
   if (strcmp(StdI->model, "spin") == 0 ) {
+    StdFace_PrintVal_d("h", &StdI->h, 0.0);
+    StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
+    StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
     StdFace_PrintVal_i("2S", &StdI->S2, 1);
     StdFace_PrintVal_d("D", &StdI->D[2][2], 0.0);
     StdFace_InputSpinNN(StdI->J, StdI->JAll, StdI->J0, StdI->J0All, "J0");
@@ -136,7 +150,33 @@ void StdFace_Chain(
     StdFace_NotUsed_d("V0", StdI->V0);
     StdFace_NotUsed_d("V'", StdI->Vp);
   }/*if (strcmp(StdI->model, "spin") == 0 )*/
+  else if (is_spinless) {
+    StdFace_NotUsed_d("h", StdI->h);
+    StdFace_NotUsed_d("Gamma", StdI->Gamma);
+    StdFace_NotUsed_d("Gamma_y", StdI->Gamma_y);
+    StdFace_InputHopp(StdI->t, &StdI->t0, "t0");
+    StdFace_InputHopp(StdI->tp, &StdI->t0p, "t0'");
+    StdFace_InputHopp(StdI->tpp, &StdI->t0pp, "t0''");
+
+    StdFace_NotUsed_d("mu", StdI->mu);
+    StdFace_NotUsed_d("U", StdI->U);
+    StdFace_NotUsed_d("V", StdI->V);
+    StdFace_NotUsed_d("V0", StdI->V0);
+    StdFace_NotUsed_d("V'", StdI->Vp);
+    StdFace_NotUsed_d("V0'", StdI->V0p);
+    StdFace_NotUsed_d("V''", StdI->Vpp);
+    StdFace_NotUsed_d("V0''", StdI->V0pp);
+    StdFace_NotUsed_J("J", StdI->JAll, StdI->J);
+    StdFace_NotUsed_J("J0", StdI->J0All, StdI->J0);
+    StdFace_NotUsed_J("J0'", StdI->J0pAll, StdI->J0p);
+    StdFace_NotUsed_J("J0''", StdI->J0ppAll, StdI->J0pp);
+    StdFace_NotUsed_d("D", StdI->D[2][2]);
+    StdFace_NotUsed_i("2S", StdI->S2);
+  }/*else if (is_spinless)*/
   else {
+    StdFace_PrintVal_d("h", &StdI->h, 0.0);
+    StdFace_PrintVal_d("Gamma", &StdI->Gamma, 0.0);
+    StdFace_PrintVal_d("Gamma_y", &StdI->Gamma_y, 0.0);
     StdFace_PrintVal_d("mu", &StdI->mu, 0.0);
     StdFace_PrintVal_d("U", &StdI->U, 0.0);
     StdFace_InputHopp(StdI->t, &StdI->t0, "t0");
@@ -171,7 +211,7 @@ void StdFace_Chain(
   /**/
   if (strcmp(StdI->model, "spin") == 0 )
     for (isite = 0; isite < StdI->nsite; isite++)StdI->locspinflag[isite] = StdI->S2;
-  else if (strcmp(StdI->model, "hubbard") == 0 ) 
+  else if (strcmp(StdI->model, "hubbard") == 0 || is_spinless)
     for (isite = 0; isite < StdI->nsite; isite++)StdI->locspinflag[isite] = 0;
   else if (strcmp(StdI->model, "kondo") == 0 ) 
     for (isite = 0; isite < StdI->nsite / 2; isite++) {
@@ -185,6 +225,10 @@ void StdFace_Chain(
     ntransMax = StdI->L * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
     nintrMax = StdI->L * (StdI->NsiteUC/*D*/ + 1/*J*/ + 1/*J'*/ + 1/*J''*/)
       * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
+  }
+  else if (is_spinless) {
+    ntransMax = StdI->L * (2/*t*/ + 2/*t'*/ + 2/*t''*/);
+    nintrMax = StdI->L;
   }
   else {
     ntransMax = StdI->L * 2/*spin*/ * (2 * StdI->NsiteUC/*mu+h+Gamma*/ + 2/*t*/ + 2/*t'*/ + 2/*t''*/);
@@ -212,7 +256,9 @@ void StdFace_Chain(
       StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite, isite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, StdI->U, isite);
+      if (!is_spinless) {
+        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, StdI->U, isite);
+      }
       if (strcmp(StdI->model, "kondo") == 0 ) {
         jsite = iL;
         StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite, jsite);
@@ -227,6 +273,9 @@ void StdFace_Chain(
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->J0, StdI->S2, StdI->S2, isite, jsite);
     }
+    else if (is_spinless) {
+      StdFace_SpinlessHopping(StdI, Cphase * StdI->t0, isite, jsite);
+    }
     else {
       StdFace_Hopping(StdI, Cphase * StdI->t0, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V0, isite, jsite);
@@ -239,6 +288,9 @@ void StdFace_Chain(
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->J0p, StdI->S2, StdI->S2, isite, jsite);
     }
+    else if (is_spinless) {
+      StdFace_SpinlessHopping(StdI, Cphase * StdI->t0p, isite, jsite);
+    }
     else {
       StdFace_Hopping(StdI, Cphase * StdI->t0p, isite, jsite, dR);
       StdFace_Coulomb(StdI, StdI->V0p, isite, jsite);
@@ -250,6 +302,9 @@ void StdFace_Chain(
     /**/
     if (strcmp(StdI->model, "spin") == 0) {
       StdFace_GeneralJ(StdI, StdI->J0pp, StdI->S2, StdI->S2, isite, jsite);
+    }
+    else if (is_spinless) {
+      StdFace_SpinlessHopping(StdI, Cphase * StdI->t0pp, isite, jsite);
     }
     else {
       StdFace_Hopping(StdI, Cphase * StdI->t0pp, isite, jsite, dR);
