@@ -130,6 +130,10 @@ static void PrintCalcMod(struct StdIntList *StdI)
     if (StdI->lGC == 0)iCalcModel = 2;
     else iCalcModel = 5;
   }/*if (strcmp(StdI->model, "kondo") == 0)*/
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+    if (StdI->lGC == 0)iCalcModel = 7;
+    else iCalcModel = 8;
+  }/*if (strcmp(StdI->model, "spinlessfermion") == 0)*/
   /*
   Restart
   */
@@ -1467,16 +1471,20 @@ static void CheckMomentumSymmetry(struct StdIntList *StdI)
 {
   double eps = 1.0e-12;
   int idim;
+  int is_spin;
+  int is_spinless;
   if (!StdFace_UsesMomentumSymmetry(StdI)) return;
+  is_spin = (strcmp(StdI->model, "spin") == 0);
+  is_spinless = (strcmp(StdI->model, "spinlessfermion") == 0);
   if (!StdFace_IsChainLattice(StdI)) {
     fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only chain lattice.\n");
     StdFace_exit(-1);
   }
-  if (strcmp(StdI->model, "spin") != 0 || StdI->lGC != 0) {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Spin model.\n");
+  if ((!is_spin && !is_spinless) || StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Spin or SpinlessFermion model.\n");
     StdFace_exit(-1);
   }
-  if (StdI->S2 != 1) {
+  if (is_spin && StdI->S2 != 1) {
     fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin-1/2.\n");
     StdFace_exit(-1);
   }
@@ -1494,13 +1502,23 @@ static void CheckMomentumSymmetry(struct StdIntList *StdI)
       StdFace_exit(-1);
     }
   }
-  if (StdFace_HasNonZeroComplexTerms(StdI->trans, StdI->ntrans, eps) ||
-      StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
-      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
-      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
-      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
-      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+  if (is_spin &&
+      (StdFace_HasNonZeroComplexTerms(StdI->trans, StdI->ntrans, eps) ||
+       StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps))) {
     fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only exchange-only Spin-1/2 chain with Jz = 0 and no field/general/pair terms.\n");
+    StdFace_exit(-1);
+  }
+  if (is_spinless &&
+      (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+       StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps))) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only hopping-only SpinlessFermion chain with no density/general/pair terms.\n");
     StdFace_exit(-1);
   }
 }
@@ -2183,6 +2201,17 @@ static void CheckModPara(struct StdIntList *StdI)
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+#if defined(_HPhi)
+    if (StdI->lGC == 0) StdFace_RequiredVal_i("ncond", StdI->ncond);
+    else {
+      StdFace_NotUsed_i("nelec", StdI->ncond);
+    }
+    StdFace_NotUsed_i("2Sz", StdI->Sz2);
+#else
+    UnsupportedSystem(StdI->model, StdI->lattice);
+#endif
+  }/*else if (strcmp(StdI->model, "spinlessfermion") == 0)*/
 }/*static void CheckModPara*/
 /**
  * @brief Output .def files for specific interactions (Coulomb, Hund, Exchange, etc.)
@@ -3082,6 +3111,11 @@ void StdFace_main(
     strcpy(StdI->model, "kondo\0");
     StdI->lGC = 1;
   }
+#if defined(_HPhi)
+  else if (strcmp(StdI->model, "spinlessfermion") == 0
+    || strcmp(StdI->model, "spinless") == 0)
+    strcpy(StdI->model, "spinlessfermion\0");
+#endif
   else UnsupportedSystem(StdI->model, StdI->lattice);
 #if defined(_HPhi)
   /*
@@ -3098,6 +3132,11 @@ void StdFace_main(
   Compute vector potential and electrical field
   */
   if (strcmp(StdI->method, "timeevolution") == 0) VectorPotential(StdI);
+  if (strcmp(StdI->model, "spinlessfermion") == 0 &&
+      !StdFace_IsChainLattice(StdI)) {
+    fprintf(stdout, "\n ERROR ! SpinlessFermion Standard mode currently supports only chain lattice.\n");
+    StdFace_exit(-1);
+  }
 #endif
   /*>>
   Generate Hamiltonian definition files
