@@ -234,23 +234,6 @@ def _require_expert_plugin(plugin, caller: str) -> None:
         raise ValueError(msg)
 
 
-def _namelist_entries_hphi(StdI: StdIntList) -> list:
-    """Return HPhi-specific ``(keyword, filename)`` namelist entries."""
-    entries: list = [("CalcMod", "calcmod.def")]
-    if StdI.SpectrumBody == 1:
-        entries.append(("SingleExcitation", "single.def"))
-    else:
-        entries.append(("PairExcitation", "pair.def"))
-    if StdI.method == MethodType.TIME_EVOLUTION:
-        if StdI.PumpBody == 1:
-            entries.append(("TEOneBody", "teone.def"))
-        elif StdI.PumpBody == 2:
-            entries.append(("TETwoBody", "tetwo.def"))
-    entries.append(("SpectrumVec", f"{StdI.CDataFileHead}_eigenvec_0"))
-    if StdI.lBoost == 1:
-        entries.append(("Boost", "boost.def"))
-    return entries
-
 
 def _namelist_entries_mvmc(StdI: StdIntList) -> list:
     """Return mVMC-specific ``(keyword, filename)`` namelist entries."""
@@ -403,43 +386,6 @@ def build_modpara(StdI: StdIntList) -> ModParaData:
     lines += plugin.modpara_lines(StdI)
     return ModParaData(lines=lines)
 
-
-def _modpara_lines_hphi(StdI: StdIntList) -> list:
-    """Return the HPhi-specific body line descriptors of ``modpara.def``."""
-    lines: list = [
-        ("raw", "HPhi_Cal_Parameters"),
-        ("sep",),
-        ("kv", "CDataFileHead", StdI.CDataFileHead, ""),
-        ("kv", "CParaFileHead", "zqp", ""),
-        ("sep",),
-        ("kv", "Nsite", StdI.nsite, "<5d"),
-    ]
-    if StdI.Sz2 is not None:
-        lines.append(("kv", "2Sz", StdI.Sz2, "<5d"))
-    if StdI.ncond is not None:
-        lines.append(("kv", "Ncond", StdI.ncond, "<5d"))
-    lines += [
-        ("kv", "Lanczos_max", StdI.Lanczos_max, "<5d"),
-        ("kv", "initial_iv", StdI.initial_iv, "<5d"),
-    ]
-    if StdI.nvec is not None:
-        lines.append(("kv", "nvec", StdI.nvec, "<5d"))
-    lines += [
-        ("kv", "exct", StdI.exct, "<5d"),
-        ("kv", "LanczosEps", StdI.LanczosEps, "<5d"),
-        ("kv", "LanczosTarget", StdI.LanczosTarget, "<5d"),
-        ("kv", "LargeValue", StdI.LargeValue, "<25.15e"),
-        ("kv", "NumAve", StdI.NumAve, "<5d"),
-        ("kv", "ExpecInterval", StdI.ExpecInterval, "<5d"),
-        ("kv", "NOmega", StdI.Nomega, "<5d"),
-        ("kv2", "OmegaMax", StdI.OmegaMax, "<25.15e", StdI.OmegaIm, "<25.15e"),
-        ("kv2", "OmegaMin", StdI.OmegaMin, "<25.15e", StdI.OmegaIm, "<25.15e"),
-        ("kv2", "OmegaOrg", StdI.OmegaOrg, "<25.15e", 0.0, "<25.15e"),
-        ("kv", "PreCG", 0, "<5d"),
-    ]
-    if StdI.method == MethodType.TIME_EVOLUTION:
-        lines.append(("kv", "ExpandCoef", StdI.ExpandCoef, "<5d"))
-    return lines
 
 
 def _modpara_lines_mvmc(StdI: StdIntList) -> list:
@@ -915,39 +861,6 @@ def check_output_mode(StdI: StdIntList) -> None:
         StdI.ioutputmode = mode
         logger.info("      ioutputmode = %-10d", StdI.ioutputmode)
 
-
-def _check_mod_para_hphi(StdI: StdIntList) -> None:
-    """Set HPhi-specific default model parameters.
-
-    Handles Lanczos parameters, spectrum frequency grid, and large-value
-    cutoff.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure, modified in place.
-    """
-    StdI.Lanczos_max = print_val_i("Lanczos_max", StdI.Lanczos_max, 2000)
-    StdI.initial_iv = print_val_i("initial_iv", StdI.initial_iv, -1)
-    # nvec is not given a default here (commented out in C)
-    StdI.exct = print_val_i("exct", StdI.exct, 1)
-    StdI.LanczosEps = print_val_i("LanczosEps", StdI.LanczosEps, 14)
-    StdI.LanczosTarget = print_val_i("LanczosTarget", StdI.LanczosTarget, 2)
-    if StdI.LanczosTarget < StdI.exct:
-        StdI.LanczosTarget = StdI.exct
-    StdI.NumAve = print_val_i("NumAve", StdI.NumAve, 5)
-    StdI.ExpecInterval = print_val_i("ExpecInterval", StdI.ExpecInterval, 20)
-    StdI.Nomega = print_val_i("NOmega", StdI.Nomega, 200)
-    StdI.OmegaMax = print_val_d(
-        "OmegaMax", StdI.OmegaMax, StdI.LargeValue * StdI.nsite
-    )
-    StdI.OmegaMin = print_val_d(
-        "OmegaMin", StdI.OmegaMin, -StdI.LargeValue * StdI.nsite
-    )
-    StdI.OmegaOrg = print_val_d("OmegaOrg", StdI.OmegaOrg, 0.0)
-    StdI.OmegaIm = print_val_d(
-        "OmegaIm", StdI.OmegaIm, 0.01 * int(StdI.LargeValue)
-    )
 
 
 def _check_mod_para_mvmc(StdI: StdIntList) -> None:

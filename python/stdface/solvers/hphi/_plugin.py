@@ -29,16 +29,16 @@ class HPhiPlugin(ExpertModeSolverPlugin):
         return _HPHI_KEYWORDS
 
     def set_defaults(self, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _check_mod_para_hphi
-        _check_mod_para_hphi(StdI)
+        from .writer import set_modpara_defaults
+        set_modpara_defaults(StdI)
 
     def modpara_lines(self, StdI: StdIntList) -> list:
-        from ...writer.common_writer import _modpara_lines_hphi
-        return _modpara_lines_hphi(StdI)
+        from .writer import modpara_lines
+        return modpara_lines(StdI)
 
     def namelist_entries(self, StdI: StdIntList) -> list:
-        from ...writer.common_writer import _namelist_entries_hphi
-        return _namelist_entries_hphi(StdI)
+        from .writer import namelist_entries
+        return namelist_entries(StdI)
 
     @property
     def reset_scalars(self) -> list[tuple[str, object]]:

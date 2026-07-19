@@ -11,6 +11,11 @@ import tempfile
 import pytest
 
 from stdface.core.stdface_vals import StdIntList, ModelType, SolverType
+from stdface.solvers.hphi.writer import (
+    set_modpara_defaults as _check_mod_para_hphi,
+    modpara_lines as _modpara_lines_hphi,
+    namelist_entries as _namelist_entries_hphi,
+)
 from stdface.writer.common_writer import (
     build_loc_spn,
     LocSpnData,
@@ -25,20 +30,17 @@ from stdface.writer.common_writer import (
     check_mod_para,
     OUTPUT_MODE_TO_INT,
     MODEL_GC_TO_EX_UPDATE_PATH,
-    _check_mod_para_hphi,
     _check_mod_para_mvmc,
     _check_mod_para_uhf,
     _check_conserved_quantities,
     _CONSERVED_QTY_RULES,
     build_modpara,
     ModParaData,
-    _modpara_lines_hphi,
     _modpara_lines_mvmc,
     _modpara_lines_uhf_hwave,
     _MODPARA_BANNER,
     build_namelist,
     NamelistData,
-    _namelist_entries_hphi,
     _namelist_entries_mvmc,
     _INTERACTION_FLAGS,
     GreenFunctionIndices,
