@@ -28,7 +28,7 @@ from .interaction_builder import (
     expand_bonds_2d,
 )
 from .site_util import (
-    init_site, set_label, set_local_spin_flags,
+    init_site, set_local_spin_flags,
     new_gnuplot_buffer, GnuplotData,
 )
 from .boost_output import (

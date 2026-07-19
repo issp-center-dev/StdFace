@@ -6,13 +6,13 @@ Holds every field the H-wave plugins read.  ``fileprefix`` / ``export_all`` /
 the sublattice / symmetry block with mVMC + UHF.  Per the duplication policy
 (``dev/solver_config_split.md`` §2-2) this declares its own copies.
 
-``calcmode`` is intentionally **not** here: it is read by
-``_resolve_solver_name`` before the config is attached, so it stays on
-``StdIntList`` as solver-selection metadata.
+``calcmode`` is intentionally **not** here: it is solver-selection metadata
+read by ``HWavePlugin``'s output-mode dispatch (``_hwave_output_mode``)
+alongside ``solver``, so it stays on ``StdIntList``.
 
-This single config is registered under the raw ``HWAVE`` alias as well as the
-resolved ``UHFR`` / ``UHFK`` names, so it is attached before
-``_resolve_solver_name`` runs (UHFR and UHFK share it).
+This single config is registered under ``HWAVE`` as well as the ``UHFR`` /
+``UHFK`` aliases, so all three solver names attach (and share) the same
+container.
 """
 from __future__ import annotations
 

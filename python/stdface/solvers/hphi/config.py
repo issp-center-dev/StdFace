@@ -25,7 +25,9 @@ class HPhiConfig:
     InitialVecType: str | None = None
     EigenVecIO: str | None = None
     HamIO: str | None = None
-    FlgTemp: int = 0
+    # C-compat: the flgtemp keyword is accepted (as in the C original) but
+    # never read; default matches the C ResetVals value.
+    FlgTemp: int = 1
 
     # Lanczos / TPQ / FullDiag
     Lanczos_max: int | None = None

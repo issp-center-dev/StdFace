@@ -31,7 +31,6 @@ from pathlib import Path
 from .stdface_vals import StdIntList
 from ..writer.wannier90_writer import (
     WannierGeometryData,
-    WannierInteractionData,
     build_wannier_geometry,
     build_wannier_interactions,
     _prefix,

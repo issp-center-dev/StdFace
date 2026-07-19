@@ -49,7 +49,10 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from typing import TextIO
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .site_util import GnuplotBuffer
 
 from ..core.stdface_vals import StdIntList, ModelType, SolverType, MethodType, ZERO_BODY_EPS, AMPLITUDE_EPS
 

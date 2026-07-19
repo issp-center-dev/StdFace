@@ -12,7 +12,6 @@ from stdface.core.stdface_vals import (
     ModelType, SolverType, MethodType,
     NaN_i,
     AMPLITUDE_EPS, ZERO_BODY_EPS,
-    is_unset_or_trivial_d,
 )
 
 
@@ -119,26 +118,6 @@ class TestHamiltonianTermsSplit:
         s1, s2 = StdIntList(), StdIntList()
         s1.trans_list.append((1 + 0j, 0, 0, 1, 1))
         assert s2.trans_list == []
-
-
-class TestIsUnsetOrTrivialD:
-    """Tests for is_unset_or_trivial_d (helper for SolverPlugin.validate)."""
-
-    def test_nan_is_unset(self):
-        assert is_unset_or_trivial_d(float("nan")) is True
-
-    def test_none_is_unset(self):
-        assert is_unset_or_trivial_d(None) is True
-
-    def test_zero_is_trivial(self):
-        assert is_unset_or_trivial_d(0.0) is True
-
-    def test_nonzero_value(self):
-        assert is_unset_or_trivial_d(0.5) is False
-
-    def test_custom_trivial(self):
-        assert is_unset_or_trivial_d(1.0, trivial=1.0) is True
-        assert is_unset_or_trivial_d(2.0, trivial=1.0) is False
 
 
 class TestStdIntListDefaults:
@@ -323,7 +302,7 @@ class TestStdIntListSolverFields:
         _reset_vals(s)
         assert s.NVMCCalMode is None
         assert s.Orb is None
-        assert s.NSROptFixSmp == 0  # non-None default preserved
+        assert s.NSROptItrStep is None
 
     def test_uhf_hwave_fields_resolve_via_config(self):
         """UHF/HWAVE shared fields (mix/eps/...) moved to the solver configs."""

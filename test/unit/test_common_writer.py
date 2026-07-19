@@ -707,13 +707,10 @@ class TestPrintModPara:
 class TestModparaBodyDispatch:
     """Tests for the modpara body-writer functions and banner."""
 
-    def test_banner_has_uhf_and_hwave(self):
-        assert SolverType.UHF in _MODPARA_BANNER
-        assert SolverType.HWAVE in _MODPARA_BANNER
-
-    def test_banner_values(self):
-        assert _MODPARA_BANNER[SolverType.UHF] == "UHF_Cal_Parameters"
-        assert _MODPARA_BANNER[SolverType.HWAVE] == "HWAVE_Cal_Parameters"
+    def test_banner_uhf_only(self):
+        """UHF is the only entry: H-wave never emits modpara.def, so the
+        former HWAVE banner was unreachable and has been removed."""
+        assert _MODPARA_BANNER == {SolverType.UHF: "UHF_Cal_Parameters"}
 
     def test_write_modpara_hphi_content(self):
         """Verify HPhi body writer produces expected fields."""
@@ -787,21 +784,6 @@ class TestModparaBodyDispatch:
         assert "UHF_Cal_Parameters" in content
         assert "IterationMax" in content
         assert "EpsSlater" in content
-
-    def test_write_modpara_uhf_hwave_hwave(self):
-        """Verify HWAVE banner in shared writer."""
-        StdI = _make_stdi_base(solver="HWAVE", nsite=4)
-        StdI.CDataFileHead = "zvo"
-        StdI.Iteration_max = 1000
-        StdI.eps = 8
-        StdI.mix = 0.5
-        StdI.RndSeed = 123456789
-        StdI.eps_slater = 6
-        StdI.NMPTrans = 0
-
-        content = ModParaData(_modpara_lines_uhf_hwave(StdI)).to_text()
-        assert "HWAVE_Cal_Parameters" in content
-        assert "UHF_Cal_Parameters" not in content
 
     def test_hphi_omits_expand_coef_for_non_te(self):
         """ExpandCoef only written for time-evolution method."""

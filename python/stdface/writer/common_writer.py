@@ -515,10 +515,10 @@ def _modpara_lines_uhf_hwave(StdI: StdIntList) -> list:
 
 
 _MODPARA_BANNER: dict[str, str] = {
-    SolverType.UHF:   "UHF_Cal_Parameters",
-    SolverType.HWAVE: "HWAVE_Cal_Parameters",
+    SolverType.UHF: "UHF_Cal_Parameters",
 }
-"""Maps UHF/HWAVE solver type to the ``modpara.def`` banner line."""
+"""Maps the solver type to the ``modpara.def`` banner line (UHF only:
+H-wave never emits ``modpara.def``, so no other entry is reachable)."""
 
 
 class GreenFunctionIndices:

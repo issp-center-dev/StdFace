@@ -54,6 +54,34 @@ class LatticePlugin(ABC):
     def setup(self, StdI: StdIntList) -> "GnuplotData | None":
         """Build the lattice geometry and Hamiltonian terms.
 
+        Contract
+        --------
+        A conforming implementation must perform these steps **in order**
+        (the helpers live in :mod:`.site_util` / :mod:`.interaction_builder`):
+
+        1. Set ``StdI.NsiteUC`` *before* calling :func:`~.site_util.init_site`
+           — ``init_site`` allocates ``tau`` with shape ``(NsiteUC, 3)``.
+        2. Resolve the lattice-shape parameters (``a`` / ``length`` /
+           ``direct`` / ``phase``) via the ``print_val_*`` helpers.
+        3. Call ``init_site(StdI, dim)`` — computes ``box`` / ``rbox`` /
+           ``NCell`` / ``Cell`` / ``ExpPhase`` / ``AntiPeriod``.
+        4. Fill the ``StdI.tau`` values *after* ``init_site`` (it reallocates
+           the array).
+        5. Validate the Hamiltonian parameters (``input_*`` / ``not_used_*``).
+        6. Call ``set_local_spin_flags`` — sets ``nsite`` / ``locspinflag``.
+        7. Call ``malloc_interactions`` — (re)initialises the two-body term
+           lists; terms added before this call are lost.
+        8. Build the bonds, preferably declaratively via a relative bond
+           table passed to :func:`~.interaction_builder.expand_bonds_2d` /
+           ``expand_bonds_3d``.  The expander also records the relative
+           model on ``StdI`` (``_rel_bonds`` / ``_rel_dim``), which the UHFk
+           supercell normalisation reads later; lattices that bypass the
+           expander (e.g. wannier90) leave it unset and are not normalised.
+
+        ``geometry.dat`` / ``lattice.xsf`` are *not* written here — the
+        caller builds them afterwards from ``direct`` / ``box`` / ``Cell`` /
+        ``tau`` / ``NCell`` / ``NsiteUC``.
+
         Parameters
         ----------
         StdI : StdIntList

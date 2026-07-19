@@ -15,7 +15,6 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import logging
-import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType
 from ..core.param_check import (
