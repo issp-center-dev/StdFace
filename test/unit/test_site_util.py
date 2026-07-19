@@ -197,6 +197,23 @@ class TestFoldToCell:
         assert nBox == [0, 0, 0]
         assert fold == [0, 0, 0]
 
+    def test_far_offset_beyond_legacy_limit(self):
+        """Offsets past the C +1000 trick's range fold correctly (#P9).
+
+        The C original computed (x + ncell*1000)/ncell - 1000, which broke
+        for |x| >= 1000*ncell; the floor-division port has no such limit.
+        """
+        box = np.array([[4, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=int)
+        rbox = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 4]], dtype=int)
+        ncell = 4
+        far = 4 * 5000 + 2  # image index 5000, position 2
+        nBox, fold = _fold_to_cell(rbox, ncell, box, [far, 0, 0])
+        assert nBox[0] == 5000
+        assert fold == [2, 0, 0]
+        nBox, fold = _fold_to_cell(rbox, ncell, box, [-far, 0, 0])
+        assert nBox[0] == -5001
+        assert fold == [2, 0, 0]
+
 
 # ===================================================================
 #  _fold_site
@@ -805,10 +822,14 @@ class TestFindCellIndex:
         for i in range(L):
             assert _find_cell_index(StdI, [i, 0, 0]) == i
 
-    def test_no_match_returns_zero(self):
-        """Test that a non-existent coordinate returns 0."""
+    def test_no_match_raises(self):
+        """A non-existent coordinate raises instead of silently mapping to 0 (#P10).
+
+        The C original fell back to site 0, masking internal folding bugs.
+        """
         StdI = _make_stdi_chain(4)
-        assert _find_cell_index(StdI, [99, 0, 0]) == 0
+        with pytest.raises(ValueError, match="not found in the Cell table"):
+            _find_cell_index(StdI, [99, 0, 0])
 
     def test_2d_square(self):
         """Test finding cells in a 2D square lattice."""
