@@ -102,6 +102,17 @@ class HWavePlugin(SolverPlugin):
             logger.error(msg)
             raise ValueError(msg)
 
+    def wants_lattice_gp(self, StdI: StdIntList) -> bool:
+        return StdI.lattice_gp == 1
+
+    def wants_geometry_file(self, StdI: StdIntList) -> bool:
+        # geometry.dat is dropped only when Wannier output is *explicit*
+        # (UHFK alias or calcmode); an unset calcmode defaults to UHFK
+        # output but keeps emitting geometry.dat for compatibility
+        # (see the uhfr_first_step integration case).
+        return not (StdI.solver == SolverType.UHFK
+                    or StdI.calcmode in ("uhfk", "rpa"))
+
     def build_output(self, StdI: StdIntList):
         if _hwave_output_mode(StdI) == SolverType.UHFR:
             return build_uhfr_output(StdI)

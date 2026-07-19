@@ -189,12 +189,19 @@ class GeometryData:
 
 
 def build_geometry(StdI: StdIntList) -> "GeometryData | None":
-    """Build :class:`GeometryData`, or ``None`` for explicit Wannier modes.
+    """Build :class:`GeometryData`, or ``None`` when the solver suppresses it.
 
-    ``geometry.dat`` is suppressed for ``calcmode in ("uhfk", "rpa")``;
-    an unset ``calcmode`` still produces it.
+    The active solver plugin decides via
+    :meth:`~stdface.plugin.SolverPlugin.wants_geometry_file` (H-wave
+    suppresses ``geometry.dat`` in UHFK / RPA output mode); unregistered
+    solvers default to producing it.
     """
-    if StdI.calcmode in ("uhfk", "rpa"):
+    from ..plugin import get_plugin
+    try:
+        plugin = get_plugin(StdI.solver)
+    except KeyError:
+        plugin = None
+    if plugin is not None and not plugin.wants_geometry_file(StdI):
         return None
 
     direct = [(float(r[0]), float(r[1]), float(r[2])) for r in StdI.direct]

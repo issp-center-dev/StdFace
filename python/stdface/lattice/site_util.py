@@ -42,7 +42,7 @@ from typing import TextIO
 
 import numpy as np
 
-from ..core.stdface_vals import StdIntList, ModelType, SolverType, NaN_i, AMPLITUDE_EPS
+from ..core.stdface_vals import StdIntList, ModelType, NaN_i, AMPLITUDE_EPS
 from ..core.param_check import print_val_i
 
 
@@ -314,19 +314,20 @@ class GnuplotBuffer:
         return GnuplotData(content=out.getvalue())
 
 
-_HWAVE_SOLVERS = (SolverType.HWAVE, SolverType.UHFR, SolverType.UHFK)
-
-
 def new_gnuplot_buffer(StdI: StdIntList) -> "GnuplotBuffer | None":
     """Return a fresh :class:`GnuplotBuffer`, or ``None`` when suppressed.
 
-    Gnuplot output is suppressed for the H-wave family (HWAVE / UHFR / UHFK)
-    unless ``StdI.lattice_gp`` is explicitly set to 1.  HWAVE is included for
-    direct/pre-resolution calls; UHFR/UHFK are the resolved names.
+    The active solver plugin decides via
+    :meth:`~stdface.plugin.SolverPlugin.wants_lattice_gp` (H-wave
+    suppresses ``lattice.gp`` unless ``lattice_gp = 1`` is given);
+    unregistered solvers default to producing the buffer.
     """
-    if StdI.solver not in _HWAVE_SOLVERS or StdI.lattice_gp == 1:
+    from ..plugin import get_plugin
+    try:
+        plugin = get_plugin(StdI.solver)
+    except KeyError:
         return GnuplotBuffer()
-    return None
+    return GnuplotBuffer() if plugin.wants_lattice_gp(StdI) else None
 
 
 def _validate_box_params(
