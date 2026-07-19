@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-from stdface.core.stdface_vals import StdIntList, MethodType, SolverType
+from stdface.core.stdface_vals import StdIntList, MethodType
 from stdface.lattice.interaction_builder import (
     trans,
     hopping,
@@ -445,46 +445,6 @@ class TestCoulomb:
 # ===================================================================
 
 
-class TestBackwardCompatibility:
-    """Test that functions are still importable from stdface_model_util."""
-
-    def test_import_from_stdface_model_util(self):
-        """Test that all 8 functions are re-exported."""
-        from stdface.core.stdface_model_util import (
-            trans as t,
-            hopping as h,
-            hubbard_local as hl,
-            mag_field as mf,
-            intr as i,
-            general_j as gj,
-            coulomb as c,
-            malloc_interactions as mi,
-        )
-        from stdface.lattice.interaction_builder import (
-            trans,
-            hopping,
-            hubbard_local,
-            mag_field,
-            intr,
-            general_j,
-            coulomb,
-            malloc_interactions,
-        )
-        assert t is trans
-        assert h is hopping
-        assert hl is hubbard_local
-        assert mf is mag_field
-        assert i is intr
-        assert gj is general_j
-        assert c is coulomb
-        assert mi is malloc_interactions
-
-
-# ===================================================================
-#  _spin_ladder_factor
-# ===================================================================
-
-
 class TestSpinLadderFactor:
     """Tests for _spin_ladder_factor helper."""
 
@@ -630,7 +590,6 @@ def _make_stdi_square_for_neighbor(
     Manually sets up the super-cell (bypassing ``init_site``) to avoid
     the L/W/Height vs box conflict check.
     """
-    import math
 
     StdI = StdIntList()
     StdI.solver = "HPhi"
@@ -779,7 +738,6 @@ def _make_stdi_ortho_for_neighbor(
     Manually sets up the 3D super-cell for testing
     ``add_neighbor_interaction_3d``.
     """
-    import math
 
     StdI = StdIntList()
     StdI.solver = "HPhi"

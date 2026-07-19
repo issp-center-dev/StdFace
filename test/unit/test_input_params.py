@@ -5,7 +5,6 @@ Tests for the input parameter resolution helpers: ``input_spin_nn``,
 """
 from __future__ import annotations
 
-import math
 
 import numpy as np
 import pytest
@@ -206,34 +205,6 @@ class TestInputHopp:
 
 # ===================================================================
 #  Backward compatibility
-# ===================================================================
-
-
-class TestBackwardCompatibility:
-    """Test that functions are still importable from stdface_model_util."""
-
-    def test_import_from_stdface_model_util(self):
-        """Test that all 4 functions are re-exported."""
-        from stdface.core.stdface_model_util import (
-            input_spin_nn as isn,
-            input_spin as isp,
-            input_coulomb_v as icv,
-            input_hopp as ih,
-        )
-        from stdface.lattice.input_params import (
-            input_spin_nn,
-            input_spin,
-            input_coulomb_v,
-            input_hopp,
-        )
-        assert isn is input_spin_nn
-        assert isp is input_spin
-        assert icv is input_coulomb_v
-        assert ih is input_hopp
-
-
-# ===================================================================
-#  _has_set_elements
 # ===================================================================
 
 

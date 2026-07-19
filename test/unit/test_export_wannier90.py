@@ -1,4 +1,4 @@
-"""Unit tests for export_wannier90 module.
+"""Unit tests for the Wannier90 writer (stdface.writer.wannier90_writer).
 
 Tests for the Python translation of export_wannier90.c.
 """
@@ -6,9 +6,7 @@ from __future__ import annotations
 
 import io
 import logging
-import math
 import os
-import tempfile
 
 import numpy as np
 import pytest
@@ -282,13 +280,13 @@ class TestPrefix:
 # ===========================================================================
 
 class TestWriteGeometry:
-    """Tests for _write_geometry (and export_geometry)."""
+    """Tests for the geometry file content (WannierGeometryData.write)."""
 
     def test_write_geometry_file_content(self, tmp_path):
         """Check that the geometry file has expected structure."""
         s = _make_stdI_for_geometry(nsiteUC=2)
         fname = str(tmp_path / "geom.dat")
-        ew._write_geometry(s, fname)
+        ew.build_wannier_geometry(s).write(fname)
 
         assert os.path.exists(fname)
         with open(fname) as f:
@@ -312,12 +310,12 @@ class TestWriteGeometry:
         tau1 = [float(x) for x in lines[5].split()]
         assert tau1 == pytest.approx([0.5, 0.5, 0.0])
 
-    def test_export_geometry_with_prefix(self, tmp_path, monkeypatch):
-        """Check that export_geometry uses the prefix correctly."""
-        monkeypatch.chdir(tmp_path)
+    def test_geometry_prefix_applied(self, tmp_path):
+        """The fileprefix is applied to the geometry filename."""
+        from stdface.core.output import build_wannier_output
         s = _make_stdI_for_geometry(nsiteUC=1)
         s.fileprefix = "test"
-        ew.export_geometry(s)
+        build_wannier_output(s).write(tmp_path)
         assert os.path.exists(tmp_path / "test_geom.dat")
 
 
@@ -671,7 +669,7 @@ class TestExportInteraction:
         caplog.set_level(logging.INFO)
         monkeypatch.chdir(tmp_path)
         s = _make_stdI_for_interaction()
-        ew.export_interaction(s)
+        assert ew.build_wannier_interactions(s) == []
         assert caplog.text.count("skipped") == 7  # 7 interaction types
 
     def test_with_transfer(self, tmp_path, monkeypatch):
@@ -680,7 +678,8 @@ class TestExportInteraction:
         s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
         s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
 
-        ew.export_interaction(s)
+        for data in ew.build_wannier_interactions(s):
+            data.write()
         assert os.path.exists(tmp_path / "transfer.dat")
 
     def test_with_fileprefix(self, tmp_path, monkeypatch):
@@ -690,7 +689,8 @@ class TestExportInteraction:
         s.fileprefix = "run1"
         s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
 
-        ew.export_interaction(s)
+        for data in ew.build_wannier_interactions(s):
+            data.write()
         assert os.path.exists(tmp_path / "run1_transfer.dat")
 
 
@@ -699,29 +699,20 @@ class TestExportInteraction:
 # ===========================================================================
 
 class TestExportGeometry:
-    """Integration tests for export_geometry."""
+    """Geometry export through the WannierModeOutput container path."""
 
-    def test_creates_geom_file(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
+    def test_creates_geom_file(self, tmp_path):
+        from stdface.core.output import build_wannier_output
         s = _make_stdI_for_geometry(nsiteUC=1)
-        ew.export_geometry(s)
+        build_wannier_output(s).write(tmp_path)
         assert os.path.exists(tmp_path / "geom.dat")
 
-    def test_creates_geom_file_with_prefix(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
+    def test_creates_geom_file_with_prefix(self, tmp_path):
+        from stdface.core.output import build_wannier_output
         s = _make_stdI_for_geometry(nsiteUC=1)
         s.fileprefix = "myprefix"
-        ew.export_geometry(s)
+        build_wannier_output(s).write(tmp_path)
         assert os.path.exists(tmp_path / "myprefix_geom.dat")
-
-
-class TestBackwardCompatShim:
-    """The old solvers.hwave.export_wannier90 path still re-exports the API."""
-
-    def test_old_path_reexports(self):
-        from stdface.solvers.hwave import export_wannier90 as old
-        assert old.export_geometry is ew.export_geometry
-        assert old.export_interaction is ew.export_interaction
 
 
 # ===========================================================================
@@ -1100,15 +1091,6 @@ class TestWannierBuildWriteSplit:
         assert len(d.direct) == 3 and len(d.tau) == 2
         assert ew.WannierGeometryData.from_dict(d.to_dict()).to_dict() == d.to_dict()
 
-    def test_geometry_wrapper_parity(self, tmp_path):
-        s = _make_stdI_for_geometry(nsiteUC=2)
-        a = str(tmp_path / "a.dat")
-        b = str(tmp_path / "b.dat")
-        ew.export_geometry  # smoke: public symbol exists
-        ew._write_geometry(s, a)
-        ew.build_wannier_geometry(s).write(b)
-        assert open(a).read() == open(b).read()
-
     def test_interactions_build_returns_data(self):
         s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
         s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
@@ -1116,25 +1098,3 @@ class TestWannierBuildWriteSplit:
         assert data and all(isinstance(d, ew.WannierInteractionData) for d in data)
         d0 = data[0]
         assert ew.WannierInteractionData.from_dict(d0.to_dict()).items == d0.items
-
-    def test_interactions_write_parity_with_export(self, tmp_path):
-        def setup():
-            s = _make_stdI_for_interaction(nsiteUC=1, ncell=2)
-            s.trans_list = [(-1.0 + 0j, 0, 0, 1, 0)]
-            s.Cintra_list = [(4.0, 0), (4.0, 1)]
-            return s
-        d1 = tmp_path / "viaexport"
-        d2 = tmp_path / "viabuild"
-        d1.mkdir(); d2.mkdir()
-        orig = os.getcwd()
-        os.chdir(d1)
-        try:
-            ew.export_interaction(setup())
-        finally:
-            os.chdir(orig)
-        for data in ew.build_wannier_interactions(setup()):
-            data.write(d2)
-        files = sorted(p.name for p in d1.iterdir())
-        assert files  # something was written
-        for f in files:
-            assert (d1 / f).read_text() == (d2 / f).read_text(), f

@@ -5,7 +5,6 @@ Tests for the SolverPlugin classes and the plugin registry.
 from __future__ import annotations
 
 import os
-import math
 import tempfile
 
 import numpy as np
@@ -558,7 +557,7 @@ class TestHWaveSplit:
                 os.chdir(orig)
 
     def test_uhfk_export_writes_geom(self, tmp_path, monkeypatch):
-        """UHFK runs ``export_geometry`` / ``export_interaction``."""
+        """UHFK writes the Wannier output set (geom.dat etc.)."""
         monkeypatch.chdir(tmp_path)
         StdI = _make_hwave_wannier_export_stdi(nsiteUC=2, ncell=2)
         StdI.solver = "UHFK"

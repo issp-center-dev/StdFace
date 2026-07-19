@@ -33,7 +33,6 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from collections.abc import Callable
 from typing import NamedTuple
 
 from .stdface_vals import (
@@ -54,85 +53,6 @@ from .input_source import StanFileSource
 from ..lattice import get_lattice as _get_lattice
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-#  Lattice dispatch (via plugin registry)
-# ---------------------------------------------------------------------------
-#  Backward-compatible dict-like objects that delegate to the lattice plugin
-#  registry.  New code should use ``get_lattice(name).setup(StdI)`` and
-#  ``get_lattice(name).boost(StdI)`` directly.
-
-
-class _LatticeDispatchProxy:
-    """Dict-like proxy over the lattice plugin registry (setup methods)."""
-
-    def __getitem__(self, key: str) -> Callable[[StdIntList], None]:
-        return _get_lattice(key).setup
-
-    def get(self, key: str, default=None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    def __contains__(self, key: str) -> bool:
-        try:
-            _get_lattice(key)
-            return True
-        except KeyError:
-            return False
-
-    def items(self):
-        from ..lattice import get_all_lattices
-        result = []
-        for plugin in get_all_lattices():
-            for alias in plugin.aliases:
-                result.append((alias, plugin.setup))
-        return result
-
-
-class _BoostDispatchProxy:
-    """Dict-like proxy over the lattice plugin registry (boost methods)."""
-
-    # Only lattices whose boost() is overridden (not the ABC default)
-    _BOOST_LATTICES = {"chain", "chainlattice", "honeycomb", "honeycomblattice",
-                       "kagome", "kagomelattice", "ladder", "ladderlattice"}
-
-    def __getitem__(self, key: str) -> Callable[[StdIntList], None]:
-        if key not in self._BOOST_LATTICES:
-            raise KeyError(key)
-        return _get_lattice(key).boost
-
-    def get(self, key: str, default=None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    def __contains__(self, key: str) -> bool:
-        return key in self._BOOST_LATTICES
-
-    def items(self):
-        result = []
-        seen = set()
-        for alias in self._BOOST_LATTICES:
-            try:
-                plugin = _get_lattice(alias)
-                if id(plugin) not in seen:
-                    seen.add(id(plugin))
-                    for a in plugin.aliases:
-                        if a in self._BOOST_LATTICES:
-                            result.append((a, plugin.boost))
-            except KeyError:
-                pass
-        return result
-
-
-LATTICE_DISPATCH = _LatticeDispatchProxy()
-"""Dict-like proxy that maps lattice aliases to setup functions via the plugin registry."""
-
-BOOST_DISPATCH = _BoostDispatchProxy()
-"""Dict-like proxy that maps lattice aliases to boost functions via the plugin registry."""
 
 # ---------------------------------------------------------------------------
 #  Model name normalisation table

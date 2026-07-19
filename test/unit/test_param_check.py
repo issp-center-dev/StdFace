@@ -5,7 +5,6 @@ extracted from ``stdface_model_util``.
 """
 from __future__ import annotations
 
-import math
 
 import numpy as np
 import pytest
@@ -186,38 +185,3 @@ class TestRequiredValI:
             required_val_i("myvar", 42)
         assert "myvar" in caplog.text
         assert "42" in caplog.text
-
-
-class TestBackwardCompatibility:
-    """Test that functions are importable from stdface.core.stdface_model_util."""
-
-    def test_import_from_stdface_model_util(self):
-        """Test that all extracted functions are re-exported."""
-        from stdface.core.stdface_model_util import (
-            print_val_d as pvd,
-            print_val_dd as pvdd,
-            print_val_c as pvc,
-            print_val_i as pvi,
-            not_used_d as nud,
-            not_used_j as nuj,
-            not_used_i as nui,
-            required_val_i as rvi,
-        )
-        from stdface.core.param_check import (
-            print_val_d,
-            print_val_dd,
-            print_val_c,
-            print_val_i,
-            not_used_d,
-            not_used_j,
-            not_used_i,
-            required_val_i,
-        )
-        assert pvd is print_val_d
-        assert pvdd is print_val_dd
-        assert pvc is print_val_c
-        assert pvi is print_val_i
-        assert nud is not_used_d
-        assert nuj is not_used_j
-        assert nui is not_used_i
-        assert rvi is required_val_i
