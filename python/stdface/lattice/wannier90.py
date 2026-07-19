@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 import itertools
 import math
+import os
 from enum import IntEnum
 from typing import NamedTuple, TextIO
 
@@ -80,6 +81,16 @@ def _skip_degeneracy_weights(fp: TextIO, n_wigner_seitz: int) -> None:
         count += len(fp.readline().split())
 
 
+def _input_path(StdI: StdIntList, fname: str) -> str:
+    """Resolve an auxiliary input file against ``StdI.input_dir``.
+
+    ``input_dir`` is set by ``generate()`` to the caller's cwd before it
+    chdirs into the output directory; ``None`` (the CLI flow) keeps the
+    plain relative name.
+    """
+    return os.path.join(StdI.input_dir, fname) if StdI.input_dir else fname
+
+
 def _geometry_w90(StdI: StdIntList) -> None:
     """Read Wannier90 geometry file.
 
@@ -93,7 +104,7 @@ def _geometry_w90(StdI: StdIntList) -> None:
         ``StdI.direct`` (lattice vectors) and ``StdI.tau`` (Wannier centres)
         are populated.
     """
-    filename = f"{StdI.CDataFileHead}_geom.dat"
+    filename = _input_path(StdI, f"{StdI.CDataFileHead}_geom.dat")
     logger.info(f"    Wannier90 Geometry file = {filename}")
 
     try:
@@ -296,6 +307,7 @@ def _read_w90(
     flg_vec = int(cutoff_Rvec[0, 0] != NaN_i)
 
     # Try to open the file
+    filename = _input_path(StdI, filename)
     try:
         fp_hr = open(filename, "r")
     except FileNotFoundError:
@@ -391,6 +403,7 @@ def _read_density_matrix(
     """
 
 
+    filename = _input_path(StdI, filename)
     try:
         fp_dr = open(filename, "r")
     except OSError as exc:

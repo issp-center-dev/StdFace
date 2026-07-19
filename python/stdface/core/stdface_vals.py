@@ -991,6 +991,16 @@ class StdIntList:
     calcmode: str | None = None
 
     # ------------------------------------------------------------------
+    #  Auxiliary input-file base directory
+    # ------------------------------------------------------------------
+    # Base directory for auxiliary input data files read during lattice
+    # setup (the wannier90 lattice's *_geom.dat / *_hr.dat / ...).
+    # ``None`` means the current working directory.  ``generate()`` sets
+    # this to the caller's cwd before chdir'ing into the output directory,
+    # so input files are not looked up inside output_dir.
+    input_dir: str | None = None
+
+    # ------------------------------------------------------------------
     #  C3: dynamic delegation to the active solver config
     # ------------------------------------------------------------------
     def __post_init__(self) -> None:

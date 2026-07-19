@@ -760,6 +760,14 @@ def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
     SolverOutput
         The assembled output container (``ExpertModeOutput`` or
         ``WannierModeOutput``).
+
+    Notes
+    -----
+    Not thread-safe: the build chdirs into *output_dir* (``os.chdir`` is
+    process-global) so that files emitted eagerly by solver hooks land
+    there.  Auxiliary input data files read during lattice setup (the
+    wannier90 lattice's ``*_geom.dat`` / ``*_hr.dat`` / ...) are resolved
+    against the caller's working directory, not *output_dir*.
     """
     import os
     import tempfile
@@ -769,6 +777,7 @@ def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
 
     data = _make_source(source).load()
     _check_solver_conflict(solver, data)
+    input_dir = os.getcwd()
 
     @contextlib.contextmanager
     def _chdir(path):
@@ -785,6 +794,7 @@ def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
         # (HPhi excitation/calcmod, mVMC variational) land there too -- not
         # just the SolverOutput / gnuplot / geometry written explicitly.
         StdI = _build_stdintlist(data, solver)
+        StdI.input_dir = input_dir
         gp_data, geo_data, xsf_data = _build_lattice_and_boost(StdI, StdI.solver)
         out = _build_output(StdI)
         fmt = output_format or DefFileFormat()

@@ -7,6 +7,22 @@ import os
 import pytest
 
 from stdface import generate, ExpertModeOutput, WannierModeOutput, JSONFormat
+
+
+def _write_minimal_w90_inputs(path, prefix="zvo", NsiteUC=1):
+    """Write a minimal *_geom.dat / *_hr.dat pair for the wannier90 lattice."""
+    with open(os.path.join(path, f"{prefix}_geom.dat"), "w") as f:
+        f.write("  1.0  0.0  0.0\n  0.0  1.0  0.0\n  0.0  0.0  1.0\n")
+        f.write(f"  {NsiteUC}\n")
+        for i in range(NsiteUC):
+            f.write("  0.0  0.0  0.0\n")
+    with open(os.path.join(path, f"{prefix}_hr.dat"), "w") as f:
+        f.write("  written by test\n")
+        f.write(f"  {NsiteUC}\n  1\n  1\n")
+        for i in range(NsiteUC):
+            for j in range(NsiteUC):
+                re_val = -1.0 if i == j else -0.5
+                f.write(f"  0  0  0  {i + 1}  {j + 1}  {re_val:12.6f}  0.000000\n")
 from stdface.core.stdface_main import _make_source, _check_solver_conflict
 from stdface.core.input_source import (
     DictSource, StanFileSource, TOMLSource, JSONSource,
@@ -72,6 +88,19 @@ class TestGenerate:
         assert isinstance(out, WannierModeOutput)
         assert (tmp_path / "k" / "geom.dat").exists()
         assert not (tmp_path / "k" / "geometry.dat").exists()  # suppressed
+
+    def test_wannier90_inputs_resolved_against_caller_cwd(self, tmp_path,
+                                                          monkeypatch):
+        """Wannier90 data files come from the caller's cwd, not output_dir (#P8)."""
+        monkeypatch.chdir(tmp_path)
+        _write_minimal_w90_inputs(tmp_path, prefix="zvo")
+
+        s = {"model": "Hubbard", "lattice": "wannier90",
+             "W": 2, "L": 2, "Height": 1, "calcmode": "uhfr",
+             "nelec": 2, "2Sz": 0}
+        out = generate(s, solver="HWAVE", output_dir=tmp_path / "out")
+        assert isinstance(out, ExpertModeOutput)
+        assert (tmp_path / "out" / "trans.def").exists()
 
     def test_json_format(self, tmp_path):
         generate(_HPHI, solver="HPhi", output_dir=tmp_path / "j",
