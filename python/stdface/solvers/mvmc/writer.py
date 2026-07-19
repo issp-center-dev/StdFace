@@ -2,18 +2,18 @@
 
 This module contains the mVMC (many-variable Variational Monte Carlo)
 solver-specific output functions extracted from ``stdface_main.py``.
-These functions write the orbital and Gutzwiller variational-parameter
-definition files required by mVMC.
+These functions build the orbital and Gutzwiller variational-parameter
+definition files required by mVMC as ``SolverFileData``.
 
 Functions
 ---------
-print_orb
-    Write the anti-parallel orbital index file ``orbitalidx.def``.
-print_orb_para
-    Write parallel orbital index files ``orbitalidxpara.def`` and
+build_orb
+    Build the anti-parallel orbital index file ``orbitalidx.def``.
+build_orb_para
+    Build the parallel orbital index files ``orbitalidxpara.def`` and
     ``orbitalidxgen.def``.
-print_gutzwiller
-    Write the Gutzwiller variational-parameter file ``gutzwilleridx.def``.
+build_gutzwiller
+    Build the Gutzwiller variational-parameter file ``gutzwilleridx.def``.
 
 License
 -------
@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 
 from ...core.stdface_vals import StdIntList, ModelType
+from ...core.output import SolverFileData
 from ...core.param_check import print_val_d, print_val_i, not_used_i
 
 
@@ -53,7 +54,7 @@ def _has_anti_period(StdI: StdIntList) -> bool:
     return any(ap == 1 for ap in StdI.AntiPeriod)
 
 
-def print_orb(StdI: StdIntList) -> None:
+def build_orb(StdI: StdIntList) -> "SolverFileData":
     """Write the anti-parallel orbital index file ``orbitalidx.def``.
 
     The file records the orbital pairing indices used by mVMC for the
@@ -75,32 +76,29 @@ def print_orb(StdI: StdIntList) -> None:
     -----
     Translated from the C function ``PrintOrb()`` in ``StdFace_main.c``.
     """
-    with open("orbitalidx.def", "w") as fp:
-        lines = [
-            "=============================================\n",
-            f"NOrbitalIdx {StdI.NOrb:10d}\n",
-            f"ComplexType {StdI.ComplexType:10d}\n",
-            "=============================================\n",
-            "=============================================\n",
-        ]
+    lines = [
+        "=============================================\n",
+        f"NOrbitalIdx {StdI.NOrb:10d}\n",
+        f"ComplexType {StdI.ComplexType:10d}\n",
+        "=============================================\n",
+        "=============================================\n",
+    ]
 
-        has_anti = _has_anti_period(StdI)
+    has_anti = _has_anti_period(StdI)
 
-        for isite in range(StdI.nsite):
-            for jsite in range(StdI.nsite):
-                if has_anti:
-                    lines.append(f"{isite:5d}  {jsite:5d}  "
-                                 f"{StdI.Orb[isite][jsite]:5d}  "
-                                 f"{StdI.AntiOrb[isite][jsite]:5d}\n")
-                else:
-                    lines.append(f"{isite:5d}  {jsite:5d}  "
-                                 f"{StdI.Orb[isite][jsite]:5d}\n")
+    for isite in range(StdI.nsite):
+        for jsite in range(StdI.nsite):
+            if has_anti:
+                lines.append(f"{isite:5d}  {jsite:5d}  "
+                             f"{StdI.Orb[isite][jsite]:5d}  "
+                             f"{StdI.AntiOrb[isite][jsite]:5d}\n")
+            else:
+                lines.append(f"{isite:5d}  {jsite:5d}  "
+                             f"{StdI.Orb[isite][jsite]:5d}\n")
 
-        for iOrb in range(StdI.NOrb):
-            lines.append(f"{iOrb:5d}  {1:5d}\n")
-        fp.write("".join(lines))
-
-    logger.info("    orbitalidx.def is written.")
+    for iOrb in range(StdI.NOrb):
+        lines.append(f"{iOrb:5d}  {1:5d}\n")
+    return SolverFileData("orbitalidx.def", "".join(lines))
 
 
 def _compute_parallel_orbitals(
@@ -187,7 +185,7 @@ def _compute_parallel_orbitals(
     return OrbGC_list, reverse_list, NOrbGC
 
 
-def _write_orbitalidxpara(
+def _build_orbitalidxpara(
     nsite: int,
     ComplexType: int,
     OrbGC: list,
@@ -209,27 +207,26 @@ def _write_orbitalidxpara(
     NOrbGC : int
         Number of parallel orbital indices.
     """
-    with open("orbitalidxpara.def", "w") as fp:
-        lines = [
-            "=============================================\n",
-            f"NOrbitalIdx {NOrbGC:10d}\n",
-            f"ComplexType {ComplexType:10d}\n",
-            "=============================================\n",
-            "=============================================\n",
-        ]
+    lines = [
+        "=============================================\n",
+        f"NOrbitalIdx {NOrbGC:10d}\n",
+        f"ComplexType {ComplexType:10d}\n",
+        "=============================================\n",
+        "=============================================\n",
+    ]
 
-        for isite in range(nsite):
-            for jsite in range(isite + 1, nsite):
-                lines.append(f"{isite:5d}  {jsite:5d}  "
-                             f"{OrbGC[isite][jsite]:5d}  "
-                             f"{reverse[isite][jsite]:5d}\n")
+    for isite in range(nsite):
+        for jsite in range(isite + 1, nsite):
+            lines.append(f"{isite:5d}  {jsite:5d}  "
+                         f"{OrbGC[isite][jsite]:5d}  "
+                         f"{reverse[isite][jsite]:5d}\n")
 
-        for iOrbGC in range(NOrbGC):
-            lines.append(f"{iOrbGC:5d}  {1:5d}\n")
-        fp.write("".join(lines))
+    for iOrbGC in range(NOrbGC):
+        lines.append(f"{iOrbGC:5d}  {1:5d}\n")
+    return SolverFileData("orbitalidxpara.def", "".join(lines))
 
 
-def _write_orbitalidxgen(
+def _build_orbitalidxgen(
     StdI: StdIntList,
     OrbGC: list,
     reverse: list,
@@ -252,49 +249,48 @@ def _write_orbitalidxgen(
     nsite = StdI.nsite
     has_anti = _has_anti_period(StdI)
 
-    with open("orbitalidxgen.def", "w") as fp:
-        lines = [
-            "=============================================\n",
-            f"NOrbitalIdx {StdI.NOrb + 2 * NOrbGC:10d}\n",
-            f"ComplexType {StdI.ComplexType:10d}\n",
-            "=============================================\n",
-            "=============================================\n",
-        ]
+    lines = [
+        "=============================================\n",
+        f"NOrbitalIdx {StdI.NOrb + 2 * NOrbGC:10d}\n",
+        f"ComplexType {StdI.ComplexType:10d}\n",
+        "=============================================\n",
+        "=============================================\n",
+    ]
 
-        # -- anti-parallel section --
-        for isite in range(nsite):
-            for jsite in range(nsite):
-                if has_anti:
-                    lines.append(f"{isite:5d}  0  {jsite:5d}  1  "
-                                 f"{StdI.Orb[isite][jsite]:5d}  "
-                                 f"{StdI.AntiOrb[isite][jsite]:5d}\n")
-                else:
-                    lines.append(f"{isite:5d}  0  {jsite:5d}  1  "
-                                 f"{StdI.Orb[isite][jsite]:5d}  {1:5d}\n")
+    # -- anti-parallel section --
+    for isite in range(nsite):
+        for jsite in range(nsite):
+            if has_anti:
+                lines.append(f"{isite:5d}  0  {jsite:5d}  1  "
+                             f"{StdI.Orb[isite][jsite]:5d}  "
+                             f"{StdI.AntiOrb[isite][jsite]:5d}\n")
+            else:
+                lines.append(f"{isite:5d}  0  {jsite:5d}  1  "
+                             f"{StdI.Orb[isite][jsite]:5d}  {1:5d}\n")
 
-        # -- parallel section (upper triangle) --
-        for isite in range(nsite):
-            for jsite in range(isite + 1, nsite):
-                lines.append(f"{isite:5d}  0  {jsite:5d}  0  "
-                             f"{OrbGC[isite][jsite] + StdI.NOrb:5d}  "
-                             f"{reverse[isite][jsite]:5d}\n")
-                lines.append(f"{isite:5d}  1  {jsite:5d}  1  "
-                             f"{OrbGC[isite][jsite] + StdI.NOrb + NOrbGC:5d}  "
-                             f"{reverse[isite][jsite]:5d}\n")
+    # -- parallel section (upper triangle) --
+    for isite in range(nsite):
+        for jsite in range(isite + 1, nsite):
+            lines.append(f"{isite:5d}  0  {jsite:5d}  0  "
+                         f"{OrbGC[isite][jsite] + StdI.NOrb:5d}  "
+                         f"{reverse[isite][jsite]:5d}\n")
+            lines.append(f"{isite:5d}  1  {jsite:5d}  1  "
+                         f"{OrbGC[isite][jsite] + StdI.NOrb + NOrbGC:5d}  "
+                         f"{reverse[isite][jsite]:5d}\n")
 
-        for iOrbGC in range(StdI.NOrb):
-            lines.append(f"{iOrbGC:5d}  {1:5d}\n")
+    for iOrbGC in range(StdI.NOrb):
+        lines.append(f"{iOrbGC:5d}  {1:5d}\n")
 
-        for iOrbGC in range(NOrbGC * 2):
-            lines.append(f"{iOrbGC + StdI.NOrb:5d}  {1:5d}\n")
-        fp.write("".join(lines))
+    for iOrbGC in range(NOrbGC * 2):
+        lines.append(f"{iOrbGC + StdI.NOrb:5d}  {1:5d}\n")
+    return SolverFileData("orbitalidxgen.def", "".join(lines))
 
 
-def print_orb_para(StdI: StdIntList) -> None:
+def build_orb_para(StdI: StdIntList) -> list:
     """Write parallel orbital index files.
 
-    Writes ``orbitalidxpara.def`` via :func:`_write_orbitalidxpara` and
-    ``orbitalidxgen.def`` via :func:`_write_orbitalidxgen`.  Computation
+    Builds ``orbitalidxpara.def`` via :func:`_build_orbitalidxpara` and
+    ``orbitalidxgen.def`` via :func:`_build_orbitalidxgen`.  Computation
     of parallel orbital indices is delegated to
     :func:`_compute_parallel_orbitals`.
 
@@ -317,12 +313,11 @@ def print_orb_para(StdI: StdIntList) -> None:
     OrbGC, reverse, NOrbGC = _compute_parallel_orbitals(
         StdI.nsite, StdI.NOrb, StdI.Orb, StdI.AntiOrb)
 
-    _write_orbitalidxpara(
-        StdI.nsite, StdI.ComplexType, OrbGC, reverse, NOrbGC)
-    logger.info("    orbitalidxpara.def is written.")
-
-    _write_orbitalidxgen(StdI, OrbGC, reverse, NOrbGC)
-    logger.info("    orbitalidxgen.def is written.")
+    return [
+        _build_orbitalidxpara(
+            StdI.nsite, StdI.ComplexType, OrbGC, reverse, NOrbGC),
+        _build_orbitalidxgen(StdI, OrbGC, reverse, NOrbGC),
+    ]
 
 
 def _gutzwiller_momentum_projected(
@@ -419,7 +414,7 @@ def _gutzwiller_global_optimization(
     return NGutzwiller
 
 
-def _write_gutzwiller_file(
+def _build_gutzwiller_file(
     StdI: StdIntList,
     NGutzwiller: int,
     Gutz: list[int],
@@ -435,30 +430,29 @@ def _write_gutzwiller_file(
     Gutz : list of int
         Per-site Gutzwiller index array.
     """
-    with open("gutzwilleridx.def", "w") as fp:
-        lines = [
-            "=============================================\n",
-            f"NGutzwillerIdx {NGutzwiller:10d}\n",
-            f"ComplexType {0:10d}\n",
-            "=============================================\n",
-            "=============================================\n",
-        ]
+    lines = [
+        "=============================================\n",
+        f"NGutzwillerIdx {NGutzwiller:10d}\n",
+        f"ComplexType {0:10d}\n",
+        "=============================================\n",
+        "=============================================\n",
+    ]
 
-        for isite in range(StdI.nsite):
-            lines.append(f"{isite:5d}  {Gutz[isite]:5d}\n")
+    for isite in range(StdI.nsite):
+        lines.append(f"{isite:5d}  {Gutz[isite]:5d}\n")
 
-        for iGutz in range(NGutzwiller):
-            flag = int(StdI.model == ModelType.HUBBARD or iGutz > 0)
-            lines.append(f"{iGutz:5d}  {flag:5d}\n")
-        fp.write("".join(lines))
+    for iGutz in range(NGutzwiller):
+        flag = int(StdI.model == ModelType.HUBBARD or iGutz > 0)
+        lines.append(f"{iGutz:5d}  {flag:5d}\n")
+    return SolverFileData("gutzwilleridx.def", "".join(lines))
 
 
-def print_gutzwiller(StdI: StdIntList) -> None:
+def build_gutzwiller(StdI: StdIntList) -> "SolverFileData":
     """Write the Gutzwiller variational-parameter file ``gutzwilleridx.def``.
 
     Delegates computation to :func:`_gutzwiller_momentum_projected` or
     :func:`_gutzwiller_global_optimization` based on ``NMPTrans``, then
-    writes the results via :func:`_write_gutzwiller_file`.
+    builds the file via :func:`_build_gutzwiller_file`.
 
     Parameters
     ----------
@@ -485,8 +479,7 @@ def print_gutzwiller(StdI: StdIntList) -> None:
     else:
         NGutzwiller = _gutzwiller_global_optimization(StdI, Gutz)
 
-    _write_gutzwiller_file(StdI, NGutzwiller, Gutz)
-    logger.info("    gutzwilleridx.def is written.")
+    return _build_gutzwiller_file(StdI, NGutzwiller, Gutz)
 
 
 # -----------------------------------------------------------------------

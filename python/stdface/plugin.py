@@ -203,13 +203,16 @@ class ExpertModeSolverPlugin(SolverPlugin):
         """Whether ``greentwo.def`` is listed in ``namelist.def`` (default True)."""
         return True
 
-    def write_solver_files(self, StdI: StdIntList) -> None:
-        """Hook: emit solver-specific files (default: none, used by UHF).
+    def build_solver_files(self, StdI: StdIntList) -> list:
+        """Hook: build solver-specific auxiliary files as data (default none).
 
-        Runs after the common data is built and before ``namelist`` is
-        built, because HPhi's excitation / calcmod set ``SpectrumBody`` /
-        ``PumpBody`` which ``build_namelist`` reads.
+        Returns a list of :class:`~stdface.core.output.SolverFileData`
+        collected into ``ExpertModeOutput.solver_files``.  Runs after the
+        common data is built and before ``namelist`` is built, because
+        HPhi's excitation / calcmod set ``SpectrumBody`` / ``PumpBody``
+        which ``build_namelist`` reads.
         """
+        return []
 
     def build_output(self, StdI: StdIntList) -> "ExpertModeOutput":
         """Assemble the Expert-mode output container for *StdI*.
@@ -234,12 +237,13 @@ class ExpertModeSolverPlugin(SolverPlugin):
         green_one = build_green_one(StdI)
         green_two = (build_green_two(StdI)
                      if self.has_two_body_green(StdI) else None)
-        self.write_solver_files(StdI)             # sets SpectrumBody/PumpBody
+        solver_files = self.build_solver_files(StdI)  # sets SpectrumBody/PumpBody
         namelist = build_namelist(StdI)
         return ExpertModeOutput(
             locspn=locspn, trans=trans, interactions=interactions,
             modpara=modpara, namelist=namelist,
             green_one=green_one, green_two=green_two,
+            solver_files=solver_files,
         )
 
 

@@ -8,13 +8,13 @@ Functions
 ---------
 large_value
     Compute the ``LargeValue`` parameter for TPQ calculations.
-print_calc_mod
+build_calc_mod
     Write ``calcmod.def`` with calculation-mode integers.
-print_excitation
+build_excitation
     Write ``single.def`` or ``pair.def`` for spectrum calculations.
 vector_potential
     Compute vector potential A(t) and electric field E(t) for time evolution.
-print_pump
+build_pump
     Write ``teone.def`` or ``tetwo.def`` for time-evolution pump terms.
 
 License
@@ -38,6 +38,7 @@ import numpy as np
 
 from ...core.stdface_vals import StdIntList, ModelType, MethodType, AMPLITUDE_EPS
 from ...core.param_check import print_val_d, print_val_i
+from ...core.output import SolverFileData
 from ...writer.common_writer import _merge_duplicate_terms
 
 # ---------------------------------------------------------------------------
@@ -290,8 +291,8 @@ class _CalcModParams(NamedTuple):
     iOutputExVec: int
 
 
-def _write_calcmod_file(StdI: StdIntList, params: _CalcModParams) -> None:
-    """Write ``calcmod.def`` with the resolved integer parameters.
+def _build_calcmod_file(StdI: StdIntList, params: _CalcModParams) -> SolverFileData:
+    """Build ``calcmod.def`` with the resolved integer parameters.
 
     Parameters
     ----------
@@ -301,40 +302,40 @@ def _write_calcmod_file(StdI: StdIntList, params: _CalcModParams) -> None:
     params : _CalcModParams
         Resolved calculation-mode parameters.
     """
-    with open("calcmod.def", "w") as fp:
-        fp.write("#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 3:CG, 4:Time-evolution 5:cTPQ\n")
-        fp.write("#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n")
-        fp.write("#Restart = 0:None, 1:Save, 2:Restart&Save, 3:Restart\n")
-        fp.write("#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save\n")
-        if StdI.NGPU is not None:
-            fp.write("#NGPU (for FullDiag): The number of GPU\n")
-        if StdI.Scalapack is not None:
-            fp.write("#Scalapack (for FullDiag) = 0:w/o ScaLAPACK, 1:w/ ScaLAPACK\n")
-        fp.write(f"CalcType {params.iCalcType:3d}\n")
-        fp.write(f"CalcModel {params.iCalcModel:3d}\n")
-        fp.write(f"ReStart {params.iRestart:3d}\n")
-        fp.write(f"CalcSpec {params.iCalcSpec:3d}\n")
-        fp.write(f"CalcEigenVec {params.iCalcEigenvec:3d}\n")
-        fp.write(f"InitialVecType {params.iInitialVecType:3d}\n")
-        fp.write(f"InputEigenVec {params.InputEigenVec:3d}\n")
-        fp.write(f"OutputEigenVec {params.OutputEigenVec:3d}\n")
-        fp.write(f"InputHam {params.iInputHam:3d}\n")
-        fp.write(f"OutputHam {params.iOutputHam:3d}\n")
-        fp.write(f"OutputExVec {params.iOutputExVec:3d}\n")
-        if StdI.NGPU is not None:
-            fp.write(f"NGPU {StdI.NGPU:3d}\n")
-        if StdI.Scalapack is not None:
-            fp.write(f"Scalapack {StdI.Scalapack:3d}\n")
+    lines = ["#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 3:CG, 4:Time-evolution 5:cTPQ\n",
+             "#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n",
+             "#Restart = 0:None, 1:Save, 2:Restart&Save, 3:Restart\n",
+             "#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save\n"]
+    if StdI.NGPU is not None:
+        lines.append("#NGPU (for FullDiag): The number of GPU\n")
+    if StdI.Scalapack is not None:
+        lines.append("#Scalapack (for FullDiag) = 0:w/o ScaLAPACK, 1:w/ ScaLAPACK\n")
+    lines += [f"CalcType {params.iCalcType:3d}\n",
+              f"CalcModel {params.iCalcModel:3d}\n",
+              f"ReStart {params.iRestart:3d}\n",
+              f"CalcSpec {params.iCalcSpec:3d}\n",
+              f"CalcEigenVec {params.iCalcEigenvec:3d}\n",
+              f"InitialVecType {params.iInitialVecType:3d}\n",
+              f"InputEigenVec {params.InputEigenVec:3d}\n",
+              f"OutputEigenVec {params.OutputEigenVec:3d}\n",
+              f"InputHam {params.iInputHam:3d}\n",
+              f"OutputHam {params.iOutputHam:3d}\n",
+              f"OutputExVec {params.iOutputExVec:3d}\n"]
+    if StdI.NGPU is not None:
+        lines.append(f"NGPU {StdI.NGPU:3d}\n")
+    if StdI.Scalapack is not None:
+        lines.append(f"Scalapack {StdI.Scalapack:3d}\n")
+    return SolverFileData("calcmod.def", "".join(lines))
 
 
-def print_calc_mod(StdI: StdIntList) -> None:
-    """Write ``calcmod.def`` containing calculation-mode integers for HPhi.
+def build_calc_mod(StdI: StdIntList) -> SolverFileData:
+    """Build ``calcmod.def`` containing calculation-mode integers for HPhi.
 
     Maps the string-valued parameters ``method``, ``model``, ``Restart``,
     ``InitialVecType``, ``EigenVecIO``, ``HamIO``, ``CalcSpec``, and
     ``OutputExVec`` to the integer codes that HPhi expects.  Validation
-    is delegated to :func:`_validate_ngpu_scalapack` and file writing to
-    :func:`_write_calcmod_file`.
+    is delegated to :func:`_validate_ngpu_scalapack` and rendering to
+    :func:`_build_calcmod_file`.
 
     Parameters
     ----------
@@ -409,7 +410,7 @@ def print_calc_mod(StdI: StdIntList) -> None:
     #  Validate and write
     # ------------------------------------------------------------------
     _validate_ngpu_scalapack(StdI)
-    _write_calcmod_file(
+    return _build_calcmod_file(
         StdI,
         _CalcModParams(
             iCalcType, iCalcModel, iCalcEigenvec,
@@ -697,15 +698,15 @@ def _compute_fourier_coefficients(StdI: StdIntList) -> tuple[list[float], list[f
     return fourier_r, fourier_i
 
 
-def _write_excitation_file(
+def _build_excitation_file(
     StdI: StdIntList,
     NumOp: int,
     coef: list[float],
     spin: list[list[int]],
     fourier_r: list[float],
     fourier_i: list[float],
-) -> None:
-    """Write ``single.def`` or ``pair.def`` excitation file.
+) -> SolverFileData:
+    """Build ``single.def`` or ``pair.def`` excitation file.
 
     Depending on ``StdI.SpectrumBody``, writes either a single-body
     excitation file (``single.def``) or a pair-body file (``pair.def``).
@@ -744,9 +745,7 @@ def _write_excitation_file(
                 lines.append(f"{isite} {spin[0][0]} 0 "
                              f"{fourier_r[isite] * coef[0]:25.15f} "
                              f"{fourier_i[isite] * coef[0]:25.15f}\n")
-        with open("single.def", "w") as fp:
-            fp.write("".join(lines))
-        logger.info("      single.def is written.\n")
+        return SolverFileData("single.def", "".join(lines))
     else:
         lines = ["=============================================\n",
                  f"NPair {StdI.nsite * NumOp}\n",
@@ -758,13 +757,11 @@ def _write_excitation_file(
                 lines.append(f"{isite} {spin[ispin][0]} {isite} {spin[ispin][1]} 1 "
                              f"{fourier_r[isite] * coef[ispin]:25.15f} "
                              f"{fourier_i[isite] * coef[ispin]:25.15f}\n")
-        with open("pair.def", "w") as fp:
-            fp.write("".join(lines))
-        logger.info("        pair.def is written.\n")
+        return SolverFileData("pair.def", "".join(lines))
 
 
-def print_excitation(StdI: StdIntList) -> None:
-    """Write ``single.def`` or ``pair.def`` for spectrum calculations.
+def build_excitation(StdI: StdIntList) -> SolverFileData:
+    """Build ``single.def`` or ``pair.def`` for spectrum calculations.
 
     Depending on ``SpectrumType``, this function generates excitation
     operators with the appropriate Fourier coefficients and spin
@@ -831,7 +828,7 @@ def print_excitation(StdI: StdIntList) -> None:
     fourier_r, fourier_i = _compute_fourier_coefficients(StdI)
 
     # Write single.def or pair.def
-    _write_excitation_file(StdI, NumOp, coef, spin, fourier_r, fourier_i)
+    return _build_excitation_file(StdI, NumOp, coef, spin, fourier_r, fourier_i)
 
 
 # ---------------------------------------------------------------------------
@@ -1042,12 +1039,12 @@ def vector_potential(StdI: StdIntList) -> None:
             lines.append(f"{time:f} "
                          f"{StdI.At[it][0]:f} {StdI.At[it][1]:f} {StdI.At[it][2]:f} "
                          f"{Et[it][0]:f} {Et[it][1]:f} {Et[it][2]:f}\n")
-        with open("potential.dat", "w") as fp:
-            fp.write("".join(lines))
+        StdI._aux_outputs = (StdI._aux_outputs or []) + [
+            SolverFileData("potential.dat", "".join(lines))]
 
 
-def print_pump(StdI: StdIntList) -> None:
-    """Write ``teone.def`` or ``tetwo.def`` for time-evolution pump terms.
+def build_pump(StdI: StdIntList) -> SolverFileData:
+    """Build ``teone.def`` or ``tetwo.def`` for time-evolution pump terms.
 
     - ``PumpBody == 1``: writes ``teone.def`` -- one-body pump terms.
       Equivalent pump terms (same index quadruples) are merged and
@@ -1094,9 +1091,7 @@ def print_pump(StdI: StdIntList) -> None:
                     f"{val.real:25.15f} {val.imag:25.15f}\n"
                 )
 
-        with open("teone.def", "w") as fp:
-            fp.write("".join(lines))
-        logger.info("      teone.def is written.\n")
+        return SolverFileData("teone.def", "".join(lines))
 
     else:
         lines = ["=============================================\n",
@@ -1112,9 +1107,7 @@ def print_pump(StdI: StdIntList) -> None:
                              f"{isite:5d} {1:5d} {isite:5d} {1:5d} "
                              f"{StdI.Uquench:25.15f}  {0.0:25.15f}\n")
 
-        with open("tetwo.def", "w") as fp:
-            fp.write("".join(lines))
-        logger.info("        tetwo.def is written.\n")
+        return SolverFileData("tetwo.def", "".join(lines))
 
 
 # -----------------------------------------------------------------------

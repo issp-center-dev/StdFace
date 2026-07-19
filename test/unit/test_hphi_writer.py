@@ -14,10 +14,10 @@ import pytest
 from stdface.core.stdface_vals import StdIntList, MethodType, ModelType
 from stdface.solvers.hphi.writer import (
     large_value,
-    print_calc_mod,
-    print_excitation,
+    build_calc_mod,
+    build_excitation,
     vector_potential,
-    print_pump,
+    build_pump,
     _resolve_string_param,
     _configure_spectrum_ops,
     _spectrum_szsz,
@@ -27,9 +27,9 @@ from stdface.solvers.hphi.writer import (
     _spectrum_down,
     _SPECTRUM_HANDLERS,
     _compute_fourier_coefficients,
-    _write_excitation_file,
+    _build_excitation_file,
     _validate_ngpu_scalapack,
-    _write_calcmod_file,
+    _build_calcmod_file,
     _CalcModParams,
     _pulselaser_At_Et,
     _aclaser_At_Et,
@@ -44,6 +44,18 @@ from stdface.solvers.hphi.writer import (
     HAM_IO_TO_FLAGS,
     OUTPUT_EX_VEC_TO_INT,
 )
+
+
+# Local build+write wrappers: the production helpers now return
+# SolverFileData instead of writing (G-1); these keep the call sites below
+# exercising the same file-on-disk assertions.
+def _write_excitation_file(*args, **kwargs):
+    _build_excitation_file(*args, **kwargs).write()
+
+
+def _write_calcmod_file(*args, **kwargs):
+    _build_calcmod_file(*args, **kwargs).write()
+
 
 # Sentinel values matching what _reset_vals sets at runtime
 
@@ -64,7 +76,7 @@ def _make_stdi_for_large_value(**overrides) -> StdIntList:
 
 
 def _make_stdi_for_calcmod(**overrides) -> StdIntList:
-    """Create a StdIntList with fields needed by print_calc_mod."""
+    """Create a StdIntList with fields needed by build_calc_mod."""
     StdI = StdIntList()
     StdI.method = overrides.get("method", "fulldiag")
     StdI.model = overrides.get("model", "hubbard")
@@ -120,7 +132,7 @@ class TestLargeValue:
 
 
 class TestPrintCalcMod:
-    """Tests for the print_calc_mod function."""
+    """Tests for the build_calc_mod function."""
 
     def test_writes_calcmod_def(self):
         """Test that calcmod.def is created with correct content."""
@@ -130,9 +142,9 @@ class TestPrintCalcMod:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                print_calc_mod(StdI)
-                assert os.path.exists("calcmod.def")
-                content = open("calcmod.def").read()
+                data = build_calc_mod(StdI)
+                assert data.fname == "calcmod.def"
+                content = data.content
                 assert "CalcType   2" in content  # fulldiag = 2
                 assert "CalcModel   0" in content  # hubbard, non-GC = 0
             finally:
@@ -146,8 +158,7 @@ class TestPrintCalcMod:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                print_calc_mod(StdI)
-                content = open("calcmod.def").read()
+                content = build_calc_mod(StdI).content
                 assert "CalcType   0" in content  # lanczos = 0
                 assert "CalcModel   4" in content  # spinGC = 4
             finally:
@@ -161,8 +172,7 @@ class TestPrintCalcMod:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                print_calc_mod(StdI)
-                content = open("calcmod.def").read()
+                content = build_calc_mod(StdI).content
                 assert "OutputEigenVec   1" in content
                 assert "InputEigenVec   0" in content
             finally:
@@ -176,8 +186,7 @@ class TestPrintCalcMod:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                print_calc_mod(StdI)
-                content = open("calcmod.def").read()
+                content = build_calc_mod(StdI).content
                 assert "CalcType   3" in content  # cg = 3
                 assert "CalcModel   5" in content  # kondoGC = 5
             finally:
@@ -207,7 +216,7 @@ class TestVectorPotential:
                 vector_potential(StdI)
                 assert StdI.PumpBody == 2
                 assert StdI.PumpType == "quench"
-                assert not os.path.exists("potential.dat")
+                assert not StdI._aux_outputs
             finally:
                 os.chdir(orig)
 
@@ -230,8 +239,10 @@ class TestVectorPotential:
             try:
                 vector_potential(StdI)
                 assert StdI.PumpBody == 1
-                assert os.path.exists("potential.dat")
-                lines = open("potential.dat").readlines()
+                assert StdI._aux_outputs
+                pot = StdI._aux_outputs[0]
+                assert pot.fname == "potential.dat"
+                lines = pot.content.splitlines()
                 assert len(lines) == 11  # header + 10 timesteps
             finally:
                 os.chdir(orig)

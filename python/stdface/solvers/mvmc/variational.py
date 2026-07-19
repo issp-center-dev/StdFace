@@ -27,6 +27,7 @@ import logging
 import numpy as np
 
 from ...core.stdface_vals import StdIntList, ModelType
+from ...core.output import SolverFileData
 from ...lattice.site_util import (
     _cell_vector, _fold_to_cell, _fold_site, _find_cell_index,
     _validate_box_params, _det_and_cofactor, find_site,
@@ -126,8 +127,8 @@ def _fold_site_sub(
     return _fold_to_cell(StdI.rboxsub, StdI.NCellsub, StdI.boxsub, iCellV)
 
 
-def proj(StdI: StdIntList) -> None:
-    """Print quantum number projection file ``qptransidx.def`` (mVMC only).
+def proj(StdI: StdIntList) -> "SolverFileData":
+    """Build the quantum number projection file ``qptransidx.def`` (mVMC only).
 
     Parameters
     ----------
@@ -163,22 +164,20 @@ def proj(StdI: StdIntList) -> None:
                         Anti[StdI.NSym][half + jCell * StdI.NsiteUC + jsite] = ap_dot
             StdI.NSym += 1
 
-    with open("qptransidx.def", "w") as fp:
-        lines = [
-            "=============================================\n",
-            f"NQPTrans {StdI.NSym:10d}\n",
-            "=============================================\n",
-            "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n",
-            "=============================================\n",
-        ]
-        for iSym in range(StdI.NSym):
-            lines.append(f"{iSym} {1.0:10.5f}\n")
-        for iSym in range(StdI.NSym):
-            for jsite in range(StdI.nsite):
-                a = _parity_sign(Anti[iSym][jsite])
-                lines.append(f"{iSym:5d}  {jsite:5d}  {Sym[iSym][jsite]:5d}  {a:5d}\n")
-        fp.write("".join(lines))
-    logger.info("    qptransidx.def is written.")
+    lines = [
+        "=============================================\n",
+        f"NQPTrans {StdI.NSym:10d}\n",
+        "=============================================\n",
+        "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n",
+        "=============================================\n",
+    ]
+    for iSym in range(StdI.NSym):
+        lines.append(f"{iSym} {1.0:10.5f}\n")
+    for iSym in range(StdI.NSym):
+        for jsite in range(StdI.nsite):
+            a = _parity_sign(Anti[iSym][jsite])
+            lines.append(f"{iSym:5d}  {jsite:5d}  {Sym[iSym][jsite]:5d}  {a:5d}\n")
+    return SolverFileData("qptransidx.def", "".join(lines))
 
 
 def _init_site_sub(StdI: StdIntList) -> None:
@@ -465,7 +464,7 @@ def _jastrow_global_optimization(
     return NJastrow
 
 
-def print_jastrow(StdI: StdIntList) -> None:
+def build_jastrow(StdI: StdIntList) -> "SolverFileData":
     """Output Jastrow factor index file ``jastrowidx.def`` (mVMC only).
 
     Delegates computation to :func:`_jastrow_momentum_projected` or
@@ -484,25 +483,23 @@ def print_jastrow(StdI: StdIntList) -> None:
     else:
         NJastrow = _jastrow_global_optimization(StdI, Jastrow)
 
-    with open("jastrowidx.def", "w") as fp:
-        lines = [
-            "=============================================\n",
-            f"NJastrowIdx {NJastrow:10d}\n",
-            f"ComplexType {0:10d}\n",
-            "=============================================\n",
-            "=============================================\n",
-        ]
+    lines = [
+        "=============================================\n",
+        f"NJastrowIdx {NJastrow:10d}\n",
+        f"ComplexType {0:10d}\n",
+        "=============================================\n",
+        "=============================================\n",
+    ]
 
-        for isite in range(StdI.nsite):
-            for jsite in range(StdI.nsite):
-                if isite == jsite:
-                    continue
-                lines.append(f"{isite:5d}  {jsite:5d}  {Jastrow[isite, jsite]:5d}\n")
+    for isite in range(StdI.nsite):
+        for jsite in range(StdI.nsite):
+            if isite == jsite:
+                continue
+            lines.append(f"{isite:5d}  {jsite:5d}  {Jastrow[isite, jsite]:5d}\n")
 
-        for iJastrow in range(NJastrow):
-            if StdI.model == ModelType.HUBBARD or iJastrow > 0:
-                lines.append(f"{iJastrow:5d}  {1:5d}\n")
-            else:
-                lines.append(f"{iJastrow:5d}  {0:5d}\n")
-        fp.write("".join(lines))
-    logger.info("    jastrowidx.def is written.")
+    for iJastrow in range(NJastrow):
+        if StdI.model == ModelType.HUBBARD or iJastrow > 0:
+            lines.append(f"{iJastrow:5d}  {1:5d}\n")
+        else:
+            lines.append(f"{iJastrow:5d}  {0:5d}\n")
+    return SolverFileData("jastrowidx.def", "".join(lines))

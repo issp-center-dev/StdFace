@@ -14,17 +14,45 @@ from stdface.core.stdface_vals import StdIntList
 import numpy as np
 
 from stdface.solvers.mvmc.writer import (
-    print_orb,
-    print_orb_para,
-    print_gutzwiller,
+    build_orb,
+    build_orb_para,
+    build_gutzwiller,
     _has_anti_period,
     _compute_parallel_orbitals,
-    _write_orbitalidxpara,
-    _write_orbitalidxgen,
+    _build_orbitalidxpara,
+    _build_orbitalidxgen,
     _gutzwiller_momentum_projected,
     _gutzwiller_global_optimization,
-    _write_gutzwiller_file,
+    _build_gutzwiller_file,
 )
+
+
+# Local build+write wrappers (G-2): the production functions now return
+# SolverFileData (or a list of them) instead of writing.
+def print_orb(StdI):
+    build_orb(StdI).write()
+
+
+def print_orb_para(StdI):
+    for data in build_orb_para(StdI):
+        data.write()
+
+
+def print_gutzwiller(StdI):
+    build_gutzwiller(StdI).write()
+
+
+def _write_gutzwiller_file(*args, **kwargs):
+    _build_gutzwiller_file(*args, **kwargs).write()
+
+
+def _write_orbitalidxpara(*args, **kwargs):
+    _build_orbitalidxpara(*args, **kwargs).write()
+
+
+def _write_orbitalidxgen(*args, **kwargs):
+    _build_orbitalidxgen(*args, **kwargs).write()
+
 
 # Sentinel values matching what _reset_vals sets at runtime
 

@@ -13,8 +13,8 @@ from ...core.keyword_parser import (
     _grid3x3_keywords,
 )
 from ...core.param_check import print_val_i
-from .variational import generate_orb, proj, print_jastrow
-from .writer import print_orb, print_orb_para, print_gutzwiller
+from .variational import generate_orb, proj, build_jastrow
+from .writer import build_orb, build_orb_para, build_gutzwiller
 
 
 class MVMCPlugin(ExpertModeSolverPlugin):
@@ -48,20 +48,20 @@ class MVMCPlugin(ExpertModeSolverPlugin):
     def reset_arrays(self) -> list[tuple[str, object]]:
         return _RESET_ARRAYS
 
-    def write_solver_files(self, StdI: StdIntList) -> None:
-        """Emit mVMC-specific variational files."""
+    def build_solver_files(self, StdI: StdIntList) -> list:
+        """Build the mVMC-specific variational files."""
         if StdI.lGC == 0 and (StdI.Sz2 == 0 or StdI.Sz2 is None):
             StdI.ComplexType = print_val_i("ComplexType", StdI.ComplexType, 0)
         else:
             StdI.ComplexType = print_val_i("ComplexType", StdI.ComplexType, 1)
 
         generate_orb(StdI)
-        proj(StdI)
-        print_jastrow(StdI)
+        files = [proj(StdI), build_jastrow(StdI)]
         if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 is not None):
-            print_orb_para(StdI)
-        print_gutzwiller(StdI)
-        print_orb(StdI)
+            files.extend(build_orb_para(StdI))
+        files.append(build_gutzwiller(StdI))
+        files.append(build_orb(StdI))
+        return files
 
 
 # -----------------------------------------------------------------------

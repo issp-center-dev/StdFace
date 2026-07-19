@@ -48,7 +48,8 @@ class TestExpertModeOutput:
     def test_to_dict_keys(self):
         d = _make_expert_output().to_dict()
         assert set(d) == {"locspn", "trans", "interactions", "modpara",
-                          "namelist", "green_one", "green_two"}
+                          "namelist", "green_one", "green_two",
+                          "solver_files"}
         assert d["green_two"] is None
         assert d["interactions"][0]["count_label"] == "NCoulombIntra"
 
