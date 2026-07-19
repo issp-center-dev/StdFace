@@ -692,58 +692,30 @@ def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
 
     Notes
     -----
-    Not thread-safe: the build chdirs into *output_dir* (``os.chdir`` is
-    process-global) so that files emitted eagerly by solver hooks land
-    there.  Auxiliary input data files read during lattice setup (the
-    wannier90 lattice's ``*_geom.dat`` / ``*_hr.dat`` / ...) are resolved
-    against the caller's working directory, not *output_dir*.
+    The build phase writes nothing (thread-safe); all files are emitted
+    into *output_dir* afterwards.  Auxiliary input data files read during
+    lattice setup (the wannier90 lattice's ``*_geom.dat`` / ``*_hr.dat`` /
+    ...) are resolved against the caller's working directory (or
+    ``StdIntList.input_dir`` when set explicitly).
     """
-    import os
-    import tempfile
-    import contextlib
     from pathlib import Path
     from .output import DefFileFormat
 
     data = _make_source(source).load()
     _check_solver_conflict(solver, data)
-    input_dir = os.getcwd()
 
-    @contextlib.contextmanager
-    def _chdir(path):
-        prev = os.getcwd()
-        os.chdir(path)
-        try:
-            yield
-        finally:
-            os.chdir(prev)
+    StdI = _build_stdintlist(data, solver)
+    gp_data, geo_data, xsf_data = _build_lattice_and_boost(StdI, StdI.solver)
+    out = _build_output(StdI)
 
-    def _run():
-        # The build runs with cwd = the target directory so that the
-        # solver-specific files emitted eagerly by ``write_solver_files``
-        # (HPhi excitation/calcmod, mVMC variational) land there too -- not
-        # just the SolverOutput / gnuplot / geometry written explicitly.
-        StdI = _build_stdintlist(data, solver)
-        StdI.input_dir = input_dir
-        gp_data, geo_data, xsf_data = _build_lattice_and_boost(StdI, StdI.solver)
-        out = _build_output(StdI)
+    if output_dir is not None:
+        directory = Path(output_dir)
+        directory.mkdir(parents=True, exist_ok=True)
         fmt = output_format or DefFileFormat()
-        fmt.write_output(out, Path("."))
-        if gp_data is not None:
-            gp_data.write(Path("."))
-        if geo_data is not None:
-            geo_data.write(Path("."))
-        if xsf_data is not None:
-            xsf_data.write(Path("."))
+        fmt.write_output(out, directory)
+        for lattice_data in (gp_data, geo_data, xsf_data):
+            if lattice_data is not None:
+                lattice_data.write(directory)
         for aux_data in StdI._aux_outputs or []:
-            aux_data.write(Path("."))
-        return out
-
-    if output_dir is None:
-        # Data-only: build in a throwaway directory so nothing lands in cwd.
-        with tempfile.TemporaryDirectory() as tmp, _chdir(tmp):
-            return _run()
-
-    directory = Path(output_dir)
-    directory.mkdir(parents=True, exist_ok=True)
-    with _chdir(directory):
-        return _run()
+            aux_data.write(directory)
+    return out

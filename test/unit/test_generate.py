@@ -89,6 +89,16 @@ class TestGenerate:
         assert (tmp_path / "k" / "geom.dat").exists()
         assert not (tmp_path / "k" / "geometry.dat").exists()  # suppressed
 
+    def test_data_only_mode_touches_no_files(self, tmp_path, monkeypatch):
+        """output_dir=None builds the container without any filesystem
+        writes (G-4: the build phase itself never writes)."""
+        monkeypatch.chdir(tmp_path)
+        out = generate({**_HUB, "method": "CG"}, solver="HPhi",
+                       output_dir=None)
+        assert isinstance(out, ExpertModeOutput)
+        assert {d.fname for d in out.solver_files} >= {"calcmod.def"}
+        assert list(tmp_path.iterdir()) == []  # nothing written anywhere
+
     def test_wannier90_inputs_resolved_against_caller_cwd(self, tmp_path,
                                                           monkeypatch):
         """Wannier90 data files come from the caller's cwd, not output_dir (#P8)."""
