@@ -13,6 +13,7 @@ import pytest
 
 from stdface.core.stdface_vals import StdIntList
 from stdface.lattice import wannier90 as w90
+from stdface.lattice import wannier90_io as wio
 
 
 # ---------------------------------------------------------------------------
@@ -35,25 +36,25 @@ class TestCheckInBox:
     def test_origin_is_in_box(self):
         """The zero vector should always be inside the box."""
         inv = np.eye(3)
-        assert w90._check_in_box(np.array([0, 0, 0]), inv) is True
+        assert wio._check_in_box(np.array([0, 0, 0]), inv) is True
 
     def test_boundary_is_in_box(self):
         """Vectors on the boundary (abs == 1) should be inside."""
         inv = np.eye(3)
-        assert w90._check_in_box(np.array([1, 0, 0]), inv) is True
-        assert w90._check_in_box(np.array([0, -1, 0]), inv) is True
+        assert wio._check_in_box(np.array([1, 0, 0]), inv) is True
+        assert wio._check_in_box(np.array([0, -1, 0]), inv) is True
 
     def test_outside_box(self):
         """Vectors outside the boundary should not be inside."""
         inv = np.eye(3)
-        assert w90._check_in_box(np.array([2, 0, 0]), inv) is False
+        assert wio._check_in_box(np.array([2, 0, 0]), inv) is False
 
     def test_scaled_box(self):
         """With scaled inverse, check boundary correctly."""
         inv = np.diag([0.5, 0.5, 0.5])
         # judge_vec = [0.5*r0, 0.5*r1, 0.5*r2]
-        assert w90._check_in_box(np.array([2, 2, 2]), inv) is True
-        assert w90._check_in_box(np.array([3, 0, 0]), inv) is False
+        assert wio._check_in_box(np.array([2, 2, 2]), inv) is True
+        assert wio._check_in_box(np.array([3, 0, 0]), inv) is False
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +294,7 @@ class TestGeometryW90:
         s.direct = np.zeros((3, 3))
         s.tau = np.zeros((2, 3))
 
-        w90._geometry_w90(s)
+        wio._geometry_w90(s)
 
         np.testing.assert_allclose(s.direct[0], [1.0, 0.0, 0.0])
         np.testing.assert_allclose(s.direct[1], [0.0, 1.0, 0.0])
@@ -309,7 +310,7 @@ class TestGeometryW90:
         s.direct = np.zeros((3, 3))
         s.tau = np.zeros((1, 3))
 
-        w90._geometry_w90(s)
+        wio._geometry_w90(s)
 
         assert s.NsiteUC == 3
 
@@ -323,7 +324,7 @@ class TestGeometryW90:
         s.direct = np.zeros((3, 3))
         s.tau = np.zeros((2, 3))
 
-        w90._geometry_w90(s)
+        wio._geometry_w90(s)
 
         np.testing.assert_allclose(s.tau[0], [0.0, 0.0, 0.0], atol=1e-10)
         np.testing.assert_allclose(s.tau[1], [0.1, 0.2, 0.3], atol=1e-10)
@@ -338,7 +339,7 @@ class TestGeometryW90:
         s.tau = np.zeros((1, 3))
 
         with pytest.raises(FileNotFoundError):
-            w90._geometry_w90(s)
+            wio._geometry_w90(s)
 
 
 # ---------------------------------------------------------------------------
@@ -370,7 +371,7 @@ class TestReadW90:
         cutoff_R = np.array([10, 10, 10], dtype=int)
         cutoff_Rvec = np.full((3, 3), NaN_i, dtype=float)
 
-        w90._read_w90(
+        wio._read_w90(
             s, str(tmp_path / "test_hr.dat"),
             1.0e-8, cutoff_R, cutoff_Rvec, -1.0,
             0, NtUJ, tUJindx, 1.0, tUJ,
@@ -394,7 +395,7 @@ class TestReadW90:
         cutoff_Rvec = np.full((3, 3), NaN_i, dtype=float)
 
         # Should not raise
-        w90._read_w90(
+        wio._read_w90(
             s, str(tmp_path / "nonexistent_hr.dat"),
             1.0e-8, cutoff_R, cutoff_Rvec, -1.0,
             0, NtUJ, tUJindx, 1.0, tUJ,
@@ -424,7 +425,7 @@ class TestReadW90:
         NtUJ_low = [0, 0, 0]
         tUJ_low = [None, None, None]
         tUJindx_low = [None, None, None]
-        w90._read_w90(
+        wio._read_w90(
             s, str(tmp_path / "test_hr.dat"),
             0.01, cutoff_R, cutoff_Rvec, -1.0,
             0, NtUJ_low, tUJindx_low, 1.0, tUJ_low,
@@ -434,7 +435,7 @@ class TestReadW90:
         NtUJ_high = [0, 0, 0]
         tUJ_high = [None, None, None]
         tUJindx_high = [None, None, None]
-        w90._read_w90(
+        wio._read_w90(
             s, str(tmp_path / "test_hr.dat"),
             10.0, cutoff_R, cutoff_Rvec, -1.0,
             0, NtUJ_high, tUJindx_high, 1.0, tUJ_high,
@@ -471,7 +472,7 @@ class TestReadW90:
         NtUJ1 = [0, 0, 0]
         tUJ1 = [None, None, None]
         tUJindx1 = [None, None, None]
-        w90._read_w90(
+        wio._read_w90(
             s, filename,
             1.0e-8, cutoff_R, cutoff_Rvec, -1.0,
             0, NtUJ1, tUJindx1, 1.0, tUJ1,
@@ -481,7 +482,7 @@ class TestReadW90:
         NtUJ2 = [0, 0, 0]
         tUJ2 = [None, None, None]
         tUJindx2 = [None, None, None]
-        w90._read_w90(
+        wio._read_w90(
             s, filename,
             1.0e-8, cutoff_R, cutoff_Rvec, -1.0,
             0, NtUJ2, tUJindx2, 2.0, tUJ2,
@@ -510,7 +511,7 @@ class TestReadDensityMatrix:
         s = StdIntList()
         s.NsiteUC = NsiteUC
 
-        DenMat = w90._read_density_matrix(s, str(tmp_path / "test_dr.dat"))
+        DenMat = wio._read_density_matrix(s, str(tmp_path / "test_dr.dat"))
 
         assert (0, 0, 0) in DenMat
         # Diagonal elements should be 0.5
@@ -526,7 +527,7 @@ class TestReadDensityMatrix:
         s.NsiteUC = 1
 
         with pytest.raises(FileNotFoundError):
-            w90._read_density_matrix(s, str(tmp_path / "nonexistent_dr.dat"))
+            wio._read_density_matrix(s, str(tmp_path / "nonexistent_dr.dat"))
 
 
 # ---------------------------------------------------------------------------
@@ -1465,7 +1466,7 @@ class TestApplyBoundaryWeights:
         s.W = None
         s.L = None
         s.Height = None
-        band = w90._apply_boundary_weights(indx_tot, Weight_tot, 3, s)
+        band = wio._apply_boundary_weights(indx_tot, Weight_tot, 3, s)
         np.testing.assert_array_equal(band, [1, 2, 3])
 
     def test_no_halving_when_dimensions_unset(self):
@@ -1476,7 +1477,7 @@ class TestApplyBoundaryWeights:
         s.W = None
         s.L = None
         s.Height = None
-        w90._apply_boundary_weights(indx_tot, Weight_tot, 2, s)
+        wio._apply_boundary_weights(indx_tot, Weight_tot, 2, s)
         np.testing.assert_array_equal(Weight_tot, [1.0, 1.0])
 
     def test_halving_at_boundary(self):
@@ -1495,7 +1496,7 @@ class TestApplyBoundaryWeights:
         s.W = 4   # Model_lattice[0] = 2
         s.L = 1   # odd => Model_lattice[1] = 0 => no halving in dim 1
         s.Height = 1
-        w90._apply_boundary_weights(indx_tot, Weight_tot, 5, s)
+        wio._apply_boundary_weights(indx_tot, Weight_tot, 5, s)
         # WSC 0 (R0=0) and WSC 1 (R0=1): unchanged
         assert Weight_tot[0] == 1.0
         assert Weight_tot[1] == 1.0
@@ -1513,7 +1514,7 @@ class TestApplyBoundaryWeights:
         s.W = 10  # Model_lattice[0] = 5, Band_lattice[0] = 1
         s.L = 10
         s.Height = 10
-        w90._apply_boundary_weights(indx_tot, Weight_tot, 1, s)
+        wio._apply_boundary_weights(indx_tot, Weight_tot, 1, s)
         assert Weight_tot[0] == 1.0
 
 
@@ -1540,7 +1541,7 @@ class TestCountAndStoreTerms:
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
 
-        w90._count_and_store_terms(
+        wio._count_and_store_terms(
             Mat_tot, indx_tot, Weight_tot, nWSC,
             NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
         )
@@ -1561,7 +1562,7 @@ class TestCountAndStoreTerms:
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
 
-        w90._count_and_store_terms(
+        wio._count_and_store_terms(
             Mat_tot, indx_tot, Weight_tot, nWSC,
             NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
         )
@@ -1581,7 +1582,7 @@ class TestCountAndStoreTerms:
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
 
-        w90._count_and_store_terms(
+        wio._count_and_store_terms(
             Mat_tot, indx_tot, Weight_tot, nWSC,
             NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
         )
@@ -1601,7 +1602,7 @@ class TestCountAndStoreTerms:
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
 
-        w90._count_and_store_terms(
+        wio._count_and_store_terms(
             Mat_tot, indx_tot, Weight_tot, nWSC,
             NsiteUC, 0.01, 0, NtUJ, tUJindx, tUJ,
         )
@@ -1621,7 +1622,7 @@ class TestCountAndStoreTerms:
         tUJ = [None, None, None]
         tUJindx = [None, None, None]
 
-        w90._count_and_store_terms(
+        wio._count_and_store_terms(
             Mat_tot, indx_tot, Weight_tot, nWSC,
             NsiteUC, 0.01, 2, NtUJ, tUJindx, tUJ,
         )
