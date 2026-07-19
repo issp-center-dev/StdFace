@@ -18,6 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install stdface
+        run: pip install ./python
+
       - name: make workspace
         run: cmake -E make_directory ${{runner.workspace}}/build
 
@@ -35,6 +43,41 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: ctest -V
+
+  # C (base-mode) regression: run the C dry binaries against ref/.
+  # 33 cases are excluded because their refs were intentionally regenerated
+  # from the Python implementation (L1-4 UHFk normalization / L2 ladder
+  # expander) and no longer match the C output:
+  #   - 5 HPhi ladder tests (Expert-mode term order)
+  #   - 28 small-cell matrix_*_uhfk tests (fold-back aliasing normalized away)
+  ctest-base:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: make workspace
+        run: cmake -E make_directory ${{runner.workspace}}/build-base
+
+      - name: cmake
+        working-directory: ${{runner.workspace}}/build-base
+        shell: bash
+        run: cmake -DHPHI=ON -DMVMC=ON -DHWAVE=ON -DUHF=ON -DTEST_MODE=base -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+
+      - name: build
+        working-directory: ${{runner.workspace}}/build-base
+        shell: bash
+        run: cmake --build ./ -j4
+
+      - name: ctest
+        working-directory: ${{runner.workspace}}/build-base
+        shell: bash
+        run: ctest -V -E '(fulldiag_spin_ladder_extended|boundary_spin_ladder_twist|lanczos_spinGC_DM|lobcg_genspin_ladder|matrix_(square|triangular|honeycomb|kagome|orthorhombic|pyrochlore|fco)_(hubbardgc|hubbard|spingc|spin)_uhfk$)'
 
   pytest:
     runs-on: ${{ matrix.os }}
@@ -54,7 +97,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install numpy pytest
+        run: pip install -e './python[dev]'
 
       - name: Run unit tests
         run: python -m pytest test/unit/ -v
