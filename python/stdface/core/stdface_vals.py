@@ -993,6 +993,14 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  C3: dynamic delegation to the active solver config
     # ------------------------------------------------------------------
+    def __post_init__(self) -> None:
+        # Dataclass __init__ assigns fields in declaration order, so the
+        # config attached when ``solver`` is set is wiped by the later
+        # ``_solver_cfg = None`` default assignment; re-attach it here so
+        # ``StdIntList(solver=...)`` works like ``s.solver = ...``.
+        if self.solver:
+            self._sync_solver_config(self.solver)
+
     def __getattr__(self, name: str):
         # Called only when normal lookup fails (dataclass fields and the C1
         # _delegate properties are resolved first).  Route to the active
