@@ -11,6 +11,21 @@ import tempfile
 import pytest
 
 from stdface.core.stdface_vals import StdIntList, ModelType, SolverType
+from stdface.solvers.mvmc.writer import (
+    MODEL_GC_TO_EX_UPDATE_PATH,
+    set_modpara_defaults as _check_mod_para_mvmc,
+    modpara_lines as _modpara_lines_mvmc,
+    namelist_entries as _namelist_entries_mvmc,
+)
+from stdface.solvers.uhf.writer import (
+    set_modpara_defaults as _check_mod_para_uhf,
+    modpara_lines as _modpara_lines_uhf_hwave,
+)
+from stdface.solvers.hphi.writer import (
+    set_modpara_defaults as _check_mod_para_hphi,
+    modpara_lines as _modpara_lines_hphi,
+    namelist_entries as _namelist_entries_hphi,
+)
 from stdface.writer.common_writer import (
     build_loc_spn,
     LocSpnData,
@@ -24,22 +39,12 @@ from stdface.writer.common_writer import (
     check_output_mode,
     check_mod_para,
     OUTPUT_MODE_TO_INT,
-    MODEL_GC_TO_EX_UPDATE_PATH,
-    _check_mod_para_hphi,
-    _check_mod_para_mvmc,
-    _check_mod_para_uhf,
     _check_conserved_quantities,
     _CONSERVED_QTY_RULES,
     build_modpara,
     ModParaData,
-    _modpara_lines_hphi,
-    _modpara_lines_mvmc,
-    _modpara_lines_uhf_hwave,
-    _MODPARA_BANNER,
     build_namelist,
     NamelistData,
-    _namelist_entries_hphi,
-    _namelist_entries_mvmc,
     _INTERACTION_FLAGS,
     GreenFunctionIndices,
     _merge_duplicate_terms,
@@ -707,10 +712,11 @@ class TestPrintModPara:
 class TestModparaBodyDispatch:
     """Tests for the modpara body-writer functions and banner."""
 
-    def test_banner_uhf_only(self):
-        """UHF is the only entry: H-wave never emits modpara.def, so the
-        former HWAVE banner was unreachable and has been removed."""
-        assert _MODPARA_BANNER == {SolverType.UHF: "UHF_Cal_Parameters"}
+    def test_uhf_banner_inlined(self):
+        """The UHF banner is inlined in solvers/uhf/writer.modpara_lines
+        (the _MODPARA_BANNER dict is gone; H-wave never emits modpara.def)."""
+        lines = _modpara_lines_uhf_hwave(_make_stdi_base(solver="UHF"))
+        assert ("raw", "UHF_Cal_Parameters") in lines
 
     def test_write_modpara_hphi_content(self):
         """Verify HPhi body writer produces expected fields."""

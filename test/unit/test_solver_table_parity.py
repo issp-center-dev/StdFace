@@ -130,6 +130,28 @@ class TestResetTableParity:
                 f"{solver}: config fields without reset entry: {sorted(missing)}")
 
 
+class TestUhfFamilyDefaultsParity:
+    """The H-wave defaults copy must behave identically to UHF's."""
+
+    _FIELDS = ("RndSeed", "Iteration_max", "mix", "eps", "eps_slater",
+               "NMPTrans")
+
+    def _apply(self, solver, fn):
+        from stdface.core.stdface_main import _reset_vals
+        from stdface.core.stdface_vals import StdIntList
+        s = StdIntList()
+        s.solver = solver
+        _reset_vals(s)
+        fn(s)
+        return {name: getattr(s, name) for name in self._FIELDS}
+
+    def test_defaults_behave_identically(self):
+        from stdface.solvers.uhf.writer import set_modpara_defaults
+        from stdface.solvers.hwave._plugin import _set_uhf_family_defaults
+        assert (self._apply("UHF", set_modpara_defaults)
+                == self._apply("HWAVE", _set_uhf_family_defaults))
+
+
 class TestConfigFieldParity:
     @staticmethod
     def _field_map(cfg_cls):

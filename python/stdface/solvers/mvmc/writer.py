@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 
 from ...core.stdface_vals import StdIntList, ModelType
+from ...core.param_check import print_val_d, print_val_i, not_used_i
 
 
 logger = logging.getLogger(__name__)
@@ -486,3 +487,143 @@ def print_gutzwiller(StdI: StdIntList) -> None:
 
     _write_gutzwiller_file(StdI, NGutzwiller, Gutz)
     logger.info("    gutzwilleridx.def is written.")
+
+
+# -----------------------------------------------------------------------
+#  modpara / namelist bodies (moved from writer/common_writer.py)
+# -----------------------------------------------------------------------
+
+MODEL_GC_TO_EX_UPDATE_PATH: dict[tuple, int] = {
+    (ModelType.HUBBARD, 0): 0,
+    (ModelType.HUBBARD, 1): 0,
+    (ModelType.SPIN, 0):    2,
+    (ModelType.SPIN, 1):    2,
+    (ModelType.KONDO, 0):   1,
+    (ModelType.KONDO, 1):   3,
+}
+"""Maps ``(ModelType, lGC)`` to the ``NExUpdatePath`` integer for mVMC.
+
+Hubbard always gets 0, Spin always gets 2, and Kondo depends on whether
+the grand-canonical flag (``lGC``) is set (1 → 3, 0 → 1).
+"""
+
+
+def namelist_entries(StdI: StdIntList) -> list:
+    """Return mVMC-specific ``(keyword, filename)`` namelist entries."""
+    entries: list = [
+        ("Gutzwiller", "gutzwilleridx.def"),
+        ("Jastrow", "jastrowidx.def"),
+        ("Orbital", "orbitalidx.def"),
+    ]
+    if StdI.lGC == 1 or (StdI.Sz2 != 0 and StdI.Sz2 is not None):
+        entries.append(("OrbitalParallel", "orbitalidxpara.def"))
+        entries.append(("# OrbitalGeneral", "orbitalidxgen.def"))
+    entries.append(("TransSym", "qptransidx.def"))
+    return entries
+
+
+def modpara_lines(StdI: StdIntList) -> list:
+    """Return the mVMC-specific body line descriptors of ``modpara.def``."""
+    lines: list = [
+        ("raw", "VMC_Cal_Parameters"),
+        ("sep",),
+        ("kv", "CDataFileHead", StdI.CDataFileHead, ""),
+        ("kv", "CParaFileHead", StdI.CParaFileHead, ""),
+        ("sep",),
+        ("kv", "NVMCCalMode", StdI.NVMCCalMode, ""),
+        ("kv", "NLanczosMode", StdI.NLanczosMode, ""),
+        ("sep",),
+        ("kv", "NDataIdxStart", StdI.NDataIdxStart, ""),
+        ("kv", "NDataQtySmp", StdI.NDataQtySmp, ""),
+        ("sep",),
+        ("kv", "Nsite", StdI.nsite, ""),
+        ("kv", "Ncond", StdI.ncond, "<5d"),
+    ]
+    if StdI.Sz2 is not None:
+        lines.append(("kv", "2Sz", StdI.Sz2, ""))
+    if StdI.NSPGaussLeg is not None:
+        lines.append(("kv", "NSPGaussLeg", StdI.NSPGaussLeg, ""))
+    if StdI.NSPStot is not None:
+        lines.append(("kv", "NSPStot", StdI.NSPStot, ""))
+    lines += [
+        ("kv", "NMPTrans", StdI.NMPTrans, ""),
+        ("kv", "NSROptItrStep", StdI.NSROptItrStep, ""),
+        ("kv", "NSROptItrSmp", StdI.NSROptItrSmp, ""),
+        ("kv", "DSROptRedCut", StdI.DSROptRedCut, ".10f"),
+        ("kv", "DSROptStaDel", StdI.DSROptStaDel, ".10f"),
+        ("kv", "DSROptStepDt", StdI.DSROptStepDt, ".10f"),
+        ("kv", "NVMCWarmUp", StdI.NVMCWarmUp, ""),
+        ("kv", "NVMCInterval", StdI.NVMCInterval, ""),
+        ("kv", "NVMCSample", StdI.NVMCSample, ""),
+        ("kv", "NExUpdatePath", StdI.NExUpdatePath, ""),
+        ("kv", "RndSeed", StdI.RndSeed, ""),
+        ("kv", "NSplitSize", StdI.NSplitSize, ""),
+        ("kv", "NStore", StdI.NStore, ""),
+        ("kv", "NSRCG", StdI.NSRCG, ""),
+    ]
+    return lines
+
+
+def set_modpara_defaults(StdI: StdIntList) -> None:
+    """Set mVMC-specific default model parameters.
+
+    Handles VMC sampling parameters, exchange-update path count,
+    and SR-optimisation settings.
+
+    Parameters
+    ----------
+    StdI : StdIntList
+        The global parameter structure, modified in place.
+    """
+    if StdI.CParaFileHead is None:
+        StdI.CParaFileHead = "zqp"
+        logger.info(
+            "    CParaFileHead = %-12s######  DEFAULT VALUE IS USED  ######",
+            StdI.CParaFileHead,
+        )
+    else:
+        logger.info("    CParaFileHead = %s", StdI.CParaFileHead)
+
+    StdI.NVMCCalMode = print_val_i("NVMCCalMode", StdI.NVMCCalMode, 0)
+    StdI.NLanczosMode = print_val_i("NLanczosMode", StdI.NLanczosMode, 0)
+    StdI.NDataIdxStart = print_val_i("NDataIdxStart", StdI.NDataIdxStart, 1)
+
+    if StdI.NVMCCalMode == 0:
+        not_used_i("NDataQtySmp", StdI.NDataQtySmp)
+    StdI.NDataQtySmp = print_val_i("NDataQtySmp", StdI.NDataQtySmp, 1)
+
+    if StdI.lGC == 0 and (StdI.Sz2 == 0 or StdI.Sz2 is None):
+        StdI.NSPGaussLeg = print_val_i("NSPGaussLeg", StdI.NSPGaussLeg, 8)
+        StdI.NSPStot = print_val_i("NSPStot", StdI.NSPStot, 0)
+    else:
+        not_used_i("NSPGaussLeg", StdI.NSPGaussLeg)
+        not_used_i("NSPStot", StdI.NSPStot)
+
+    StdI.NMPTrans = print_val_i("NMPTrans", StdI.NMPTrans, -1)
+
+    StdI.NSROptItrStep = print_val_i("NSROptItrStep", StdI.NSROptItrStep, 1000)
+
+    if StdI.NVMCCalMode == 1:
+        not_used_i("NSROptItrSmp", StdI.NSROptItrSmp)
+    StdI.NSROptItrSmp = print_val_i(
+        "NSROptItrSmp", StdI.NSROptItrSmp, StdI.NSROptItrStep // 10
+    )
+
+    StdI.NVMCWarmUp = print_val_i("NVMCWarmUp", StdI.NVMCWarmUp, 10)
+    StdI.NVMCInterval = print_val_i("NVMCInterval", StdI.NVMCInterval, 1)
+    StdI.NVMCSample = print_val_i("NVMCSample", StdI.NVMCSample, 1000)
+
+    key = (StdI.model, StdI.lGC)
+    ex_path = MODEL_GC_TO_EX_UPDATE_PATH.get(key)
+    if ex_path is not None:
+        StdI.NExUpdatePath = ex_path
+    logger.info("  %15s = %-10d", "NExUpdatePath", StdI.NExUpdatePath)
+
+    StdI.RndSeed = print_val_i("RndSeed", StdI.RndSeed, 123456789)
+    StdI.NSplitSize = print_val_i("NSplitSize", StdI.NSplitSize, 1)
+    StdI.NStore = print_val_i("NStore", StdI.NStore, 1)
+    StdI.NSRCG = print_val_i("NSRCG", StdI.NSRCG, 0)
+
+    StdI.DSROptRedCut = print_val_d("DSROptRedCut", StdI.DSROptRedCut, 0.001)
+    StdI.DSROptStaDel = print_val_d("DSROptStaDel", StdI.DSROptStaDel, 0.02)
+    StdI.DSROptStepDt = print_val_d("DSROptStepDt", StdI.DSROptStepDt, 0.02)
