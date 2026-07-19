@@ -185,11 +185,19 @@ class TestApplyFieldResetsHWAVE:
         assert (StdI.boxsub == NaN_i).all()
 
     def test_has_extra_fields_vs_uhf(self):
-        """Test that HWAVE resets export_all/lattice_gp beyond UHF."""
+        """Test that HWAVE resets fileprefix/export_all/lattice_gp beyond UHF."""
         StdI = _make_stdi("HWAVE")
         _apply_field_resets(StdI, SolverType.HWAVE)
+        assert StdI.fileprefix is None
         assert StdI.export_all is None
         assert StdI.lattice_gp is None
+
+    def test_fileprefix_reset_clears_previous_run(self):
+        """A reused config must not leak fileprefix into the next run (#P5)."""
+        StdI = _make_stdi("HWAVE")
+        StdI.fileprefix = "prev_"
+        _apply_field_resets(StdI, SolverType.HWAVE)
+        assert StdI.fileprefix is None
 
 
 # -------------------------------------------------------------------

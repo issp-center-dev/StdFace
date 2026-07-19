@@ -1814,6 +1814,12 @@ class TestModParaDataBuildWrite:
         assert via_print.startswith("--------------------\nModel_Parameters   0\n")
         assert "HPhi_Cal_Parameters" in via_print
 
+    def test_rejects_non_expert_plugin(self):
+        """A non-Expert plugin (H-wave) raises ValueError, not AssertionError (#P6)."""
+        s = _make_stdi_base(solver="HWAVE")
+        with pytest.raises(ValueError, match="ExpertModeSolverPlugin"):
+            build_modpara(s)
+
     def test_to_text_matches_file(self, tmp_path):
         data = build_modpara(self._hphi_stdi())
         data.write(tmp_path)

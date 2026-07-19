@@ -224,6 +224,16 @@ def build_trans(StdI: StdIntList) -> TransData:
     return TransData(rows=rows)
 
 
+def _require_expert_plugin(plugin, caller: str) -> None:
+    """Reject non-Expert plugins (e.g. H-wave) reaching Expert-only builders."""
+    from ..plugin import ExpertModeSolverPlugin
+    if not isinstance(plugin, ExpertModeSolverPlugin):
+        msg = (f"{caller} requires an ExpertModeSolverPlugin, "
+               f"got {type(plugin).__name__} (solver {plugin.name!r})")
+        logger.error(msg)
+        raise ValueError(msg)
+
+
 def _namelist_entries_hphi(StdI: StdIntList) -> list:
     """Return HPhi-specific ``(keyword, filename)`` namelist entries."""
     entries: list = [("CalcMod", "calcmod.def")]
@@ -303,9 +313,9 @@ def build_namelist(StdI: StdIntList) -> NamelistData:
     solver-specific entries from the plugin.  (When the output container
     is introduced, these can be derived from the assembled data objects.)
     """
-    from ..plugin import get_plugin, ExpertModeSolverPlugin
+    from ..plugin import get_plugin
     plugin = get_plugin(StdI.solver)
-    assert isinstance(plugin, ExpertModeSolverPlugin)
+    _require_expert_plugin(plugin, "build_namelist")
 
     entries: list = [
         ("ModPara", "modpara.def"),
@@ -386,9 +396,9 @@ class ModParaData:
 
 def build_modpara(StdI: StdIntList) -> ModParaData:
     """Build :class:`ModParaData` (common header + solver-specific body)."""
-    from ..plugin import get_plugin, ExpertModeSolverPlugin
+    from ..plugin import get_plugin
     plugin = get_plugin(StdI.solver)
-    assert isinstance(plugin, ExpertModeSolverPlugin)
+    _require_expert_plugin(plugin, "build_modpara")
     lines: list = [("sep",), ("raw", "Model_Parameters   0"), ("sep",)]
     lines += plugin.modpara_lines(StdI)
     return ModParaData(lines=lines)

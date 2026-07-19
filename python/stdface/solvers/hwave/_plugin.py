@@ -169,6 +169,7 @@ _UHF_BASE_SCALARS: list[tuple[str, object]] = [
 ]
 
 _RESET_SCALARS: list[tuple[str, object]] = _UHF_BASE_SCALARS + [
+    ("fileprefix", None),
     ("export_all", None),
     ("lattice_gp", None),
 ]
