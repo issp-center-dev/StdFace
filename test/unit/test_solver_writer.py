@@ -401,7 +401,8 @@ class TestHPhiPlugin:
         s.lBoost = 1
         plugin = get_plugin("HPhi")
         plugin.post_lattice(s)
-        assert (tmp_path / "boost.def").exists()
+        fnames = {a.fname for a in s._aux_outputs or []}
+        assert "boost.def" in fnames  # built as data; main flow writes it
 
     def test_time_evolution_pump_writes_teone(self, tmp_path, monkeypatch):
         """``build_pump`` builds ``teone.def`` for time evolution + pump."""

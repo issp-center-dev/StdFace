@@ -400,6 +400,8 @@ class TestLadderBoost:
         s.L = 8
         s.S2 = 1
         ladder_boost(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
         assert (tmp_path / "boost.def").exists()
 
 
@@ -412,6 +414,8 @@ class TestHoneycombBoost:
         honeycomb(s)
         s.S2 = 1
         honeycomb_boost(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
         assert (tmp_path / "boost.def").exists()
 
 
@@ -424,6 +428,8 @@ class TestKagomeBoost:
         kagome(s)
         s.S2 = 1
         kagome_boost(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
         assert (tmp_path / "boost.def").exists()
 
 

@@ -15,10 +15,12 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import logging
+import io
 import math
 
 import numpy as np
 
+from ..core.output import SolverFileData
 from ..core.stdface_vals import StdIntList, ModelType
 from ..core.param_check import (
     print_val_d, print_val_i,
@@ -200,82 +202,84 @@ def kagome_boost(StdI: StdIntList) -> None:
         raise ValueError(msg)
 
     # Magnetic field
-    with open("boost.def", "w") as fp:
-        write_boost_mag_field(fp, StdI)
+    fp = io.StringIO()
+    write_boost_mag_field(fp, StdI)
 
-        # Interaction
-        fp.write(f"{3}  # Number of type of J\n")
-        fp.write("# J 0\n")
-        write_boost_j_symmetric(fp, StdI.J0)
-        fp.write("# J 1\n")
-        write_boost_j_symmetric(fp, StdI.J1)
-        fp.write("# J 2\n")
-        write_boost_j_symmetric(fp, StdI.J2)
+    # Interaction
+    fp.write(f"{3}  # Number of type of J\n")
+    fp.write("# J 0\n")
+    write_boost_j_symmetric(fp, StdI.J0)
+    fp.write("# J 1\n")
+    write_boost_j_symmetric(fp, StdI.J1)
+    fp.write("# J 2\n")
+    write_boost_j_symmetric(fp, StdI.J2)
 
-        # Topology
-        if StdI.S2 != 1:
-            msg = "\n ERROR! S2 must be 1 in Boost. \n"
-            logger.error(msg)
-            raise ValueError(msg)
-        StdI.ishift_nspin = 3
-        if StdI.L < 2:
-            msg = "\n ERROR! L < 2 \n"
-            logger.error(msg)
-            raise ValueError(msg)
-        if StdI.W % StdI.ishift_nspin != 0:
-            msg = f"\n ERROR! W %% {StdI.ishift_nspin} != 0 \n"
-            logger.error(msg)
-            raise ValueError(msg)
-        StdI.num_pivot = 4
-        if StdI.W != 3:
-            msg = "DEBUG: W != 3"
-            logger.error(msg)
-            raise ValueError(msg)
-        StdI.W = 9
-        fp.write("# W0  R0  StdI->num_pivot  StdI->ishift_nspin\n")
-        fp.write(f"{StdI.W} {StdI.L} {StdI.num_pivot} {StdI.ishift_nspin}\n")
+    # Topology
+    if StdI.S2 != 1:
+        msg = "\n ERROR! S2 must be 1 in Boost. \n"
+        logger.error(msg)
+        raise ValueError(msg)
+    StdI.ishift_nspin = 3
+    if StdI.L < 2:
+        msg = "\n ERROR! L < 2 \n"
+        logger.error(msg)
+        raise ValueError(msg)
+    if StdI.W % StdI.ishift_nspin != 0:
+        msg = f"\n ERROR! W %% {StdI.ishift_nspin} != 0 \n"
+        logger.error(msg)
+        raise ValueError(msg)
+    StdI.num_pivot = 4
+    if StdI.W != 3:
+        msg = "DEBUG: W != 3"
+        logger.error(msg)
+        raise ValueError(msg)
+    StdI.W = 9
+    fp.write("# W0  R0  StdI->num_pivot  StdI->ishift_nspin\n")
+    fp.write(f"{StdI.W} {StdI.L} {StdI.num_pivot} {StdI.ishift_nspin}\n")
 
-        # 6-spin star list
-        StdI.list_6spin_star = np.zeros((StdI.num_pivot, 7), dtype=int)
+    # 6-spin star list
+    StdI.list_6spin_star = np.zeros((StdI.num_pivot, 7), dtype=int)
 
-        StdI.list_6spin_star[0, :] = [1, 1, 1, 1, 4, 2, -1]
-        StdI.list_6spin_star[1, :] = [6, 1, 1, 1, 6, 7, 1]
-        StdI.list_6spin_star[2, :] = [6, 1, 1, 1, 4, 2, 1]
-        StdI.list_6spin_star[3, :] = [5, 1, 1, 1, 4, 2, 1]
+    StdI.list_6spin_star[0, :] = [1, 1, 1, 1, 4, 2, -1]
+    StdI.list_6spin_star[1, :] = [6, 1, 1, 1, 6, 7, 1]
+    StdI.list_6spin_star[2, :] = [6, 1, 1, 1, 4, 2, 1]
+    StdI.list_6spin_star[3, :] = [5, 1, 1, 1, 4, 2, 1]
 
-        write_boost_6spin_star(fp, StdI)
+    write_boost_6spin_star(fp, StdI)
 
-        # 6-spin pair list
-        max_kintr = max(StdI.list_6spin_star[ip, 0] for ip in range(StdI.num_pivot))
-        StdI.list_6spin_pair = np.zeros((StdI.num_pivot, 7, max_kintr), dtype=int)
+    # 6-spin pair list
+    max_kintr = max(StdI.list_6spin_star[ip, 0] for ip in range(StdI.num_pivot))
+    StdI.list_6spin_pair = np.zeros((StdI.num_pivot, 7, max_kintr), dtype=int)
 
-        # pivot 0
-        StdI.list_6spin_pair[0, :, 0] = [0, 4, 1, 2, 3, 5, 3]
+    # pivot 0
+    StdI.list_6spin_pair[0, :, 0] = [0, 4, 1, 2, 3, 5, 3]
 
-        # pivot 1
-        StdI.list_6spin_pair[1, :, 0] = [0, 1, 2, 3, 4, 5, 3]
-        StdI.list_6spin_pair[1, :, 1] = [1, 2, 0, 3, 4, 5, 1]
-        StdI.list_6spin_pair[1, :, 2] = [0, 2, 1, 3, 4, 5, 2]
-        StdI.list_6spin_pair[1, :, 3] = [1, 3, 0, 2, 4, 5, 3]
-        StdI.list_6spin_pair[1, :, 4] = [2, 4, 0, 1, 3, 5, 2]
-        StdI.list_6spin_pair[1, :, 5] = [2, 5, 0, 1, 3, 4, 1]
+    # pivot 1
+    StdI.list_6spin_pair[1, :, 0] = [0, 1, 2, 3, 4, 5, 3]
+    StdI.list_6spin_pair[1, :, 1] = [1, 2, 0, 3, 4, 5, 1]
+    StdI.list_6spin_pair[1, :, 2] = [0, 2, 1, 3, 4, 5, 2]
+    StdI.list_6spin_pair[1, :, 3] = [1, 3, 0, 2, 4, 5, 3]
+    StdI.list_6spin_pair[1, :, 4] = [2, 4, 0, 1, 3, 5, 2]
+    StdI.list_6spin_pair[1, :, 5] = [2, 5, 0, 1, 3, 4, 1]
 
-        # pivot 2
-        StdI.list_6spin_pair[2, :, 0] = [0, 1, 2, 3, 4, 5, 3]
-        StdI.list_6spin_pair[2, :, 1] = [1, 2, 0, 3, 4, 5, 1]
-        StdI.list_6spin_pair[2, :, 2] = [0, 2, 1, 3, 4, 5, 2]
-        StdI.list_6spin_pair[2, :, 3] = [1, 3, 0, 2, 4, 5, 3]
-        StdI.list_6spin_pair[2, :, 4] = [2, 5, 0, 1, 3, 4, 2]
-        StdI.list_6spin_pair[2, :, 5] = [2, 4, 0, 1, 3, 5, 1]
+    # pivot 2
+    StdI.list_6spin_pair[2, :, 0] = [0, 1, 2, 3, 4, 5, 3]
+    StdI.list_6spin_pair[2, :, 1] = [1, 2, 0, 3, 4, 5, 1]
+    StdI.list_6spin_pair[2, :, 2] = [0, 2, 1, 3, 4, 5, 2]
+    StdI.list_6spin_pair[2, :, 3] = [1, 3, 0, 2, 4, 5, 3]
+    StdI.list_6spin_pair[2, :, 4] = [2, 5, 0, 1, 3, 4, 2]
+    StdI.list_6spin_pair[2, :, 5] = [2, 4, 0, 1, 3, 5, 1]
 
-        # pivot 3
-        StdI.list_6spin_pair[3, :, 0] = [0, 1, 2, 3, 4, 5, 3]
-        StdI.list_6spin_pair[3, :, 1] = [1, 2, 0, 3, 4, 5, 1]
-        StdI.list_6spin_pair[3, :, 2] = [0, 2, 1, 3, 4, 5, 2]
-        StdI.list_6spin_pair[3, :, 3] = [2, 5, 0, 1, 3, 4, 2]
-        StdI.list_6spin_pair[3, :, 4] = [2, 4, 0, 1, 3, 5, 1]
+    # pivot 3
+    StdI.list_6spin_pair[3, :, 0] = [0, 1, 2, 3, 4, 5, 3]
+    StdI.list_6spin_pair[3, :, 1] = [1, 2, 0, 3, 4, 5, 1]
+    StdI.list_6spin_pair[3, :, 2] = [0, 2, 1, 3, 4, 5, 2]
+    StdI.list_6spin_pair[3, :, 3] = [2, 5, 0, 1, 3, 4, 2]
+    StdI.list_6spin_pair[3, :, 4] = [2, 4, 0, 1, 3, 5, 1]
 
-        write_boost_6spin_pair(fp, StdI)
+    write_boost_6spin_pair(fp, StdI)
+    StdI._aux_outputs = (StdI._aux_outputs or []) + [
+        SolverFileData("boost.def", fp.getvalue())]
 
 
 # ---------------------------------------------------------------------------

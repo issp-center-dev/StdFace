@@ -15,8 +15,10 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import logging
+import io
 import numpy as np
 
+from ..core.output import SolverFileData
 from ..core.stdface_vals import StdIntList, ModelType
 from ..core.param_check import (
     print_val_d, print_val_i,
@@ -199,78 +201,80 @@ def ladder_boost(StdI: StdIntList) -> None:
     StdI.W = StdI.NsiteUC
     StdI.NsiteUC = 1
 
-    with open("boost.def", "w") as fp:
-        # Magnetic field
-        write_boost_mag_field(fp, StdI)
+    fp = io.StringIO()
+    # Magnetic field
+    write_boost_mag_field(fp, StdI)
 
-        # Interaction parameters
-        fp.write(f"{5}  # Number of type of J\n")
+    # Interaction parameters
+    fp.write(f"{5}  # Number of type of J\n")
 
-        # J1 - Vertical interactions
-        fp.write("# J 1 (inter chain, vertical)\n")
-        write_boost_j_symmetric(fp, StdI.J0)
+    # J1 - Vertical interactions
+    fp.write("# J 1 (inter chain, vertical)\n")
+    write_boost_j_symmetric(fp, StdI.J0)
 
-        # J2 - Nearest neighbor along chain
-        fp.write("# J 2 (Nearest neighbor, along chain)\n")
-        write_boost_j_symmetric(fp, StdI.J1)
+    # J2 - Nearest neighbor along chain
+    fp.write("# J 2 (Nearest neighbor, along chain)\n")
+    write_boost_j_symmetric(fp, StdI.J1)
 
-        # J3 - Second nearest neighbor along chain
-        fp.write("# J 3 (Second nearest neighbor, along chain)\n")
-        write_boost_j_symmetric(fp, StdI.J1p)
+    # J3 - Second nearest neighbor along chain
+    fp.write("# J 3 (Second nearest neighbor, along chain)\n")
+    write_boost_j_symmetric(fp, StdI.J1p)
 
-        # J4 - Diagonal 1
-        fp.write("# J 4 (inter chain, diagonal1)\n")
-        write_boost_j_symmetric(fp, StdI.J2)
+    # J4 - Diagonal 1
+    fp.write("# J 4 (inter chain, diagonal1)\n")
+    write_boost_j_symmetric(fp, StdI.J2)
 
-        # J5 - Diagonal 2
-        fp.write("# J 5 (inter chain, diagonal2)\n")
-        write_boost_j_symmetric(fp, StdI.J2p)
+    # J5 - Diagonal 2
+    fp.write("# J 5 (inter chain, diagonal2)\n")
+    write_boost_j_symmetric(fp, StdI.J2p)
 
-        # Validate parameters
-        if StdI.S2 != 1:
-            msg = "\n ERROR! S2 must be 1 in Boost. \n"
-            logger.error(msg)
-            raise ValueError(msg)
-        StdI.ishift_nspin = 2
-        if StdI.W != 2:
-            msg = "\n ERROR! W != 2 \n"
-            logger.error(msg)
-            raise ValueError(msg)
-        if StdI.L % 2 != 0:
-            msg = "\n ERROR! L %% 2 != 0 \n"
-            logger.error(msg)
-            raise ValueError(msg)
-        if StdI.L < 4:
-            msg = "\n ERROR! L < 4 \n"
-            logger.error(msg)
-            raise ValueError(msg)
+    # Validate parameters
+    if StdI.S2 != 1:
+        msg = "\n ERROR! S2 must be 1 in Boost. \n"
+        logger.error(msg)
+        raise ValueError(msg)
+    StdI.ishift_nspin = 2
+    if StdI.W != 2:
+        msg = "\n ERROR! W != 2 \n"
+        logger.error(msg)
+        raise ValueError(msg)
+    if StdI.L % 2 != 0:
+        msg = "\n ERROR! L %% 2 != 0 \n"
+        logger.error(msg)
+        raise ValueError(msg)
+    if StdI.L < 4:
+        msg = "\n ERROR! L < 4 \n"
+        logger.error(msg)
+        raise ValueError(msg)
 
-        StdI.W = StdI.L
-        StdI.L = 2
-        StdI.num_pivot = StdI.W // 2
+    StdI.W = StdI.L
+    StdI.L = 2
+    StdI.num_pivot = StdI.W // 2
 
-        fp.write("# W0  R0  StdI->num_pivot  StdI->ishift_nspin\n")
-        fp.write(f"{StdI.W} {StdI.L} {StdI.num_pivot} {StdI.ishift_nspin}\n")
+    fp.write("# W0  R0  StdI->num_pivot  StdI->ishift_nspin\n")
+    fp.write(f"{StdI.W} {StdI.L} {StdI.num_pivot} {StdI.ishift_nspin}\n")
 
-        # 6-spin star list
-        StdI.list_6spin_star = np.zeros((StdI.num_pivot, 7), dtype=int)
-        for ipivot in range(StdI.num_pivot):
-            StdI.list_6spin_star[ipivot, :] = [7, 1, 1, 1, 1, 1, 1]
+    # 6-spin star list
+    StdI.list_6spin_star = np.zeros((StdI.num_pivot, 7), dtype=int)
+    for ipivot in range(StdI.num_pivot):
+        StdI.list_6spin_star[ipivot, :] = [7, 1, 1, 1, 1, 1, 1]
 
-        write_boost_6spin_star(fp, StdI)
+    write_boost_6spin_star(fp, StdI)
 
-        # 6-spin pair list
-        StdI.list_6spin_pair = np.zeros((StdI.num_pivot, 7, 7), dtype=int)
-        for ipivot in range(StdI.num_pivot):
-            StdI.list_6spin_pair[ipivot, :, 0] = [0, 1, 2, 3, 4, 5, 1]
-            StdI.list_6spin_pair[ipivot, :, 1] = [0, 2, 1, 3, 4, 5, 2]
-            StdI.list_6spin_pair[ipivot, :, 2] = [1, 3, 0, 2, 4, 5, 2]
-            StdI.list_6spin_pair[ipivot, :, 3] = [0, 4, 1, 2, 3, 5, 3]
-            StdI.list_6spin_pair[ipivot, :, 4] = [1, 5, 0, 2, 3, 4, 3]
-            StdI.list_6spin_pair[ipivot, :, 5] = [0, 3, 1, 2, 4, 5, 4]
-            StdI.list_6spin_pair[ipivot, :, 6] = [1, 2, 0, 3, 4, 5, 5]
+    # 6-spin pair list
+    StdI.list_6spin_pair = np.zeros((StdI.num_pivot, 7, 7), dtype=int)
+    for ipivot in range(StdI.num_pivot):
+        StdI.list_6spin_pair[ipivot, :, 0] = [0, 1, 2, 3, 4, 5, 1]
+        StdI.list_6spin_pair[ipivot, :, 1] = [0, 2, 1, 3, 4, 5, 2]
+        StdI.list_6spin_pair[ipivot, :, 2] = [1, 3, 0, 2, 4, 5, 2]
+        StdI.list_6spin_pair[ipivot, :, 3] = [0, 4, 1, 2, 3, 5, 3]
+        StdI.list_6spin_pair[ipivot, :, 4] = [1, 5, 0, 2, 3, 4, 3]
+        StdI.list_6spin_pair[ipivot, :, 5] = [0, 3, 1, 2, 4, 5, 4]
+        StdI.list_6spin_pair[ipivot, :, 6] = [1, 2, 0, 3, 4, 5, 5]
 
-        write_boost_6spin_pair(fp, StdI)
+    write_boost_6spin_pair(fp, StdI)
+    StdI._aux_outputs = (StdI._aux_outputs or []) + [
+        SolverFileData("boost.def", fp.getvalue())]
 
 
 # ---------------------------------------------------------------------------
