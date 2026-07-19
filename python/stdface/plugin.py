@@ -144,6 +144,20 @@ class SolverPlugin(ABC):
             The parameter structure (modified in place).
         """
 
+    def wants_lattice_gp(self, StdI: StdIntList) -> bool:
+        """Whether the solver-independent ``lattice.gp`` should be built.
+
+        Default True; H-wave suppresses it unless requested explicitly.
+        """
+        return True
+
+    def wants_geometry_file(self, StdI: StdIntList) -> bool:
+        """Whether the solver-independent ``geometry.dat`` should be built.
+
+        Default True; H-wave suppresses it in UHFK (Wannier90) output mode.
+        """
+        return True
+
     def validate(self, StdI: StdIntList) -> None:
         """Solver-specific validation after lattice construction (default: no-op).
 

@@ -322,12 +322,28 @@ class TestGeometryDataBuildWrite:
         assert all(isinstance(x, int) for s in d.sites for x in s)
         assert len(d.sites) == 4  # NCell * NsiteUC
 
-    def test_suppressed_for_wannier_modes(self):
-        s = _make_stdi(L=4)
+    def test_suppressed_for_explicit_wannier_modes(self):
+        """Suppression is the H-wave plugin's call (wants_geometry_file)."""
+        s = _make_stdi(L=4, solver="HWAVE")
         s.calcmode = "uhfk"
         assert build_geometry(s) is None
         s.calcmode = "rpa"
         assert build_geometry(s) is None
+
+    def test_suppressed_for_uhfk_alias_without_calcmode(self):
+        """The UHFK alias suppresses geometry.dat even with calcmode unset
+        (formerly inconsistent with the HWAVE + calcmode=uhfk spelling)."""
+        s = _make_stdi(L=4, solver="UHFK")
+        assert build_geometry(s) is None
+
+    def test_emitted_for_hwave_default_calcmode(self):
+        """HWAVE with calcmode unset keeps emitting geometry.dat
+        (compatibility; see the uhfr_first_step integration case)."""
+        s = _make_stdi(L=4, solver="HWAVE")
+        assert build_geometry(s) is not None
+
+    def test_emitted_for_expert_solvers(self):
+        assert build_geometry(_make_stdi(L=4, solver="HPhi")) is not None
 
     def test_to_from_dict_roundtrip(self):
         d = build_geometry(_make_stdi(L=4))
