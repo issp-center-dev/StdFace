@@ -23,6 +23,22 @@ from ...core.keyword_parser import (
 logger = logging.getLogger(__name__)
 
 
+def _set_uhf_family_defaults(StdI: StdIntList) -> None:
+    """Set the H-wave default model parameters (UHF-family shared block).
+
+    Deliberate copy of ``solvers/uhf/writer.set_modpara_defaults`` per the
+    solver self-containment policy (CLAUDE.md); behavioural parity with
+    UHF is enforced by ``test/unit/test_solver_table_parity.py``.
+    """
+    from ...core.param_check import print_val_d, print_val_i
+    StdI.RndSeed = print_val_i("RndSeed", StdI.RndSeed, 123456789)
+    StdI.Iteration_max = print_val_i("Iteration_max", StdI.Iteration_max, 1000)
+    StdI.mix = print_val_d("Mix", StdI.mix, 0.5)
+    StdI.eps = print_val_i("eps", StdI.eps, 8)
+    StdI.eps_slater = print_val_i("EpsSlater", StdI.eps_slater, 6)
+    StdI.NMPTrans = print_val_i("NMPTrans", StdI.NMPTrans, 0)
+
+
 # ---------------------------------------------------------------------------
 #  Output strategies (C4-1: extracted so HWavePlugin can dispatch by calcmode)
 # ---------------------------------------------------------------------------
@@ -84,8 +100,7 @@ class HWavePlugin(SolverPlugin):
         return _RESET_ARRAYS
 
     def set_defaults(self, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _check_mod_para_uhf
-        _check_mod_para_uhf(StdI)
+        _set_uhf_family_defaults(StdI)
 
     def validate(self, StdI: StdIntList) -> None:
         """Reject a boundary twist (``phase``) in UHFk / RPA output mode.

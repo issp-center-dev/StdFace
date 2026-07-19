@@ -34,12 +34,12 @@ class UHFPlugin(ExpertModeSolverPlugin):
         return _RESET_ARRAYS
 
     def set_defaults(self, StdI: StdIntList) -> None:
-        from ...writer.common_writer import _check_mod_para_uhf
-        _check_mod_para_uhf(StdI)
+        from .writer import set_modpara_defaults
+        set_modpara_defaults(StdI)
 
     def modpara_lines(self, StdI: StdIntList) -> list:
-        from ...writer.common_writer import _modpara_lines_uhf_hwave
-        return _modpara_lines_uhf_hwave(StdI)
+        from .writer import modpara_lines
+        return modpara_lines(StdI)
 
     def has_two_body_green(self, StdI: StdIntList) -> bool:
         return False

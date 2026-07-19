@@ -46,9 +46,9 @@ import numpy as np
 
 from ..core.stdface_vals import (
     StdIntList, ModelType, SolverType,
-    NaN_i, AMPLITUDE_EPS,
+    AMPLITUDE_EPS,
 )
-from ..core.param_check import print_val_i, print_val_d, required_val_i, not_used_i
+from ..core.param_check import print_val_i, required_val_i, not_used_i
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +219,6 @@ def _require_expert_plugin(plugin, caller: str) -> None:
         raise ValueError(msg)
 
 
-
 # Interaction output-flag attribute -> (namelist keyword, filename)
 _INTERACTION_FLAGS: list[tuple[str, str, str]] = [
     ("LCintra",   "CoulombIntra", "coulombintra.def"),
@@ -357,43 +356,6 @@ def build_modpara(StdI: StdIntList) -> ModParaData:
     lines += plugin.modpara_lines(StdI)
     return ModParaData(lines=lines)
 
-
-
-def _modpara_lines_uhf_hwave(StdI: StdIntList) -> list:
-    """Return the UHF / H-wave body line descriptors of ``modpara.def``.
-
-    UHF and H-wave share identical content except the banner line, which
-    is selected from :data:`_MODPARA_BANNER`.
-    """
-    lines: list = [
-        ("raw", _MODPARA_BANNER[StdI.solver]),
-        ("sep",),
-        ("kv", "CDataFileHead", StdI.CDataFileHead, ""),
-        ("kv", "CParaFileHead", "zqp", ""),
-        ("sep",),
-        ("kv", "Nsite", StdI.nsite, ""),
-    ]
-    if StdI.Sz2 is not None:
-        lines.append(("kv", "2Sz", StdI.Sz2, "<5d"))
-    # UHF/HWAVE emit an unset Ncond as the integer sentinel (legacy format).
-    ncond_out = StdI.ncond if StdI.ncond is not None else NaN_i
-    lines += [
-        ("kv", "Ncond", ncond_out, "<5d"),
-        ("kv", "IterationMax", StdI.Iteration_max, ""),
-        ("kv", "EPS", StdI.eps, ""),
-        ("kv", "Mix", StdI.mix, ".10f"),
-        ("kv", "RndSeed", StdI.RndSeed, ""),
-        ("kv", "EpsSlater", StdI.eps_slater, ""),
-        ("kv", "NMPTrans", StdI.NMPTrans, ""),
-    ]
-    return lines
-
-
-_MODPARA_BANNER: dict[str, str] = {
-    SolverType.UHF: "UHF_Cal_Parameters",
-}
-"""Maps the solver type to the ``modpara.def`` banner line (UHF only:
-H-wave never emits ``modpara.def``, so no other entry is reachable)."""
 
 
 class GreenFunctionIndices:
@@ -790,26 +752,6 @@ def check_output_mode(StdI: StdIntList) -> None:
         StdI.ioutputmode = mode
         logger.info("      ioutputmode = %-10d", StdI.ioutputmode)
 
-
-
-def _check_mod_para_uhf(StdI: StdIntList) -> None:
-    """Set UHF/H-wave-specific default model parameters.
-
-    Handles random seed, iteration limit, mixing, convergence, and
-    symmetry-projection parameters.  UHF and H-wave share identical
-    defaults.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        The global parameter structure, modified in place.
-    """
-    StdI.RndSeed = print_val_i("RndSeed", StdI.RndSeed, 123456789)
-    StdI.Iteration_max = print_val_i("Iteration_max", StdI.Iteration_max, 1000)
-    StdI.mix = print_val_d("Mix", StdI.mix, 0.5)
-    StdI.eps = print_val_i("eps", StdI.eps, 8)
-    StdI.eps_slater = print_val_i("EpsSlater", StdI.eps_slater, 6)
-    StdI.NMPTrans = print_val_i("NMPTrans", StdI.NMPTrans, 0)
 
 
 # -------------------------------------------------------------------
