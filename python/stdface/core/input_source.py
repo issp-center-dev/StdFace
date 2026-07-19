@@ -122,7 +122,10 @@ class TOMLSource(InputSource):
         self.path = Path(path)
 
     def load(self) -> dict[str, Any]:
-        import tomllib
+        try:
+            import tomllib  # Python >= 3.11
+        except ModuleNotFoundError:
+            import tomli as tomllib  # Python 3.10 backport
 
         try:
             with open(self.path, "rb") as fp:

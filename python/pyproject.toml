@@ -9,7 +9,7 @@ description = "Standard-mode input generator for HPhi / mVMC / UHF / H-wave"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.10"
-dependencies = ["numpy"]
+dependencies = ["numpy", "tomli>=1.2.0; python_version < '3.11'"]
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov"]
