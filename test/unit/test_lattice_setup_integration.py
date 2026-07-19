@@ -98,8 +98,6 @@ def make_spin_stdint_2d(
 ) -> StdIntList:
     """Minimal spin ``StdIntList`` for 2D lattices (``init_site`` uses the L/W path)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "spin"
     s.solver = "HPhi"
     s.lattice = lattice
@@ -132,8 +130,6 @@ def make_spin_stdint_2d(
 def make_spin_stdint_3d(*, lattice: str, L: int, W: int, H: int) -> StdIntList:
     """Spin ``StdIntList`` for 3D lattices (orthorhombic, fcc, pyrochlore)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "spin"
     s.solver = "HPhi"
     s.lattice = lattice
@@ -164,8 +160,6 @@ def make_spin_stdint_3d(*, lattice: str, L: int, W: int, H: int) -> StdIntList:
 def make_spin_ladder(L: int, W_legs: int) -> StdIntList:
     """Ladder only: ``input_spin`` paths use per-matrix JkAll values."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "spin"
     s.solver = "HPhi"
     s.lattice = "ladder"
@@ -332,8 +326,6 @@ class TestTetragonalHubbard:
 
     def _make_hubbard_square(self, L: int, W: int) -> StdIntList:
         s = StdIntList()
-        s.pi = math.acos(-1.0)
-        s.pi180 = s.pi / 180.0
         s.model = "hubbard"
         s.solver = "HPhi"
         s.lattice = "square"

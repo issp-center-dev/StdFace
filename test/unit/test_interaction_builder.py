@@ -637,8 +637,6 @@ def _make_stdi_square_for_neighbor(
     StdI.model = model
     StdI.method = "lanczos"
     StdI.PumpBody = 0
-    StdI.pi = math.acos(-1.0)
-    StdI.pi180 = StdI.pi / 180.0
     StdI.S2 = 1
     StdI.NsiteUC = 1
 
@@ -788,8 +786,6 @@ def _make_stdi_ortho_for_neighbor(
     StdI.model = model
     StdI.method = "lanczos"
     StdI.PumpBody = 0
-    StdI.pi = math.acos(-1.0)
-    StdI.pi180 = StdI.pi / 180.0
     StdI.S2 = 1
     StdI.NsiteUC = 1
 

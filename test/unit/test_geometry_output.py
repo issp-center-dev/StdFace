@@ -44,7 +44,6 @@ def _make_stdi(
     StdI.solver = solver
     StdI.model = model
     StdI.lattice = lattice
-    StdI.pi = math.acos(-1.0)
 
     # Box = [[L,0,0],[0,1,0],[0,0,1]]
     StdI.box[:, :] = 0

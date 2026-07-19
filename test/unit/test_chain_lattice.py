@@ -27,8 +27,6 @@ def _make_spin_chain(L: int = 4) -> StdIntList:
     """Return an StdIntList pre-configured for a spin chain."""
     s = StdIntList()
     # Set sentinel / NaN values for unused parameters
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "spin"
     s.solver = "HPhi"
     s.lattice = "chain"

@@ -32,7 +32,6 @@ def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
     StdI = StdIntList()
     StdI.solver = "HPhi"
     _attach_solver_config(StdI)  # C3: solver-specific fields live on the config
-    StdI.pi = math.acos(-1.0)
     StdI.nsite = nsite
     StdI.model = "hubbard"
     StdI.lattice = "chain"
@@ -105,8 +104,6 @@ def _make_stdi_for_hphi(nsite: int = 4) -> StdIntList:
 def _make_spin_chain(L: int = 16) -> StdIntList:
     """Return a spin-chain StdIntList (aligned with ``test_chain_lattice``)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "spin"
     s.solver = "HPhi"
     s.lattice = "chain"
@@ -199,7 +196,6 @@ def _make_stdi_for_mvmc_write(
         StdI.Cell[i, 0] = float(i)
     StdI.tau = np.zeros((1, 3))
     StdI.phase[:] = 0.0
-    StdI.pi180 = StdI.pi / 180.0
     StdI.ExpPhase = np.ones(3, dtype=complex)
     StdI.AntiPeriod = np.zeros(3, dtype=int)
     StdI.locspinflag = [0] * nsite

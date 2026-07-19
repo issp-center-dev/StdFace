@@ -922,7 +922,7 @@ def normalize_supercell_for_wannier(StdI: StdIntList) -> None:
     which reads ``*_hr.dat``; the hand-written ladder).  A boundary phase is
     already rejected upstream (``HWavePlugin.validate``), so ``Cphase == 1``.
     """
-    bonds = getattr(StdI, "_rel_bonds", None)
+    bonds = StdI._rel_bonds
     if bonds is None:
         return
     from .site_util import _compute_reciprocal_box, _enumerate_cells

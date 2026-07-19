@@ -36,8 +36,6 @@ def _make_stdi_chain(L: int = 4) -> StdIntList:
     StdI = StdIntList()
     StdI.solver = "HPhi"
     StdI.model = "hubbard"
-    StdI.pi = math.acos(-1.0)
-    StdI.pi180 = StdI.pi / 180.0
 
     # 1D chain: box = [[L,0,0],[0,1,0],[0,0,1]]
     StdI.box[:, :] = 0
@@ -273,8 +271,6 @@ class TestInitSite:
         """
         NaN_i = 2147483647
         StdI = StdIntList()
-        StdI.pi = math.acos(-1.0)
-        StdI.pi180 = StdI.pi / 180.0
         StdI.L = L
         StdI.W = W if W is not None else None
         StdI.Height = Height if Height is not None else None
@@ -545,8 +541,6 @@ class TestEnumerateCells:
     def _make_stdi_for_enum(box: list[list[int]], NCell: int) -> StdIntList:
         """Create StdIntList with box and NCell ready for enumeration."""
         StdI = StdIntList()
-        StdI.pi = math.acos(-1.0)
-        StdI.pi180 = StdI.pi / 180.0
         for i in range(3):
             for j in range(3):
                 StdI.box[i, j] = box[i][j]
