@@ -108,9 +108,6 @@ class HWavePlugin(SolverPlugin):
         from ...core.output import build_wannier_output
         return build_wannier_output(StdI)
 
-    def write(self, StdI: StdIntList) -> None:
-        self.build_output(StdI).write()
-
 
 # -----------------------------------------------------------------------
 #  Keyword table

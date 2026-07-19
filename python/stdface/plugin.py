@@ -5,10 +5,11 @@ solver plugin must implement, and a plugin registry for discovering and
 retrieving plugins by name.
 
 New solver plugins should subclass :class:`SolverPlugin` and implement the
-required abstract properties and methods.  The :meth:`write` method provides
-a template for the common output sequence (locspn → trans → interactions →
-modpara → solver-specific → green → namelist); solvers with a different
-sequence can override :meth:`write` entirely.
+required abstract properties and methods.  The abstract core is
+:meth:`build_output`, which assembles a :class:`~stdface.core.output.SolverOutput`
+container; :meth:`write` defaults to ``build_output(StdI).write()`` and both
+the CLI flow and the :func:`~stdface.core.stdface_main.generate` library API
+work with any conforming plugin.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from .core.output import SolverOutput
     from .core.stdface_vals import StdIntList
 
 
@@ -27,22 +29,9 @@ class SolverPlugin(ABC):
     - A keyword table for parsing solver-specific input keywords.
     - Field reset tables for initialising solver-specific fields on
       :class:`StdIntList`.
-    - A :meth:`write` method to generate Expert-mode definition files.
+    - A :meth:`build_output` method assembling the output container;
+      :meth:`write` (build + write) is provided by this base class.
     - Optional hooks for post-lattice processing and field initialisation.
-
-    Template Method
-    ---------------
-    The default :meth:`write` implementation calls a sequence of steps
-    that is common to most solvers::
-
-        write_locspn → write_trans → write_interactions →
-        check_and_write_modpara → write_solver_specific →
-        write_green → write_namelist
-
-    Subclasses should override :meth:`write_solver_specific` for
-    solver-specific output (e.g. excitation files, variational parameters).
-    Solvers that need a completely different sequence (e.g. H-wave in
-    Wannier90 export mode) can override :meth:`write` directly.
 
     Attributes
     ----------
@@ -85,19 +74,32 @@ class SolverPlugin(ABC):
     # ------------------------------------------------------------------
 
     @abstractmethod
-    def write(self, StdI: StdIntList) -> None:
-        """Write all Expert-mode definition files for this solver.
+    def build_output(self, StdI: StdIntList) -> "SolverOutput":
+        """Assemble the output container for *StdI* (nothing written yet).
 
-        Each plugin implements its own explicit output sequence.  Expert-mode
-        solvers (HPhi/mVMC/UHF) build the common files via
-        :meth:`ExpertModeSolverPlugin._write_common_files`; other solvers
-        (H-wave) write their own file set.
+        This is the abstract core of the plugin contract: both
+        :meth:`write` (CLI flow) and the ``generate()`` library API go
+        through it.  Expert-mode solvers return an
+        :class:`~stdface.core.output.ExpertModeOutput`; H-wave returns the
+        container matching its output mode.
 
         Parameters
         ----------
         StdI : StdIntList
             The fully-populated parameter structure.
         """
+
+    def write(self, StdI: StdIntList) -> None:
+        """Write all definition files via the output container.
+
+        Default implementation: ``self.build_output(StdI).write()``.
+
+        Parameters
+        ----------
+        StdI : StdIntList
+            The fully-populated parameter structure.
+        """
+        self.build_output(StdI).write()
 
     # ------------------------------------------------------------------
     #  Optional lifecycle hooks
@@ -225,10 +227,6 @@ class ExpertModeSolverPlugin(SolverPlugin):
             modpara=modpara, namelist=namelist,
             green_one=green_one, green_two=green_two,
         )
-
-    def write(self, StdI: StdIntList) -> None:
-        """Write all Expert-mode files via the output container."""
-        self.build_output(StdI).write()
 
 
 # ---------------------------------------------------------------------------
