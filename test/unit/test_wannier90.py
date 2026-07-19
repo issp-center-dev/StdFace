@@ -856,6 +856,8 @@ class TestWannier90Hubbard:
 
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
 
         assert (tmp_path / "wan2site.dat").exists()
         # lattice.xsf and geometry.dat are now independent lattice outputs
@@ -911,6 +913,8 @@ class TestWannier90Hubbard:
 
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
 
         content = (tmp_path / "wan2site.dat").read_text()
         assert "Total site number" in content
@@ -1031,6 +1035,8 @@ class TestWannier90DoubleCountingIntegration:
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         s.double_counting_mode = dc_mode
         w90.wannier90(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
 
         assert s.NsiteUC == NsiteUC
         assert (tmp_path / "initial.def").exists()
@@ -1406,7 +1412,7 @@ class TestBuildWannierInteractions:
 
 
 class TestWriteWan2site:
-    """Tests for _write_wan2site."""
+    """Tests for the wan2site.dat output (built into StdI._aux_outputs)."""
 
     def test_creates_file(self, tmp_path):
         """Should create wan2site.dat in working directory."""
@@ -1420,6 +1426,8 @@ class TestWriteWan2site:
 
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
 
         assert (tmp_path / "wan2site.dat").exists()
 
@@ -1435,6 +1443,8 @@ class TestWriteWan2site:
 
         s = _make_wannier_StdI(model="hubbard", prefix=prefix, W=2, L=2, Height=1)
         w90.wannier90(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
 
         content = (tmp_path / "wan2site.dat").read_text()
         assert "Total site number" in content

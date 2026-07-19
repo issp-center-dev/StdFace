@@ -203,11 +203,13 @@ _COMMON_RESET_SCALARS: list[tuple[str, object]] = [
     ("lambda_U", None),
     ("lambda_J", None),
     ("alpha", None),
-    # Internal lattice-derived state (relative bond model, cell-map cache)
+    # Internal lattice-derived state (relative bond model, cell-map cache,
+    # auxiliary outputs)
     ("_rel_bonds", None),
     ("_rel_dim", None),
     ("_rel_local_fn", None),
     ("_cell_map", None),
+    ("_aux_outputs", None),
 ]
 """Common scalar field resets — ``setattr(StdI, name, value)``."""
 
@@ -591,6 +593,8 @@ def stdface_main(fname: str, solver: str = "HPhi") -> None:
         geo_data.write()
     if xsf_data is not None:
         xsf_data.write()
+    for aux_data in StdI._aux_outputs or []:
+        aux_data.write()
 
     # ------------------------------------------------------------------
     #  Print Expert input files
@@ -730,6 +734,8 @@ def generate(source, solver: str = "HPhi", output_dir=".", output_format=None):
             geo_data.write(Path("."))
         if xsf_data is not None:
             xsf_data.write(Path("."))
+        for aux_data in StdI._aux_outputs or []:
+            aux_data.write(Path("."))
         return out
 
     if output_dir is None:

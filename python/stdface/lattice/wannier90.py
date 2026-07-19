@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import logging
 import math
+from dataclasses import dataclass
 from enum import IntEnum
+from pathlib import Path
 from typing import NamedTuple
 
 import numpy as np
@@ -42,14 +44,83 @@ from .wannier90_io import _geometry_w90, _read_w90, _read_density_matrix
 logger = logging.getLogger(__name__)
 
 
-def _print_uhf_initial(
+@dataclass
+class UHFInitialData:
+    """Initial UHF guess (``initial.def``).
+
+    Attributes
+    ----------
+    rows : list of tuple
+        ``(jsite, isite, re, im)`` per non-negligible entry; each row is
+        written once per spin with the value halved at build time.
+    """
+
+    rows: list
+
+    def write(self, directory: Path = Path(".")) -> None:
+        lines = ["======================== \n",
+                 f"NInitialGuess {len(self.rows) * 2:7d}  \n",
+                 "======================== \n",
+                 "========i_j_s_tijs====== \n",
+                 "======================== \n"]
+        for jsite, isite, re, im in self.rows:
+            for ispin in range(2):
+                lines.append(
+                    f"{jsite:5d} {ispin:5d} {isite:5d} {ispin:5d} "
+                    f"{re:25.15f} "
+                    f"{im:25.15f}\n"
+                )
+        with open(Path(directory) / "initial.def", "w") as fp:
+            fp.write("".join(lines))
+        logger.info("      initial.def is written.")
+
+    def to_dict(self) -> dict:
+        return {"rows": [list(r) for r in self.rows]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "UHFInitialData":
+        return cls(rows=[tuple(r) for r in data["rows"]])
+
+
+@dataclass
+class Wan2SiteData:
+    """Wannier-orbital to super-cell-site mapping (``wan2site.dat``).
+
+    Attributes
+    ----------
+    rows : list of tuple
+        ``(isite, nx, ny, nz, iorb)`` per site.
+    """
+
+    rows: list
+
+    def write(self, directory: Path = Path(".")) -> None:
+        lines = ["======================== \n",
+                 f"Total site number {len(self.rows):7d}  \n",
+                 "======================== \n",
+                 "========site nx ny nz norb====== \n",
+                 "======================== \n"]
+        for isite, nx, ny, nz, iorb in self.rows:
+            lines.append(f"{isite:5d}{nx:5d}{ny:5d}{nz:5d}{iorb:5d}\n")
+        with open(Path(directory) / "wan2site.dat", "w") as fp:
+            fp.write("".join(lines))
+
+    def to_dict(self) -> dict:
+        return {"rows": [list(r) for r in self.rows]}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Wan2SiteData":
+        return cls(rows=[tuple(r) for r in data["rows"]])
+
+
+def _build_uhf_initial(
     StdI: StdIntList,
     NtUJ: list[int],
     tUJ: list[np.ndarray],
     DenMat: dict[tuple[int, int, int], np.ndarray],
     tUJindx: list[np.ndarray],
-) -> None:
-    """Print initial UHF guess to ``initial.def``.
+) -> UHFInitialData:
+    """Build the initial UHF guess (``initial.def``) as data.
 
     Parameters
     ----------
@@ -91,26 +162,13 @@ def _print_uhf_initial(
                 IniGuess[jsite, isite] = np.conj(dm_val)
 
     mask = np.abs(IniGuess) > AMPLITUDE_EPS
-    NIniGuess = int(np.count_nonzero(mask))
-
-    with open("initial.def", "w") as fp:
-        fp.write("======================== \n")
-        fp.write(f"NInitialGuess {NIniGuess * 2:7d}  \n")
-        fp.write("======================== \n")
-        fp.write("========i_j_s_tijs====== \n")
-        fp.write("======================== \n")
-
-        rows, cols = np.nonzero(mask)
-        for isite, jsite in zip(rows, cols):
-            val = 0.5 * IniGuess[isite, jsite]
-            for ispin in range(2):
-                fp.write(
-                    f"{jsite:5d} {ispin:5d} {isite:5d} {ispin:5d} "
-                    f"{val.real:25.15f} "
-                    f"{val.imag:25.15f}\n"
-                )
-
-    logger.info("      initial.def is written.")
+    out_rows = []
+    rows, cols = np.nonzero(mask)
+    for isite, jsite in zip(rows, cols):
+        val = 0.5 * IniGuess[isite, jsite]
+        out_rows.append((int(jsite), int(isite),
+                         float(val.real), float(val.imag)))
+    return UHFInitialData(rows=out_rows)
 
 
 # ---------------------------------------------------------------------------
@@ -659,28 +717,23 @@ def _build_wannier_interactions(
         _apply_hund_terms(StdI, kCell, cell_w, cell_l, iH, NtUJ, tUJ, tUJindx, idcmode, DenMat)
 
 
-def _write_wan2site(StdI: StdIntList) -> None:
-    """Write ``wan2site.dat`` mapping Wannier orbitals to super-cell sites.
+def _build_wan2site(StdI: StdIntList) -> Wan2SiteData:
+    """Build the Wannier-orbital to super-cell-site mapping as data.
 
     Parameters
     ----------
     StdI : StdIntList
         Structure containing lattice and cell information.
     """
-    with open("wan2site.dat", "w") as fp:
-        fp.write("======================== \n")
-        fp.write(f"Total site number {StdI.NCell * StdI.NsiteUC:7d}  \n")
-        fp.write("======================== \n")
-        fp.write("========site nx ny nz norb====== \n")
-        fp.write("======================== \n")
-
-        for kCell in range(StdI.NCell):
-            nx = StdI.Cell[kCell, 0]
-            ny = StdI.Cell[kCell, 1]
-            nz = StdI.Cell[kCell, 2]
-            for it in range(StdI.NsiteUC):
-                isite = StdI.NsiteUC * kCell + it
-                fp.write(f"{isite:5d}{nx:5d}{ny:5d}{nz:5d}{it:5d}\n")
+    rows = []
+    for kCell in range(StdI.NCell):
+        nx = int(StdI.Cell[kCell, 0])
+        ny = int(StdI.Cell[kCell, 1])
+        nz = int(StdI.Cell[kCell, 2])
+        for it in range(StdI.NsiteUC):
+            isite = StdI.NsiteUC * kCell + it
+            rows.append((isite, nx, ny, nz, it))
+    return Wan2SiteData(rows=rows)
 
 
 def _validate_interaction_params(StdI: StdIntList) -> None:
@@ -805,8 +858,9 @@ def wannier90(StdI: StdIntList) -> None:
     4. Set local spin flags and number of sites.
     5. Allocate memory for interactions.
     6. Set up transfers and interactions between sites.
-    7. Write ``wan2site.dat`` (``lattice.xsf`` is emitted on the
-       lattice-level independent path in the main flow).
+    7. Build the auxiliary outputs (``initial.def`` when double-counting
+       correction is on, and ``wan2site.dat``) into ``StdI._aux_outputs``;
+       the main flow writes them alongside gnuplot / geometry / xsf.
     """
     NtUJ = [0, 0, 0]
     tUJ: list = [None, None, None]
@@ -856,14 +910,14 @@ def wannier90(StdI: StdIntList) -> None:
     # (4)-(5) Allocate arrays and populate transfer / interaction terms
     _build_wannier_interactions(StdI, NtUJ, tUJ, tUJindx, idcmode, DenMat)
 
+    # (7) Auxiliary outputs are built here but written by the main flow
+    # (StdI._aux_outputs, alongside gnuplot / geometry / xsf); lattice.xsf
+    # itself is emitted on the lattice-level independent path (build_xsf).
+    aux: list = []
     if idcmode != _DCMode.NOTCORRECT:
-        _print_uhf_initial(StdI, NtUJ, tUJ, DenMat, tUJindx)
-
-    # lattice.xsf is emitted on the lattice-level independent path
-    # (build_xsf in the main flow), not here.
-
-    # Write wan2site.dat
-    _write_wan2site(StdI)
+        aux.append(_build_uhf_initial(StdI, NtUJ, tUJ, DenMat, tUJindx))
+    aux.append(_build_wan2site(StdI))
+    StdI._aux_outputs = aux
 
 
 # ---------------------------------------------------------------------------
