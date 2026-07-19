@@ -23,12 +23,11 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
 
-from ..core.stdface_vals import StdIntList, ModelType, SolverType
+from ..core.stdface_vals import StdIntList, ModelType
 
 
 def _cell_diff(Cell, iCell: int, jCell: int) -> list[int]:

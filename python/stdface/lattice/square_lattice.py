@@ -15,7 +15,6 @@ the Free Software Foundation, either version 3 of the License, or
 from __future__ import annotations
 
 import logging
-import numpy as np
 
 from ..core.stdface_vals import StdIntList, ModelType
 from ..core.param_check import (
@@ -28,7 +27,7 @@ from .interaction_builder import (
     expand_bonds_2d,
 )
 from .site_util import (
-    init_site, set_label, set_local_spin_flags,
+    init_site, set_local_spin_flags,
     new_gnuplot_buffer, GnuplotData,
 )
 

@@ -28,7 +28,6 @@ class MVMCConfig:
     NSPGaussLeg: int | None = None
     NSROptItrStep: int | None = None
     NSROptItrSmp: int | None = None
-    NSROptFixSmp: int = 0
     DSROptRedCut: float | None = None
     DSROptStaDel: float | None = None
     DSROptStepDt: float | None = None

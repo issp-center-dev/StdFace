@@ -120,17 +120,6 @@ NaN_i: int = 2147483647
 """Sentinel for an unset integer parameter (same as ``INT_MAX`` in C)."""
 
 
-def is_unset_or_trivial_d(val: float, trivial: float = 0.0) -> bool:
-    """Return True if a float parameter is unset (NaN) or equals *trivial*.
-
-    Helper for :meth:`SolverPlugin.validate` implementations.  An unset
-    float parameter is ``None``; a residual ``NaN`` matrix element is
-    also treated as unset.
-    """
-    import math
-    return val is None or math.isnan(val) or val == trivial
-
-
 # ---------------------------------------------------------------------------
 #  Numerical tolerances
 # ---------------------------------------------------------------------------
@@ -740,8 +729,6 @@ class StdIntList:
         (mVMC) Number of iterations for stochastic reconfiguration.
     NSROptItrSmp : int
         (mVMC) Number of steps for sampling.
-    NSROptFixSmp : int
-        (mVMC) Stochastic reconfiguration parameter.
     DSROptRedCut : float
         (mVMC) Stochastic reconfiguration parameter, input from file.
     DSROptStaDel : float

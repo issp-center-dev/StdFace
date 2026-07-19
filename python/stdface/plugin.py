@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .core.output import SolverOutput
+    from .core.output import ExpertModeOutput, SolverOutput
     from .core.stdface_vals import StdIntList
 
 
