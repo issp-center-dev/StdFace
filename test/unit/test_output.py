@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import inspect
-import os
 
 import numpy as np
 import pytest
@@ -16,7 +15,6 @@ from stdface.writer.common_writer import (
     LocSpnData, TransData, NamelistData, ModParaData, GreenOneData,
 )
 from stdface.writer.interaction_writer import InteractionData
-import stdface.writer.wannier90_writer as ew
 
 
 def _make_expert_output(green_two=None):
@@ -107,25 +105,6 @@ class TestWannierModeOutput:
     def test_to_dict_keys(self):
         d = build_wannier_output(_make_uhfk_stdi()).to_dict()
         assert set(d) == {"geometry", "geom_fname", "interactions"}
-
-    def test_write_parity_with_direct_export(self, tmp_path):
-        via_direct = tmp_path / "direct"
-        via_cont = tmp_path / "cont"
-        via_direct.mkdir()
-        orig = os.getcwd()
-        os.chdir(via_direct)
-        try:
-            ew.export_geometry(_make_uhfk_stdi())
-            ew.export_interaction(_make_uhfk_stdi())
-        finally:
-            os.chdir(orig)
-        build_wannier_output(_make_uhfk_stdi()).write(via_cont)
-
-        files = sorted(p.name for p in via_direct.iterdir())
-        assert files == sorted(p.name for p in via_cont.iterdir())
-        assert files  # non-empty
-        for f in files:
-            assert (via_direct / f).read_text() == (via_cont / f).read_text(), f
 
     def test_write_creates_directory(self, tmp_path):
         target = tmp_path / "nested" / "out"

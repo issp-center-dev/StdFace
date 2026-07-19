@@ -1,12 +1,13 @@
 """
 Export functions for the Wannier90/HWAVE format.
 
-This module contains functions to export lattice geometry and interaction
-parameters in a format compatible with Wannier90. The main public functions
-are:
+This module builds the lattice geometry and interaction parameters in a
+format compatible with Wannier90. The main public entry points are:
 
-- ``export_geometry()`` -- Exports lattice vectors and orbital positions
-- ``export_interaction()`` -- Exports hopping and interaction parameters
+- ``build_wannier_geometry()`` -- lattice vectors and orbital positions
+  as a :class:`WannierGeometryData`
+- ``build_wannier_interactions()`` -- hopping and interaction parameters
+  as a list of :class:`WannierInteractionData`
 
 License
 -------
@@ -162,15 +163,6 @@ def build_wannier_geometry(StdI: StdIntList) -> WannierGeometryData:
              for r in StdI.tau[:StdI.NsiteUC]],
     )
 
-
-def _write_geometry(StdI: StdIntList, fname: str) -> None:
-    """Write ``geom.dat`` (thin wrapper over :func:`build_wannier_geometry`)."""
-    build_wannier_geometry(StdI).write(fname)
-
-
-# -----------------------------------------------------------------------
-#  Index macro (replaces C's _index)
-# -----------------------------------------------------------------------
 
 def _compute_index(rx: int, ry: int, rz: int,
                    a: int, b: int, s: int, t: int,
@@ -909,51 +901,6 @@ def _prefix(StdI: StdIntList, fname: str) -> str:
         return fname
     else:
         return f"{StdI.fileprefix}_{fname}"
-
-
-# =======================================================================
-#  Public API
-# =======================================================================
-
-def export_geometry(StdI: StdIntList) -> None:
-    """Export geometry information to file.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        Standard input parameters containing lattice geometry.
-
-    Notes
-    -----
-    This function is only meaningful when ``StdI.solver == "HWAVE"``.
-    It writes the file ``geom.dat`` (optionally with prefix).
-    """
-    _write_geometry(StdI, _prefix(StdI, "geom.dat"))
-
-
-def export_interaction(StdI: StdIntList) -> None:
-    """Export interaction term coefficients to files.
-
-    Parameters
-    ----------
-    StdI : StdIntList
-        Standard input parameters containing interaction terms.
-
-    Notes
-    -----
-    This function is only meaningful when ``StdI.solver == "HWAVE"``.
-    It writes the following files (optionally with prefix):
-
-    - ``transfer.dat``
-    - ``coulombintra.dat``
-    - ``coulombinter.dat``
-    - ``hund.dat``
-    - ``exchange.dat``
-    - ``pairlift.dat``
-    - ``pairhopp.dat``
-    """
-    for data in build_wannier_interactions(StdI):
-        data.write()
 
 
 def build_wannier_interactions(StdI: StdIntList) -> list:
