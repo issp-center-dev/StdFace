@@ -8,10 +8,9 @@ duplication policy (``dev/solver_config_split.md`` §2-2) each solver config
 declares its own copy; only one config is ever attached at a time, so the
 copies never collide at runtime.
 
-Until C3-5 removes these names from ``StdIntList`` the corresponding dataclass
-fields shadow this config (attribute access resolves to ``StdIntList`` first),
-so this container is dormant — it is exercised live only after the unified
-removal.
+C3-5 removed these names from ``StdIntList``, so this container is the sole
+storage: ``StdI.mix`` etc. resolve here through the dynamic delegation
+(``__getattr__`` / ``__setattr__``) while the UHF config is attached.
 """
 from __future__ import annotations
 

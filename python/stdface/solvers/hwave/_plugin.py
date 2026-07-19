@@ -149,8 +149,8 @@ _HWAVE_KEYWORDS: dict[str, tuple] = {
 #  Reset tables
 # -----------------------------------------------------------------------
 #
-# Field resets actually run pre-resolution (solver == HWAVE) via the legacy
-# fallback in stdface_main; these tables satisfy the plugin interface and
+# Field resets run through the plugin registry (``_apply_field_resets``
+# resolves any of the HWAVE/UHFR/UHFK aliases to this plugin); the tables
 # cover the union of UHFR/UHFK fields.
 
 _UHF_BASE_SCALARS: list[tuple[str, object]] = [

@@ -60,8 +60,10 @@ class SolverType(str, Enum):
     UHF : str
         Unrestricted Hartree-Fock solver.
     HWAVE : str
-        H-wave solver as supplied on the command line; resolved to
-        :attr:`UHFR` or :attr:`UHFK` by ``_resolve_solver_name``.
+        H-wave solver.  ``HWAVE`` / ``UHFR`` / ``UHFK`` are all registered
+        aliases of ``HWavePlugin``; the output mode (UHFR ``.def`` vs UHFK
+        Wannier90) is dispatched internally from ``solver`` and ``calcmode``
+        (``_hwave_output_mode``).
     UHFR : str
         H-wave real-space UHF mode (``calcmode = uhfr``).
     UHFK : str
@@ -959,11 +961,12 @@ class StdIntList:
     # ------------------------------------------------------------------
     #  Active solver config (C3: dynamic single-active delegation)
     # ------------------------------------------------------------------
-    # Set by ``_attach_solver_config`` (top of ``_reset_vals``) from the
-    # config registry, keyed on the raw solver name.  While solver-specific
-    # fields still live on this dataclass (pre-C3-5) this stays effectively
-    # dormant: with no config registered for a solver it remains ``None`` and
-    # attribute access falls through to the normal dataclass fields.
+    # Attached automatically when ``solver`` is set (``__setattr__`` /
+    # ``__post_init__`` -> ``_sync_solver_config``), keyed on the raw solver
+    # name.  All solver-specific fields live here (C3-5 complete); attribute
+    # access resolves through ``__getattr__`` / ``__setattr__``.  ``None``
+    # only for solvers with no registered config (then solver-specific
+    # attribute access raises AttributeError).
     _solver_cfg: object | None = None
 
     # ------------------------------------------------------------------
@@ -982,12 +985,11 @@ class StdIntList:
     # use it.  ``calcmode`` stays below as solver-selection metadata.
 
     # ------------------------------------------------------------------
-    #  HWAVE solver-selection metadata (read before config attach)
+    #  HWAVE solver-selection metadata
     # ------------------------------------------------------------------
-    # ``calcmode`` stays here as solver-selection metadata (read by
-    # _resolve_solver_name before the config is attached).  C3-3 moved
-    # ``fileprefix`` / ``export_all`` / ``lattice_gp`` into HWaveConfig
-    # (solvers/hwave/config.py); they now resolve via _solver_cfg.
+    # ``calcmode`` stays here (not in HWaveConfig) as solver-selection
+    # metadata: HWavePlugin's output-mode dispatch (``_hwave_output_mode``)
+    # and the geometry.dat suppression read it alongside ``solver``.
     calcmode: str | None = None
 
     # ------------------------------------------------------------------
