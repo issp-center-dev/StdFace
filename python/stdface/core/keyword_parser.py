@@ -15,11 +15,11 @@ from .stdface_vals import StdIntList, NaN_i
 logger = logging.getLogger(__name__)
 
 
-_TRIM_TABLE = str.maketrans("", "", " :;\"\\\b\v\n\0")
+_TRIM_TABLE = str.maketrans("", "", " \t:;\"\\\b\v\n\r\0")
 """Translation table for :func:`trim_space_quote`.
 
-Removes: space, colon, semicolon, double-quote, backslash,
-backspace (``\\b``), vertical-tab (``\\v``), newline, and null.
+Removes: space, tab, colon, semicolon, double-quote, backslash,
+backspace (``\\b``), vertical-tab (``\\v``), newline, CR, and null.
 """
 
 
@@ -187,7 +187,10 @@ def store_with_check_dup_d(keyword: str, value: str, current: float) -> float:
 
 
 def _safe_float(s: str) -> float:
-    """Parse a string to float, returning 0.0 on empty or invalid input.
+    """Parse a string to float; an empty string means 0.0.
+
+    The empty-string default supports the ``",imag"`` / ``"real,"``
+    complex forms where one part is omitted.
 
     Parameters
     ----------
@@ -197,7 +200,12 @@ def _safe_float(s: str) -> float:
     Returns
     -------
     float
-        Parsed value, or 0.0 if *s* is empty or not a valid number.
+        Parsed value, or 0.0 if *s* is empty.
+
+    Raises
+    ------
+    ValueError
+        If *s* is non-empty and not a valid number.
     """
     s = s.strip()
     if not s:
@@ -205,7 +213,9 @@ def _safe_float(s: str) -> float:
     try:
         return float(s)
     except ValueError:
-        return 0.0
+        msg = f"Invalid numerical value: {s!r}"
+        logger.error(msg)
+        raise ValueError(msg) from None
 
 
 def store_with_check_dup_c(keyword: str, value: str, current: complex) -> complex:
