@@ -24,8 +24,9 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .stdface_vals import StdIntList
@@ -35,6 +36,8 @@ from ..writer.wannier90_writer import (
     build_wannier_interactions,
     _prefix,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SolverOutput(ABC):
@@ -102,13 +105,39 @@ def build_wannier_output(StdI: StdIntList) -> WannierModeOutput:
 
 
 @dataclass
+class SolverFileData:
+    """A solver-specific auxiliary file as rendered text.
+
+    Used for the run-configuration files (HPhi excitation / calcmod /
+    pump, mVMC variational group) whose content is built during
+    :meth:`ExpertModeSolverPlugin.build_solver_files`; unlike the common
+    ``.def`` files they carry no semantic row schema, just the rendered
+    content.
+    """
+
+    fname: str
+    content: str
+
+    def write(self, directory: Path = Path(".")) -> None:
+        with open(Path(directory) / self.fname, "w") as fp:
+            fp.write(self.content)
+        logger.info("%s is written.", f"{self.fname:>15s}")
+
+    def to_dict(self) -> dict:
+        return {"fname": self.fname, "content": self.content}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SolverFileData":
+        return cls(fname=data["fname"], content=data["content"])
+
+
+@dataclass
 class ExpertModeOutput(SolverOutput):
     """Expert-mode (.def) output for HPhi / mVMC / UHF.
 
-    Holds the data-backed common files.  Solver-specific files
-    (HPhi excitation / calcmod / pump, mVMC variational group) are not
-    represented here; they are emitted by the plugin's
-    ``write_solver_files`` hook during assembly.
+    Holds the data-backed common files plus the solver-specific
+    auxiliary files (HPhi excitation / calcmod / pump, mVMC variational
+    group) as :class:`SolverFileData` in ``solver_files``.
 
     ``locspn`` / ``modpara`` / ``namelist`` are optional because UHFR
     emits only ``trans`` / ``interactions`` / ``green_one``.
@@ -121,6 +150,7 @@ class ExpertModeOutput(SolverOutput):
     namelist: object | None = None    # NamelistData
     green_one: object | None = None   # GreenOneData
     green_two: object | None = None   # GreenTwoData
+    solver_files: list = field(default_factory=list)  # list[SolverFileData]
 
     def write(self, directory: Path = Path(".")) -> None:
         directory = Path(directory)
@@ -136,6 +166,8 @@ class ExpertModeOutput(SolverOutput):
             self.green_one.write(directory)
         if self.green_two is not None:
             self.green_two.write(directory)
+        for data in self.solver_files:
+            data.write(directory)
         if self.namelist is not None:
             self.namelist.write(directory)
 
@@ -150,6 +182,7 @@ class ExpertModeOutput(SolverOutput):
             "namelist": _d(self.namelist),
             "green_one": _d(self.green_one),
             "green_two": _d(self.green_two),
+            "solver_files": [d.to_dict() for d in self.solver_files],
         }
 
 

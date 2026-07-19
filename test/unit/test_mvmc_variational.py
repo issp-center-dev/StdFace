@@ -3,7 +3,7 @@
 Tests for the mVMC variational parameter generation functions extracted
 from ``stdface_model_util``: ``_anti_period_dot``, ``_parity_sign``,
 ``_fold_site_sub``, ``proj``, ``_init_site_sub``, ``generate_orb``,
-and ``print_jastrow``.
+and ``build_jastrow``.
 """
 from __future__ import annotations
 
@@ -26,8 +26,18 @@ from stdface.solvers.mvmc.variational import (
     _jastrow_global_optimization,
     proj,
     generate_orb,
-    print_jastrow,
+    build_jastrow,
 )
+
+
+# Local build+write wrappers (G-2): production functions return
+# SolverFileData instead of writing.
+def _print_jastrow(StdI):
+    build_jastrow(StdI).write()
+
+
+def _run_proj(StdI):
+    proj(StdI).write()
 
 
 NaN_i = 2147483647
@@ -325,7 +335,7 @@ class TestProj:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                proj(StdI)
+                _run_proj(StdI)
                 assert os.path.exists("qptransidx.def")
             finally:
                 os.chdir(orig)
@@ -340,7 +350,7 @@ class TestProj:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                proj(StdI)
+                _run_proj(StdI)
                 assert StdI.NSym > 0
             finally:
                 os.chdir(orig)
@@ -355,7 +365,7 @@ class TestProj:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                proj(StdI)
+                _run_proj(StdI)
                 with open("qptransidx.def") as f:
                     content = f.read()
                 assert "NQPTrans" in content
@@ -376,7 +386,7 @@ class TestPrintJastrow:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                print_jastrow(StdI)
+                _print_jastrow(StdI)
                 assert os.path.exists("jastrowidx.def")
             finally:
                 os.chdir(orig)
@@ -391,7 +401,7 @@ class TestPrintJastrow:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                print_jastrow(StdI)
+                _print_jastrow(StdI)
                 with open("jastrowidx.def") as f:
                     content = f.read()
                 assert "NJastrowIdx" in content
@@ -409,7 +419,7 @@ class TestPrintJastrow:
             orig = os.getcwd()
             os.chdir(tmpdir)
             try:
-                print_jastrow(StdI)
+                _print_jastrow(StdI)
                 assert os.path.exists("jastrowidx.def")
                 with open("jastrowidx.def") as f:
                     content = f.read()

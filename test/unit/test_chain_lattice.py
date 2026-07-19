@@ -244,6 +244,8 @@ class TestChainBoost:
         s.L = 16
         s.S2 = 1
         cl.chain_boost(s)
+        for aux in s._aux_outputs or []:
+            aux.write()
 
         boost_file = tmp_path / "boost.def"
         assert boost_file.exists()

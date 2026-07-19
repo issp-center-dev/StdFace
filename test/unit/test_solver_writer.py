@@ -401,10 +401,11 @@ class TestHPhiPlugin:
         s.lBoost = 1
         plugin = get_plugin("HPhi")
         plugin.post_lattice(s)
-        assert (tmp_path / "boost.def").exists()
+        fnames = {a.fname for a in s._aux_outputs or []}
+        assert "boost.def" in fnames  # built as data; main flow writes it
 
     def test_time_evolution_pump_writes_teone(self, tmp_path, monkeypatch):
-        """``print_pump`` writes ``teone.def`` for time evolution + pump."""
+        """``build_pump`` builds ``teone.def`` for time evolution + pump."""
         monkeypatch.chdir(tmp_path)
         StdI = _make_stdi_for_hphi(nsite=4)
         StdI.method = "timeevolution"
@@ -420,8 +421,8 @@ class TestHPhiPlugin:
             [complex(1.0, 0.0)],
             [complex(0.5, 0.0)],
         ]
-        from stdface.solvers.hphi.writer import print_pump
-        print_pump(StdI)
+        from stdface.solvers.hphi.writer import build_pump
+        build_pump(StdI).write()
         assert os.path.exists("teone.def")
 
 
@@ -489,8 +490,12 @@ class TestUHFPlugin:
         assert "params" in d["modpara"]
         assert d["namelist"]["entries"][0] == ["ModPara", "modpara.def"]
 
-    def test_hphi_build_output_emits_solver_files(self, tmp_path, monkeypatch):
-        """HPhi build_output writes solver-specific files via the hook."""
+    def test_hphi_build_output_collects_solver_files(self, tmp_path, monkeypatch):
+        """HPhi build_output collects the solver files as data (G-1).
+
+        Nothing is written during build; the container's write() emits
+        calcmod / excitation alongside the common files.
+        """
         from stdface.core.output import ExpertModeOutput
         monkeypatch.chdir(tmp_path)
         StdI = _make_stdi_for_hphi(nsite=4)
@@ -498,9 +503,12 @@ class TestUHFPlugin:
         StdI.outputmode = None
         out = get_plugin("HPhi").build_output(StdI)
         assert isinstance(out, ExpertModeOutput)
-        # excitation / calcmod written eagerly by write_solver_files
+        fnames = {d.fname for d in out.solver_files}
+        assert "calcmod.def" in fnames
+        assert fnames & {"pair.def", "single.def"}
+        assert not os.path.exists("calcmod.def")  # build has no side writes
+        out.write(tmp_path)
         assert os.path.exists("calcmod.def")
-        assert os.path.exists("pair.def") or os.path.exists("single.def")
 
 
 class TestHWaveFamilyPlugin:

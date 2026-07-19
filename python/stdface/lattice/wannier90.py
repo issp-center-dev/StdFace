@@ -917,7 +917,9 @@ def wannier90(StdI: StdIntList) -> None:
     if idcmode != _DCMode.NOTCORRECT:
         aux.append(_build_uhf_initial(StdI, NtUJ, tUJ, DenMat, tUJindx))
     aux.append(_build_wan2site(StdI))
-    StdI._aux_outputs = aux
+    # Extend (not assign): parse-stage builders (HPhi potential.dat) may
+    # already have queued outputs here.
+    StdI._aux_outputs = (StdI._aux_outputs or []) + aux
 
 
 # ---------------------------------------------------------------------------

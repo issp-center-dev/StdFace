@@ -14,7 +14,7 @@ from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_sl,
     store_with_check_dup_i, store_with_check_dup_d,
 )
-from .writer import large_value, print_calc_mod, print_excitation, print_pump
+from .writer import large_value, build_calc_mod, build_excitation, build_pump
 
 
 class HPhiPlugin(ExpertModeSolverPlugin):
@@ -63,12 +63,13 @@ class HPhiPlugin(ExpertModeSolverPlugin):
             else:
                 lattice_plugin.boost(StdI)
 
-    def write_solver_files(self, StdI: StdIntList) -> None:
-        """Emit HPhi-specific files (excitation / pump / calcmod)."""
-        print_excitation(StdI)
+    def build_solver_files(self, StdI: StdIntList) -> list:
+        """Build the HPhi-specific files (excitation / pump / calcmod)."""
+        files = [build_excitation(StdI)]
         if StdI.method == MethodType.TIME_EVOLUTION:
-            print_pump(StdI)
-        print_calc_mod(StdI)
+            files.append(build_pump(StdI))
+        files.append(build_calc_mod(StdI))
+        return files
 
 
 # -----------------------------------------------------------------------
