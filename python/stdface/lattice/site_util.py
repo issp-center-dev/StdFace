@@ -117,10 +117,21 @@ def _find_cell_index(StdI: StdIntList, cellV: list[int]) -> int:
     -------
     int
         Cell index ``k`` such that ``StdI.Cell[k]`` equals *cellV*.
-        Returns 0 if no match is found (matching the original C behavior).
+
+    Raises
+    ------
+    ValueError
+        If no cell matches *cellV*.  A folded coordinate always lies in
+        the cell table, so this indicates an internal inconsistency (the
+        C original silently fell back to index 0 here).
     """
     cell_map = _build_cell_map(StdI)
-    return cell_map.get((cellV[0], cellV[1], cellV[2]), 0)
+    key = (cellV[0], cellV[1], cellV[2])
+    if key not in cell_map:
+        msg = f"Internal error: cell {key} not found in the Cell table"
+        logger.error(msg)
+        raise ValueError(msg)
+    return cell_map[key]
 
 
 def _fold_to_cell(
@@ -157,13 +168,15 @@ def _fold_to_cell(
     iCellV_frac = rbox @ iCellV_arr
 
     # (2) Search which periodic image contains this cell
-    nBox = (iCellV_frac + ncell * 1000) // ncell - 1000
+    # (The C original offsets by ncell*1000 to force truncating division to
+    #  round down; numpy's // floor-divides natively, with no range limit.)
+    nBox = iCellV_frac // ncell
 
     # (3) Fractional coordinate in the original cell
     iCellV_frac = iCellV_frac - ncell * nBox
 
     # (4) Transform back to lattice coordinates and fold
-    iCellV_fold = (box.T @ iCellV_frac + ncell * 1000) // ncell - 1000
+    iCellV_fold = (box.T @ iCellV_frac) // ncell
 
     return nBox.astype(int).tolist(), iCellV_fold.astype(int).tolist()
 

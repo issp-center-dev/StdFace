@@ -320,6 +320,34 @@ class TestSolverPluginIsAbstract:
         with pytest.raises(TypeError):
             SolverPlugin()
 
+    def test_build_output_is_abstract(self):
+        """build_output is part of the ABC contract (#P7).
+
+        A plugin implementing only write() used to work on the CLI path
+        but break generate(); build_output is now required.
+        """
+        assert "build_output" in SolverPlugin.__abstractmethods__
+
+    def test_write_defaults_to_build_output(self):
+        """Implementing build_output alone yields a working write()."""
+        calls = []
+
+        class _FakeOutput:
+            def write(self, directory=None):
+                calls.append("written")
+
+        class _MinimalPlugin(SolverPlugin):
+            name = "Minimal"
+            keyword_table = {}
+            reset_scalars = []
+            reset_arrays = []
+
+            def build_output(self, StdI):
+                return _FakeOutput()
+
+        _MinimalPlugin().write(None)
+        assert calls == ["written"]
+
 
 class TestHPhiPlugin:
     """Tests for the HPhiPlugin class."""

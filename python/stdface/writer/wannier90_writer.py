@@ -43,8 +43,9 @@ _EPS = 1.0e-8
 #  Control flags
 # -----------------------------------------------------------------------
 
-_is_export_all = 1
-"""Default for the exportall parameter (1 = export zero elements too)."""
+def _resolve_export_all(StdI) -> int:
+    """Resolve the exportall flag from *StdI* (default 1 = export zeros too)."""
+    return 1 if StdI.export_all is None else StdI.export_all
 
 
 # -----------------------------------------------------------------------
@@ -268,7 +269,7 @@ def _write_wannier_body(
     nsiteuc: int,
     nspin: int,
     matrix: np.ndarray,
-    export_all: int | None = None,
+    export_all: int,
 ) -> None:
     """Write the matrix body of a Wannier90-format interaction file.
 
@@ -291,9 +292,9 @@ def _write_wannier_body(
         Number of spin states.
     matrix : numpy.ndarray
         Flat complex interaction matrix.
+    export_all : int
+        Whether to emit zero entries (1) or only non-negligible ones (0).
     """
-    if export_all is None:
-        export_all = _is_export_all
     spin_pairs = list(itertools.product(range(nspin), repeat=2))
     dims = [rr[i] * 2 + 1 for i in range(3)]
     for r in range(nvol):
@@ -390,14 +391,6 @@ def _wannier_interaction_data(
               float(it.v.real), float(it.v.imag)) for it in intr_table]
     return WannierInteractionData(fname, tagname, nsiteuc, nspin,
                                   export_all, items)
-
-
-def _write_wannier90(intr_table: list[_IntrItem],
-                     nsiteuc: int, nspin: int,
-                     fname: str, tagname: str) -> None:
-    """Write a Wannier90 interaction file (build + write wrapper)."""
-    _wannier_interaction_data(
-        intr_table, nsiteuc, nspin, fname, tagname, _is_export_all).write()
 
 
 # -----------------------------------------------------------------------
@@ -624,7 +617,7 @@ def _export_inter(StdI: StdIntList,
 
     if intr_table:
         return _wannier_interaction_data(
-            intr_table, StdI.NsiteUC, 1, fname, tagname, _is_export_all)
+            intr_table, StdI.NsiteUC, 1, fname, tagname, _resolve_export_all(StdI))
     logger.info(f"{fname:>24s} is skipped.")
     return None
 
@@ -780,7 +773,7 @@ def _export_transfer(StdI: StdIntList,
     if intr_table:
         return _wannier_interaction_data(
             intr_table, StdI.NsiteUC, 2 if spin_dep == 1 else 1,
-            fname, tagname, _is_export_all)
+            fname, tagname, _resolve_export_all(StdI))
     logger.info(f"{fname:>24s} is skipped.")
     return None
 
@@ -879,7 +872,7 @@ def _export_coulomb_intra(StdI: StdIntList,
 
     if intr_table:
         return _wannier_interaction_data(
-            intr_table, StdI.NsiteUC, 1, fname, tagname, _is_export_all)
+            intr_table, StdI.NsiteUC, 1, fname, tagname, _resolve_export_all(StdI))
     logger.info(f"{fname:>24s} is skipped.")
     return None
 
@@ -963,15 +956,9 @@ def build_wannier_interactions(StdI: StdIntList) -> list:
     """Build the Wannier90 interaction files as data objects.
 
     Returns a list of :class:`WannierInteractionData` (one per non-empty
-    interaction type).  Updates the module-level ``_is_export_all`` flag
-    from ``StdI.export_all`` as a side effect (read by each file's
-    :meth:`WannierInteractionData.write`).
+    interaction type).  Each data object carries the resolved ``exportall``
+    flag, so building has no module-level side effects.
     """
-    global _is_export_all
-
-    if StdI.export_all is not None:
-        _is_export_all = StdI.export_all
-
     out: list = []
 
     _ntrans = len(StdI.trans_list)

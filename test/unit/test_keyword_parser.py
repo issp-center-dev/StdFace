@@ -293,6 +293,10 @@ class TestTrimSpaceQuote:
         """Test that '=' is NOT stripped (needed for key=value parsing)."""
         assert "=" in trim_space_quote("key=value")
 
+    def test_removes_tab_and_cr(self):
+        """Tab-separated and CRLF input parses like space-separated (#P4)."""
+        assert trim_space_quote("model\t=\tspin\r\n") == "model=spin"
+
 
 # =====================================================================
 #  Tests for store_with_check_dup_s
@@ -403,15 +407,20 @@ class TestStoreWithCheckDupC:
         result = store_with_check_dup_c("t", ",2.0", NaN_c)
         assert result == complex(0.0, 2.0)
 
-    def test_invalid_real_part_yields_zero_real(self):
-        """Non-numeric real token is treated as 0.0 via _safe_float."""
-        result = store_with_check_dup_c("t", "bad,1.0", NaN_c)
-        assert result == complex(0.0, 1.0)
+    def test_invalid_real_part_raises(self):
+        """Non-numeric real token raises instead of silently becoming 0.0 (#P3)."""
+        with pytest.raises(ValueError, match="Invalid numerical value"):
+            store_with_check_dup_c("t", "bad,1.0", NaN_c)
 
-    def test_invalid_imag_part_yields_zero_imag(self):
-        """Non-numeric imaginary token is treated as 0.0 via _safe_float."""
-        result = store_with_check_dup_c("t", "1.0,bad", NaN_c)
-        assert result == complex(1.0, 0.0)
+    def test_invalid_imag_part_raises(self):
+        """Non-numeric imaginary token raises instead of silently becoming 0.0 (#P3)."""
+        with pytest.raises(ValueError, match="Invalid numerical value"):
+            store_with_check_dup_c("t", "1.0,bad", NaN_c)
+
+    def test_empty_parts_still_default_to_zero(self):
+        """Omitted parts of the comma form keep their documented 0.0 default."""
+        assert store_with_check_dup_c("t", ",2.0", NaN_c) == complex(0.0, 2.0)
+        assert store_with_check_dup_c("t", "1.5,", NaN_c) == complex(1.5, 0.0)
 
     def test_exits_on_duplicate(self):
         """Test that duplicate assignment raises ValueError."""

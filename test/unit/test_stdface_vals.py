@@ -342,6 +342,27 @@ class TestStdIntListSolverFields:
         s = StdIntList()
         assert hasattr(s, "calcmode")
 
+    def test_constructor_kwarg_attaches_config(self):
+        """StdIntList(solver=...) attaches the config like ``s.solver = ...``.
+
+        Dataclass __init__ assigns fields in declaration order, so without
+        __post_init__ the ``_solver_cfg = None`` default wipes the config
+        attached by the ``solver`` assignment (#P1).
+        """
+        s = StdIntList(solver="HPhi")
+        assert s._solver_cfg is not None
+        assert s.method is None  # resolves via HPhiConfig, no AttributeError
+
+        for solver, probe in [("mVMC", "NVMCCalMode"), ("UHF", "mix"),
+                              ("HWAVE", "fileprefix")]:
+            s = StdIntList(solver=solver)
+            assert s._solver_cfg is not None, solver
+            assert getattr(s, probe) is None, solver
+
+    def test_constructor_default_has_no_config(self):
+        """A bare StdIntList() still has no config attached."""
+        assert StdIntList()._solver_cfg is None
+
     def test_hwave_only_fields_resolve_via_config(self):
         """fileprefix/export_all/lattice_gp moved to HWaveConfig (C3-3).
 
