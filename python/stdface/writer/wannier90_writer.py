@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 
-from ..core.stdface_vals import StdIntList
+from ..core.stdface_vals import StdIntList, LatticeGeometry
 from ..lattice.site_util import _cell_vector
 
 # -----------------------------------------------------------------------
@@ -393,13 +393,13 @@ def _wannier_interaction_data(
 #  Unfold site coordinates
 # -----------------------------------------------------------------------
 
-def _unfold_site(StdI: StdIntList, v_in: list[int]) -> list[int]:
+def _unfold_site(geom: LatticeGeometry, v_in: list[int]) -> list[int]:
     """Convert site coordinates from [0, N] to [-N/2, N/2] range.
 
     Parameters
     ----------
-    StdI : StdIntList
-        Standard input parameters.
+    geom : LatticeGeometry
+        Lattice geometry sub-object.
     v_in : list of int
         Input coordinates (length 3).
 
@@ -409,15 +409,15 @@ def _unfold_site(StdI: StdIntList, v_in: list[int]) -> list[int]:
         Output coordinates in the unfolded range (length 3).
     """
     # v = rbox @ v_in (matrix-vector product)
-    v = StdI.rbox.astype(int) @ np.array(v_in)
+    v = geom.rbox.astype(int) @ np.array(v_in)
 
     # Fold to [-N/2, N/2] range using vectorized operations
-    vv = v / StdI.NCell
-    v = np.where(vv > 0.5, v - StdI.NCell, v)
-    v = np.where(vv <= -0.5, v + StdI.NCell, v)
+    vv = v / geom.NCell
+    v = np.where(vv > 0.5, v - geom.NCell, v)
+    v = np.where(vv <= -0.5, v + geom.NCell, v)
 
     # w = (v @ box) // NCell
-    w = (v @ StdI.box.astype(int)) // StdI.NCell
+    w = (v @ geom.box.astype(int)) // geom.NCell
 
     return w.tolist()
 
@@ -520,7 +520,7 @@ def _accumulate_list(keylen: int,
 # -----------------------------------------------------------------------
 
 def _build_inter_table(
-    StdI: StdIntList,
+    geom: LatticeGeometry,
     nintr: int,
     intr_index: list[list[int]],
     intr_value: np.ndarray,
@@ -534,8 +534,8 @@ def _build_inter_table(
 
     Parameters
     ----------
-    StdI : StdIntList
-        Standard input parameters (reads ``NsiteUC``, ``Cell``).
+    geom : LatticeGeometry
+        Lattice geometry sub-object (reads ``NsiteUC``, ``Cell``).
     nintr : int
         Number of accumulated entries.
     intr_index : list of list of int
@@ -554,12 +554,12 @@ def _build_inter_table(
     for k in range(nintr):
         idx_i, idx_j = intr_index[k][:2]
 
-        icell, isite = divmod(idx_i, StdI.NsiteUC)
-        jcell, jsite = divmod(idx_j, StdI.NsiteUC)
+        icell, isite = divmod(idx_i, geom.NsiteUC)
+        jcell, jsite = divmod(idx_j, geom.NsiteUC)
 
-        jCV = _cell_vector(StdI.Cell, jcell)
-        iCV = _cell_vector(StdI.Cell, icell)
-        rr = _unfold_site(StdI, [j - i for j, i in zip(jCV, iCV)])
+        jCV = _cell_vector(geom.Cell, jcell)
+        iCV = _cell_vector(geom.Cell, icell)
+        rr = _unfold_site(geom, [j - i for j, i in zip(jCV, iCV)])
 
         lookup_key = (tuple(rr), isite, jsite)
         if lookup_key in seen:
@@ -608,7 +608,7 @@ def _export_inter(StdI: StdIntList,
     nintr, intr_index, intr_value = _accumulate_list(
         2, ntbl, tbl_index, tbl_value, 1)
 
-    intr_table = (_build_inter_table(StdI, nintr, intr_index, intr_value)
+    intr_table = (_build_inter_table(StdI._lattice, nintr, intr_index, intr_value)
                   if nintr > 0 else [])
 
     if intr_table:
@@ -660,7 +660,7 @@ def _export_inter_real(StdI: StdIntList,
 # -----------------------------------------------------------------------
 
 def _build_transfer_table(
-    StdI: StdIntList,
+    geom: LatticeGeometry,
     nintr: int,
     intr_index: list[list[int]],
     intr_value: np.ndarray,
@@ -675,8 +675,8 @@ def _build_transfer_table(
 
     Parameters
     ----------
-    StdI : StdIntList
-        Standard input parameters (reads ``NsiteUC``, ``Cell``).
+    geom : LatticeGeometry
+        Lattice geometry sub-object (reads ``NsiteUC``, ``Cell``).
     nintr : int
         Number of accumulated entries.
     intr_index : list of list of int
@@ -699,12 +699,12 @@ def _build_transfer_table(
     for k in range(nintr):
         idx_i, ispin, idx_j, jspin = intr_index[k][:4]
 
-        icell, isite = divmod(idx_i, StdI.NsiteUC)
-        jcell, jsite = divmod(idx_j, StdI.NsiteUC)
+        icell, isite = divmod(idx_i, geom.NsiteUC)
+        jcell, jsite = divmod(idx_j, geom.NsiteUC)
 
-        jCV = _cell_vector(StdI.Cell, jcell)
-        iCV = _cell_vector(StdI.Cell, icell)
-        rr = _unfold_site(StdI, [j - i for j, i in zip(jCV, iCV)])
+        jCV = _cell_vector(geom.Cell, jcell)
+        iCV = _cell_vector(geom.Cell, icell)
+        rr = _unfold_site(geom, [j - i for j, i in zip(jCV, iCV)])
 
         intr_value[k] *= -1  # by convention
 
@@ -763,7 +763,7 @@ def _export_transfer(StdI: StdIntList,
         4, ntbl, tbl_index, tbl_value, 0)
 
     intr_table = (_build_transfer_table(
-        StdI, nintr, intr_index, intr_value, spin_dep)
+        StdI._lattice, nintr, intr_index, intr_value, spin_dep)
         if nintr > 0 else [])
 
     if intr_table:
@@ -779,7 +779,7 @@ def _export_transfer(StdI: StdIntList,
 # -----------------------------------------------------------------------
 
 def _build_coulomb_intra_table(
-    StdI: StdIntList,
+    geom: LatticeGeometry,
     nintr: int,
     intr_index: list[list[int]],
     intr_value: np.ndarray,
@@ -793,8 +793,8 @@ def _build_coulomb_intra_table(
 
     Parameters
     ----------
-    StdI : StdIntList
-        Standard input parameters (reads ``NsiteUC``).
+    geom : LatticeGeometry
+        Lattice geometry sub-object (reads ``NsiteUC``).
     nintr : int
         Number of accumulated entries.
     intr_index : list of list of int
@@ -812,7 +812,7 @@ def _build_coulomb_intra_table(
 
     for k in range(nintr):
         idx_i = intr_index[k][0]
-        isite = idx_i % StdI.NsiteUC
+        isite = idx_i % geom.NsiteUC
 
         if isite in seen:
             existing = intr_table[seen[isite]]
@@ -863,7 +863,7 @@ def _export_coulomb_intra(StdI: StdIntList,
         1, ntbl, tbl_index, tbl_value_c, 1)
 
     intr_table = (_build_coulomb_intra_table(
-        StdI, nintr, intr_index, intr_value)
+        StdI._lattice, nintr, intr_index, intr_value)
         if nintr > 0 else [])
 
     if intr_table:
