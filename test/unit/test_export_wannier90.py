@@ -239,7 +239,7 @@ class TestUnfoldSite:
         s.NCell = 4
         s.rbox = np.eye(3, dtype=int)
         s.box = np.array([[4, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=int)
-        result = ew._unfold_site(s, [0, 0, 0])
+        result = ew._unfold_site(s._lattice, [0, 0, 0])
         assert result == [0, 0, 0]
 
     def test_unfold_positive(self):
@@ -248,7 +248,7 @@ class TestUnfoldSite:
         s.NCell = 4
         s.rbox = np.eye(3, dtype=int)
         s.box = np.array([[4, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=int)
-        result = ew._unfold_site(s, [3, 0, 0])
+        result = ew._unfold_site(s._lattice, [3, 0, 0])
         assert result == [-1, 0, 0]
 
 
@@ -810,7 +810,7 @@ class TestBuildTransferTable:
     def test_empty_input(self):
         """Zero entries returns empty table."""
         s = self._make_stdi()
-        result = ew._build_transfer_table(s, 0, [], np.array([], dtype=complex), 1)
+        result = ew._build_transfer_table(s._lattice, 0, [], np.array([], dtype=complex), 1)
         assert result == []
 
     def test_single_entry(self):
@@ -819,7 +819,7 @@ class TestBuildTransferTable:
         # site 0 (cell 0) → site 1 (cell 1), spin 0→0
         intr_index = [[0, 0, 1, 0]]
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 1)
+        result = ew._build_transfer_table(s._lattice, 1, intr_index, intr_value, 1)
         assert len(result) == 1
         assert result[0].a == 0
         assert result[0].b == 0  # site 1 % NsiteUC(1) = 0
@@ -833,7 +833,7 @@ class TestBuildTransferTable:
         s = self._make_stdi(ncell=2)
         intr_index = [[0, 0, 0, 0]]
         intr_value = np.array([3.5 + 2j])
-        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 1)
+        result = ew._build_transfer_table(s._lattice, 1, intr_index, intr_value, 1)
         assert result[0].v == pytest.approx(-3.5 - 2j)
 
     def test_deduplication(self):
@@ -843,7 +843,7 @@ class TestBuildTransferTable:
         # site 0→1 (cells 0→1) and site 2→3 (cells 2→3) → both rr=[1,0,0]
         intr_index = [[0, 0, 1, 0], [2, 0, 3, 0]]
         intr_value = np.array([1.0 + 0j, 1.0 + 0j])
-        result = ew._build_transfer_table(s, 2, intr_index, intr_value, 1)
+        result = ew._build_transfer_table(s._lattice, 2, intr_index, intr_value, 1)
         # Both map to (rr=[1,0,0], a=0, b=0, s=0, t=0) with value -1.0
         assert len(result) == 1
 
@@ -853,7 +853,7 @@ class TestBuildTransferTable:
         # Entry with spin (0,1) — should be skipped when spin_dep=0
         intr_index = [[0, 0, 0, 1]]
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 0)
+        result = ew._build_transfer_table(s._lattice, 1, intr_index, intr_value, 0)
         assert len(result) == 0
 
     def test_spin_dep_zero_keeps_00(self):
@@ -861,7 +861,7 @@ class TestBuildTransferTable:
         s = self._make_stdi(ncell=2)
         intr_index = [[0, 0, 0, 0]]
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 0)
+        result = ew._build_transfer_table(s._lattice, 1, intr_index, intr_value, 0)
         assert len(result) == 1
 
     def test_spin_dep_one_keeps_all(self):
@@ -869,7 +869,7 @@ class TestBuildTransferTable:
         s = self._make_stdi(ncell=2)
         intr_index = [[0, 0, 0, 0], [0, 1, 0, 1]]
         intr_value = np.array([1.0 + 0j, 2.0 + 0j])
-        result = ew._build_transfer_table(s, 2, intr_index, intr_value, 1)
+        result = ew._build_transfer_table(s._lattice, 2, intr_index, intr_value, 1)
         assert len(result) == 2
 
     def test_relative_coordinates(self):
@@ -879,7 +879,7 @@ class TestBuildTransferTable:
         # but _unfold_site may fold: 4 cells, rr_frac = 2/4 = 0.5 → not folded
         intr_index = [[0, 0, 2, 0]]
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_transfer_table(s, 1, intr_index, intr_value, 1)
+        result = ew._build_transfer_table(s._lattice, 1, intr_index, intr_value, 1)
         assert len(result) == 1
         # The exact rr depends on _unfold_site; just verify it's set
         assert len(result[0].r) == 3
@@ -894,7 +894,7 @@ class TestBuildTransferTable:
         # Use cells that map to same rr: cell 0→1 and cell 2→3
         intr_index = [[0, 0, 1, 0], [2, 0, 3, 0]]
         intr_value = np.array([1.0 + 0j, 2.0 + 0j])  # different values!
-        result = ew._build_transfer_table(s, 2, intr_index, intr_value, 1)
+        result = ew._build_transfer_table(s._lattice, 2, intr_index, intr_value, 1)
         assert "WARNING" in caplog.text
 
 
@@ -930,7 +930,7 @@ class TestBuildInterTable:
     def test_empty_input(self):
         """Zero entries returns empty table."""
         s = self._make_stdi()
-        result = ew._build_inter_table(s, 0, [], np.array([], dtype=complex))
+        result = ew._build_inter_table(s._lattice, 0, [], np.array([], dtype=complex))
         assert result == []
 
     def test_single_entry(self):
@@ -938,7 +938,7 @@ class TestBuildInterTable:
         s = self._make_stdi(ncell=2)
         intr_index = [[0, 1]]
         intr_value = np.array([2.5 + 0j])
-        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        result = ew._build_inter_table(s._lattice, 1, intr_index, intr_value)
         assert len(result) == 1
         assert result[0].a == 0
         assert result[0].b == 0  # site 1 % NsiteUC(1) = 0
@@ -951,7 +951,7 @@ class TestBuildInterTable:
         s = self._make_stdi(ncell=2)
         intr_index = [[0, 1]]
         intr_value = np.array([3.0 + 1j])
-        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        result = ew._build_inter_table(s._lattice, 1, intr_index, intr_value)
         assert result[0].v == pytest.approx(3.0 + 1j)
 
     def test_deduplication(self):
@@ -960,7 +960,7 @@ class TestBuildInterTable:
         # cell 0→1 and cell 2→3 both have rr=[1,0,0], a=0, b=0
         intr_index = [[0, 1], [2, 3]]
         intr_value = np.array([1.0 + 0j, 1.0 + 0j])
-        result = ew._build_inter_table(s, 2, intr_index, intr_value)
+        result = ew._build_inter_table(s._lattice, 2, intr_index, intr_value)
         assert len(result) == 1
 
     def test_different_sites_kept(self):
@@ -970,7 +970,7 @@ class TestBuildInterTable:
         # site 0 (cell 0, uc 0) → site 2 (cell 1, uc 0)
         intr_index = [[0, 1], [0, 2]]
         intr_value = np.array([1.0 + 0j, 2.0 + 0j])
-        result = ew._build_inter_table(s, 2, intr_index, intr_value)
+        result = ew._build_inter_table(s._lattice, 2, intr_index, intr_value)
         assert len(result) == 2
 
     def test_spin_indices_always_zero(self):
@@ -978,7 +978,7 @@ class TestBuildInterTable:
         s = self._make_stdi(ncell=2)
         intr_index = [[0, 1]]
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        result = ew._build_inter_table(s._lattice, 1, intr_index, intr_value)
         assert result[0].s == 0
         assert result[0].t == 0
 
@@ -987,7 +987,7 @@ class TestBuildInterTable:
         s = self._make_stdi(ncell=4)
         intr_index = [[0, 2]]
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_inter_table(s, 1, intr_index, intr_value)
+        result = ew._build_inter_table(s._lattice, 1, intr_index, intr_value)
         assert len(result[0].r) == 3
 
     def test_inconsistent_values_warns(self, caplog):
@@ -996,7 +996,7 @@ class TestBuildInterTable:
         s = self._make_stdi(ncell=4)
         intr_index = [[0, 1], [2, 3]]
         intr_value = np.array([1.0 + 0j, 5.0 + 0j])
-        ew._build_inter_table(s, 2, intr_index, intr_value)
+        ew._build_inter_table(s._lattice, 2, intr_index, intr_value)
         assert "WARNING" in caplog.text
 
 
@@ -1027,7 +1027,7 @@ class TestBuildCoulombIntraTable:
         s = self._make_stdi(nsiteUC=2)
         intr_index = [[0]]
         intr_value = np.array([4.0 + 0j])
-        result = ew._build_coulomb_intra_table(s, 1, intr_index, intr_value)
+        result = ew._build_coulomb_intra_table(s._lattice, 1, intr_index, intr_value)
         assert len(result) == 1
         assert result[0].r == [0, 0, 0]
         assert result[0].a == 0
@@ -1040,7 +1040,7 @@ class TestBuildCoulombIntraTable:
         # sites 0 and 2 both map to uc site 0 (% 1 = 0)
         intr_index = [[0], [2]]
         intr_value = np.array([3.0 + 0j, 3.0 + 0j])
-        result = ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
+        result = ew._build_coulomb_intra_table(s._lattice, 2, intr_index, intr_value)
         assert len(result) == 1
 
     def test_different_uc_sites_kept(self):
@@ -1049,7 +1049,7 @@ class TestBuildCoulombIntraTable:
         # site 0 → uc 0, site 1 → uc 1
         intr_index = [[0], [1]]
         intr_value = np.array([1.0 + 0j, 2.0 + 0j])
-        result = ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
+        result = ew._build_coulomb_intra_table(s._lattice, 2, intr_index, intr_value)
         assert len(result) == 2
         assert result[0].a == 0
         assert result[1].a == 1
@@ -1059,7 +1059,7 @@ class TestBuildCoulombIntraTable:
         s = self._make_stdi()
         intr_index = [[0]]
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_coulomb_intra_table(s, 1, intr_index, intr_value)
+        result = ew._build_coulomb_intra_table(s._lattice, 1, intr_index, intr_value)
         assert result[0].s == 0
         assert result[0].t == 0
 
@@ -1068,7 +1068,7 @@ class TestBuildCoulombIntraTable:
         s = self._make_stdi(nsiteUC=3)
         intr_index = [[2]]  # uc site 2
         intr_value = np.array([1.0 + 0j])
-        result = ew._build_coulomb_intra_table(s, 1, intr_index, intr_value)
+        result = ew._build_coulomb_intra_table(s._lattice, 1, intr_index, intr_value)
         assert result[0].a == result[0].b == 2
 
     def test_inconsistent_values_warns(self, caplog):
@@ -1077,7 +1077,7 @@ class TestBuildCoulombIntraTable:
         s = self._make_stdi(nsiteUC=1)
         intr_index = [[0], [1]]  # both map to uc site 0
         intr_value = np.array([1.0 + 0j, 9.0 + 0j])
-        ew._build_coulomb_intra_table(s, 2, intr_index, intr_value)
+        ew._build_coulomb_intra_table(s._lattice, 2, intr_index, intr_value)
         assert "WARNING" in caplog.text
 
 

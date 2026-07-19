@@ -997,6 +997,12 @@ class StdIntList:
     # invalidated when init_site reallocates Cell).
     _cell_map: dict | None = None
 
+    # Auxiliary lattice outputs built during setup (data objects with a
+    # ``write(directory)`` method, e.g. the wannier90 lattice's initial.def /
+    # wan2site.dat).  The main flow writes them alongside gnuplot / geometry /
+    # xsf; ``None`` for lattices with no auxiliary outputs.
+    _aux_outputs: list | None = None
+
     # ------------------------------------------------------------------
     #  Auxiliary input-file base directory
     # ------------------------------------------------------------------
