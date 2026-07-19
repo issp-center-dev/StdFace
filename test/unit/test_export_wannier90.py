@@ -326,13 +326,13 @@ class TestWriteGeometry:
 # ===========================================================================
 
 class TestWriteWannier90:
-    """Tests for _write_wannier90."""
+    """Tests for the Wannier90 file format via _wannier_interaction_data."""
 
     def test_single_element_no_spin(self, tmp_path):
         """One interaction entry, nspin=1."""
         item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=0, t=0, v=1.5 + 0.5j)
         fname = str(tmp_path / "test_w90.dat")
-        ew._write_wannier90([item], 1, 1, fname, "Test")
+        ew._wannier_interaction_data([item], 1, 1, fname, "Test", 1).write()
 
         with open(fname) as f:
             lines = f.readlines()
@@ -357,7 +357,7 @@ class TestWriteWannier90:
         """Check that the reverse entry is set to conjugate."""
         item = ew._IntrItem(r=[1, 0, 0], a=0, b=0, s=0, t=0, v=1.0 + 2.0j)
         fname = str(tmp_path / "test_hc.dat")
-        ew._write_wannier90([item], 1, 1, fname, "Test")
+        ew._wannier_interaction_data([item], 1, 1, fname, "Test", 1).write()
 
         with open(fname) as f:
             lines = f.readlines()
@@ -384,7 +384,7 @@ class TestWriteWannier90:
         """nspin=2 should use extended format with s,t columns."""
         item = ew._IntrItem(r=[0, 0, 0], a=0, b=0, s=1, t=0, v=0.3 + 0j)
         fname = str(tmp_path / "test_spin.dat")
-        ew._write_wannier90([item], 1, 2, fname, "SpinTest")
+        ew._wannier_interaction_data([item], 1, 2, fname, "SpinTest", 1).write()
 
         with open(fname) as f:
             lines = f.readlines()
@@ -450,7 +450,7 @@ class TestWriteWannierBody:
         """nspin=1 writes compact format (7 columns: rx ry rz a b re im)."""
         matrix = np.array([1.0 + 0.5j])
         fp = io.StringIO()
-        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 1, matrix)
+        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 1, matrix, 1)
         lines = fp.getvalue().strip().splitlines()
         assert len(lines) == 1
         parts = lines[0].split()
@@ -461,7 +461,7 @@ class TestWriteWannierBody:
         matrix = np.zeros(4, dtype=complex)
         matrix[0] = 1.0 + 0j
         fp = io.StringIO()
-        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 2, matrix)
+        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 2, matrix, 1)
         lines = fp.getvalue().strip().splitlines()
         # With export_all=1, all 4 spin combinations are written
         assert len(lines) == 4
@@ -472,7 +472,7 @@ class TestWriteWannierBody:
         """Values from the matrix appear in the output."""
         matrix = np.array([2.5 + 0.3j])
         fp = io.StringIO()
-        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 1, matrix)
+        ew._write_wannier_body(fp, [0, 0, 0], 1, 1, 1, matrix, 1)
         content = fp.getvalue()
         assert "2.500000000000" in content
         assert "0.300000000000" in content
@@ -482,7 +482,7 @@ class TestWriteWannierBody:
         # rr=[1,0,0] → nvol=3, nsiteuc=1, nspin=1 → 3 entries
         matrix = np.ones(3, dtype=complex)
         fp = io.StringIO()
-        ew._write_wannier_body(fp, [1, 0, 0], 3, 1, 1, matrix)
+        ew._write_wannier_body(fp, [1, 0, 0], 3, 1, 1, matrix, 1)
         lines = fp.getvalue().strip().splitlines()
         assert len(lines) == 3
         # Check rx values: -1, 0, 1
@@ -748,28 +748,43 @@ class TestIntrItem:
 
 
 # ===========================================================================
-#  Tests: Module-level global state
+#  Tests: exportall resolution (no module-level state)
 # ===========================================================================
 
 class TestExportAllFlag:
-    """Tests for the _is_export_all global flag."""
+    """Tests for _resolve_export_all and per-data exportall (PB-2).
+
+    The former module-level ``_is_export_all`` global leaked the flag
+    between runs in the same process; each WannierInteractionData now
+    carries its own resolved value.
+    """
 
     def test_default_value(self):
-        """Default should be 1 (export all)."""
-        # Reset to default
-        ew._is_export_all = 1
-        assert ew._is_export_all == 1
+        """Unset export_all resolves to 1 (export all)."""
+        s = StdIntList()
+        s.solver = "HWAVE"
+        assert ew._resolve_export_all(s) == 1
+        s.export_all = 0
+        assert ew._resolve_export_all(s) == 0
 
-    def test_set_via_export_interaction(self, tmp_path, monkeypatch):
-        """export_interaction should update _is_export_all from StdI."""
+    def test_data_carries_export_all(self, tmp_path, monkeypatch):
+        """build_wannier_interactions stamps the flag on each data object."""
         monkeypatch.chdir(tmp_path)
-        ew._is_export_all = 1  # reset
         s = _make_stdI_for_interaction()
-        s.export_all = 0  # not None, so should be used
-        ew.export_interaction(s)
-        assert ew._is_export_all == 0
-        # Reset
-        ew._is_export_all = 1
+        s.export_all = 0
+        for data in ew.build_wannier_interactions(s):
+            assert data.export_all == 0
+
+    def test_no_leak_between_runs(self, tmp_path, monkeypatch):
+        """export_all=0 in one run must not leak into the next run."""
+        monkeypatch.chdir(tmp_path)
+        s0 = _make_stdI_for_interaction()
+        s0.export_all = 0
+        ew.build_wannier_interactions(s0)
+
+        s1 = _make_stdI_for_interaction()  # export_all unset -> default 1
+        for data in ew.build_wannier_interactions(s1):
+            assert data.export_all == 1
 
 
 # ===================================================================
