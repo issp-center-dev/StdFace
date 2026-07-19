@@ -166,7 +166,6 @@ def _make_chain_stdi(L: int = 4, model: str = "hubbard") -> StdIntList:
     """
     StdI = StdIntList()
     StdI.solver = "mVMC"
-    StdI.pi = math.acos(-1.0)
     StdI.model = model
     StdI.lattice = "chain"
     StdI.lGC = 0
@@ -202,7 +201,6 @@ def _make_chain_stdi(L: int = 4, model: str = "hubbard") -> StdIntList:
 
     # Phase / AntiPeriod
     StdI.phase[:] = 0.0
-    StdI.pi180 = StdI.pi / 180.0
     StdI.ExpPhase = np.ones(3, dtype=complex)
     StdI.AntiPeriod = np.zeros(3, dtype=int)
 

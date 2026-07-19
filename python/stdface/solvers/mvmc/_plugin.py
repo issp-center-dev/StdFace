@@ -105,6 +105,7 @@ _MVMC_KEYWORDS: dict[str, tuple] = {
 # -----------------------------------------------------------------------
 
 _RESET_SCALARS: list[tuple[str, object]] = [
+    ("CParaFileHead", None),
     ("NVMCCalMode", None),
     ("NLanczosMode", None),
     ("NDataIdxStart", None),

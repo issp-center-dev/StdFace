@@ -18,10 +18,13 @@ the Free Software Foundation, either version 3 of the License, or
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class ModelType(str, Enum):
@@ -980,6 +983,21 @@ class StdIntList:
     calcmode: str | None = None
 
     # ------------------------------------------------------------------
+    #  Relative bond model (recorded by expand_bonds_2d/3d)
+    # ------------------------------------------------------------------
+    # The generic bond expanders record the size-independent relative model
+    # here; the UHFk supercell normalisation replays it on the minimal cell
+    # (see LatticePlugin.setup contract).  ``None`` for lattices that bypass
+    # the expander (e.g. wannier90) — those are not normalised.
+    _rel_bonds: list | None = None
+    _rel_dim: int | None = None
+    _rel_local_fn: object | None = None
+
+    # Cell-coordinate lookup cache (built lazily by site_util._build_cell_map,
+    # invalidated when init_site reallocates Cell).
+    _cell_map: dict | None = None
+
+    # ------------------------------------------------------------------
     #  Auxiliary input-file base directory
     # ------------------------------------------------------------------
     # Base directory for auxiliary input data files read during lattice
@@ -1018,6 +1036,15 @@ class StdIntList:
                 and hasattr(cfg, name)):
             setattr(cfg, name, value)
             return
+        if name not in _STDI_OWN_FIELDS:
+            # Typo, or a field of a solver config that is not attached: the
+            # stray instance attribute would silently shadow the config field
+            # once that solver is activated.  Warn but keep the legacy
+            # behaviour of setting it.
+            logger.warning(
+                "Unknown attribute %r set on StdIntList (typo, or a field of "
+                "an inactive solver config? active solver: %s)",
+                name, self.__dict__.get("solver") or "(none)")
         object.__setattr__(self, name, value)
         # Setting the solver attaches its config so solver-specific fields
         # resolve immediately (C3).  ``_reset_vals`` no longer has to be the

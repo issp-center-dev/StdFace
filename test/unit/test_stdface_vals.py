@@ -4,6 +4,8 @@ Tests for the Python translation of StdFace_vals.h.
 """
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pytest
 
@@ -341,6 +343,41 @@ class TestStdIntListSolverFields:
     def test_constructor_default_has_no_config(self):
         """A bare StdIntList() still has no config attached."""
         assert StdIntList()._solver_cfg is None
+
+
+class TestSetattrUnknownNameWarning:
+    """__setattr__ warns on names that are neither own fields nor owned by
+    the active solver config (typo / shadowing guard)."""
+
+    @staticmethod
+    def _unknown_records(caplog):
+        return [r for r in caplog.records
+                if "Unknown attribute" in r.getMessage()]
+
+    def test_typo_warns(self, caplog):
+        s = StdIntList()
+        s.solver = "HPhi"
+        with caplog.at_level(logging.WARNING):
+            s.Lanczos_maxx = 5  # typo of Lanczos_max
+        assert self._unknown_records(caplog)
+
+    def test_inactive_config_field_warns(self, caplog):
+        """Setting an mVMC field while HPhi is active would shadow the
+        config field after a solver switch — warn."""
+        s = StdIntList()
+        s.solver = "HPhi"
+        with caplog.at_level(logging.WARNING):
+            s.NVMCCalMode = 1
+        assert self._unknown_records(caplog)
+
+    def test_legitimate_sets_do_not_warn(self, caplog):
+        s = StdIntList()
+        with caplog.at_level(logging.WARNING):
+            s.solver = "HPhi"
+            s.L = 4              # delegated own field
+            s.method = "cg"      # active config field
+            s._rel_dim = 2       # declared internal field
+        assert not self._unknown_records(caplog)
 
     def test_hwave_only_fields_resolve_via_config(self):
         """fileprefix/export_all/lattice_gp moved to HWaveConfig (C3-3).

@@ -283,6 +283,11 @@ _COMMON_RESET_SCALARS: list[tuple[str, object]] = [
     ("lambda_U", None),
     ("lambda_J", None),
     ("alpha", None),
+    # Internal lattice-derived state (relative bond model, cell-map cache)
+    ("_rel_bonds", None),
+    ("_rel_dim", None),
+    ("_rel_local_fn", None),
+    ("_cell_map", None),
 ]
 """Common scalar field resets — ``setattr(StdI, name, value)``."""
 

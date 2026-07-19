@@ -917,7 +917,6 @@ def _make_spectrum_StdI(
     s.nsite = nsite
     s.NCell = NCell
     s.NsiteUC = NsiteUC
-    s.pi = math.acos(-1.0)
     s.Cell = np.array([[0, 0, 0], [1, 0, 0]], dtype=int)
     s.tau = np.zeros((NsiteUC, 3))
     s.tau[0] = [0.0, 0.0, 0.0]

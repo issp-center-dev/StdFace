@@ -48,8 +48,6 @@ def _fill_j_all_nan(s: StdIntList) -> None:
 
 def _base_chain_stdi(L: int) -> StdIntList:
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.solver = "HPhi"
     s.lattice = "chain"
     s.a = NaN_d
@@ -120,8 +118,6 @@ def make_kondo_chain(L: int = 4) -> StdIntList:
 def make_kondo_square(L: int = 2, W: int = 2) -> StdIntList:
     """Square lattice Kondo: exercises ``input_spin`` and Kondo ``isite`` offset."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "kondo"
     s.solver = "HPhi"
     s.lattice = "square"
@@ -171,8 +167,6 @@ def make_kondo_square(L: int = 2, W: int = 2) -> StdIntList:
 def make_hubbard_triangular(L: int = 2, W: int = 2) -> StdIntList:
     """Triangular Hubbard: full fermion branch (hoppings + Coulombs)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "hubbard"
     s.solver = "HPhi"
     s.lattice = "triangular"
@@ -212,8 +206,6 @@ def make_hubbard_triangular(L: int = 2, W: int = 2) -> StdIntList:
 def make_hubbard_orthorhombic(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
     """Simple orthorhombic Hubbard (3D fermion branch including ``tpp`` / ``Vpp``)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "hubbard"
     s.solver = "HPhi"
     s.lattice = "orthorhombic"
@@ -247,8 +239,6 @@ def make_hubbard_orthorhombic(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
 def make_hubbard_fc_ortho(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
     """Face-centered orthorhombic Hubbard (``J''`` / ``Jpp`` only, no separate tpp line)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "hubbard"
     s.solver = "HPhi"
     s.lattice = "fco"
@@ -282,8 +272,6 @@ def make_hubbard_fc_ortho(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
 def make_hubbard_pyrochlore(L: int = 2, W: int = 2, H: int = 2) -> StdIntList:
     """Pyrochlore Hubbard (no ``t0''`` / ``Vpp`` in the fermion branch)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "hubbard"
     s.solver = "HPhi"
     s.lattice = "pyrochlore"
@@ -324,8 +312,6 @@ def make_hubbard_honeycomb(L: int = 2, W: int = 2) -> StdIntList:
 def make_hubbard_kagome(L: int = 2, W: int = 2) -> StdIntList:
     """Kagome Hubbard: ``t0``–``t2p`` and ``V0``–``V2p`` only (plus ``not_used_j`` on ``J'``)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "hubbard"
     s.solver = "HPhi"
     s.lattice = "kagome"
@@ -359,8 +345,6 @@ def make_hubbard_kagome(L: int = 2, W: int = 2) -> StdIntList:
 def make_hubbard_ladder(L: int = 4, W_legs: int = 2) -> StdIntList:
     """Ladder Hubbard: ``input_hopp`` uses ``t`` (not ``tp`` / ``t0p``)."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = "hubbard"
     s.solver = "HPhi"
     s.lattice = "ladder"

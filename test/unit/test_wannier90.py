@@ -200,8 +200,6 @@ def _make_wannier_StdI(
 ) -> StdIntList:
     """Create a StdIntList pre-configured for Wannier90 tests."""
     s = StdIntList()
-    s.pi = math.acos(-1.0)
-    s.pi180 = s.pi / 180.0
     s.model = model
     s.solver = "HPhi"
     s.lattice = "wannier90"

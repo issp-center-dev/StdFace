@@ -88,7 +88,7 @@ def _build_cell_map(StdI: StdIntList) -> dict[tuple[int, int, int], int]:
     dict[tuple[int, int, int], int]
         Mapping from ``(Cell[k,0], Cell[k,1], Cell[k,2])`` to ``k``.
     """
-    cell_map = getattr(StdI, '_cell_map', None)
+    cell_map = StdI._cell_map
     if cell_map is not None:
         return cell_map
     cell_map = {}

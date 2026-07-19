@@ -29,7 +29,6 @@ def _make_stdi(solver: str) -> StdIntList:
     StdI = StdIntList()
     StdI.solver = solver
     _attach_solver_config(StdI)  # C3: solver-specific fields live on the config
-    StdI.pi = math.acos(-1.0)
     return StdI
 
 
