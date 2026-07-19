@@ -7,7 +7,6 @@ and ``new_gnuplot_buffer`` / ``GnuplotBuffer``.
 from __future__ import annotations
 
 import io
-import math
 
 import numpy as np
 import pytest
@@ -768,29 +767,6 @@ class TestSetLabel:
 # ===================================================================
 
 
-class TestBackwardCompatibility:
-    """Test that functions are importable from stdface.core.stdface_model_util."""
-
-    def test_import_from_stdface_model_util(self):
-        """Test that all 4 functions are re-exported."""
-        from stdface.core.stdface_model_util import (
-            _fold_site as fs,
-            init_site as iis,
-            find_site as fis,
-            set_label as sl,
-        )
-        from stdface.lattice.site_util import _fold_site, init_site, find_site, set_label
-        assert fs is _fold_site
-        assert iis is init_site
-        assert fis is find_site
-        assert sl is set_label
-
-
-# ===================================================================
-#  _find_cell_index
-# ===================================================================
-
-
 class TestFindCellIndex:
     """Tests for _find_cell_index helper."""
 
@@ -1046,6 +1022,3 @@ class TestNewGnuplotBuffer:
         assert "0.0 0.0" in _LATTICE_GP_FOOTER
         assert "end" in _LATTICE_GP_FOOTER
         assert "pause -1" in _LATTICE_GP_FOOTER
-
-
-
