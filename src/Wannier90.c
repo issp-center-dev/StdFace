@@ -713,9 +713,10 @@ void StdFace_Wannier90(
 
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
-      if (StdI->box[i][j] != StdI->NaN_i)
+      if (StdI->box[i][j] != StdI->NaN_i) {
         sprintf(tempwords, "cutoff_tVec[%d][%d]", i, j);
         StdFace_PrintVal_d(tempwords, &StdI->cutoff_tVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+      }
     }
   }
 
@@ -734,9 +735,10 @@ void StdFace_Wannier90(
   StdFace_PrintVal_i("cutoff_UR[2]", &StdI->cutoff_UR[2], 0);
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
-      if (StdI->box[i][j] != StdI->NaN_i)
+      if (StdI->box[i][j] != StdI->NaN_i) {
         sprintf(tempwords, "cutoff_UVec[%d][%d]", i, j);
-      StdFace_PrintVal_d(tempwords, &StdI->cutoff_UVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+        StdFace_PrintVal_d(tempwords, &StdI->cutoff_UVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+      }
     }
   }
 
@@ -755,9 +757,10 @@ void StdFace_Wannier90(
   StdFace_PrintVal_i("cutoff_JR[2]", &StdI->cutoff_JR[2], 0);
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
-      if (StdI->box[i][j] != StdI->NaN_i)
+      if (StdI->box[i][j] != StdI->NaN_i) {
         sprintf(tempwords, "cutoff_JVec[%d][%d]", i, j);
-      StdFace_PrintVal_d(tempwords, &StdI->cutoff_JVec[i][j],  ((double)(StdI->box[i][j]) * 0.5));
+        StdFace_PrintVal_d(tempwords, &StdI->cutoff_JVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+      }
     }
   }
 
