@@ -15,7 +15,6 @@ from stdface.core.stdface_vals import (
     MethodType,
 )
 from stdface.core.stdface_main import (
-    BOOST_DISPATCH,
     _build_lattice_and_boost,
     _parse_input_file,
     _parse_solver_keyword_via_plugin,
@@ -284,21 +283,3 @@ class TestBuildLatticeAndBoost:
              patch("stdface.plugin.get_plugin", return_value=solver_plugin):
             with pytest.raises(ValueError):
                 _build_lattice_and_boost(StdI, "HPhi")
-
-
-class TestBoostDispatchItemsDefensive:
-    """Cover ``except KeyError: pass`` inside ``BOOST_DISPATCH.items()``."""
-
-    def test_items_skips_alias_when_get_lattice_raises(self):
-        import stdface.core.stdface_main as sm
-
-        real = sm._get_lattice
-
-        def _flaky(name: str):
-            if name == "chain":
-                raise KeyError(name)
-            return real(name)
-
-        with patch.object(sm, "_get_lattice", side_effect=_flaky):
-            entries = list(BOOST_DISPATCH.items())
-        assert isinstance(entries, list)
