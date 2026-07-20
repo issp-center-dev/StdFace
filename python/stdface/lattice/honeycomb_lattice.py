@@ -138,7 +138,6 @@ def honeycomb(StdI: StdIntList) -> "GnuplotData | None":
         StdI.V0pp = input_coulomb_v(StdI.Vpp, StdI.V0pp, "V0''")
         StdI.V1pp = input_coulomb_v(StdI.Vpp, StdI.V1pp, "V1''")
         StdI.V2pp = input_coulomb_v(StdI.Vpp, StdI.V2pp, "V2''")
-        StdI.Vp = print_val_d("V'", StdI.Vp, 0.0)
 
         not_used_j("J0", StdI.J0All, StdI.J0)
         not_used_j("J1", StdI.J1All, StdI.J1)

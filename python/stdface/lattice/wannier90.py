@@ -319,10 +319,10 @@ def _read_w90_with_cutoff(
     for i in range(3):
         for j in range(3):
             if StdI.box[i, j] != NaN_i:
-                param_name = f"{cutoff_Vec_name}[{i}][{j}]"
-            cutoff_Vec[i, j] = print_val_d(
-                param_name, cutoff_Vec[i, j], float(StdI.box[i, j]) * 0.5
-            )
+                cutoff_Vec[i, j] = print_val_d(
+                    f"{cutoff_Vec_name}[{i}][{j}]",
+                    cutoff_Vec[i, j], float(StdI.box[i, j]) * 0.5
+                )
 
     filename = f"{StdI.CDataFileHead}{file_suffix}"
     _read_w90(
