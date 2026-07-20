@@ -66,6 +66,13 @@ owns its input keyword/reset tables and output.  ``core/`` carries no
 solver-specific data; solver fields are reached through ``StdIntList``'s
 delegation to the active config.
 
+A further difference from the C version: the Python build phase **writes no
+files**.  Every output — including solver-specific extras such as
+``calcmod.def`` or the mVMC variational files — is assembled as a data object
+first and written in a final output step, which is what makes the
+``generate()`` library API (data-only mode, arbitrary output directory,
+thread safety) possible.
+
 See :doc:`plugin_tutorial` for step-by-step instructions.
 
 Source-to-Module Mapping
@@ -81,15 +88,16 @@ Python counterparts.
    * - C Source File
      - Python Module
    * - ``dry.c``
-     - ``python/__main__.py``
+     - ``stdface/__main__.py``
    * - ``StdFace_main.c``
      - ``stdface/core/stdface_main.py``
    * - ``StdFace_vals.h``
      - ``stdface/core/stdface_vals.py``
    * - ``StdFace_ModelUtil.c/h``
-     - ``stdface/core/stdface_model_util.py``
+     - ``stdface/lattice/site_util.py`` / ``input_params.py`` /
+       ``interaction_builder.py``, ``stdface/core/param_check.py``
    * - ``version.h``
-     - ``stdface/version.py``
+     - ``stdface/core/version.py``
    * - ``ChainLattice.c``
      - ``stdface/lattice/chain_lattice.py``
    * - ``SquareLattice.c``
@@ -109,6 +117,7 @@ Python counterparts.
    * - ``Pyrochlore.c``
      - ``stdface/lattice/pyrochlore.py``
    * - ``Wannier90.c``
-     - ``stdface/lattice/wannier90.py``
+     - ``stdface/lattice/wannier90.py`` (setup) /
+       ``wannier90_io.py`` (input readers)
    * - ``export_wannier90.c``
-     - ``stdface/solvers/hwave/export_wannier90.py``
+     - ``stdface/writer/wannier90_writer.py``

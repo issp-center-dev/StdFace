@@ -31,15 +31,19 @@ How the Plugin System Works
      |                                                v
      |                                         (builds geometry & interactions)
      |
-     +---> get_plugin("HPhi") ---> HPhiPlugin.write(StdI)
+     +---> get_plugin("HPhi") ---> HPhiPlugin.build_output(StdI)
                                         |
                                         v
-                                  (writes .def files)
+                                  (assembles the output container;
+                                   write() = build_output().write())
 
 1. The input file specifies ``lattice = ...`` and ``model = ...``.
 2. ``stdface_main`` looks up the lattice plugin by name and calls ``setup(StdI)``.
-3. After lattice construction, the solver plugin's ``write(StdI)`` generates
-   output files.
+3. After lattice construction, the solver plugin's ``build_output(StdI)``
+   assembles the output as data; writing happens in a final output step
+   (``write()`` is provided by the base class as
+   ``build_output(StdI).write()``).  Nothing writes to the filesystem during
+   the build.
 
 Both registries use **auto-registration**: when a module is imported it creates
 a plugin instance and registers it.  No central dispatch table needs to be
@@ -180,9 +184,19 @@ Key points:
 
 - The ``LatticePlugin`` subclass defines ``name``, ``aliases``, ``ndim``, and
   ``setup()``.
+- ``setup()`` must follow the ordering contract documented in the
+  ``LatticePlugin.setup`` docstring (``NsiteUC`` before ``init_site``, ``tau``
+  after it, ``malloc_interactions`` before adding terms, ...), and must **not
+  write any files** — auxiliary outputs are queued as data objects on
+  ``StdI._aux_outputs`` and written by the main flow.  Prefer the declarative
+  relative-bond table (``expand_bonds_2d`` / ``expand_bonds_3d``) over manual
+  bond loops; the expander also records the relative model used by the UHFk
+  supercell normalisation.
 - ``register_lattice()`` is called at module level — the plugin registers itself
   when the module is imported.
-- If the lattice supports HPhi Boost mode, override ``boost(self, StdI)``.
+- If the lattice supports HPhi Boost mode, override ``boost(self, StdI)``; it
+  likewise builds ``boost.def`` as data onto ``StdI._aux_outputs`` (see
+  ``chain_lattice.chain_boost``).
 
 Step 2: Register the module for auto-discovery
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -294,14 +308,21 @@ the ``NaN_i`` sentinel instead, since ``None`` cannot be stored in them).
 Step 3: Implement the plugin
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create ``python/stdface/solvers/mysolver/_plugin.py``.  Reading or writing
-``StdI.MaxIter`` transparently reaches the attached ``MySolverConfig`` (via
+Create ``python/stdface/solvers/mysolver/_plugin.py``.  The abstract core of
+the contract is ``build_output``: it assembles the output as a data object
+(with ``write(directory)`` / ``to_dict()``); the base class provides
+``write()`` as ``build_output(StdI).write()``, and the same container backs
+the ``generate()`` library API.  Reading or writing ``StdI.MaxIter``
+transparently reaches the attached ``MySolverConfig`` (via
 ``StdIntList.__getattr__`` / ``__setattr__``):
 
 .. code-block:: python
 
    """MySolver plugin."""
    from __future__ import annotations
+
+   from dataclasses import dataclass
+   from pathlib import Path
 
    from ...plugin import SolverPlugin, register, register_config
    from ...core.stdface_vals import StdIntList
@@ -310,6 +331,20 @@ Create ``python/stdface/solvers/mysolver/_plugin.py``.  Reading or writing
        store_with_check_dup_s,
    )
    from .config import MySolverConfig
+
+
+   @dataclass
+   class MySolverOutput:
+       """Output container: data first, file I/O only in write()."""
+
+       content: str
+
+       def write(self, directory: Path = Path(".")) -> None:
+           with open(Path(directory) / "mysolver_config.def", "w") as fp:
+               fp.write(self.content)
+
+       def to_dict(self) -> dict:
+           return {"content": self.content}
 
 
    class MySolverPlugin(SolverPlugin):
@@ -339,12 +374,12 @@ Create ``python/stdface/solvers/mysolver/_plugin.py``.  Reading or writing
            if StdI.MaxIter is None:
                StdI.MaxIter = 500
 
-       def write(self, StdI: StdIntList) -> None:
-           with open("mysolver_config.def", "w") as fp:
-               fp.write(f"MaxIter = {StdI.MaxIter}\n")
-               fp.write(f"Threshold = {StdI.Threshold}\n")
-               if StdI.OutputFile is not None:
-                   fp.write(f"OutputFile = {StdI.OutputFile}\n")
+       def build_output(self, StdI: StdIntList) -> MySolverOutput:
+           lines = [f"MaxIter = {StdI.MaxIter}\n",
+                    f"Threshold = {StdI.Threshold}\n"]
+           if StdI.OutputFile is not None:
+               lines.append(f"OutputFile = {StdI.OutputFile}\n")
+           return MySolverOutput("".join(lines))
 
 
    # Auto-register on import: plugin under its name, config under the same name.
@@ -357,8 +392,8 @@ Create ``python/stdface/solvers/mysolver/_plugin.py``.  Reading or writing
    ``trans.def`` / ``modpara.def`` / ``namelist.def`` / Green's functions)
    should subclass :class:`ExpertModeSolverPlugin` instead of
    ``SolverPlugin`` and implement :meth:`modpara_lines` (and optionally
-   ``namelist_entries`` / ``has_two_body_green`` / ``write_solver_files``);
-   the base class assembles them into an ``ExpertModeOutput`` and writes it.
+   ``namelist_entries`` / ``has_two_body_green`` / ``build_solver_files``);
+   the base class assembles them into an ``ExpertModeOutput``.
    See ``solvers/uhf/`` for a minimal example.
 
 Step 4: Make it discoverable
@@ -462,7 +497,8 @@ SolverPlugin
 ^^^^^^^^^^^^
 
 Defined in ``python/stdface/plugin.py``.  A solver implements the four
-required members plus ``write``; the optional hooks default to no-ops.
+required members plus ``build_output``; ``write`` is provided by the base
+class and the optional hooks default to no-ops.
 
 .. list-table::
    :header-rows: 1
@@ -488,10 +524,11 @@ required members plus ``write``; the optional hooks default to no-ops.
      - ``list[tuple]`` property
      - Yes
      - Array-fill reset table (``(name, fill_value)``)
-   * - ``write(StdI)``
+   * - ``build_output(StdI)``
      - method
      - Yes
-     - Emit this solver's output files
+     - Assemble the output container (``write()`` =
+       ``build_output(StdI).write()`` comes from the base class)
    * - ``set_defaults(StdI)``
      - method
      - No
@@ -508,6 +545,14 @@ required members plus ``write``; the optional hooks default to no-ops.
      - method
      - No
      - Reject unsupported parameter combinations (raise ``ValueError``)
+   * - ``wants_lattice_gp(StdI)``
+     - method
+     - No
+     - Whether the solver-independent ``lattice.gp`` is built (default ``True``)
+   * - ``wants_geometry_file(StdI)``
+     - method
+     - No
+     - Whether ``geometry.dat`` is built (default ``True``)
 
 Registration: call ``register(MyPlugin())`` and ``register_config("Name",
 MyConfig)`` at module level.
@@ -538,10 +583,12 @@ It implements ``write`` via ``build_output`` and adds:
      - method
      - No
      - List ``greentwo.def`` in the namelist (default: ``True``)
-   * - ``write_solver_files(StdI)``
+   * - ``build_solver_files(StdI)``
      - method
      - No
-     - Emit solver-specific extra files (e.g. mVMC variational files)
+     - Build solver-specific extra files as ``SolverFileData`` (e.g. HPhi
+       calcmod/excitation, mVMC variational files); collected into
+       ``ExpertModeOutput.solver_files``
    * - ``build_output(StdI)``
      - method
      - No
@@ -562,14 +609,15 @@ per-file template method.  ``write()`` calls ``build_output()``:
      |-- build_interactions()         # coulomb*/hund/exchange/... (sets L* flags)
      |-- build_modpara()              # modpara.def
      |-- build_green_one() / build_green_two()
-     |-- write_solver_files()         # solver-specific extra files
+     |-- build_solver_files()         # solver extras as SolverFileData
      |-- build_namelist()             # namelist.def
-   write() = build_output(StdI).write()
+   write() = build_output(StdI).write()   # the only step that touches disk
 
-A plain ``SolverPlugin`` (no modpara/namelist) just overrides ``write``
-directly, or builds its own output container.  See ``solvers/hwave/`` for a
-plugin that returns either an ``ExpertModeOutput`` (UHFR ``.def``) or a
-``WannierModeOutput`` (UHFK Wannier90) depending on ``calcmode``.
+A plain ``SolverPlugin`` (no modpara/namelist) implements ``build_output``
+with its own output container, as in the MySolver example above.  See
+``solvers/hwave/`` for a plugin that returns either an ``ExpertModeOutput``
+(UHFR ``.def``) or a ``WannierModeOutput`` (UHFK Wannier90) depending on
+``calcmode``.
 
 Existing Plugins Reference
 --------------------------

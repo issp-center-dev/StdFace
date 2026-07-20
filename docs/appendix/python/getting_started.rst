@@ -60,10 +60,16 @@ to a chosen directory (or not write at all):
 
 .. code-block:: python
 
-   from stdface.core.stdface_main import generate
+   from stdface import generate
 
    output = generate("stan.in", solver="HPhi", output_dir="run1")
    data = output.to_dict()        # output_dir=None to skip writing files
+
+``generate()`` builds everything in memory first and only then writes into
+*output_dir*; with ``output_dir=None`` nothing touches the filesystem and the
+returned container includes the solver-specific files as well.  The call is
+thread-safe.  Besides a ``stan.in`` path, *source* may also be a ``.toml`` /
+``.json`` file or a plain ``dict``.
 
 Running Tests
 -------------
@@ -76,5 +82,7 @@ Running Tests
    # Unit tests with coverage report
    python3 -m pytest test/unit/ --cov=python --cov-report=html
 
-   # Integration tests (all solvers, all lattices)
-   bash test/run_all_integration.sh
+   # Integration tests (all solvers, all lattices; run from the repo root)
+   pip install -e python/    # puts the ``stdface`` command on PATH
+   cmake -B build -DHPHI=ON -DMVMC=ON -DUHF=ON -DHWAVE=ON .
+   cd build && ctest
