@@ -98,7 +98,7 @@ def triangular(StdI: StdIntList) -> "GnuplotData | None":
         not_used_d("t0'", StdI.t0p)
         not_used_d("t1'", StdI.t1p)
         not_used_d("t2'", StdI.t2p)
-        not_used_d("t''", StdI.tp)
+        not_used_d("t''", StdI.tpp)
         not_used_d("t0''", StdI.t0pp)
         not_used_d("t1''", StdI.t1pp)
         not_used_d("t2''", StdI.t2pp)

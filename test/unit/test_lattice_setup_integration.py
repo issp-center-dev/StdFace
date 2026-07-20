@@ -227,6 +227,15 @@ class TestTriangularSpin:
         # Default a=1 → Ly on the second basis vector along L is Llength * sqrt(3)/2
         assert s.direct[1, 1] == pytest.approx(0.5 * math.sqrt(3.0))
 
+    def test_spin_rejects_tpp(self, tmp_path, monkeypatch):
+        """t'' is rejected in the spin model (C bug #1: the check used to
+        inspect tp, silently ignoring a specified t'')."""
+        monkeypatch.chdir(tmp_path)
+        s = make_spin_stdint_2d(lattice="triangular", L=2, W=2)
+        s.tpp = 0.5
+        with pytest.raises(ValueError):
+            triangular(s)
+
 
 class TestLadderSpin:
     """``ladder``: ladder (NsiteUC equals number of legs)."""

@@ -102,7 +102,6 @@ def kagome(StdI: StdIntList) -> "GnuplotData | None":
         not_used_d("mu", StdI.mu)
         not_used_d("U", StdI.U)
         not_used_d("t", StdI.t)
-        not_used_d("t0", StdI.t)
         not_used_d("t0", StdI.t0)
         not_used_d("t1", StdI.t1)
         not_used_d("t2", StdI.t2)
