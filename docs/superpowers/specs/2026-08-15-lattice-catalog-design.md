@@ -119,7 +119,10 @@ lattice_catalog/
 - **符号は必ずデータ(scale / coeff)に持たせ、コメントに置かない。**
 - **param 参照の一般形**(拡張方言):
   `{param: <名>, scale: <実数, 省略時 1.0>, default: <最終値, 省略時 0>}`
-  → 値 = scale × param(param 未指定時は default)。
+  → **param 指定時**: 値 = scale × param。
+  **param 未指定時**: 値 = default(**スケールは適用しない最終値**)。
+  例: `{param: 2S, scale: 0.5, default: 0.5}` → 2S=1 指定で S=0.5、
+  未指定でも S=0.5。この条件分岐は C7 検査とツールテストに明記する。
 - wannier90 の `H_mn → −H_mn` 反転は別規則として §5.5 / manual 5 章に明記。
 
 ### 4.4 J テンソルとパラメータ解決(規範)
@@ -200,17 +203,21 @@ lattice_catalog/
 
 構造検査(C1–C9)+ manifest 突合(C10)+ **計数展開**(C11):
 
-- C1 catalog ヘッダ(schema **と dialect** の値)
+- C1 catalog ヘッダ(schema **と dialect** の値、および `lattice`/`model`
+  メタデータ — C10 の照合元。例:
+  `catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: chain, model: spin}`)
 - C2 schema 検査(null 文書、必須キー、型、サイトラベル重複、
   dimension/R/size の整数・次元整合)
 - C3 R 次元 = dimension = size 次元
 - C4 ラベル整合(bonds の from/to、**onsite のラベル**、
   geometry.sites と site_dof の集合一致)
 - C5 type ↔ couplings 整合(未定義参照・未使用定義)
-- C6 反転同値 `(i,j,R)≡(j,i,−R)` での重複検出
+- C6 反転同値での重複検出。同値キーは **type を含む**
+  `(type, i, j, R) ≡ (type, j, i, −R)`(同一幾何ボンド上の t/V 共存は正当)
 - C7 param 参照の目録整合(scale/default の型検査を含む)
 - C8 J coupling の 9 成分完全性と **ops 対 ↔ param 接尾辞の対応**
-  (`[Sx,Sy] ↔ …xy` 等、過不足・重複なし)
+  (`[Sx,Sy] ↔ …xy` 等)。**総項数 = 9 かつ ops 対の重複はエラー**
+  (重複項は交換係数の二重加算になるため)
 - C9 演算子と site_dof の型整合(§4.5 の表)、tensor_terms の ops 長
 - C10 manifest 全項目突合(lattice/model/dimension/n_sites_uc/
   bonds_per_uc/source の存在)

@@ -14,11 +14,11 @@
 
 - 成果物はすべて `lattice_catalog/` 配下。リポジトリの既存コードは一切変更しない。
 - マニュアル・YAML コメントは日本語。
-- 各 YAML の先頭に `catalog: {schema: stdface-catalog/0.1, dialect: experimental}` を置く。
+- 各 YAML の先頭に `catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: <格子名>, model: <spin|hubbard|kondo|wannier90>}` を置く(lattice/model は C10 の manifest 照合元)。
 - ボンド type 名は StdFace キーワード名そのまま。プライムを含む名前(`J0'` 等)は YAML では必ず引用符付き。
 - **R の定義**: `R = cell(to) − cell(from)`。実変位 δ = (frac_to − frac_from) + R·A。
 - **向き = ソース順保持**: bonds は参照実装の向きのまま書く(`_BONDS` の `site_i → site_j`、Kondo は `general_j(..., 遍歴, 局在)` の引数順)。正準形への並べ替えは**しない**。各ボンドは一度だけ書き、リンタが反転同値 `(i,j,R)≡(j,i,−R)` の重複を検出する。反転時の係数変換(hopping: 複素共役、交換テンソル: 転置)は消費側規範として CONVENTIONS に記載。
-- **value 意味論**: `H = Σ value·operator` の物理ハミルトニアン係数(solver 出力の係数規約とは別物 — スペック §4.3 の検証連鎖)。**符号は必ずデータに持たせる**: param 参照の一般形は `{param: <名>, scale: <実数, 省略時1.0>, default: <最終値, 省略時0>}`、値 = scale × param。符号表(スペック §4.3): t 族 scale −1、mu/h/Gamma/Gamma_y coeff −1、U/V/D/J 族/Kondo J は +。
+- **value 意味論**: `H = Σ value·operator` の物理ハミルトニアン係数(solver 出力の係数規約とは別物 — スペック §4.3 の検証連鎖)。**符号は必ずデータに持たせる**: param 参照の一般形は `{param: <名>, scale: <実数, 省略時1.0>, default: <最終値, 省略時0>}`。**param 指定時は scale × param、未指定時は default をそのまま(スケール適用なしの最終値)**。符号表(スペック §4.3): t 族 scale −1、mu/h/Gamma/Gamma_y coeff −1、U/V/D/J 族/Kondo J は +。
 - J 族は 9 成分 tensor_terms 正準形。**パラメータ解決順**(`input_params.py::_resolve_spin_matrix` と同一): 成分局所 > 成分大域 > スカラー局所(対角) > スカラー大域(対角) > 0。競合規則(スカラー同士・スカラーvs行列・行列vs行列)とプライム系(大域 fallback なし)の解決表を CONVENTIONS に規範として記載。
 - twist は度単位、境界 n 回横断で `exp(i·n·π·θ/180)`。`{twist: {param: phase0}}` 等で参照。
 - 出典記録は「ファイル名 + 関数名 + 参照コミットハッシュ」(行番号は補助)。
@@ -59,7 +59,9 @@
 # lattice_catalog 記述規約 (stdface-catalog/0.1)
 
 1. 位置づけと dialect 宣言
-   - 各 YAML 先頭: catalog: {schema: stdface-catalog/0.1, dialect: experimental}
+   - 各 YAML 先頭: catalog: {schema: stdface-catalog/0.1,
+     dialect: experimental, lattice: <格子名>, model: <模型名>}
+     (lattice/model は manifest 照合 (C10) の照合元)
    - draft 仕様準拠部分と拡張方言(§7)の区別
 2. ファイル構成(自己完結: catalog / geometry / system / model)
 3. geometry 規約(サイト順序 = sites 配列順 = 仕様のサイト番号)
@@ -126,14 +128,14 @@ files: {}
 
 | ID | 検査内容 |
 |----|----------|
-| C1 | `catalog.schema == "stdface-catalog/0.1"` **かつ** `catalog.dialect == "experimental"` |
+| C1 | `catalog.schema == "stdface-catalog/0.1"` **かつ** `catalog.dialect == "experimental"` **かつ** `catalog.lattice`/`catalog.model` が存在 |
 | C2 | schema 検査: 文書が dict、geometry/system/model の必須キーと型、サイトラベル重複なし、dimension は正整数、R/size 要素は整数、site_dof が存在 |
 | C3 | R の長さ = dimension = size の長さ |
 | C4 | bonds の from/to、**onsite のサイトラベル**が定義済み。`geometry.sites` のラベル集合 = `site_dof` のキー集合 |
 | C5 | bonds の type ↔ couplings キー整合(未定義参照・未使用定義) |
-| C6 | 反転同値 `(i,j,R) ≡ (j,i,−R)` での重複検出(向きの並べ替え検査はしない — ソース順保持のため) |
+| C6 | 反転同値での重複検出。同値キーは **type を含む** `(type,i,j,R) ≡ (type,j,i,−R)`(同一幾何ボンド上の t/V 共存は正当)。向きの並べ替え検査はしない — ソース順保持のため |
 | C7 | `{param: ...}` 参照名が目録に存在。`scale` は実数、`default` は数値 |
-| C8 | J 型 coupling(tensor_terms が Sx/Sy/Sz の 2 サイト積のもの)は 9 成分を一度ずつ持ち、ops 対と param 接尾辞が対応(`[Sx,Sy]↔…xy` 等) |
+| C8 | J 型 coupling(tensor_terms が Sx/Sy/Sz の 2 サイト積のもの)は**総項数がちょうど 9**、ops 対の**重複はエラー**、ops 対と param 接尾辞が対応(`[Sx,Sy]↔…xy` 等) |
 | C9 | 演算子と site_dof の型整合: hop/density-density は fermion–fermion、`s_i . S_j` は fermion–spin(この順)、J テンソルは spin–spin。tensor_terms の ops 長 = ボンド 2 / onsite 1 |
 | C10 | manifest 全キー(lattice/model/dimension/n_sites_uc/bonds_per_uc/coordination/min_size_for_check/source)の存在と、n_sites_uc・dimension・bonds_per_uc の一致 |
 | C11 | **計数展開**: min_size_for_check のトーラス上に bonds を展開し、ラベル×type の配位数を実測して manifest の coordination と比較 |
@@ -151,11 +153,12 @@ files: {}
 
 ```python
 def reversal_dup(bonds):
-    """C6: 反転同値 (i,j,R)~(j,i,-R) での重複検出。"""
+    """C6: 反転同値 (type,i,j,R)~(type,j,i,-R) での重複検出。
+    キーに type を含める — 同一幾何ボンド上の t/V 共存は正当。"""
     seen, errs = set(), []
     for b in bonds:
-        k = (b["from"], b["to"], tuple(b["R"]))
-        rk = (b["to"], b["from"], tuple(-x for x in b["R"]))
+        k = (b["type"], b["from"], b["to"], tuple(b["R"]))
+        rk = (b["type"], b["to"], b["from"], tuple(-x for x in b["R"]))
         if k in seen or rk in seen:
             errs.append(f"C6: (逆向き)重複ボンド {b}")
         seen.add(k)
@@ -168,46 +171,49 @@ _J_COMPONENTS = {  # C8: ops 対 ↔ param 接尾辞
 }
 
 def check_j_coupling(type_name, tensor_terms):
-    """C8: 9 成分完全性と ops↔接尾辞対応。"""
+    """C8: 総項数 9・重複なし・ops↔接尾辞対応。
+    重複 ops 対は交換係数の二重加算になるため明示的にエラー。"""
     errs, seen = [], set()
-    for tt in tensor_terms:
-        pair = tuple(tt["ops"])
+    if len(tensor_terms) != 9:
+        errs.append(f"C8: {type_name}: 項数 {len(tensor_terms)} != 9")
+    for i, tt in enumerate(tensor_terms):
+        pair = tuple(tt.get("ops", []))
         suffix = _J_COMPONENTS.get(pair)
         if suffix is None:
-            errs.append(f"C8: {type_name}: 不正な ops 対 {pair}")
+            errs.append(f"C8: {type_name}[{i}]: 不正な ops 対 {pair}")
             continue
-        expected = f"{type_name}{suffix}"
-        got = tt["coeff"].get("param") if isinstance(tt["coeff"], dict) else None
-        if got != expected:
-            errs.append(f"C8: {type_name}: param {got} != {expected}")
+        if pair in seen:
+            errs.append(f"C8: {type_name}[{i}]: ops 対 {pair} の重複")
         seen.add(pair)
-    if len(seen) != 9:
-        errs.append(f"C8: {type_name}: 成分数 {len(seen)} != 9")
+        coeff = tt.get("coeff")
+        expected = f"{type_name}{suffix}"
+        got = coeff.get("param") if isinstance(coeff, dict) else None
+        if got != expected:
+            errs.append(f"C8: {type_name}[{i}]: param {got} != {expected}")
     return errs
 
 def expand_and_count(dim, labels, bonds, size):
     """C11: min_size トーラス上でボンドを展開し、
-    ラベル×type の配位数(そのラベルのサイト 1 個に接続する本数)を返す。"""
+    ラベル×type の配位数(そのラベルのサイト 1 個に接続する本数)を返す。
+    from/to 双方の接続を数える。R=0 の同一ラベル自己ボンドは現行
+    StdFace に存在しない前提とし、検出したら C2 エラーにする(呼び出し
+    側で事前検査)。"""
     import itertools
     ncells = 1
     for s in size:
         ncells *= s
     touch = {lb: {} for lb in labels}          # label -> type -> 接続本数合計
-    for cell in itertools.product(*[range(s) for s in size]):
+    for _cell in itertools.product(*[range(s) for s in size]):
         for b in bonds:
-            to_cell = tuple((c + r) % s for c, r, s in zip(cell, b["R"], size))
             t = b["type"]
             touch[b["from"]][t] = touch[b["from"]].get(t, 0) + 1
             touch[b["to"]][t] = touch[b["to"]].get(t, 0) + 1
-            if b["from"] == b["to"] and tuple(b["R"]) == (0,) * dim:
-                pass  # 自己ループは二重加算しない(実際には存在しない想定)
-            _ = to_cell
     # ラベルごとのサイト数 = ncells なので配位数 = 合計 / ncells
     return {lb: {t: n // ncells for t, n in d.items()} for lb, d in touch.items()}
 ```
 
-(注: `expand_and_count` は from/to 双方の接続を数える。R=0 の同一
-ラベル自己ボンドは現行 StdFace に存在しないため考慮不要。)
+(注: 実装時は C8/C9 の診断に coupling 名と項番号を含め、キー欠落は
+例外でなく該当チェックの診断として報告する。)
 
 - [ ] **Step 4: keyword_inventory.py を書く**
 
@@ -272,8 +278,11 @@ assert ベースでよい)。最低限:
   (`J0'x` 等)が canonical に含まれる / 出力が安定ソート・重複なし /
   ソルバーレジストリの件数 ≧ 4(将来プラグイン追加の検知)
 - リンタ C1–C11: 各チェックの正例・負例(インライン YAML 文字列で
-  最小ケースを構成 — 壊れた schema、逆向き重複、9 成分欠落、
-  型不整合 fermion–spin、manifest 不一致、計数展開の配位数不一致)
+  最小ケースを構成 — 壊れた schema、逆向き重複(同 type)と
+  t/V 共存の正当性、9 成分の欠落・重複・10 項、型不整合 fermion–spin、
+  manifest 不一致、計数展開の配位数不一致)
+- param 参照の意味論: param 指定時 = scale × param、未指定時 =
+  default(スケール適用なし)の条件分岐を C7 検査・テストで固定
 - 不正 YAML(パース不能・null 文書)で例外にならず診断が出ること
 
 Run: `python3 lattice_catalog/tools/test_tools.py`
@@ -323,7 +332,7 @@ chain の抽出済み事実:
 # 検算は manifest.yaml の chain/chain_spin.yaml エントリを参照。
 # 出典: python/stdface/lattice/chain_lattice.py::chain (_BONDS), commit <hash>
 
-catalog: {schema: stdface-catalog/0.1, dialect: experimental}
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: chain, model: spin}
 
 geometry:
   dimension: 1
@@ -408,10 +417,10 @@ model:
 ```yaml
 # StdFace chain / Hubbard 模型
 # stan.in 対応例:  model="Hubbard" / lattice="chain" / L=16 / t=1.0 / U=4.0
-# 検算は manifest.yaml を参照。ハミルトニアン寄与は -t·hop (CONVENTIONS 6章)
+# 検算は manifest.yaml を参照。符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
 # 出典: python/stdface/lattice/chain_lattice.py::chain (_BONDS), commit <hash>
 
-catalog: {schema: stdface-catalog/0.1, dialect: experimental}
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: chain, model: hubbard}
 
 geometry:
   dimension: 1
@@ -476,7 +485,7 @@ model:
 # 現行実装のサイト倍加 (前半=局在 S2, 後半=遍歴) との対応は manual 4章。
 # 出典: python/stdface/lattice/chain_lattice.py::chain (_BONDS), commit <hash>
 
-catalog: {schema: stdface-catalog/0.1, dialect: experimental}
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: chain, model: kondo}
 
 geometry:
   dimension: 1
