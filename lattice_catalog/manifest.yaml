@@ -357,6 +357,41 @@ files:
       A_s: {J: 1}
     min_size_for_check: [3, 3, 3]
     source: {file: python/stdface/lattice/orthorhombic.py, func: orthorhombic, commit: 1cf9f86a394d01f9efe180031e14bfa5d344bfcc}
+  fc_ortho/fc_ortho_spin.yaml:
+    lattice: fc_ortho
+    model: spin
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {J0: 2, J1: 2, J2: 2, "J0'": 1, "J1'": 1, "J2'": 1}
+    coordination:
+      A: {J0: 4, J1: 4, J2: 4, "J0'": 2, "J1'": 2, "J2'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/fc_ortho.py, func: fc_ortho, commit: 8e3601167d1254807f58ce365107333f1d505fa0}
+  fc_ortho/fc_ortho_hubbard.yaml:
+    lattice: fc_ortho
+    model: hubbard
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 2, t1: 2, t2: 2, "t0'": 1, "t1'": 1, "t2'": 1,
+                   V0: 2, V1: 2, V2: 2, "V0'": 1, "V1'": 1, "V2'": 1}
+    coordination:
+      A: {t0: 4, t1: 4, t2: 4, "t0'": 2, "t1'": 2, "t2'": 2,
+          V0: 4, V1: 4, V2: 4, "V0'": 2, "V1'": 2, "V2'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/fc_ortho.py, func: fc_ortho, commit: 8e3601167d1254807f58ce365107333f1d505fa0}
+  fc_ortho/fc_ortho_kondo.yaml:
+    lattice: fc_ortho
+    model: kondo
+    dimension: 3
+    n_sites_uc: 2
+    bonds_per_uc: {J: 1, t0: 2, t1: 2, t2: 2, "t0'": 1, "t1'": 1, "t2'": 1,
+                   V0: 2, V1: 2, V2: 2, "V0'": 1, "V1'": 1, "V2'": 1}
+    coordination:
+      A_c: {J: 1, t0: 4, t1: 4, t2: 4, "t0'": 2, "t1'": 2, "t2'": 2,
+            V0: 4, V1: 4, V2: 4, "V0'": 2, "V1'": 2, "V2'": 2}
+      A_s: {J: 1}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/fc_ortho.py, func: fc_ortho, commit: 8e3601167d1254807f58ce365107333f1d505fa0}
 
 # 記入例(Task 1 で実エントリを追加):
 # chain/chain_spin.yaml:
