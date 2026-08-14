@@ -1,0 +1,149 @@
+# StdFace honeycomb / Kondo 格子模型
+# stan.in 対応例:  model="Kondo" / lattice="honeycomb" / W=4 / L=4 / t=1.0 / J=1.0
+# 2 物理サイト A/B、各々を _c (遍歴電子) / _s (局在スピン) の 2 ラベルに分解
+# (CONVENTIONS 6.7章)。Kondo J ボンドは物理サイトごとに 1 本、遍歴側が
+# 第 1 端点 (A_c→A_s, B_c→B_s) — 参照実装が単位胞内の各サイトを倍加する
+# 順序をそのまま反映する。
+# 磁場 (h/Gamma/Gamma_y) は遍歴電子と局在スピンの両方に適用される
+# (python/stdface/core/model_plugin.py::KondoModel)。
+# 現行実装のサイト倍加 (前半=局在 S2, 後半=遍歴) との対応は manual 4章。
+# 出典: python/stdface/lattice/honeycomb_lattice.py::honeycomb (_BONDS), commit e42ef547c5fb073d78200752c5c5ff01375d4619
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: honeycomb, model: kondo}
+
+geometry:
+  dimension: 2
+  lattice_vectors:
+    a1: [1.0, 0.0]                         # StdFace: Wx, Wy
+    a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly
+  sites:
+    - {label: A_c, frac: [0.0, 0.0]}                             # 遍歴電子 (物理サイト A, tau[0])
+    - {label: A_s, frac: [0.0, 0.0]}                             # 局在スピン (同上)
+    - {label: B_c, frac: [0.3333333333333333, 0.3333333333333333]}  # 遍歴電子 (物理サイト B, tau[1])
+    - {label: B_s, frac: [0.3333333333333333, 0.3333333333333333]}  # 局在スピン (同上)
+
+system:
+  finite: true
+  size: [3, 3]                    # StdFace: W, L
+  boundary:
+    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase1}}
+
+model:
+  site_dof:
+    A_c: {fermion: {orbitals: 1}}
+    A_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    B_c: {fermion: {orbitals: 1}}
+    B_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # Kondo 結合はソース順 = general_j(..., 遍歴, 局在) の引数順。
+    # 遍歴 A_c/B_c が第 1 端点 (s_i . S_j の役割と一致)。物理サイト順
+    # (A then B) で単位胞内を倍加する参照実装の走査順を保持する。
+    - {from: A_c, to: A_s, R: [0, 0], type: J}   # Kondo 結合 (物理サイト A, セル内)
+    - {from: B_c, to: B_s, R: [0, 0], type: J}   # Kondo 結合 (物理サイト B, セル内)
+    # --- 最近接 (nn=1): Kitaev x/y/z 慣例で t1=x, t2=y, t0=z に対応 ---
+    - {from: A_c, to: B_c, R: [0, 0], type: t0}      # セル内ボンド (Kitaev z 相当)
+    - {from: B_c, to: A_c, R: [1, 0], type: t1}      # W 方向 (Kitaev x 相当)
+    - {from: B_c, to: A_c, R: [0, 1], type: t2}      # L 方向 (Kitaev y 相当)
+    # --- 第二近接 (nn=2) ---
+    - {from: A_c, to: A_c, R: [1, 0], type: "t2'"}
+    - {from: B_c, to: B_c, R: [1, 0], type: "t2'"}
+    - {from: A_c, to: A_c, R: [0, 1], type: "t1'"}
+    - {from: B_c, to: B_c, R: [0, 1], type: "t1'"}
+    - {from: A_c, to: A_c, R: [1, -1], type: "t0'"}
+    - {from: B_c, to: B_c, R: [1, -1], type: "t0'"}
+    # --- 第三近接 (nn=3) ---
+    - {from: A_c, to: B_c, R: [1, -1], type: "t1''"}
+    - {from: A_c, to: B_c, R: [-1, -1], type: "t0''"}
+    - {from: A_c, to: B_c, R: [-1, 1], type: "t2''"}
+    # --- 最近接 (V) ---
+    - {from: A_c, to: B_c, R: [0, 0], type: V0}
+    - {from: B_c, to: A_c, R: [1, 0], type: V1}
+    - {from: B_c, to: A_c, R: [0, 1], type: V2}
+    # --- 第二近接 (V) ---
+    - {from: A_c, to: A_c, R: [1, 0], type: "V2'"}
+    - {from: B_c, to: B_c, R: [1, 0], type: "V2'"}
+    - {from: A_c, to: A_c, R: [0, 1], type: "V1'"}
+    - {from: B_c, to: B_c, R: [0, 1], type: "V1'"}
+    - {from: A_c, to: A_c, R: [1, -1], type: "V0'"}
+    - {from: B_c, to: B_c, R: [1, -1], type: "V0'"}
+    # --- 第三近接 (V) ---
+    - {from: A_c, to: B_c, R: [1, -1], type: "V1''"}
+    - {from: A_c, to: B_c, R: [-1, -1], type: "V0''"}
+    - {from: A_c, to: B_c, R: [-1, 1], type: "V2''"}
+
+  couplings:
+    t0:     {operator: "hop", value: {param: t0, scale: -1.0}}
+    t1:     {operator: "hop", value: {param: t1, scale: -1.0}}
+    t2:     {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t2'":  {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    "t1'":  {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    "t0'":  {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t1''": {operator: "hop", value: {param: "t1''", scale: -1.0}}
+    "t0''": {operator: "hop", value: {param: "t0''", scale: -1.0}}
+    "t2''": {operator: "hop", value: {param: "t2''", scale: -1.0}}
+    V0:     {operator: "density-density", value: {param: V0}}
+    V1:     {operator: "density-density", value: {param: V1}}
+    V2:     {operator: "density-density", value: {param: V2}}
+    "V2'":  {operator: "density-density", value: {param: "V2'"}}
+    "V1'":  {operator: "density-density", value: {param: "V1'"}}
+    "V0'":  {operator: "density-density", value: {param: "V0'"}}
+    "V1''": {operator: "density-density", value: {param: "V1''"}}
+    "V0''": {operator: "density-density", value: {param: "V0''"}}
+    "V2''": {operator: "density-density", value: {param: "V2''"}}
+    J:      {operator: "s_i . S_j", value: {param: J}}   # +J s·S (第1端点=遍歴)
+
+  onsite:
+    A_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A_s:
+      field_z:                   # 局在側にも同じ 3 成分
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    B_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    B_s:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}

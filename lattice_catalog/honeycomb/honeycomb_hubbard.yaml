@@ -1,0 +1,120 @@
+# StdFace honeycomb / Hubbard 模型
+# stan.in 対応例:  model="Hubbard" / lattice="honeycomb" / W=4 / L=4 / t=1.0 / U=4.0
+# 2 サイト基底 A/B (NsiteUC=2)。t0/t1/t2 は最近接の 3 方向ボンド (Kitaev x/y/z 慣例)
+# にそれぞれ対応する: t0=セル内ボンド (z 相当), t1=W 方向 (x 相当), t2=L 方向 (y 相当)。
+# 検算: 最近接配位数は各サイト 3 (t0+t1+t2 が各 1 本)。
+# 検算は manifest.yaml を参照。符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
+# 出典: python/stdface/lattice/honeycomb_lattice.py::honeycomb (_BONDS), commit e42ef547c5fb073d78200752c5c5ff01375d4619
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: honeycomb, model: hubbard}
+
+geometry:
+  dimension: 2
+  lattice_vectors:
+    a1: [1.0, 0.0]                         # StdFace: Wx, Wy
+    a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly
+  sites:
+    - {label: A, frac: [0.0, 0.0]}                             # tau[0]
+    - {label: B, frac: [0.3333333333333333, 0.3333333333333333]}  # tau[1] = (1/3, 1/3)
+
+system:
+  finite: true
+  size: [3, 3]                    # StdFace: W, L
+  boundary:
+    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase1}}
+
+model:
+  site_dof:
+    A: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)
+    B: {fermion: {orbitals: 1}}
+
+  bonds:
+    # 参照実装 (_BONDS) のソース順を保持。site 0=A, 1=B。
+    # t ブロック (hop) を _BONDS 行順で列挙した後、同じ行順で V ブロック
+    # (density-density) を列挙する (chain/square/triangular と同じ提示規約)。
+    # --- 最近接 (nn=1): Kitaev x/y/z 慣例で t1=x, t2=y, t0=z に対応 ---
+    - {from: A, to: B, R: [0, 0], type: t0}      # セル内ボンド (Kitaev z 相当)
+    - {from: B, to: A, R: [1, 0], type: t1}      # W 方向 (Kitaev x 相当)
+    - {from: B, to: A, R: [0, 1], type: t2}      # L 方向 (Kitaev y 相当)
+    # --- 第二近接 (nn=2) ---
+    - {from: A, to: A, R: [1, 0], type: "t2'"}   # W 方向, 0->0
+    - {from: B, to: B, R: [1, 0], type: "t2'"}   # W 方向, 1->1
+    - {from: A, to: A, R: [0, 1], type: "t1'"}   # L 方向, 0->0
+    - {from: B, to: B, R: [0, 1], type: "t1'"}   # L 方向, 1->1
+    - {from: A, to: A, R: [1, -1], type: "t0'"}  # W-L 方向, 0->0
+    - {from: B, to: B, R: [1, -1], type: "t0'"}  # W-L 方向, 1->1
+    # --- 第三近接 (nn=3) ---
+    - {from: A, to: B, R: [1, -1], type: "t1''"}   # W-L 方向
+    - {from: A, to: B, R: [-1, -1], type: "t0''"}  # -W-L 方向
+    - {from: A, to: B, R: [-1, 1], type: "t2''"}   # -W+L 方向
+    # --- 最近接 (V) ---
+    - {from: A, to: B, R: [0, 0], type: V0}
+    - {from: B, to: A, R: [1, 0], type: V1}
+    - {from: B, to: A, R: [0, 1], type: V2}
+    # --- 第二近接 (V) ---
+    - {from: A, to: A, R: [1, 0], type: "V2'"}
+    - {from: B, to: B, R: [1, 0], type: "V2'"}
+    - {from: A, to: A, R: [0, 1], type: "V1'"}
+    - {from: B, to: B, R: [0, 1], type: "V1'"}
+    - {from: A, to: A, R: [1, -1], type: "V0'"}
+    - {from: B, to: B, R: [1, -1], type: "V0'"}
+    # --- 第三近接 (V) ---
+    - {from: A, to: B, R: [1, -1], type: "V1''"}
+    - {from: A, to: B, R: [-1, -1], type: "V0''"}
+    - {from: A, to: B, R: [-1, 1], type: "V2''"}
+
+  couplings:
+    # H への寄与 = value × operator (物理係数)。-t は scale で表す。
+    t0:     {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
+    t1:     {operator: "hop", value: {param: t1, scale: -1.0}}
+    t2:     {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t2'":  {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    "t1'":  {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    "t0'":  {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t1''": {operator: "hop", value: {param: "t1''", scale: -1.0}}
+    "t0''": {operator: "hop", value: {param: "t0''", scale: -1.0}}
+    "t2''": {operator: "hop", value: {param: "t2''", scale: -1.0}}
+    V0:     {operator: "density-density", value: {param: V0}}    # +V n_i n_j
+    V1:     {operator: "density-density", value: {param: V1}}
+    V2:     {operator: "density-density", value: {param: V2}}
+    "V2'":  {operator: "density-density", value: {param: "V2'"}}
+    "V1'":  {operator: "density-density", value: {param: "V1'"}}
+    "V0'":  {operator: "density-density", value: {param: "V0'"}}
+    "V1''": {operator: "density-density", value: {param: "V1''"}}
+    "V0''": {operator: "density-density", value: {param: "V0''"}}
+    "V2''": {operator: "density-density", value: {param: "V2''"}}
+
+  onsite:
+    A:
+      hubbard_u:                 # +U n↑n↓
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:        # -mu N
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:                   # -h Sz (電子スピン)
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    B:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
