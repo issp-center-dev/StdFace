@@ -352,8 +352,8 @@ wannier90 変換専用パラメータは 5 章(wannier90 変換仕様)で詳説�
 | `cutoff_t`, `cutoff_tw/tl/th`, `cutoff_t_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の hopping(t)チャネル cutoff 指定 → 5 章参照 | `example_hubbard.yaml` の H(hopping)チャネルに対応する打ち切りパラメータ |
 | `cutoff_u`, `cutoff_uw/ul/uh`, `cutoff_u_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の U(Coulomb)チャネル cutoff 指定 → 5 章参照 | `example_hubbard.yaml` の U チャネルに対応する打ち切りパラメータ |
 | `cutoff_length_j, cutoff_length_t, cutoff_length_u`(3 種) | common | wannier90 変換のチャネル別・実距離での打ち切り指定 → 5 章参照 | `cutoff_j/t/u` 系(セル添字ベース)とは別軸の、実空間距離ベースの打ち切り |
-| `lambda, lambda_u, lambda_j`(3 種) | common | wannier90 由来 `H_mn(R)` の縮退重み・チャネル別減衰パラメータ → 5 章参照 | Hermite 正準対の縮退重み等に関わる |
-| `alpha` | common | wannier90 超交換生成パラメータ → 5 章参照 | Spin チャネルの超交換 `2\|t\|²(1/U_m+1/U_n)` 生成に関わる係数 |
+| `lambda, lambda_u, lambda_j`(3 種) | common | wannier90 `*_hr.dat` 読み込み時に全行列要素へ一様に乗じるスケール係数 → 5 章参照 | `_hr.dat` 形式自身が持つ縮退重みは読み込み時に破棄される(`wannier90_io.py::_skip_degeneracy_weights`)。`lambda*` はそれとは別に、全行列要素に一様適用されるスケール係数(`wannier90_io.py` の読み込みループで `lam * (dtmp_re + 1j*dtmp_im)` として適用)。`lambda` 未指定時は `lambda_U`/`lambda_J` の共有既定値になる |
+| `alpha` | common | wannier90 Hubbard/Hund 二重計数補正の混合重み → 5 章参照 | Hartree-Fock 二重計数補正(`doublecounting` モードで有効化)における混合重み(`wannier90.py` の `_apply_coulomb_terms` 系、範囲 [0,1]・既定 0.5)。Spin チャネルの超交換 `2\|t\|²(1/U_m+1/U_n)` 生成には関与しない(そちらは `StdI.alpha` を参照しない) |
 | `doublecounting` | common | wannier90 二重計数補正モード指定 → 5 章参照 | Coulomb 相互作用の二重計数補正方式の選択 |
 
 族単位の内訳(cutoff_j 13 + cutoff_t 13 + cutoff_u 13 + cutoff_length_* 3
