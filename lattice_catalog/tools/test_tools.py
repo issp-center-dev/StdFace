@@ -159,11 +159,12 @@ def base_doc() -> dict:
         },
         "geometry": {
             "dimension": 1,
-            "cell": [[1.0]],
+            "lattice_vectors": {"a1": [1.0]},
             "sites": [{"label": "A", "frac": [0.0]}],
         },
         "system": {
             "size": [7],
+            "boundary": [{"twist": {"param": "phase0"}}],
         },
         "model": {
             "site_dof": {

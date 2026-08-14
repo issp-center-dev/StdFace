@@ -51,18 +51,20 @@ model:    { ... }   # §5, §6
   `sites[1]` がサイト 1、という対応を機械的に維持する。
 - サイトラベル(`sites[*].label`)は仕様書やソース実装の慣例名
   (`A`, `B`, `A3` 等)を用い、ファイル内で重複してはならない(C2)。
-- `geometry.cell`(単位胞の格子ベクトル `A`)と各サイトの
-  分率座標 `frac` を持つ。
+- `geometry.lattice_vectors`(単位胞の格子ベクトル。次元ぶんの named
+  ベクトル `a1`, `a2`, `a3`, ... からなる辞書。§5 の行列 `A` は
+  これらを行ベクトルとして積み上げたもの)と各サイトの分率座標
+  `frac` を持つ。
 
 ## 4. system 規約
 
 - `W, L, Height` などの繰り返し数は `system.size`(整数配列)に写す。
   検査で用いる代表値は `system.size` の各成分そのもの
   (manifest の `min_size_for_check` と対応)。
-- `phase0`–`phase2` は `system.twist.paramN`(**度単位**)に写し、
-  境界を n 回横断する経路の位相因子は
-  `exp(i · n · π · θ / 180)` として消費側が解釈する。
-  YAML 上は `{param: phaseN}` 参照(§6.3 の一般形)で表現する。
+- `phase0`–`phase2` は `system.boundary`(配列。各要素は
+  `{twist: {param: phaseN}}`)に写し、境界を n 回横断する経路の
+  位相因子は `exp(i · n · π · θ / 180)` として消費側が解釈する
+  (**度単位**)。`{param: phaseN}` 自体は §6.3 の一般形で表現する。
 - chain 格子は論理的には 1 次元だが、現行実装は内部的に
   `W=1` の 2 次元表現を用いる。`phase0` → 内部 `phase[1]` への転写は
   実装上の詳細であり、manual 3 章で説明する(YAML の意味論には影響しない)。
@@ -76,7 +78,8 @@ model:    { ... }   # §5, §6
 - **セル差分 R の定義**: `R = cell(to) − cell(from)`(整数ベクトル、
   次元は `dimension` と一致)。
 - **変位 δ の定義**: `δ = (frac_to − frac_from) + R · A`
-  (`A` は `geometry.cell`)。
+  (`A` は `geometry.lattice_vectors` の行ベクトル `a1`, `a2`, ... を
+  積み上げた行列)。
 - **type 名**: StdFace のキーワード名をそのまま用いる
   (`J0`, `J0'`, `t0` 等)。プライムを含む名前は YAML 上
   引用符付きで記述する(`"J0'"`)。プライムの機械的識別子への分離は
@@ -106,7 +109,9 @@ model:    { ... }   # §5, §6
 
 ### 6.1 value 意味論
 
-`model.couplings[*].value` および `model.onsite[*].value` は
+`model.couplings[<type>].value`(スカラー/ベクトル系 couplings。`hop` /
+`density-density` / `s_i . S_j`)および
+`model.onsite[<site>][<term>].value` は
 
 ```
 H = Σ_bonds value · operator + Σ_onsite value · operator
@@ -123,18 +128,27 @@ StdFace パラメータ → builder 呼び出し (interaction_builder.py)
 → trans/intr 係数 → solver 出力規約 → 物理ハミルトニアンの符号
 ```
 
+**J 族 / onsite の例外**: J 族の交換相互作用
+(`model.couplings[<type>].operator.tensor_terms`)には共有の `value` は
+なく、各成分項が個別に `coeff: {param: ...}` を持つ(§6.4)。onsite の
+各項(`model.onsite[<site>][<term>]`)も同じく
+`operator: {tensor_terms: [{ops: [...], coeff: <数値>}]}` の形を取るが、
+こちらの `tensor_terms` は要素 1 個の配列で、その `coeff` は符号のみを
+表す**リテラル数値**(`+1.0` / `-1.0` 等)である。実際の外部パラメータ
+参照は同じ項の `value`(`{param, scale, default}`、§6.3)が担う。
+
 ### 6.2 符号表(規範)
 
 | StdFace | 物理ハミルトニアン寄与 | YAML 表現 |
 |---|---|---|
-| t 族(ホッピング) | −t Σ_σ (c†c + h.c.) | `value: {param: t0, scale: -1.0}` |
-| mu(化学ポテンシャル) | −mu N | onsite `coeff: -1.0`(ops `[N]`) |
-| U(オンサイト Coulomb) | +U n↑n↓ | `coeff: +1.0` |
-| V 族(サイト間 Coulomb) | +V n_i n_j | `scale: +1.0`(省略可、既定値そのもの) |
-| J 族(交換相互作用) | +Σ_ab J_ab S^a S^b | `tensor_terms`(§6.4) |
-| h / Gamma / Gamma_y(磁場) | −h Sz − Γ Sx − Γy Sy | `coeff: -1.0` |
-| D(単イオン異方性) | +D (Sz)² | `coeff: +1.0` |
-| Kondo J(s·S 結合) | +J s·S | `scale: +1.0` |
+| t 族(ホッピング) | −t Σ_σ (c†c + h.c.) | `couplings[t0]: {operator: hop, value: {param: t0, scale: -1.0}}` |
+| mu(化学ポテンシャル) | −mu N | onsite `operator.tensor_terms: [{ops: [N], coeff: -1.0}]`, `value: {param: mu}` |
+| U(オンサイト Coulomb) | +U n↑n↓ | onsite `operator.tensor_terms: [{ops: [NupNdn], coeff: 1.0}]`, `value: {param: U}` |
+| V 族(サイト間 Coulomb) | +V n_i n_j | `couplings[V0]: {operator: density-density, value: {param: V0}}`(scale 省略可、既定 +1.0) |
+| J 族(交換相互作用) | +Σ_ab J_ab S^a S^b | `couplings[J0]: {operator: {tensor_terms: [...]}}`(§6.4) |
+| h / Gamma / Gamma_y(磁場) | −h Sz − Γ Sx − Γy Sy | onsite `operator.tensor_terms: [{ops: [Sz/Sx/Sy], coeff: -1.0}]`, `value: {param: h/Gamma/Gamma_y}` |
+| D(単イオン異方性) | +D (Sz)² | onsite `operator.tensor_terms: [{ops: [Szz], coeff: 1.0}]`, `value: {param: D}` |
+| Kondo J(s·S 結合) | +J s·S | `couplings[J]: {operator: "s_i . S_j", value: {param: J}}`(scale 省略時 +1.0) |
 
 **符号は必ずデータ(`scale` / `coeff`)に持たせ、コメントとして記述しては
 ならない。** これは検証可能性(リンタ・後続処理での機械的突合)を
@@ -172,10 +186,10 @@ wannier90 の `H_mn → −H_mn` 反転は上記とは別の規則であり、
 
 ### 6.4 J 族 9 成分 tensor_terms 正準形
 
-J 族の交換相互作用は 9 成分の `tensor_terms` として表現する
-(等方成分 `J0` 等の 1 パラメータへの縮約は行わない — 常に 9 項を
-書き切る)。各項は 2 スピン演算子の積 `ops: [S?, S?]` とその係数
-`coeff: {param: <name>}` からなる。
+J 族の交換相互作用は `model.couplings[<type>].operator.tensor_terms` の
+9 成分として表現する(等方成分 `J0` 等の 1 パラメータへの縮約は行わない
+— 常に 9 項を書き切る)。各項は 2 スピン演算子の積 `ops: [S?, S?]` と
+その係数 `coeff: {param: <name>}` からなる。
 
 ops 対と param 接尾辞の対応表:
 
@@ -239,15 +253,17 @@ prefix ごとの解決表(概要):
   第 2 端点(j)が局在スピン**。端点順序に意味があり、
   §5 のソース順保持規約により順序が保証される。
 - onsite 演算子語彙: `N`, `Nup`, `Ndn`, `NupNdn`, `Sx`, `Sy`, `Sz`, `Szz`。
+  これは `model.onsite[<site>][<term>].operator.tensor_terms[0].ops` の
+  要素(単一演算子。§6.1 の例外参照)として現れる。
 
 演算子と `site_dof` の型整合表(リンタ C9 が検査):
 
 | 演算子 | 要求される site_dof の型(端点順) |
 |---|---|
-| `hop` | fermion – fermion |
-| `density-density` | fermion – fermion |
-| `s_i . S_j` | fermion – spin(この順。第 1 端点が fermion) |
-| J テンソル(`tensor_terms`, ops が `S?`) | spin – spin |
+| `hop`(couplings, `operator` 文字列) | fermion – fermion |
+| `density-density`(couplings, `operator` 文字列) | fermion – fermion |
+| `s_i . S_j`(couplings, `operator` 文字列) | fermion – spin(この順。第 1 端点が fermion) |
+| J テンソル(couplings, `operator.tensor_terms`、ops が `S?`) | spin – spin |
 | onsite スピン演算子(`Sx`/`Sy`/`Sz`/`Szz`) | spin、または fermion(電子スピンとして) |
 | onsite `N`/`Nup`/`Ndn`/`NupNdn` | fermion |
 
@@ -268,7 +284,7 @@ spin 自由度)として表現する。両ラベルは**同一の分率座標**�
 
 - Hubbard 一式(`t`, `U`, `mu`)は `_c` ラベルにのみ適用。
 - 磁場(`h`, `Gamma`, `Gamma_y`)は `_c`, `_s` **両ラベル**に適用
-  (§4.5 の符号表通り)。
+  (§6.2 の符号表通り)。
 - Kondo `J`(`s_i . S_j`)は `_c → _s` の順(遍歴が第 1 端点、§6.6)。
 - **pyrochlore の例外**: 現行実装(C/Python 共通)は J を
   「副格子 3 の遍歴サイト ↔ 全副格子の局在スピン」という非対称な
