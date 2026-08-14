@@ -1,0 +1,40 @@
+# lattice_catalog 検算台帳
+#
+# 各エントリはリンタ (tools/lint_catalog.py) が YAML 本体と突合する
+# 期待値である。キーはすべて必須(欠落は C10 エラー)。
+#
+# files:
+#   <カタログ YAML への相対パス>:  # 例: chain/chain_spin.yaml
+#     lattice: <catalog.lattice と一致>
+#     model: <catalog.model と一致>
+#     dimension: <geometry.dimension と一致する整数>
+#     n_sites_uc: <geometry.sites の要素数と一致する整数>
+#     bonds_per_uc: {<bond type>: <単位胞あたりの本数>, ...}
+#       # 全 bond type を列挙する(省略不可)
+#     coordination:
+#       # サイトラベル × ボンド type ごとの配位数。
+#       # min_size_for_check のトーラス上で計数展開して実測比較する
+#       # (tools/lint_catalog.py の expand_and_count)。
+#       <label>: {<bond type>: <配位数>, ...}
+#     min_size_for_check: [<各次元のサイズ>, ...]
+#       # 異なる R が同一サイト対に折り畳まれない最小サイズ。
+#       # 各方向について L > 2 * max|R成分| を満たす奇数を記載する。
+#     source:
+#       file: <参照した python 実装ファイルの相対パス>
+#       func: <参照した関数名>
+#       commit: <参照コミットハッシュ>
+#
+# Task 1 以降で実エントリを追加していく。現時点では空。
+files: {}
+
+# 記入例(Task 1 で実エントリを追加):
+# chain/chain_spin.yaml:
+#   lattice: chain
+#   model: spin
+#   dimension: 1
+#   n_sites_uc: 1
+#   bonds_per_uc: {J0: 1, "J0'": 1, "J0''": 1}
+#   coordination:
+#     A: {J0: 2, "J0'": 2, "J0''": 2}
+#   min_size_for_check: [7]
+#   source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: <hash>}
