@@ -1,0 +1,97 @@
+# StdFace orthorhombic (simple cubic) / Hubbard 模型
+# stan.in 対応例:  model="Hubbard" / lattice="orthorhombic" / W=4 / L=4 / Height=4 / t=1.0 / U=4.0
+# 検算は manifest.yaml を参照。符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
+# 出典: python/stdface/lattice/orthorhombic.py::orthorhombic (_BONDS), commit 1cf9f86a394d01f9efe180031e14bfa5d344bfcc
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: orthorhombic, model: hubbard}
+
+geometry:
+  dimension: 3
+  lattice_vectors:
+    a1: [1.0, 0.0, 0.0]           # StdFace: Wx, Wy, Wz
+    a2: [0.0, 1.0, 0.0]           # StdFace: Lx, Ly, Lz
+    a3: [0.0, 0.0, 1.0]           # StdFace: Hx, Hy, Hz
+  sites:
+    - {label: A, frac: [0.0, 0.0, 0.0]}
+
+system:
+  finite: true
+  size: [4, 4, 4]                 # StdFace: W, L, Height
+  boundary:
+    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase1}}
+    - {twist: {param: phase2}}
+
+model:
+  site_dof:
+    A: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)
+
+  bonds:
+    # 参照実装 (_BONDS) のソース順を保持。R = [dW, dL, dH]
+    # 最近接 (nn, 配位数6)
+    - {from: A, to: A, R: [1, 0, 0], type: t0}     # W 方向
+    - {from: A, to: A, R: [0, 1, 0], type: t1}     # L 方向
+    - {from: A, to: A, R: [0, 0, 1], type: t2}     # H 方向
+    # 第二近接 (面対角, 配位数12)
+    - {from: A, to: A, R: [0, 1, 1], type: "t0'"}   # +L+H
+    - {from: A, to: A, R: [0, 1, -1], type: "t0'"}  # +L-H
+    - {from: A, to: A, R: [1, 0, 1], type: "t1'"}   # +H+W
+    - {from: A, to: A, R: [-1, 0, 1], type: "t1'"}  # +H-W
+    - {from: A, to: A, R: [1, 1, 0], type: "t2'"}   # +W+L
+    - {from: A, to: A, R: [1, -1, 0], type: "t2'"}  # +W-L
+    # 第三近接 (体対角, 配位数8)
+    - {from: A, to: A, R: [1, 1, 1], type: "t''"}   # +W+L+H
+    - {from: A, to: A, R: [-1, 1, 1], type: "t''"}  # -W+L+H
+    - {from: A, to: A, R: [1, -1, 1], type: "t''"}  # +W-L+H
+    - {from: A, to: A, R: [1, 1, -1], type: "t''"}  # +W+L-H
+    # 最近接 (nn, 配位数6)
+    - {from: A, to: A, R: [1, 0, 0], type: V0}     # W 方向
+    - {from: A, to: A, R: [0, 1, 0], type: V1}     # L 方向
+    - {from: A, to: A, R: [0, 0, 1], type: V2}     # H 方向
+    # 第二近接 (面対角, 配位数12)
+    - {from: A, to: A, R: [0, 1, 1], type: "V0'"}   # +L+H
+    - {from: A, to: A, R: [0, 1, -1], type: "V0'"}  # +L-H
+    - {from: A, to: A, R: [1, 0, 1], type: "V1'"}   # +H+W
+    - {from: A, to: A, R: [-1, 0, 1], type: "V1'"}  # +H-W
+    - {from: A, to: A, R: [1, 1, 0], type: "V2'"}   # +W+L
+    - {from: A, to: A, R: [1, -1, 0], type: "V2'"}  # +W-L
+    # 第三近接 (体対角, 配位数8)
+    - {from: A, to: A, R: [1, 1, 1], type: "V''"}   # +W+L+H
+    - {from: A, to: A, R: [-1, 1, 1], type: "V''"}  # -W+L+H
+    - {from: A, to: A, R: [1, -1, 1], type: "V''"}  # +W-L+H
+    - {from: A, to: A, R: [1, 1, -1], type: "V''"}  # +W+L-H
+
+  couplings:
+    # H への寄与 = value × operator (物理係数)。-t は scale で表す。
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
+    t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
+    t2:    {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t1'": {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    "t2'": {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    "t''": {operator: "hop", value: {param: "t''", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}    # +V n_i n_j
+    V1:    {operator: "density-density", value: {param: V1}}
+    V2:    {operator: "density-density", value: {param: V2}}
+    "V0'": {operator: "density-density", value: {param: "V0'"}}
+    "V1'": {operator: "density-density", value: {param: "V1'"}}
+    "V2'": {operator: "density-density", value: {param: "V2'"}}
+    "V''": {operator: "density-density", value: {param: "V''"}}
+
+  onsite:
+    A:
+      hubbard_u:                 # +U n↑n↓
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:        # -mu N
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:                   # -h Sz (電子スピン)
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
