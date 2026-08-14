@@ -17,12 +17,10 @@
 - 各 YAML の先頭に `catalog: {schema: stdface-catalog/0.1, dialect: experimental}` を置く。
 - ボンド type 名は StdFace キーワード名そのまま。プライムを含む名前(`J0'` 等)は YAML では必ず引用符付き。
 - **R の定義**: `R = cell(to) − cell(from)`。実変位 δ = (frac_to − frac_from) + R·A。
-- **向きの一意化**: from のサイト番号(`geometry.sites` の配列順)≦ to。同一サイトなら R 辞書順で正(最初の非零成分が正)。各ボンドは一度だけ書く。
-- **反転変換**: `(i,j,R) → (j,i,−R)` の際、ホッピング係数は複素共役、スピン交換テンソルは転置(`J_ab → J_ba`)。
-- 係数は `value: {param: <StdFaceキーワード>}` / `coeff: {param: ...}` で参照(wannier90 例のみ実数値可)。
-- J 族は 9 成分 tensor_terms 正準形で書く(スペック §4.3)。パラメータ解決規則(成分 > スカラー対角 > 大域別名 > 0、同時指定エラー)は CONVENTIONS.md に規範として記載。
-- `hop` に符号を埋め込まない(ハミルトニアン寄与は −t·hop、CONVENTIONS に係数規約を明記)。
-- twist は度単位、境界 n 回横断で `exp(i·n·π·θ/180)`。`{param: phase0}` 等で参照。
+- **向き = ソース順保持**: bonds は参照実装の向きのまま書く(`_BONDS` の `site_i → site_j`、Kondo は `general_j(..., 遍歴, 局在)` の引数順)。正準形への並べ替えは**しない**。各ボンドは一度だけ書き、リンタが反転同値 `(i,j,R)≡(j,i,−R)` の重複を検出する。反転時の係数変換(hopping: 複素共役、交換テンソル: 転置)は消費側規範として CONVENTIONS に記載。
+- **value 意味論**: `H = Σ value·operator` の物理ハミルトニアン係数(solver 出力の係数規約とは別物 — スペック §4.3 の検証連鎖)。**符号は必ずデータに持たせる**: param 参照の一般形は `{param: <名>, scale: <実数, 省略時1.0>, default: <最終値, 省略時0>}`、値 = scale × param。符号表(スペック §4.3): t 族 scale −1、mu/h/Gamma/Gamma_y coeff −1、U/V/D/J 族/Kondo J は +。
+- J 族は 9 成分 tensor_terms 正準形。**パラメータ解決順**(`input_params.py::_resolve_spin_matrix` と同一): 成分局所 > 成分大域 > スカラー局所(対角) > スカラー大域(対角) > 0。競合規則(スカラー同士・スカラーvs行列・行列vs行列)とプライム系(大域 fallback なし)の解決表を CONVENTIONS に規範として記載。
+- twist は度単位、境界 n 回横断で `exp(i·n·π·θ/180)`。`{twist: {param: phase0}}` 等で参照。
 - 出典記録は「ファイル名 + 関数名 + 参照コミットハッシュ」(行番号は補助)。
 - 各タスクの完了条件に `python3 lattice_catalog/tools/lint_catalog.py` の成功を含む。
 - コミットは Task ごと。コミットメッセージは中立的な表現(内部ツール名を出さない)。
@@ -43,6 +41,7 @@
 - Create: `lattice_catalog/manifest.yaml`(空の骨格 + 形式定義コメント)
 - Create: `lattice_catalog/tools/lint_catalog.py`
 - Create: `lattice_catalog/tools/keyword_inventory.py`
+- Create: `lattice_catalog/tools/test_tools.py`(リンタ・目録の自動テスト)
 
 **Interfaces:**
 - Consumes: スペック §4(規約)、`python/stdface/core/keyword_parser.py` の
@@ -68,16 +67,32 @@
 5. bonds 規約
    - R = cell(to) − cell(from)、δ = (frac_to − frac_from) + R·A
    - type 名 = StdFace キーワード名(プライムは引用符付き)
-   - 向きの一意化(from 番号 ≦ to、R 辞書順で正)
-   - 反転変換(hopping: 複素共役、交換テンソル: 転置)
+   - 向き = ソース順保持(_BONDS の site_i→site_j、Kondo は遍歴→局在)。
+     正準化しない。一意性は反転同値 (i,j,R)≡(j,i,−R) で判定
+   - 反転時の係数変換(消費側規範): hopping 複素共役、交換テンソル転置
 6. couplings / onsite 規約
-   - J 族 9 成分 tensor_terms 正準形(成分キーワード名一覧)
-   - パラメータ解決規則(成分 > スカラー対角 > 大域別名 > 0、同時指定エラー)
-   - 演算子意味論: hop(符号なし、寄与は −t·hop)、density-density、
-     s_i . S_j、onsite 語彙(N, Nup, Ndn, NupNdn, Sx, Sy, Sz, Szz)
+   - value 意味論: H = Σ value·operator(物理ハミルトニアン係数)。
+     solver 出力係数規約(HPhi trans.def の H=−Σt 暗黙符号)との違いと
+     検証連鎖(パラメータ→builder→trans/intr→solver規約→物理符号)
+   - 符号表(スペック §4.3 の表を転記): t 族 scale −1、mu/磁場 coeff −1、
+     U/V/D/J/Kondo J は +。符号は必ずデータ(scale/coeff)に置く
+   - param 参照の一般形 {param, scale(省略時1), default(省略時0)}、
+     値 = scale × param。型制約(2S: 正整数 等)
+   - J 族 9 成分 tensor_terms 正準形(成分キーワード名一覧、
+     ops 対 ↔ 接尾辞対応表 [Sx,Sy]↔xy 等)
+   - パラメータ解決順序(実装準拠): 成分局所 > 成分大域 >
+     スカラー局所(対角) > スカラー大域(対角) > 0。
+     競合規則(スカラー同士/スカラーvs行列/行列vs行列)と
+     プライム系(大域 fallback なし)の prefix 別解決表
+   - 演算子意味論と端点順序: hop(符号なし)、density-density、
+     s_i . S_j(第1端点=遍歴)、onsite 語彙(N, Nup, Ndn, NupNdn,
+     Sx, Sy, Sz, Szz)
+   - 演算子と site_dof の型整合表(hop/density-density: fermion–fermion、
+     s_i . S_j: fermion–spin この順、J テンソル: spin–spin)
    - 模型別 onsite 適用範囲(Global Constraints の表と同内容)
    - Kondo 2 ラベル(_c/_s、同一分率座標、物理的には 1 サイト 2 自由度)
-7. 拡張方言一覧(fermion site_dof、演算子語彙、{param}参照、catalog ヘッダ)
+7. 拡張方言一覧(fermion site_dof、演算子語彙、{param,scale,default}参照、
+   catalog ヘッダ、4フェルミオン一般項の素描(将来課題))
 8. 検算・出典記録の書式(manifest 参照、関数名+コミットハッシュ)
 ```
 
@@ -85,7 +100,10 @@
 
 ```yaml
 # lattice_catalog 検算台帳
-# 各エントリはリンタが YAML 本体と突合する期待値。
+# 各エントリはリンタが YAML 本体と突合する期待値(全キー必須)。
+# coordination: サイトラベル × ボンド type ごとの配位数
+#   (min_size_for_check のトーラス上で計数展開により実測比較。
+#    全ボンド type を列挙する — 省略不可)
 # min_size_for_check: 異なる R が同一サイト対に折り畳まれない最小サイズ
 #   (各方向 L > 2 * max|R成分| を満たす奇数を記載)
 files: {}
@@ -96,149 +114,100 @@ files: {}
 #   dimension: 1
 #   n_sites_uc: 1
 #   bonds_per_uc: {J0: 1, "J0'": 1, "J0''": 1}
-#   coordination: {J0: 2, "J0'": 2, "J0''": 2}
+#   coordination:
+#     A: {J0: 2, "J0'": 2, "J0''": 2}
 #   min_size_for_check: [7]
 #   source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: <hash>}
 ```
 
 - [ ] **Step 3: lint_catalog.py を書く**
 
+チェック項目(スペック §6.1 と同一。各 ID は診断メッセージの接頭辞):
+
+| ID | 検査内容 |
+|----|----------|
+| C1 | `catalog.schema == "stdface-catalog/0.1"` **かつ** `catalog.dialect == "experimental"` |
+| C2 | schema 検査: 文書が dict、geometry/system/model の必須キーと型、サイトラベル重複なし、dimension は正整数、R/size 要素は整数、site_dof が存在 |
+| C3 | R の長さ = dimension = size の長さ |
+| C4 | bonds の from/to、**onsite のサイトラベル**が定義済み。`geometry.sites` のラベル集合 = `site_dof` のキー集合 |
+| C5 | bonds の type ↔ couplings キー整合(未定義参照・未使用定義) |
+| C6 | 反転同値 `(i,j,R) ≡ (j,i,−R)` での重複検出(向きの並べ替え検査はしない — ソース順保持のため) |
+| C7 | `{param: ...}` 参照名が目録に存在。`scale` は実数、`default` は数値 |
+| C8 | J 型 coupling(tensor_terms が Sx/Sy/Sz の 2 サイト積のもの)は 9 成分を一度ずつ持ち、ops 対と param 接尾辞が対応(`[Sx,Sy]↔…xy` 等) |
+| C9 | 演算子と site_dof の型整合: hop/density-density は fermion–fermion、`s_i . S_j` は fermion–spin(この順)、J テンソルは spin–spin。tensor_terms の ops 長 = ボンド 2 / onsite 1 |
+| C10 | manifest 全キー(lattice/model/dimension/n_sites_uc/bonds_per_uc/coordination/min_size_for_check/source)の存在と、n_sites_uc・dimension・bonds_per_uc の一致 |
+| C11 | **計数展開**: min_size_for_check のトーラス上に bonds を展開し、ラベル×type の配位数を実測して manifest の coordination と比較 |
+
+実装要件:
+- 不正 YAML・キー欠落でも例外で落とさず、ファイル単位の診断として報告
+  (try/except で C2 診断に変換)。
+- 引数のパスは `Path.resolve()` してから ROOT 相対に変換(ROOT 外は
+  エラー報告)。引数なしで `lattice_catalog/**/*.yaml` 全件
+  (manifest.yaml 除外)。違反があれば exit 1、末尾に
+  `{N} files, {M} errors` を出力。
+- 目録は `keyword_inventory.py` をサブプロセス実行して取得。
+
+中核アルゴリズム(この通り実装):
+
 ```python
-#!/usr/bin/env python3
-"""lattice_catalog 意味検査リンタ(開発時専用)。
-
-チェック項目:
-  C1  catalog ヘッダ(schema/dialect)の存在と値
-  C2  必須トップレベルキー(geometry/system/model)と型
-  C3  R の次元 = geometry.dimension、size の次元一致
-  C4  bonds の from/to が site_dof・geometry.sites に存在
-  C5  bonds の type ↔ couplings のキー整合(未定義参照・未使用定義)
-  C6  向き規約(from番号 ≦ to、同一サイトは R 辞書順で正)
-  C7  逆向き重複(反転変換 (i,j,R)~(j,i,-R) を同値として重複検出)
-  C8  {param: ...} 参照名が keyword_inventory の目録に存在
-  C9  tensor_terms の ops 長 = ボンド(2)/onsite(1) のサイト数
-  C10 manifest.yaml との突合(bonds_per_uc・n_sites_uc・dimension)
-使い方: python3 lattice_catalog/tools/lint_catalog.py [file.yaml ...]
-        引数なしで lattice_catalog/**/*.yaml 全件。違反があれば exit 1。
-"""
-from __future__ import annotations
-import glob, json, subprocess, sys
-from pathlib import Path
-import yaml
-
-ROOT = Path(__file__).resolve().parent.parent
-
-def load_inventory() -> set[str]:
-    out = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "keyword_inventory.py")],
-        capture_output=True, text=True, check=True)
-    return {e["keyword_canonical"] for e in json.loads(out.stdout)}
-
-def bond_key(b: dict) -> tuple:
-    return (b["from"], b["to"], tuple(b["R"]))
-
-def reversed_key(b: dict) -> tuple:
-    return (b["to"], b["from"], tuple(-x for x in b["R"]))
-
-def canonical_ok(b: dict, site_order: dict[str, int]) -> bool:
-    i, j = site_order[b["from"]], site_order[b["to"]]
-    if i < j:
-        return True
-    if i > j:
-        return False
-    nz = [x for x in b["R"] if x != 0]
-    return bool(nz) and nz[0] > 0
-
-def collect_params(node) -> list[str]:
-    found = []
-    if isinstance(node, dict):
-        if set(node) >= {"param"}:
-            found.append(node["param"])
-        for v in node.values():
-            found += collect_params(v)
-    elif isinstance(node, list):
-        for v in node:
-            found += collect_params(v)
-    return found
-
-def lint_file(path: Path, inventory: set[str], manifest: dict) -> list[str]:
-    errs = []
-    doc = yaml.safe_load(path.read_text())
-    rel = str(path.relative_to(ROOT))
-    cat = doc.get("catalog", {})
-    if cat.get("schema") != "stdface-catalog/0.1":                     # C1
-        errs.append("C1: catalog.schema がない/不正")
-    geom, model = doc.get("geometry", {}), doc.get("model", {})
-    dim = geom.get("dimension")
-    labels = [s["label"] for s in geom.get("sites", [])]
-    site_order = {lb: i for i, lb in enumerate(labels)}
-    if not (dim and labels and model):                                  # C2
-        errs.append("C2: geometry/model の必須キー不足")
-    if len(doc.get("system", {}).get("size", [])) != dim:               # C3
-        errs.append("C3: system.size の次元が dimension と不一致")
-    bonds = model.get("bonds", [])
-    seen = set()
+def reversal_dup(bonds):
+    """C6: 反転同値 (i,j,R)~(j,i,-R) での重複検出。"""
+    seen, errs = set(), []
     for b in bonds:
-        if len(b["R"]) != dim:                                          # C3
-            errs.append(f"C3: R 次元不一致 {b}")
-        if b["from"] not in site_order or b["to"] not in site_order:    # C4
-            errs.append(f"C4: 未定義ラベル {b}")
-            continue
-        if not canonical_ok(b, site_order):                             # C6
-            errs.append(f"C6: 向き規約違反 {b}")
-        k, rk = bond_key(b), reversed_key(b)
-        if k in seen or rk in seen:                                     # C7
-            errs.append(f"C7: (逆向き)重複ボンド {b}")
+        k = (b["from"], b["to"], tuple(b["R"]))
+        rk = (b["to"], b["from"], tuple(-x for x in b["R"]))
+        if k in seen or rk in seen:
+            errs.append(f"C6: (逆向き)重複ボンド {b}")
         seen.add(k)
-    types_used = {b["type"] for b in bonds}
-    types_def = set(model.get("couplings", {}))
-    for t in types_used - types_def:                                    # C5
-        errs.append(f"C5: coupling 未定義の type {t}")
-    for t in types_def - types_used:                                    # C5
-        errs.append(f"C5: 未使用の coupling {t}")
-    for p in collect_params(doc):                                       # C8
-        if p not in inventory:
-            errs.append(f"C8: 目録にないパラメータ参照 {p}")
-    for scope, arity in (("couplings", 2), ("onsite", 1)):              # C9
-        node = model.get(scope, {})
-        entries = node.values() if scope == "couplings" else \
-            (e for site in node.values() for e in site.values())
-        for e in entries:
-            op = e.get("operator")
-            if isinstance(op, dict):
-                for tt in op.get("tensor_terms", []):
-                    if len(tt["ops"]) != arity:
-                        errs.append(f"C9: ops 長 {len(tt['ops'])} != {arity}")
-    m = manifest.get("files", {}).get(rel.removeprefix("lattice_catalog/"))
-    if m:                                                               # C10
-        if m["n_sites_uc"] != len(labels) or m["dimension"] != dim:
-            errs.append("C10: manifest とサイト数/次元が不一致")
-        per_uc: dict[str, int] = {}
+    return errs
+
+_J_COMPONENTS = {  # C8: ops 対 ↔ param 接尾辞
+    ("Sx", "Sx"): "x",  ("Sy", "Sy"): "y",  ("Sz", "Sz"): "z",
+    ("Sx", "Sy"): "xy", ("Sx", "Sz"): "xz", ("Sy", "Sx"): "yx",
+    ("Sy", "Sz"): "yz", ("Sz", "Sx"): "zx", ("Sz", "Sy"): "zy",
+}
+
+def check_j_coupling(type_name, tensor_terms):
+    """C8: 9 成分完全性と ops↔接尾辞対応。"""
+    errs, seen = [], set()
+    for tt in tensor_terms:
+        pair = tuple(tt["ops"])
+        suffix = _J_COMPONENTS.get(pair)
+        if suffix is None:
+            errs.append(f"C8: {type_name}: 不正な ops 対 {pair}")
+            continue
+        expected = f"{type_name}{suffix}"
+        got = tt["coeff"].get("param") if isinstance(tt["coeff"], dict) else None
+        if got != expected:
+            errs.append(f"C8: {type_name}: param {got} != {expected}")
+        seen.add(pair)
+    if len(seen) != 9:
+        errs.append(f"C8: {type_name}: 成分数 {len(seen)} != 9")
+    return errs
+
+def expand_and_count(dim, labels, bonds, size):
+    """C11: min_size トーラス上でボンドを展開し、
+    ラベル×type の配位数(そのラベルのサイト 1 個に接続する本数)を返す。"""
+    import itertools
+    ncells = 1
+    for s in size:
+        ncells *= s
+    touch = {lb: {} for lb in labels}          # label -> type -> 接続本数合計
+    for cell in itertools.product(*[range(s) for s in size]):
         for b in bonds:
-            per_uc[b["type"]] = per_uc.get(b["type"], 0) + 1
-        if per_uc != m["bonds_per_uc"]:
-            errs.append(f"C10: bonds_per_uc 不一致 {per_uc} != {m['bonds_per_uc']}")
-    else:
-        errs.append("C10: manifest 未登録")
-    return [f"{rel}: {e}" for e in errs]
-
-def main(argv: list[str]) -> int:
-    files = [Path(a) for a in argv] or \
-        [Path(p) for p in glob.glob(str(ROOT / "**" / "*.yaml"), recursive=True)
-         if "manifest" not in p]
-    inventory = load_inventory()
-    manifest = yaml.safe_load((ROOT / "manifest.yaml").read_text())
-    all_errs = []
-    for f in files:
-        all_errs += lint_file(f, inventory, manifest)
-    for e in all_errs:
-        print(e)
-    print(f"{len(files)} files, {len(all_errs)} errors")
-    return 1 if all_errs else 0
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+            to_cell = tuple((c + r) % s for c, r, s in zip(cell, b["R"], size))
+            t = b["type"]
+            touch[b["from"]][t] = touch[b["from"]].get(t, 0) + 1
+            touch[b["to"]][t] = touch[b["to"]].get(t, 0) + 1
+            if b["from"] == b["to"] and tuple(b["R"]) == (0,) * dim:
+                pass  # 自己ループは二重加算しない(実際には存在しない想定)
+            _ = to_cell
+    # ラベルごとのサイト数 = ncells なので配位数 = 合計 / ncells
+    return {lb: {t: n // ncells for t, n in d.items()} for lb, d in touch.items()}
 ```
+
+(注: `expand_and_count` は from/to 双方の接続を数える。R=0 の同一
+ラベル自己ボンドは現行 StdFace に存在しないため考慮不要。)
 
 - [ ] **Step 4: keyword_inventory.py を書く**
 
@@ -246,25 +215,28 @@ if __name__ == "__main__":
 #!/usr/bin/env python3
 """StdFace パーサーレジストリ全体からキーワード目録(JSON)を生成する。
 
-母集合: core の _COMMON_KEYWORDS + 各ソルバープラグインのテーブル。
-出力: [{"keyword_canonical": "J0x", "keyword_lower": "j0x",
-        "source": "common|hphi|mvmc|uhf|hwave"}, ...]
-keyword_canonical はカタログの {param: ...} 参照で使う表記
-(StdFace ドキュメント慣例: J0x, t0, U, 2S など。lower 形との対応表を持つ)。
+母集合: core の _COMMON_KEYWORDS + ソルバーレジストリ経由で列挙した
+全プラグインのキーワードテーブル(クラスのハードコード禁止)+
+格子名/模型名の alias(lattice/model registry から)。
+出力(canonical 単位に集約、安定ソート):
+[{"keyword_canonical": "J0x", "keyword_lower": "j0x",
+  "sources": ["common"], "kind": "keyword"},
+ {"keyword_canonical": "chain", "sources": ["lattice_registry"],
+  "kind": "lattice_alias", "canonical_target": "chain"}, ...]
 """
 from __future__ import annotations
 import json, sys
+from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "python"))
 
 from stdface.core.keyword_parser import _COMMON_KEYWORDS  # noqa: E402
-from stdface.solvers.hphi._plugin import HPhiPlugin        # noqa: E402
-from stdface.solvers.mvmc._plugin import MVMCPlugin        # noqa: E402
-from stdface.solvers.uhf._plugin import UHFPlugin          # noqa: E402
-from stdface.solvers.hwave._plugin import HWavePlugin      # noqa: E402
+# ソルバーは plugin レジストリ経由で列挙する。実装時に
+# stdface.plugin のレジストリ API(登録済みプラグイン一覧)を確認し、
+# 各プラグインのキーワードテーブル属性を取得する。
+# 格子 alias は stdface.lattice のレジストリ(LatticePlugin.aliases)から。
 
-# 小文字キーワード → カタログ正準表記(機械変換 + 例外表)
 _CANON_EXCEPTIONS = {"2s": "2S", "2sz": "2Sz", "gamma": "Gamma",
                      "gamma_y": "Gamma_y", "u": "U", "v": "V", "d": "D",
                      "k": "K", "l": "L", "w": "W", "h": "h", "mu": "mu"}
@@ -277,38 +249,45 @@ def canon(kw: str) -> str:
     return kw
 
 def main() -> None:
-    entries = []
-    def add(table: dict, source: str) -> None:
-        for kw in table:
-            entries.append({"keyword_canonical": canon(kw),
-                            "keyword_lower": kw, "source": source})
-    add(_COMMON_KEYWORDS, "common")
-    for plugin_cls, name in ((HPhiPlugin, "hphi"), (MVMCPlugin, "mvmc"),
-                             (UHFPlugin, "uhf"), (HWavePlugin, "hwave")):
-        table = getattr(plugin_cls, "keyword_table", None) or \
-            getattr(plugin_cls(), "keyword_table", {})
-        add(dict(table), name)
+    agg: dict[tuple, set] = defaultdict(set)   # (canonical, kind) -> sources
+    for kw in _COMMON_KEYWORDS:
+        agg[(canon(kw), "keyword")].add("common")
+    # ソルバーレジストリの全プラグイン: agg[(canon(kw), "keyword")].add(name)
+    # 格子レジストリ: agg[(alias, "lattice_alias")].add("lattice_registry")
+    # 模型名: agg[(name, "model_alias")].add("model_registry")
+    # (実装時にレジストリ API に合わせて記入。既存コードは変更しない)
+    entries = [{"keyword_canonical": c, "kind": k, "sources": sorted(s)}
+               for (c, k), s in sorted(agg.items())]
     json.dump(entries, sys.stdout, ensure_ascii=False, indent=1)
 
 if __name__ == "__main__":
     main()
 ```
 
-注意: ソルバープラグインのキーワードテーブル属性名は実装を確認して
-合わせること(`solvers/hphi/_plugin.py` の `2s` を含むテーブル。
-属性名が異なる場合はこのスクリプト側を修正する。既存コードは変更しない)。
+- [ ] **Step 5: test_tools.py を書く**
 
-- [ ] **Step 5: 動作確認(壊れ例で失敗、直して成功)**
+tools の自動テスト(pytest 不要、`python3 test_tools.py` で完結する
+assert ベースでよい)。最低限:
+- inventory: `2S` がソルバー表から取れる / prime 付き J 成分
+  (`J0'x` 等)が canonical に含まれる / 出力が安定ソート・重複なし /
+  ソルバーレジストリの件数 ≧ 4(将来プラグイン追加の検知)
+- リンタ C1–C11: 各チェックの正例・負例(インライン YAML 文字列で
+  最小ケースを構成 — 壊れた schema、逆向き重複、9 成分欠落、
+  型不整合 fermion–spin、manifest 不一致、計数展開の配位数不一致)
+- 不正 YAML(パース不能・null 文書)で例外にならず診断が出ること
 
-Run: `python3 lattice_catalog/tools/keyword_inventory.py | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d), 'keywords'); assert any(e['keyword_canonical']=='2S' for e in d)"`
-Expected: キーワード件数表示、assert 成功(`2S` がソルバー表から取れている)
+Run: `python3 lattice_catalog/tools/test_tools.py`
+Expected: `all tools tests passed`
 
-一時ファイル `lattice_catalog/chain/chain_spin.yaml` に**故意に壊した**
-最小 YAML(couplings 未定義 type、逆向き重複、未知 param)を置き:
+- [ ] **Step 6: 動作確認**
+
+Run: `python3 lattice_catalog/tools/keyword_inventory.py | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d), 'entries'); assert any(e['keyword_canonical']=='2S' for e in d)"`
+Expected: 件数表示、assert 成功
+
 Run: `python3 lattice_catalog/tools/lint_catalog.py`
-Expected: C5/C7/C8/C10 の違反が報告され exit 1。確認後、一時ファイルを削除。
+Expected: `0 files, 0 errors`(カタログ YAML なしの状態で正常終了)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add lattice_catalog/CONVENTIONS.md lattice_catalog/manifest.yaml lattice_catalog/tools/
@@ -361,9 +340,10 @@ system:
 
 model:
   site_dof:
-    A: {spin: {param: 2S, default: 0.5}}   # S = 2S/2。既定 2S=1
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S。既定 S=1/2
 
   bonds:
+    # 参照実装 (_BONDS) のソース順を保持
     - {from: A, to: A, R: [1], type: J0}     # 最近接   (別名 J)
     - {from: A, to: A, R: [2], type: "J0'"}  # 次近接   (別名 J')
     - {from: A, to: A, R: [3], type: "J0''"} # 三次近接 (別名 J'')
@@ -459,16 +439,17 @@ model:
     - {from: A, to: A, R: [3], type: "V0''"} # 別名 V''
 
   couplings:
-    t0:    {operator: "hop", value: {param: t0}}     # 複素可。h.c. は反転変換で共役
-    "t0'": {operator: "hop", value: {param: "t0'"}}
-    "t0''": {operator: "hop", value: {param: "t0''"}}
-    V0:    {operator: "density-density", value: {param: V0}}
+    # H への寄与 = value × operator (物理係数)。-t は scale で表す。
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t0''": {operator: "hop", value: {param: "t0''", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}    # +V n_i n_j
     "V0'": {operator: "density-density", value: {param: "V0'"}}
     "V0''": {operator: "density-density", value: {param: "V0''"}}
 
   onsite:
     A:
-      hubbard_u:                 # U n↑n↓
+      hubbard_u:                 # +U n↑n↓
         operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
         value: {param: U}
       chemical_potential:        # -mu N
@@ -514,9 +495,11 @@ system:
 model:
   site_dof:
     A_c: {fermion: {orbitals: 1}}
-    A_s: {spin: {param: 2S, default: 0.5}}
+    A_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
 
   bonds:
+    # Kondo 結合はソース順 = general_j(..., 遍歴, 局在) の引数順。
+    # 遍歴 A_c が第 1 端点 (s_i . S_j の役割と一致)
     - {from: A_c, to: A_s, R: [0], type: J}   # Kondo 結合 (セル内)
     - {from: A_c, to: A_c, R: [1], type: t0}
     - {from: A_c, to: A_c, R: [2], type: "t0'"}
@@ -526,13 +509,13 @@ model:
     - {from: A_c, to: A_c, R: [3], type: "V0''"}
 
   couplings:
-    t0:    {operator: "hop", value: {param: t0}}
-    "t0'": {operator: "hop", value: {param: "t0'"}}
-    "t0''": {operator: "hop", value: {param: "t0''"}}
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t0''": {operator: "hop", value: {param: "t0''", scale: -1.0}}
     V0:    {operator: "density-density", value: {param: V0}}
     "V0'": {operator: "density-density", value: {param: "V0'"}}
     "V0''": {operator: "density-density", value: {param: "V0''"}}
-    J:     {operator: "s_i . S_j", value: {param: J}}
+    J:     {operator: "s_i . S_j", value: {param: J}}   # +J s·S (第1端点=遍歴)
 
   onsite:
     A_c:
@@ -563,14 +546,14 @@ model:
         value: {param: Gamma_y}
 ```
 
-注意: chain_kondo の bonds で `A_c→A_s` R=[0] はサイト番号 0→1 なので
-向き規約に適合。J は等方スカラーのみ(Kondo の `input_spin` はスカラー
-入力)だが、成分キーワード(`Jx` 等)が共通テーブルに存在するため
-`{param: J}` のスカラー参照とし、その旨コメントする。
+注意: chain_kondo の J は等方スカラーのみ(Kondo の `input_spin` は
+スカラー入力)だが、成分キーワード(`Jx` 等)が共通テーブルに存在する
+ため `{param: J}` のスカラー参照とし、その旨コメントする。
 
 - [ ] **Step 4: manifest.yaml に chain 3 エントリを追加**
 
-commit ハッシュは `git rev-parse HEAD` の値を使用:
+commit ハッシュは `git rev-parse HEAD` の値を使用。coordination は
+ラベル×type で**全ボンド type を列挙**(省略不可):
 
 ```yaml
 files:
@@ -580,7 +563,8 @@ files:
     dimension: 1
     n_sites_uc: 1
     bonds_per_uc: {J0: 1, "J0'": 1, "J0''": 1}
-    coordination: {J0: 2, "J0'": 2, "J0''": 2}
+    coordination:
+      A: {J0: 2, "J0'": 2, "J0''": 2}
     min_size_for_check: [7]
     source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: <hash>}
   chain/chain_hubbard.yaml:
@@ -589,7 +573,8 @@ files:
     dimension: 1
     n_sites_uc: 1
     bonds_per_uc: {t0: 1, "t0'": 1, "t0''": 1, V0: 1, "V0'": 1, "V0''": 1}
-    coordination: {t0: 2, V0: 2}
+    coordination:
+      A: {t0: 2, "t0'": 2, "t0''": 2, V0: 2, "V0'": 2, "V0''": 2}
     min_size_for_check: [7]
     source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: <hash>}
   chain/chain_kondo.yaml:
@@ -598,7 +583,9 @@ files:
     dimension: 1
     n_sites_uc: 2
     bonds_per_uc: {J: 1, t0: 1, "t0'": 1, "t0''": 1, V0: 1, "V0'": 1, "V0''": 1}
-    coordination: {t0: 2, J: 1}
+    coordination:
+      A_c: {J: 1, t0: 2, "t0'": 2, "t0''": 2, V0: 2, "V0'": 2, "V0''": 2}
+      A_s: {J: 1}
     min_size_for_check: [7]
     source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: <hash>}
 ```
@@ -649,8 +636,9 @@ J0/J1 の方向割当(W方向/L方向)はソースコメントと
 bonds/couplings は抽出結果を全数記載(J 族は 9 成分正準形)。
 Kondo は A_c/A_s の 2 ラベル、磁場両側適用。
 
-- [ ] **Step 3: manifest エントリ追加**(3 件。coordination: 最近接 4
-(J0+J1 各 2)、対角 `J'` 系 4。min_size_for_check は R 成分最大値から算出)
+- [ ] **Step 3: manifest エントリ追加**(3 件。coordination はラベル×type
+で全 type 列挙: 最近接は J0+J1 各 2、対角 `J'` 系 4。
+min_size_for_check は各方向 L > 2·max|R成分| の奇数)
 
 - [ ] **Step 4: リンタ実行**
 
@@ -876,17 +864,16 @@ git commit -m "Add face-centered orthorhombic lattice catalog definitions"
 
 ```yaml
   bonds:
-    # Kondo 結合: 現行実装は A3_c と全局在スピンを結合する
-    # (他格子の副格子ごと対応と異なる。上流実装のバグの可能性あり —
-    #  manual 7章参照。ここでは現行動作を忠実に記載)
-    - {from: A0_s, to: A3_c, R: [0, 0, 0], type: J}
-    - {from: A1_s, to: A3_c, R: [0, 0, 0], type: J}
-    - {from: A2_s, to: A3_c, R: [0, 0, 0], type: J}
+    # Kondo 結合: 現行実装は A3_c (副格子3の遍歴サイト) と全局在スピンを
+    # 結合する (他格子の副格子ごと対応と異なる。上流実装のバグの可能性
+    # あり — manual 7章参照。上流修正時はカタログの versioning が必要)。
+    # ソース順保持: general_j(..., isite+3, jsite+uc_i) の引数順で
+    # 遍歴 A3_c が常に第 1 端点 (s_i . S_j の役割と一致)
+    - {from: A3_c, to: A0_s, R: [0, 0, 0], type: J}
+    - {from: A3_c, to: A1_s, R: [0, 0, 0], type: J}
+    - {from: A3_c, to: A2_s, R: [0, 0, 0], type: J}
     - {from: A3_c, to: A3_s, R: [0, 0, 0], type: J}
 ```
-
-(from/to の向きはサイト番号順の規約に合わせて調整。`s_i . S_j` の
-第 1 引数が遍歴側になるよう couplings 側の定義と整合させること。)
 
 - [ ] **Step 3: manifest エントリ追加**
 
@@ -927,7 +914,10 @@ git commit -m "Add pyrochlore lattice catalog definitions (spin/Hubbard/Kondo)"
 - [ ] **Step 2: 入力データを選ぶ**
 
 `test/wannier90_data/` と `samples/` から軌道数最小の Hubbard 用
-データセット(_hr.dat / _geom / _ur.dat)を選ぶ。
+データセットを選ぶ。**H(_hr.dat)と U(_ur.dat)チャネルのみ使用**。
+J チャネル(_jr.dat: Hund・exchange・pair-hopping)は 4 フェルミオン項の
+データモデルが未定義のため対象外(manual 5.5 章で規則を散文記述、
+7 章に制限として明記)。
 
 - [ ] **Step 3: example_hubbard.yaml を書く**
 
@@ -936,6 +926,8 @@ git commit -m "Add pyrochlore lattice catalog definitions (spin/Hubbard/Kondo)"
   規則で変換(上位 N 件抽出ではない)。正準対のみ列挙し、
   排除した Hermite 対の扱いをコメントで明記。R=0 対角は onsite へ。
 - 値は実数値を直接記載(外部データ由来。param 参照不可の旨コメント)。
+  H チャネルの符号反転など Step 1 で確定した規則の適用は
+  ファイル冒頭コメントに規則名で明記する。
 - 各要素に元ファイルの行番号をコメントで記録。
 
 - [ ] **Step 4: manifest エントリ追加 + リンタ実行**
@@ -1020,20 +1012,27 @@ ladder の W 一般化規則もここに記載。
 
 - [ ] **Step 2: 4 章(模型ごとの演算子対応)を書く**
 
-- Spin: 9 成分正準形とパラメータ解決規則(成分キーワード 9 種の表)、
+- **符号表と検証連鎖**(スペック §4.3 の表): StdFace パラメータ →
+  builder(`interaction_builder.py`)→ trans/intr 係数 → solver 規約
+  (HPhi trans.def の H=−Σt 暗黙符号)→ 物理符号、の導出を明記。
+- Spin: 9 成分正準形とパラメータ解決規則(成分キーワード 9 種の表、
+  解決順序: 成分局所 > 成分大域 > スカラー局所 > スカラー大域 > 0)、
   等方入力・異方入力・同時指定エラーの 3 例。
-- Hubbard: hop / density-density / onsite の定義(数式)、係数規約
-  (−t·hop)、複素 t と反転変換。
-- Kondo: 2 ラベル表現、磁場両側適用、サイト倍加(前半=局在)との対応、
-  GC 変種(粒子数条件は solver 層、カタログ対象外)。
+- Hubbard: hop / density-density / onsite の定義(数式)、scale による
+  符号表現、複素 t と反転同値(共役)。
+- Kondo: 2 ラベル表現と端点順序(遍歴第 1)、磁場両側適用、
+  サイト倍加(前半=局在)との対応、GC 変種(粒子数条件は solver 層)。
 
 - [ ] **Step 3: 5 章(wannier90 変換仕様)を書く**
 
 Task 10 Step 1 で確定した規則を模型別に文書化:
-- Hubbard: H/U/J 各チャネルの変換(符号、onsite 分離、Hermite 正準対、
+- Hubbard: H/U チャネルの変換(符号反転、onsite 分離、Hermite 正準対、
   縮退重み、cutoff、λ/α、doublecounting)
 - Spin: 超交換 `2|t_mn|^2(1/U_m+1/U_n)` 生成の現行アルゴリズムと、
   直接写像との差異
+- **5.5 J チャネル**: Hund・exchange・pair-hopping の変換規則を散文で
+  記述し、YAML 例が対象外である理由(4 フェルミオン項スキーマ未定義)と
+  一般項スキーマの素描(6 章の拡張提案 6 項)を示す
 - example_hubbard.yaml の読み解き
 
 - [ ] **Step 4: Commit**
@@ -1057,8 +1056,9 @@ git commit -m "Add lattice catalog manual: per-lattice, per-model, and wannier90
 
 - [ ] **Step 1: 6 章(仕様拡張提案)を書く**
 
-スペック §4.5 の 5 項目(fermion site_dof、1 サイト演算子語彙、
-名前付き 2 体演算子、`{param}` 参照の許容箇所、catalog ヘッダ)を、
+スペック §4.6 の 6 項目(fermion site_dof、1 サイト演算子語彙、
+名前付き 2 体演算子と端点順序の意味論、`{param, scale, default}` 参照の
+許容箇所、catalog ヘッダ、4 フェルミオン一般項の素描)を、
 それぞれ tensor_terms への展開形・型・意味論つきで draft への
 追記提案として記述。
 
@@ -1066,11 +1066,15 @@ git commit -m "Add lattice catalog manual: per-lattice, per-model, and wannier90
 
 - oracle 比較(数値同値性)未実施 — 展開エンジン実装時の課題
 - ladder は W=2/3 の例のみ(一般 W は生成規則の文書)
-- wannier90 は Hubbard 例のみ、Spin/Kondo は仕様記述のみ
-- pyrochlore Kondo の `isite+3` 挙動(上流バグ疑い、現行動作を記載)
+- wannier90 は Hubbard の H/U チャネル例のみ。J チャネル
+  (4 フェルミオン項)は散文記述のみ、Spin/Kondo も仕様記述のみ
+- pyrochlore Kondo の `isite+3` 挙動(上流バグ疑い、現行動作を記載。
+  上流修正時はカタログの versioning が必要)
 - box 行列は写像説明のみで YAML 例なし
 - 機械的識別子(prime を含む type 名)の分離は仕様確定時の課題
 - 多体項(3 体以上)は現行 StdFace に存在しないため対象外
+- YAML・manifest・manual の三重記載はリンタと inventory の機械照合で
+  緩和しているが、ソース変更時は三箇所の同期更新が必要
 
 - [ ] **Step 3: README.md を書く**
 

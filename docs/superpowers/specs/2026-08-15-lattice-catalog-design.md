@@ -1,6 +1,6 @@
 # StdFace 格子カタログ(新フォーマット対応一式)設計書
 
-- 日付: 2026-08-15(Codex デザインレビュー Round 1 反映済み)
+- 日付: 2026-08-15(Codex デザインレビュー Round 1・Round 2 反映済み)
 - ブランチ: `lattice-catalog`
 - 参照仕様: 「格子定義仕様 (draft)」2026/07/27
   (PASUMS 共有ドライブ `19. StdFace/1. 打ち合わせ/20260727/stdface_lattice_spec.pdf`)
@@ -14,246 +14,241 @@
 2. 対応関係を説明する日本語マニュアル
 3. カタログの構造的正しさを機械検査する意味検査リンタ + manifest
 
-の一式を作成する。カタログは新仕様 §8「カタログ層」の実体となることを想定した
-参照データであり、変換ツール(stan.in → YAML コンバータ)と展開エンジンは
-今回のスコープ外。
+の一式を作成する。変換ツール(stan.in → YAML)と展開エンジンはスコープ外。
 
-### 位置づけ(重要)
+### 位置づけ
 
-- 本カタログの YAML は draft 仕様に**拡張方言**(experimental extensions、
-  §4.5)を加えた形式で書く。各ファイル先頭で
-  `catalog: {schema: stdface-catalog/0.1, dialect: experimental}` を宣言し、
-  draft 準拠部分と拡張部分を区別できるようにする。
-- 成果物は「展開エンジンで実行検証済み」とは主張しない。主張するのは
-  (a) 現行実装ソースとの突合、(b) リンタによる構造検査、(c) manifest に
-  基づく検算、の 3 点である。
+- YAML は draft 仕様に**拡張方言**(experimental extensions、§4.6)を加えた
+  形式。各ファイル先頭で
+  `catalog: {schema: stdface-catalog/0.1, dialect: experimental}` を宣言。
+- 主張する検証水準: (a) 現行実装ソースとの突合、(b) リンタによる構造・
+  整合検査(計数展開による配位数実測を含む)、(c) manifest 検算。
+  数値同値性(oracle 比較)は主張しない。
 
 ## 2. スコープ
 
 ### 対象
 
-- **格子 9 種(固定幾何)**: chain, ladder(W=2 と W=3 の 2 例), square,
-  triangular, honeycomb, kagome, orthorhombic, fc_ortho, pyrochlore
-- **wannier90**: 模型別変換仕様の章 + Hubbard 小規模例 YAML 1 件
-- **模型 3 種**: Spin / Hubbard / Kondo(GC 変種は粒子数条件の違いのみ。
-  粒子数条件はカタログ外(solver 層)に属することをマニュアルに明記)
-- **相互作用の語彙**(現行実装から抽出済み):
-  - ホッピング: `t, t', t'', t0–t2` とそのプライム変種(複素数)
-  - オンサイト斥力: `U`、化学ポテンシャル: `mu`
-  - オフサイトクーロン: `V` 族(`V0–V2` とプライム変種)
-  - スピン交換: `J` 族(`J0–J2` とプライム変種)、各々 **3×3 テンソル**。
-    成分キーワードは `<prefix>{x,y,z,xy,xz,yx,yz,zx,zy}`
-    (`x`=xx 対角、`keyword_parser.py::_j_matrix_keywords`)
-  - 単イオン異方性 `D`、磁場 `h, Gamma, Gamma_y`
-  - 位相(twist)`phase0–2`(**度単位**、境界横断ごとに
-    `exp(i·π/180·phase)` を乗算; `site_util.py::ExpPhase`)
-  - 一般化セル `box`(a0W 等の行列指定)
-
+- **格子 9 種**: chain, ladder(W=2 / W=3 の 2 例), square, triangular,
+  honeycomb, kagome, orthorhombic, fc_ortho, pyrochlore
+- **wannier90**: 模型別変換仕様の章 + **H(hopping)・U(Coulomb)チャネル
+  のみの Hubbard 小規模例** 1 件(J チャネルは §5.5 参照)
+- **模型 3 種**: Spin / Hubbard / Kondo(GC 変種は粒子数条件のみ →
+  solver 層の扱いとしてマニュアルに明記)
+- **相互作用の語彙**(現行実装から抽出・検証済み):
+  - ホッピング t 族(複素)、`U`、`mu`、V 族、J 族(3×3 テンソル、成分
+    キーワード `<prefix>{x,y,z,xy,xz,yx,yz,zx,zy}`、`x`=xx 対角)
+  - `D`、`h, Gamma, Gamma_y`、`phase0–2`(度)、`box`
 - **YAML 件数**: (8 格子 + ladder×2) × 3 模型 = 30 件 + wannier90 1 件 = 31 件
 
 ### 対象外
 
-- 展開エンジンの実装、stan.in → 新フォーマット変換ツール
-- StdFace 生成の相互作用リストとの数値同値性比較(oracle 比較)。
-  リンタは構造検査までとし、同値性検証は展開エンジン実装時の課題とする
-- 計算条件系キーワード(`method` 等)→ 対応表で「対象外」と分類
-- 新仕様 draft 本体の改訂(拡張は「提案」としてマニュアルに記載するのみ)
+- 展開エンジン、stan.in 変換ツール、数値 oracle 比較
+- wannier90 J チャネル(Hund・exchange・pair-hopping)の YAML 例
+  (4 フェルミオン項のデータモデルが未定義のため。§5.5 で規則を散文
+  記述し、一般項スキーマの素描を将来課題として示す)
+- 計算条件系キーワード → 対応表で「対象外」と分類
+- draft 本体の改訂(拡張は提案として記載)
 
 ## 3. 成果物の構成
 
 ```
 lattice_catalog/
-  README.md                      # 一式の入口
-  manual.md                      # 対応マニュアル本体(日本語)
-  CONVENTIONS.md                 # 記述規約(Task 0 で確定、manual 1章に転記)
-  manifest.yaml                  # 機械可読の検算台帳(全ファイル分)
+  README.md / manual.md / CONVENTIONS.md
+  manifest.yaml                  # 機械可読の検算台帳
   tools/
-    lint_catalog.py              # 意味検査リンタ(開発時専用、PyYAML 使用可)
-    keyword_inventory.py         # パーサーテーブル走査によるキーワード目録生成
-  chain/
-    chain_spin.yaml
-    chain_hubbard.yaml
-    chain_kondo.yaml
-  ladder/
-    ladder_w2_spin.yaml …        # W=2 / W=3 各 3 模型(6 件)
-  square/ … triangular/ … honeycomb/ … kagome/ …
-  orthorhombic/ … fc_ortho/ … pyrochlore/
-  wannier90/
-    example_hubbard.yaml         # Hubbard の小規模厳密例
+    lint_catalog.py              # 意味検査リンタ(計数展開器を含む)
+    keyword_inventory.py         # キーワード目録生成(レジストリ走査)
+    test_tools.py                # tools の自動テスト(開発時専用)
+  chain/ ladder/ square/ triangular/ honeycomb/ kagome/
+  orthorhombic/ fc_ortho/ pyrochlore/
+  wannier90/example_hubbard.yaml
 ```
 
 ## 4. 対応規約
 
 ### 4.1 geometry / system
 
-- 格子ベクトル・分率座標・サイトラベルは現行実装から抽出。
-- サイトの順序は `geometry.sites` の**配列順**を正とし、仕様 §4.2 の
-  「サイト番号」に対応させる(ラベル辞書順ではない)。
-- `W, L, Height` → `system.size`。境界は既定 `periodic`。
-- `phase0–2` → 方向別 `{twist: θ}`。**単位は度**、境界を n 回横切る
-  ボンドには位相 `exp(i·n·π·θ/180)` が乗る(現行実装と同一規約)。
-  twist の値も `{param: phase0}` 形式で参照する(コメント扱いにしない)。
-- chain は論理 1 次元で記述する。現行実装の内部表現(W=1 の 2D、
-  `phase0` 入力が内部で L 方向 `phase[1]` に転写される)との対応は
-  マニュアル 3 章に明記する。
-- 一般化セル(`box` 行列)は仕様 §5.1 `supercell(S)` への写像として
-  マニュアルで説明する。行列の作用方向(`A_super = S·A`、行ベクトル規約)、
-  det(S) ≠ 0 条件、`W/L/Height` 指定との排他関係を明記する。
-  カタログ YAML 自体は標準セルで記述する。
+- 幾何は現行実装から抽出。サイト順序は `geometry.sites` の**配列順** =
+  仕様 §4.2 の「サイト番号」。
+- `W, L, Height` → `system.size`。`phase0–2` → `{twist: {param: phaseN}}`
+  (**度単位**、境界 n 回横断で `exp(i·n·π·θ/180)`)。
+- chain は論理 1 次元(内部 W=1 2D 表現、`phase0`→`phase[1]` 転写は
+  manual 3 章)。
+- `box` → `supercell(S)` 写像(`A_super = S·A` 行ベクトル規約、
+  det(S)≠0、`W/L/Height` との排他)はマニュアル説明のみ。
 
-### 4.2 ボンド(model.bonds)
+### 4.2 ボンド(model.bonds)— ソース順保持
 
-- **R の定義**: `R = cell(to) − cell(from)`(整数ベクトル)。
-  実変位は δ = (frac_to − frac_from) + R·A。
-- **ボンド type 名 = StdFace パラメータ名**(`J0, J0', t1, V2, …`)。
-  プライムを含む名前は YAML では引用符付き文字列とする。
-  機械的識別子との分離は仕様確定時の課題として manual 7 章に記載
-  (本カタログでは StdFace 原名を正とする)。
-- **向きの一意化**: 各ボンドは一度だけ書く。正準形は
-  from のサイト番号(sites 配列順)≦ to、同一サイトなら R 辞書順で正
-  (最初の非零成分が正)。
-- **反転変換**: `(i, j, R)` を `(j, i, −R)` に反転する場合、
-  ホッピングは係数を複素共役、スピン交換は 3×3 テンソルを転置
-  (`J_ab → J_ba`)する。この規則を CONVENTIONS.md に明記し、
-  リンタで「逆向き重複」を検出する。
-- 各格子プラグインの `_BONDS` テーブルから代表ボンドを全数抽出。
-  出典は**関数名 + テーブル内容 + 参照コミットハッシュ**で記録する
-  (行番号のみの参照は陳腐化するため補助情報とする)。
+- **R の定義**: `R = cell(to) − cell(from)`。δ = (frac_to − frac_from) + R·A。
+- **向き**: **参照実装のソース順をそのまま保持する**
+  (`_BONDS` テーブルの `site_i → site_j`、Kondo 結合は
+  `general_j(..., isite, jsite)` の引数順 = 遍歴が第 1)。
+  正準形への並べ替えは**行わない**(並べ替えは複素 hopping の共役・
+  交換テンソルの転置を要求し、単一の couplings キーでは表現できない
+  ため。Round 2 指摘)。
+- **一意性**: 各ボンドは一度だけ書く。リンタが**反転同値**
+  `(i,j,R) ≡ (j,i,−R)` での重複を検出する(反転時の係数変換
+  — hopping: 複素共役、交換テンソル: 転置 — は消費側の規範として
+  CONVENTIONS に記載)。
+- type 名 = StdFace キーワード名(プライムは引用符付き)。
+  機械的識別子の分離は将来課題(manual 7 章)。
+- 出典: ファイル + 関数名 + 参照コミットハッシュ(行番号は補助)。
 
-### 4.3 係数参照とパラメータ解決(拡張方言の核)
+### 4.3 係数の意味論と符号(規範)
 
-- 係数は `{param: <StdFaceキーワード名>}` で参照する。数値は書かない
-  (wannier90 例のみ外部データ由来の実数値を書く)。
-- **スピン交換の正準形**: J 族はすべて 9 成分の tensor_terms で書く:
+- **value 意味論**: `H = Σ_bonds value·(operator) + Σ_onsite value·(operator)`
+  の**物理ハミルトニアン係数**。solver 出力ファイル(HPhi trans.def 等)の
+  係数規約(H_trans = −Σ t c†c の暗黙符号)とは**別物**であることを
+  manual に明記し、以下の**検証連鎖**で突合する:
+  `StdFace パラメータ → builder 呼び出し(interaction_builder.py)
+  → trans/intr 係数 → solver 規約 → 物理符号`。
+- **符号表**(検証済み。manual 4 章に導出つきで記載):
 
-  ```yaml
-  J0:
-    operator:
-      tensor_terms:
-        - {ops: [Sx, Sx], coeff: {param: J0x}}
-        - {ops: [Sy, Sy], coeff: {param: J0y}}
-        - {ops: [Sz, Sz], coeff: {param: J0z}}
-        - {ops: [Sx, Sy], coeff: {param: J0xy}}
-        - {ops: [Sx, Sz], coeff: {param: J0xz}}
-        - {ops: [Sy, Sx], coeff: {param: J0yx}}
-        - {ops: [Sy, Sz], coeff: {param: J0yz}}
-        - {ops: [Sz, Sx], coeff: {param: J0zx}}
-        - {ops: [Sz, Sy], coeff: {param: J0zy}}
-  ```
+  | StdFace | 物理ハミルトニアン寄与 | YAML 表現 |
+  |---|---|---|
+  | t 族 | −t Σσ (c†c + h.c.) | `value: {param: t0, scale: -1.0}` |
+  | mu | −mu N | onsite `coeff: -1.0`(ops [N]) |
+  | U | +U n↑n↓ | `coeff: +1.0` |
+  | V 族 | +V n_i n_j | `scale: +1.0`(省略可) |
+  | J 族 | +Σ_ab J_ab S^a S^b | tensor_terms(§4.4) |
+  | h/Gamma/Gamma_y | −h Sz −Γ Sx −Γy Sy | `coeff: -1.0` |
+  | D | +D (Sz)² | `coeff: +1.0` |
+  | Kondo J | +J s·S | `scale: +1.0` |
 
-  (tensor_terms の `coeff` に `{param: ...}` を許すのは拡張方言。)
-- **パラメータ解決規則**(StdFace の `input_spin_nn` / `input_hopp` /
-  `input_coulomb_v` と同一。CONVENTIONS.md に規範として記載):
-  1. 成分キーワード(`J0x` 等)が指定されればその値。
-  2. 未指定成分は、等方スカラー `J0` が指定されていれば対角に `J0`、
-     非対角に 0。
-  3. `J0` も未指定なら大域 `J`(および `J'→J0'` 等の別名)へフォールバック。
-  4. スカラーと成分の同時指定は StdFace 同様エラー。
-  5. どこにも指定がなければ 0。
-- ホッピング t 族・クーロン V 族の別名フォールバック(`t→t0` 等)も
-  同じ形式で規範化する。
+- **符号は必ずデータ(scale / coeff)に持たせ、コメントに置かない。**
+- **param 参照の一般形**(拡張方言):
+  `{param: <名>, scale: <実数, 省略時 1.0>, default: <最終値, 省略時 0>}`
+  → 値 = scale × param(param 未指定時は default)。
+- wannier90 の `H_mn → −H_mn` 反転は別規則として §5.5 / manual 5 章に明記。
 
-### 4.4 模型ごとの演算子(model.couplings / onsite)
+### 4.4 J テンソルとパラメータ解決(規範)
 
-- **演算子の意味論**(CONVENTIONS.md に規範として記載):
-  - `hop` = Σσ (c†_iσ c_jσ + h.c.)。**符号は演算子に埋め込まず**、
-    ハミルトニアンへの寄与は `−t · hop`(係数規約として文書化)。
-    複素 t の h.c. は向き規約 + 反転変換(共役)で処理。
-  - `density-density` = n_i n_j。
-  - `s_i . S_j` = 遍歴スピン s と局在スピン S の交換(Kondo)。
-  - onsite 語彙: `N, Nup, Ndn, NupNdn, Sx, Sy, Sz, Szz(=(Sz)^2)`。
-- **Spin**: J 族 → §4.3 正準形。`D` → onsite `Szz`。
-  磁場 → onsite `field_z/x/y`(係数 −h, −Gamma, −Gamma_y)。
-- **Hubbard**: t 族 → `hop`、`U` → onsite `NupNdn`、`mu` → onsite `−N`、
-  V 族 → `density-density`。磁場(h/Gamma/Gamma_y)は電子スピンに適用
-  (`model_plugin.py::HubbardModel` と同一)。
-- **Kondo**: 遍歴 `<X>_c`(fermion)+ 局在 `<X>_s`(spin、同一分率座標)
-  の 2 ラベル。物理的には 1 サイト上の 2 種の自由度であり、ラベルが
-  自由度を区別する(仕様 §2.1「サイトラベルは元素種とは別概念」の応用)。
-  - Hubbard 項一式(U, mu, t, V, 磁場)は `<X>_c` に適用。
-  - **磁場(h/Gamma/Gamma_y)は `<X>_s` にも適用**(両側適用。
-    `model_plugin.py::KondoModel` で確認済み)。
-  - Kondo 結合 `J` は R=0 の `<X>_c–<X>_s` ボンド。
-  - **pyrochlore の例外**: 現行実装(C/Python 共通)は Kondo 結合を
-    `isite + 3`(副格子 3 の遍歴サイト)と全副格子の局在スピンの間に
-    生成する(`src/Pyrochlore.c:249`)。カタログは**現行動作を忠実に
-    再現**し、上流実装のバグの可能性がある旨を YAML コメントと
-    マニュアルに注記する。
-- **2S の表現**: `site_dof` の spin 値も `{param: 2S}` で参照する
-  (拡張方言)。例: `A: {spin: {param: 2S, default: 0.5}}`。
-  既定値は StdFace の既定(2S=1 → S=1/2)。
+- J 族は 9 成分 tensor_terms 正準形(`coeff: {param: J0xy}` 等)。
+- **解決順序**(`input_params.py::_resolve_spin_matrix` と同一):
+  1. 局所成分(`J0xy` 等)
+  2. **大域成分**(`Jxy` 等)
+  3. 局所スカラー `J0`(対角のみ)
+  4. 大域スカラー `J`(対角のみ)
+  5. 0
+- **競合規則**(`input_spin_nn` と同一): スカラー同士(J vs J0)、
+  スカラー vs 行列(全 4 組合せ)、行列 vs 行列(J0 成分と J 成分の
+  同時指定)はエラー。プライム系(`input_spin`)は大域 fallback なし
+  (`J0'` スカラー vs `J0'` 成分のみ)。prefix ごとの解決表・競合表を
+  CONVENTIONS に規範として列挙する。
+- 解決の実行者は**カタログ消費側**(resolver)。カタログは規範表を
+  提供する(入力契約)。出力契約は「ボンドごとの解決済み数値係数」。
 
-### 4.5 仕様への拡張提案(マニュアル 6 章)
+### 4.5 模型ごとの演算子
 
-draft 仕様への追記提案として以下を明記(いずれも本カタログで使用):
+- 演算子語彙: `hop` = Σσ (c†_iσ c_jσ + h.c.)(符号なし)、
+  `density-density` = n_i n_j、`s_i . S_j`(**第 1 端点 = 遍歴**。
+  端点順序に意味があり、ソース順保持(§4.2)により保証)、
+  onsite: `N, Nup, Ndn, NupNdn, Sx, Sy, Sz, Szz`。
+- 演算子と site_dof の型整合(リンタ検査): `hop`/`density-density` は
+  fermion–fermion、`s_i . S_j` は fermion–spin(この順)、J テンソルは
+  spin–spin、onsite スピン演算子は spin または fermion(電子スピン)。
+- **Spin**: J 族 §4.4、D、磁場(符号表)。
+- **Hubbard**: t/U/mu/V + 磁場(電子スピン)。
+- **Kondo**: `<X>_c`(fermion)+ `<X>_s`(spin、同一分率座標、
+  1 物理サイト 2 自由度)。Hubbard 一式は `_c`、磁場は**両側**、
+  J は `_c → _s`(遍歴第 1)。
+  - **pyrochlore の例外**: 現行実装(C/Python 共通)は J を
+    「副格子 3 の遍歴サイト ↔ 全副格子の局在スピン」に生成
+    (`src/Pyrochlore.c` GeneralJ / `pyrochlore.py::_local`)。
+    カタログは現行動作を忠実に再現し(from は遍歴 `A3_c`)、
+    上流バグの可能性と、上流修正時のカタログ versioning が必要に
+    なる旨を注記する。
+- **2S**: `spin: {param: 2S, scale: 0.5, default: 0.5}`
+  (spin 値 = S = 0.5 × 2S。param 未指定時 S=0.5。型: 2S は正整数)。
 
-1. `site_dof` のフェルミオン自由度 `{fermion: {orbitals: n}}`
-2. 1 サイト演算子語彙: `Cdag_up, Cdag_dn, C_up, C_dn, N, Nup, Ndn,
-   NupNdn, Szz`(tensor_terms への展開形を明記)
-3. 名前付き 2 体演算子: `hop`, `density-density`, `s_i . S_j`
-4. `{param: ...}` 参照: coupling の value、tensor_terms の coeff、
-   site_dof の spin、boundary の twist で許す
-5. `catalog:` ヘッダ(schema/dialect 宣言)
+### 4.6 仕様への拡張提案(マニュアル 6 章)
+
+1. `site_dof` フェルミオン `{fermion: {orbitals: n}}`
+2. 1 サイト演算子語彙(N 系・S 系・Szz)と展開形
+3. 名前付き 2 体演算子(`hop`, `density-density`, `s_i . S_j`)と
+   端点順序の意味論
+4. param 参照 `{param, scale, default}`(value / coeff / spin / twist)
+5. `catalog:` ヘッダ(schema/dialect)
+6. (素描のみ)4 フェルミオン一般項: 順序付き生成消滅演算子列と
+   site/orbital 束縛を持つ項表現。named operator はその省略記法。
+   wannier90 J チャネルの記述に将来必要(今回は対象外)。
 
 ## 5. マニュアル構成(manual.md)
 
-1. 概要と読み方(三層仕様の要約、位置づけ、CONVENTIONS の詳説)
-2. StdFace キーワード → 新フォーマット対応表。
-   **母集合はパーサーレジストリ全体を機械走査して確定**
-   (`_COMMON_KEYWORDS` + 全ソルバープラグインのテーブル(`2s` 等)+
-   格子名/模型名の別名 + wannier90 系キーワード)。
-   `tools/keyword_inventory.py` の出力を基に、
-   geometry / system / bonds+couplings / onsite / site_dof /
-   wannier90 / 対象外 に分類。
-3. 格子ごとの解説(幾何、ボンド定義表、検算、出典(関数名+コミット))
-4. 模型ごとの解説(演算子対応、パラメータ解決規則、Kondo 2 ラベルと
-   サイト倍加の対応、GC 変種の扱い)
-5. wannier90 の変換仕様(**模型別**):
-   - Hubbard: H_mn(R) → hop(符号反転あり)、R=0 & m=n は onsite
-     一体項として分離、U_mn(R) → density-density、J_mn(R) → Hund・
-     exchange・pair-hopping。Hermite 対 `(m,n,R)/(n,m,−R)` の正準対
-     選択と二重計数防止、縮退重み、cutoff(値・R 範囲・長さ)、
-     `lambda*/alpha/doublecounting` の扱い。
-   - Spin: H から超交換 `2|t_mn|^2(1/U_m + 1/U_n)` を生成する現行
-     アルゴリズムの記述と、直接写像との差異。
-   - 例 YAML は Hubbard 1 件のみ(小規模データ、cutoff 内全要素)。
-6. 仕様拡張提案(§4.5)
-7. 既知の制限・未対応事項(ladder は W=2/3 の例のみ、oracle 比較未実施、
-   機械的識別子の分離は将来課題、等)
+1. 概要と読み方(位置づけ、CONVENTIONS 詳説、param 参照と解決規則)
+2. キーワード対応表(母集合 = レジストリ走査による機械的 inventory。
+   canonical キーワード単位に集約し出典を配列で保持。格子名・模型名の
+   alias は registry から別表で生成)
+3. 格子ごとの解説(幾何、ボンド表、manifest 検算の根拠、出典)
+4. 模型ごとの解説(**符号表と検証連鎖の導出**、解決規則、Kondo 対応、
+   GC 変種)
+5. wannier90 変換仕様(模型別):
+   - Hubbard: H_mn(R) の符号反転、R=0 対角の onsite 分離、Hermite
+     正準対と縮退重み、cutoff、λ/α、doublecounting
+   - Spin: 超交換 `2|t|²(1/U_m+1/U_n)` 生成
+   - **5.5 J チャネル**: Hund・exchange・pair-hopping の変換規則を散文で
+     記述し、YAML 例は対象外である理由(4 フェルミオン項スキーマ未定義)
+     と §4.6-6 の素描を示す
+6. 仕様拡張提案(§4.6)
+7. 既知の制限(oracle 比較なし、ladder W=2/3 のみ、wannier90 J チャネル
+   例なし、pyrochlore Kondo 現行動作固定と versioning、機械的識別子)
 
 ## 6. 検証方法
 
-1. **リンタ**(`tools/lint_catalog.py`、各タスクで実行):
-   - YAML 構文 + カタログ schema 検証(必須キーの存在・型)
-   - R の次元 = geometry.dimension
-   - bonds の from/to ラベルと site_dof のラベル整合
-   - bonds の type ↔ couplings のキー整合(未定義参照・未使用定義)
-   - 向き規約違反・逆向き重複(反転変換を考慮した同値判定)
-   - `{param: ...}` 参照名がキーワード目録に存在すること
-   - tensor_terms の ops 長(arity)と bond/term のサイト数の整合
-   - manifest.yaml との突合: ファイルごとの期待ボンド本数・サイト数・
-     配位数(**折り返し縮退のない最小サイズ条件**を manifest に併記)
-2. **ソース突合**: `_BONDS` テーブルと 1 行ずつ突合(出典記録付き)。
-3. **onsite 項の突合**: `model_plugin.py` の項生成と YAML の onsite を照合。
-4. 数値同値性(oracle 比較)は対象外(§2)。
+### 6.1 リンタ(`tools/lint_catalog.py`)
+
+構造検査(C1–C9)+ manifest 突合(C10)+ **計数展開**(C11):
+
+- C1 catalog ヘッダ(schema **と dialect** の値)
+- C2 schema 検査(null 文書、必須キー、型、サイトラベル重複、
+  dimension/R/size の整数・次元整合)
+- C3 R 次元 = dimension = size 次元
+- C4 ラベル整合(bonds の from/to、**onsite のラベル**、
+  geometry.sites と site_dof の集合一致)
+- C5 type ↔ couplings 整合(未定義参照・未使用定義)
+- C6 反転同値 `(i,j,R)≡(j,i,−R)` での重複検出
+- C7 param 参照の目録整合(scale/default の型検査を含む)
+- C8 J coupling の 9 成分完全性と **ops 対 ↔ param 接尾辞の対応**
+  (`[Sx,Sy] ↔ …xy` 等、過不足・重複なし)
+- C9 演算子と site_dof の型整合(§4.5 の表)、tensor_terms の ops 長
+- C10 manifest 全項目突合(lattice/model/dimension/n_sites_uc/
+  bonds_per_uc/source の存在)
+- C11 **計数展開**: min_size トーラス上に bonds を展開し、
+  サイトラベル×type ごとの配位数を実測して manifest の
+  `coordination: {label: {type: count}}` と比較(ladder W=3 の
+  非一様配位、Kondo 重複座標もラベル単位で扱える)
+- 実装要件: 不正 YAML でも例外で落ちずファイル単位で診断、
+  相対パス入力の解決、`test_tools.py` に C1–C11 の正例・負例テスト
+
+### 6.2 その他
+
+- ソース突合(`_BONDS`・`model_plugin.py`・`input_params.py`)
+- `keyword_inventory.py` はソルバー**レジストリ経由**で列挙
+  (クラスのハードコード禁止)、canonical 集約、格子/模型 alias 出力
+- 数値 oracle 比較は対象外(§2)
 
 ## 7. 進め方
 
-- Task 0(規約・schema・リンタ・manifest 形式・キーワード目録)を先行
-  させ、chain 着手前にレビュー可能にする(規約欠陥の 30 ファイル波及を防ぐ)。
-- Task 1: chain 3 模型で雛形を確定 → 残り格子へ展開(ladder は W=2/W=3)。
-- 後続: wannier90(Hubbard 例)、manual、README。
-- コミットは Task 単位。
+Task 0(規約・schema・リンタ・manifest・目録 + tools 自動テスト)→
+Task 1 chain 雛形 → 各格子 → wannier90 → manual。コミットは Task 単位。
 
 ## 8. 決定事項の記録
 
-初回(ユーザー承認済み):
-- 静的カタログ + マニュアル / 全 3 模型 / wannier90 例あり /
-  `lattice_catalog/` / 日本語 / 自己完結型ファイル構成 /
-  type 名 = StdFace パラメータ名 / Kondo 2 ラベル
+初回(ユーザー承認済み): 静的カタログ+マニュアル / 全 3 模型 /
+wannier90 例あり / `lattice_catalog/` / 日本語 / 自己完結型 /
+type 名 = StdFace 名 / Kondo 2 ラベル
 
-Codex デザインレビュー Round 1 対応(ユーザー判断):
-- 検証: 意味検査リンタ + manifest(oracle 比較はスコープ外と明記)
-- pyrochlore Kondo: 現行動作(`isite+3`)を忠実に再現、バグ疑いを注記
-- wannier90: 模型別変換仕様章 + Hubbard 小例 1 件
-- ladder: W=2 / W=3 の 2 例 + 一般化規則の文書化
+Round 1 対応(ユーザー判断): リンタ+manifest / pyrochlore 現行動作忠実 /
+wannier90 模型別仕様+Hubbard 例 / ladder W=2・W=3
+
+Round 2 対応(設計判断、検証に基づく):
+- 係数 = 物理ハミルトニアン規約と確定(Codex の符号指摘は HPhi の
+  H_trans = −Σt 規約の見落としで、物理符号としては −t/−mu/−h が正。
+  ただし意味論が未規範だった点は正当 → 符号をデータに持たせ scale を導入)
+- ボンドはソース順保持(正準化強制を撤回)
+- 解決順序を実装通り(成分局所 > 成分大域 > スカラー局所 > スカラー大域)に修正
+- 2S は scale 付き param 参照
+- wannier90 例は H+U チャネルのみ(J チャネルはデータモデル未定義のため
+  散文記述+将来スキーマ素描)
+- manifest coordination をラベル×type に、リンタに計数展開(C11)を追加
