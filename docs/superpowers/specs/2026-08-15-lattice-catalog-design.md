@@ -123,7 +123,10 @@ lattice_catalog/
   **param 未指定時**: 値 = default(**スケールは適用しない最終値**)。
   例: `{param: 2S, scale: 0.5, default: 0.5}` → 2S=1 指定で S=0.5、
   未指定でも S=0.5。この条件分岐は C7 検査とツールテストに明記する。
-- wannier90 の `H_mn → −H_mn` 反転は別規則として §5.5 / manual 5 章に明記。
+- wannier90 の符号規則は実装検証の結果、物理ホッピング係数 = **+H_mn**
+  (wannier90 経路の `−Cphase` 負号と solver 規約の負号が相殺。
+  Task 10 で `trans.def` 実出力により確認)。固定格子の t 族
+  (scale −1)との違いとして manual 5 章に明記。
 
 ### 4.4 J テンソルとパラメータ解決(規範)
 
