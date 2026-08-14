@@ -392,6 +392,51 @@ files:
       A_s: {J: 1}
     min_size_for_check: [3, 3, 3]
     source: {file: python/stdface/lattice/fc_ortho.py, func: fc_ortho, commit: 8e3601167d1254807f58ce365107333f1d505fa0}
+  pyrochlore/pyrochlore_spin.yaml:
+    lattice: pyrochlore
+    model: spin
+    dimension: 3
+    n_sites_uc: 4
+    bonds_per_uc: {J0: 2, J1: 2, J2: 2, "J0'": 2, "J1'": 2, "J2'": 2}
+    coordination:
+      A0: {J0: 2, J1: 2, J2: 2}
+      A1: {J0: 2, "J1'": 2, "J2'": 2}
+      A2: {J1: 2, "J0'": 2, "J2'": 2}
+      A3: {J2: 2, "J0'": 2, "J1'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/pyrochlore.py, func: pyrochlore, commit: 70fbecd02aeb60df04625843217a08b545c2c8b0}
+  pyrochlore/pyrochlore_hubbard.yaml:
+    lattice: pyrochlore
+    model: hubbard
+    dimension: 3
+    n_sites_uc: 4
+    bonds_per_uc: {t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A0: {t0: 2, t1: 2, t2: 2, V0: 2, V1: 2, V2: 2}
+      A1: {t0: 2, "t1'": 2, "t2'": 2, V0: 2, "V1'": 2, "V2'": 2}
+      A2: {t1: 2, "t0'": 2, "t2'": 2, V1: 2, "V0'": 2, "V2'": 2}
+      A3: {t2: 2, "t0'": 2, "t1'": 2, V2: 2, "V0'": 2, "V1'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/pyrochlore.py, func: pyrochlore, commit: 70fbecd02aeb60df04625843217a08b545c2c8b0}
+  pyrochlore/pyrochlore_kondo.yaml:
+    lattice: pyrochlore
+    model: kondo
+    dimension: 3
+    n_sites_uc: 8
+    bonds_per_uc: {J: 4, t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A0_c: {t0: 2, t1: 2, t2: 2, V0: 2, V1: 2, V2: 2}
+      A0_s: {J: 1}
+      A1_c: {t0: 2, "t1'": 2, "t2'": 2, V0: 2, "V1'": 2, "V2'": 2}
+      A1_s: {J: 1}
+      A2_c: {t1: 2, "t0'": 2, "t2'": 2, V1: 2, "V0'": 2, "V2'": 2}
+      A2_s: {J: 1}
+      A3_c: {J: 4, t2: 2, "t0'": 2, "t1'": 2, V2: 2, "V0'": 2, "V1'": 2}
+      A3_s: {J: 1}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/pyrochlore.py, func: pyrochlore, commit: 70fbecd02aeb60df04625843217a08b545c2c8b0}
 
 # 記入例(Task 1 で実エントリを追加):
 # chain/chain_spin.yaml:

@@ -1,0 +1,182 @@
+# StdFace pyrochlore / Spin 模型
+# stan.in 対応例:  model="Spin" / lattice="pyrochlore" / W=4 / L=4 / Height=4 / J0=1.0
+# 4 副格子 (A0..A3、NsiteUC=4)。FCC 格子ベクトル既定。四面体内 (R=[0,0,0])
+# の 6 本と四面体間 (R != 0) の 6 本の区別は下記ボンド表のコメント参照。
+# 検算: 最近接配位数は各サイト 6 (四面体内 2 本+四面体間 2 本 × 3 隣接副格子系列)。
+# 検算は manifest.yaml の pyrochlore/pyrochlore_spin.yaml エントリを参照。
+# 出典: python/stdface/lattice/pyrochlore.py::pyrochlore (_BONDS), commit 70fbecd02aeb60df04625843217a08b545c2c8b0
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: pyrochlore, model: spin}
+
+geometry:
+  dimension: 3
+  lattice_vectors:
+    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (既定: 0, Llength/2, Hlength/2) — FCC
+    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (既定: Wlength/2, 0, Hlength/2)
+    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (既定: Wlength/2, Llength/2, 0)
+  sites:
+    - {label: A0, frac: [0.0, 0.0, 0.0]}   # tau[0]
+    - {label: A1, frac: [0.5, 0.0, 0.0]}   # tau[1]
+    - {label: A2, frac: [0.0, 0.5, 0.0]}   # tau[2]
+    - {label: A3, frac: [0.0, 0.0, 0.5]}   # tau[3]
+
+system:
+  finite: true
+  size: [4, 4, 4]                 # StdFace: W, L, Height
+  boundary:
+    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase1}}
+    - {twist: {param: phase2}}
+
+model:
+  site_dof:
+    A0: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S。既定 S=1/2
+    A1: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    A2: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    A3: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # 参照実装 (_BONDS) のソース順を保持。R = [dW, dL, dH]。
+    # --- 四面体内 (R = [0,0,0], 単位胞内の 6 本) ---
+    - {from: A0, to: A1, R: [0, 0, 0], type: J0}    # along W
+    - {from: A0, to: A2, R: [0, 0, 0], type: J1}    # along L
+    - {from: A0, to: A3, R: [0, 0, 0], type: J2}    # along H
+    - {from: A2, to: A3, R: [0, 0, 0], type: "J0'"}  # along L-H
+    - {from: A3, to: A1, R: [0, 0, 0], type: "J1'"}  # along H-W
+    - {from: A1, to: A2, R: [0, 0, 0], type: "J2'"}  # along W-L
+    # --- 四面体間 (R != [0,0,0], 隣接単位胞への 6 本) ---
+    - {from: A1, to: A0, R: [1, 0, 0], type: J0}     # along W
+    - {from: A2, to: A0, R: [0, 1, 0], type: J1}     # along L
+    - {from: A3, to: A0, R: [0, 0, 1], type: J2}     # along H
+    - {from: A3, to: A2, R: [0, -1, 1], type: "J0'"}  # along L-H
+    - {from: A1, to: A3, R: [1, 0, -1], type: "J1'"}  # along H-W
+    - {from: A2, to: A1, R: [-1, 1, 0], type: "J2'"}  # along W-L
+
+  couplings:
+    # J 族は 9 成分正準形。パラメータ解決: 成分 > スカラー対角 > 大域別名 > 0
+    J0:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J0x}}
+          - {ops: [Sy, Sy], coeff: {param: J0y}}
+          - {ops: [Sz, Sz], coeff: {param: J0z}}
+          - {ops: [Sx, Sy], coeff: {param: J0xy}}
+          - {ops: [Sx, Sz], coeff: {param: J0xz}}
+          - {ops: [Sy, Sx], coeff: {param: J0yx}}
+          - {ops: [Sy, Sz], coeff: {param: J0yz}}
+          - {ops: [Sz, Sx], coeff: {param: J0zx}}
+          - {ops: [Sz, Sy], coeff: {param: J0zy}}
+    J1:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J1x}}
+          - {ops: [Sy, Sy], coeff: {param: J1y}}
+          - {ops: [Sz, Sz], coeff: {param: J1z}}
+          - {ops: [Sx, Sy], coeff: {param: J1xy}}
+          - {ops: [Sx, Sz], coeff: {param: J1xz}}
+          - {ops: [Sy, Sx], coeff: {param: J1yx}}
+          - {ops: [Sy, Sz], coeff: {param: J1yz}}
+          - {ops: [Sz, Sx], coeff: {param: J1zx}}
+          - {ops: [Sz, Sy], coeff: {param: J1zy}}
+    J2:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J2x}}
+          - {ops: [Sy, Sy], coeff: {param: J2y}}
+          - {ops: [Sz, Sz], coeff: {param: J2z}}
+          - {ops: [Sx, Sy], coeff: {param: J2xy}}
+          - {ops: [Sx, Sz], coeff: {param: J2xz}}
+          - {ops: [Sy, Sx], coeff: {param: J2yx}}
+          - {ops: [Sy, Sz], coeff: {param: J2yz}}
+          - {ops: [Sz, Sx], coeff: {param: J2zx}}
+          - {ops: [Sz, Sy], coeff: {param: J2zy}}
+    "J0'":
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: "J0'x"}}
+          - {ops: [Sy, Sy], coeff: {param: "J0'y"}}
+          - {ops: [Sz, Sz], coeff: {param: "J0'z"}}
+          - {ops: [Sx, Sy], coeff: {param: "J0'xy"}}
+          - {ops: [Sx, Sz], coeff: {param: "J0'xz"}}
+          - {ops: [Sy, Sx], coeff: {param: "J0'yx"}}
+          - {ops: [Sy, Sz], coeff: {param: "J0'yz"}}
+          - {ops: [Sz, Sx], coeff: {param: "J0'zx"}}
+          - {ops: [Sz, Sy], coeff: {param: "J0'zy"}}
+    "J1'":
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: "J1'x"}}
+          - {ops: [Sy, Sy], coeff: {param: "J1'y"}}
+          - {ops: [Sz, Sz], coeff: {param: "J1'z"}}
+          - {ops: [Sx, Sy], coeff: {param: "J1'xy"}}
+          - {ops: [Sx, Sz], coeff: {param: "J1'xz"}}
+          - {ops: [Sy, Sx], coeff: {param: "J1'yx"}}
+          - {ops: [Sy, Sz], coeff: {param: "J1'yz"}}
+          - {ops: [Sz, Sx], coeff: {param: "J1'zx"}}
+          - {ops: [Sz, Sy], coeff: {param: "J1'zy"}}
+    "J2'":
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: "J2'x"}}
+          - {ops: [Sy, Sy], coeff: {param: "J2'y"}}
+          - {ops: [Sz, Sz], coeff: {param: "J2'z"}}
+          - {ops: [Sx, Sy], coeff: {param: "J2'xy"}}
+          - {ops: [Sx, Sz], coeff: {param: "J2'xz"}}
+          - {ops: [Sy, Sx], coeff: {param: "J2'yx"}}
+          - {ops: [Sy, Sz], coeff: {param: "J2'yz"}}
+          - {ops: [Sz, Sx], coeff: {param: "J2'zx"}}
+          - {ops: [Sz, Sy], coeff: {param: "J2'zy"}}
+
+  onsite:
+    A0:
+      field_z:                   # -h Sz
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:                   # -Gamma Sx
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:                   # -Gamma_y Sy
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:                   # D (Sz)^2
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
+    A1:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
+    A2:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
+    A3:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
