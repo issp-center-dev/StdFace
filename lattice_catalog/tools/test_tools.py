@@ -70,6 +70,23 @@ def test_inventory_prime_j_component() -> None:
     check("J0''xy" in names, "double-prime J component \"J0''xy\" must be present")
 
 
+def test_inventory_scalar_j_canonicalised_uppercase() -> None:
+    """The bare Kondo scalar exchange keyword ``j`` must canonicalise to
+    ``J`` (matching its sibling ``v`` -> ``V``; both are single-letter
+    scalar members of the ``J``/``V`` families and appear as ``"J"`` /
+    ``"V"`` in the underlying keyword tables, e.g.
+    ``_j_matrix_keywords("j", "JAll", "J")``). Regression for a Task 1
+    finding: ``_CANON_EXCEPTIONS`` had ``"v": "V"`` but was missing the
+    analogous ``"j": "J"`` entry, so catalog ``{param: J}`` references
+    (chain/chain_kondo.yaml) failed C7 against the (wrongly lower-cased)
+    inventory.
+    """
+    entries = ki.build_inventory()
+    names = {x["keyword_canonical"] for x in entries if x["kind"] == "keyword"}
+    check("J" in names, "scalar keyword 'j' must canonicalise to 'J'")
+    check("j" not in names, "lower-case 'j' must not remain as a separate canonical keyword")
+
+
 def test_inventory_stable_sort_no_dup() -> None:
     e1 = ki.build_inventory()
     e2 = ki.build_inventory()
@@ -156,11 +173,16 @@ def base_doc() -> dict:
                 {"type": "J0", "from": "A", "to": "A", "R": [1]},
             ],
             "couplings": {
-                "J0": {"tensor_terms": copy.deepcopy(_J0_TERMS)},
+                "J0": {"operator": {"tensor_terms": copy.deepcopy(_J0_TERMS)}},
             },
-            "onsite": [
-                {"site": "A", "ops": ["Szz"], "coeff": {"param": "D", "scale": 1.0, "default": 0}},
-            ],
+            "onsite": {
+                "A": {
+                    "aniso_z": {
+                        "operator": {"tensor_terms": [{"ops": ["Szz"], "coeff": 1.0}]},
+                        "value": {"param": "D", "scale": 1.0, "default": 0},
+                    },
+                },
+            },
         },
     }
 
@@ -311,7 +333,7 @@ def test_c4_negative_bond_unknown_label() -> None:
 
 def test_c4_negative_onsite_unknown_label() -> None:
     d = base_doc()
-    d["model"]["onsite"][0]["site"] = "Z"
+    d["model"]["onsite"] = {"Z": d["model"]["onsite"].pop("A")}
     errs = lint(d)
     check("C4" in only_ids(errs), f"onsite referencing unknown label must raise C4, got {errs}")
 
@@ -362,7 +384,7 @@ def test_c6_positive_t_v_coexist() -> None:
         "t0": {"operator": "hop", "value": {"param": "t0", "scale": -1.0}},
         "V0": {"operator": "density-density", "value": {"param": "V0", "scale": 1.0}},
     }
-    d["model"]["onsite"] = []
+    d["model"]["onsite"] = {}
     m = {REL: {**base_manifest()[REL], "bonds_per_uc": {"t0": 1, "V0": 1},
                "coordination": {"A": {"t0": 2, "V0": 2}}}}
     errs = lint(d, m)
@@ -387,21 +409,21 @@ def test_c7_positive() -> None:
 
 def test_c7_negative_unknown_param() -> None:
     d = base_doc()
-    d["model"]["onsite"][0]["coeff"]["param"] = "NotAKeyword"
+    d["model"]["onsite"]["A"]["aniso_z"]["value"]["param"] = "NotAKeyword"
     errs = lint(d)
     check("C7" in only_ids(errs), f"unknown param name must raise C7, got {errs}")
 
 
 def test_c7_negative_bad_scale_type() -> None:
     d = base_doc()
-    d["model"]["onsite"][0]["coeff"]["scale"] = "big"
+    d["model"]["onsite"]["A"]["aniso_z"]["value"]["scale"] = "big"
     errs = lint(d)
     check("C7" in only_ids(errs), f"non-numeric scale must raise C7, got {errs}")
 
 
 def test_c7_negative_bad_default_type() -> None:
     d = base_doc()
-    d["model"]["onsite"][0]["coeff"]["default"] = "zero"
+    d["model"]["onsite"]["A"]["aniso_z"]["value"]["default"] = "zero"
     errs = lint(d)
     check("C7" in only_ids(errs), f"non-numeric default must raise C7, got {errs}")
 
@@ -417,14 +439,14 @@ def test_c8_positive() -> None:
 
 def test_c8_negative_missing_term() -> None:
     d = base_doc()
-    d["model"]["couplings"]["J0"]["tensor_terms"].pop()
+    d["model"]["couplings"]["J0"]["operator"]["tensor_terms"].pop()
     errs = lint(d)
     check("C8" in only_ids(errs), f"8 terms (missing one) must raise C8, got {errs}")
 
 
 def test_c8_negative_duplicate_ops() -> None:
     d = base_doc()
-    d["model"]["couplings"]["J0"]["tensor_terms"][-1] = {
+    d["model"]["couplings"]["J0"]["operator"]["tensor_terms"][-1] = {
         "ops": ["Sx", "Sx"], "coeff": {"param": "J0x"},
     }
     errs = lint(d)
@@ -433,7 +455,7 @@ def test_c8_negative_duplicate_ops() -> None:
 
 def test_c8_negative_extra_term() -> None:
     d = base_doc()
-    d["model"]["couplings"]["J0"]["tensor_terms"].append(
+    d["model"]["couplings"]["J0"]["operator"]["tensor_terms"].append(
         {"ops": ["Sx", "Sx"], "coeff": {"param": "J0x"}}
     )
     errs = lint(d)
@@ -442,7 +464,7 @@ def test_c8_negative_extra_term() -> None:
 
 def test_c8_negative_bad_param_name() -> None:
     d = base_doc()
-    d["model"]["couplings"]["J0"]["tensor_terms"][0]["coeff"]["param"] = "J0wrong"
+    d["model"]["couplings"]["J0"]["operator"]["tensor_terms"][0]["coeff"]["param"] = "J0wrong"
     errs = lint(d)
     check("C8" in only_ids(errs), f"ops<->param suffix mismatch must raise C8, got {errs}")
 
@@ -456,7 +478,14 @@ def _fermion_hop_doc() -> dict:
     d["model"]["site_dof"] = {"A": {"fermion": {"orbitals": 1}}}
     d["model"]["bonds"] = [{"type": "t0", "from": "A", "to": "A", "R": [1]}]
     d["model"]["couplings"] = {"t0": {"operator": "hop", "value": {"param": "t0", "scale": -1.0}}}
-    d["model"]["onsite"] = [{"site": "A", "ops": ["N"], "coeff": {"param": "mu", "scale": -1.0}}]
+    d["model"]["onsite"] = {
+        "A": {
+            "chemical_potential": {
+                "operator": {"tensor_terms": [{"ops": ["N"], "coeff": -1.0}]},
+                "value": {"param": "mu", "scale": -1.0},
+            },
+        },
+    }
     return d
 
 
@@ -488,7 +517,7 @@ def test_c9_positive_kondo_fermion_spin() -> None:
     d["geometry"]["sites"] = [{"label": "A_c", "frac": [0.0]}, {"label": "A_s", "frac": [0.0]}]
     d["model"]["bonds"] = [{"type": "J", "from": "A_c", "to": "A_s", "R": [0]}]
     d["model"]["couplings"] = {"J": {"operator": "s_i . S_j", "value": {"param": "J", "scale": 1.0}}}
-    d["model"]["onsite"] = []
+    d["model"]["onsite"] = {}
     m = {REL: {"lattice": "chain", "model": "kondo", "dimension": 1, "n_sites_uc": 2,
                "bonds_per_uc": {"J": 1},
                "coordination": {"A_c": {"J": 1}, "A_s": {"J": 1}},
@@ -507,7 +536,7 @@ def test_c9_negative_kondo_wrong_order() -> None:
     d["geometry"]["sites"] = [{"label": "A_c", "frac": [0.0]}, {"label": "A_s", "frac": [0.0]}]
     d["model"]["bonds"] = [{"type": "J", "from": "A_s", "to": "A_c", "R": [0]}]
     d["model"]["couplings"] = {"J": {"operator": "s_i . S_j", "value": {"param": "J", "scale": 1.0}}}
-    d["model"]["onsite"] = []
+    d["model"]["onsite"] = {}
     m = {REL: {"lattice": "chain", "model": "kondo", "dimension": 1, "n_sites_uc": 2,
                "bonds_per_uc": {"J": 1},
                "coordination": {"A_c": {"J": 1}, "A_s": {"J": 1}},
@@ -526,7 +555,10 @@ def test_c9_negative_j_tensor_on_fermion() -> None:
 
 def test_c9_negative_onsite_type_mismatch() -> None:
     d = base_doc()  # site A is spin
-    d["model"]["onsite"][0] = {"site": "A", "ops": ["N"], "coeff": {"param": "mu", "scale": -1.0}}
+    d["model"]["onsite"]["A"]["aniso_z"] = {
+        "operator": {"tensor_terms": [{"ops": ["N"], "coeff": -1.0}]},
+        "value": {"param": "mu", "scale": -1.0},
+    }
     errs = lint(d)
     check("C9" in only_ids(errs), f"N onsite op on spin site_dof must raise C9, got {errs}")
 

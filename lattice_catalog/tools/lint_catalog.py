@@ -233,6 +233,42 @@ def _site_dof_kind(entry: Any) -> str | None:
     return None
 
 
+_MISSING = object()  # sentinel: "not J-family shaped", distinct from an
+                      # explicitly-present-but-malformed tensor_terms value.
+
+
+def _coupling_operator_tensor_terms(c: Any) -> Any:
+    """Extract the J-family ``tensor_terms`` list from a ``couplings`` entry.
+
+    ``model.couplings[*]`` entries come in two shapes (CONVENTIONS.md §6,
+    fixed by the chain catalog templates — Task 1):
+
+    - scalar/vector-valued (``hop`` / ``density-density`` / ``s_i . S_j``):
+      ``{operator: <str>, value: {param, scale, default}}``.
+    - J-family (9-component exchange tensor): ``{operator: {tensor_terms:
+      [...]}}`` — no shared top-level ``value``; each term carries its own
+      ``coeff: {param: ...}``.
+
+    Parameters
+    ----------
+    c : Any
+        A single ``model.couplings`` value.
+
+    Returns
+    -------
+    Any
+        ``c["operator"]["tensor_terms"]`` (whatever its type — the caller
+        validates it is a list) if *c* is J-family shaped, else the
+        ``_MISSING`` sentinel.
+    """
+    if not isinstance(c, dict):
+        return _MISSING
+    op = c.get("operator")
+    if isinstance(op, dict) and "tensor_terms" in op:
+        return op["tensor_terms"]
+    return _MISSING
+
+
 # ---------------------------------------------------------------------------
 #  Individual checks (C1-C11)
 # ---------------------------------------------------------------------------
@@ -326,10 +362,34 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
         couplings = {}
     ctx["couplings"] = couplings
 
-    onsite = model.get("onsite")
-    if not isinstance(onsite, list):
-        errs.append("C2: model.onsite missing or not a list")
-        onsite = []
+    onsite_raw = model.get("onsite")
+    onsite: list[dict] = []
+    if not isinstance(onsite_raw, dict):
+        errs.append("C2: model.onsite missing or not a mapping of site -> {term_name: {...}}")
+    else:
+        for site, terms in onsite_raw.items():
+            if not isinstance(terms, dict) or not terms:
+                errs.append(f"C2: model.onsite[{site!r}] must be a non-empty mapping of term_name -> term")
+                continue
+            for term_name, term in terms.items():
+                if not isinstance(term, dict):
+                    errs.append(f"C2: model.onsite[{site!r}][{term_name!r}] must be a mapping")
+                    continue
+                op = term.get("operator")
+                tt = op.get("tensor_terms") if isinstance(op, dict) else None
+                ops_list: Any = None
+                if isinstance(tt, list) and len(tt) == 1 and isinstance(tt[0], dict):
+                    ops_list = tt[0].get("ops")
+                else:
+                    errs.append(
+                        f"C2: model.onsite[{site!r}][{term_name!r}].operator.tensor_terms "
+                        "must be a single-element list"
+                    )
+                onsite.append({
+                    "site": site,
+                    "term": term_name,
+                    "ops": ops_list if isinstance(ops_list, list) else [],
+                })
     ctx["onsite"] = onsite
 
     return errs, ctx
@@ -410,12 +470,13 @@ def check_c7(doc: dict, inventory: set[str]) -> list[str]:
 def check_c8(ctx: dict) -> list[str]:
     errs = []
     for type_name, c in ctx["couplings"].items():
-        if isinstance(c, dict) and "tensor_terms" in c:
-            tt = c["tensor_terms"]
-            if not isinstance(tt, list):
-                errs.append(f"C8: {type_name}: tensor_terms is not a list")
-                continue
-            errs.extend(check_j_coupling(type_name, tt))
+        tt = _coupling_operator_tensor_terms(c)
+        if tt is _MISSING:
+            continue
+        if not isinstance(tt, list):
+            errs.append(f"C8: {type_name}: tensor_terms is not a list")
+            continue
+        errs.extend(check_j_coupling(type_name, tt))
     return errs
 
 
@@ -432,10 +493,11 @@ def check_c9(ctx: dict) -> list[str]:
             continue
         frm, to = b.get("from"), b.get("to")
         kf, kt = kinds.get(frm), kinds.get(to)
-        if "tensor_terms" in c:
+        tt = _coupling_operator_tensor_terms(c)
+        if tt is not _MISSING:
             if kf != "spin" or kt != "spin":
                 errs.append(f"C9: bond type {t!r} ({frm}->{to}): J tensor requires spin-spin site_dof (got {kf}-{kt})")
-            for i, term in enumerate(c["tensor_terms"] if isinstance(c.get("tensor_terms"), list) else []):
+            for i, term in enumerate(tt if isinstance(tt, list) else []):
                 ops = term.get("ops", []) if isinstance(term, dict) else []
                 if len(ops) != 2:
                     errs.append(f"C9: {t}.tensor_terms[{i}]: ops length={len(ops)} != 2")

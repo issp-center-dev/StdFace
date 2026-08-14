@@ -1,0 +1,75 @@
+# StdFace chain / Kondo 格子模型
+# stan.in 対応例:  model="Kondo" / lattice="chain" / L=16 / t=1.0 / J=1.0
+# 磁場 (h/Gamma/Gamma_y) は遍歴電子と局在スピンの両方に適用される
+# (python/stdface/core/model_plugin.py::KondoModel)。
+# 現行実装のサイト倍加 (前半=局在 S2, 後半=遍歴) との対応は manual 4章。
+# 出典: python/stdface/lattice/chain_lattice.py::chain (_BONDS), commit b96aef2107f1ab200565efd496606a01184e3f46
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: chain, model: kondo}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [1.0]                    # StdFace: a
+  sites:
+    - {label: A_c, frac: [0.0]}  # 遍歴電子 (1物理サイト上の自由度その1)
+    - {label: A_s, frac: [0.0]}  # 局在スピン (同・その2)
+
+system:
+  finite: true
+  size: [16]                     # StdFace: L
+  boundary:
+    - {twist: {param: phase0}}   # 度単位
+
+model:
+  site_dof:
+    A_c: {fermion: {orbitals: 1}}
+    A_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # Kondo 結合はソース順 = general_j(..., 遍歴, 局在) の引数順。
+    # 遍歴 A_c が第 1 端点 (s_i . S_j の役割と一致)
+    - {from: A_c, to: A_s, R: [0], type: J}   # Kondo 結合 (セル内)
+    - {from: A_c, to: A_c, R: [1], type: t0}
+    - {from: A_c, to: A_c, R: [2], type: "t0'"}
+    - {from: A_c, to: A_c, R: [3], type: "t0''"}
+    - {from: A_c, to: A_c, R: [1], type: V0}
+    - {from: A_c, to: A_c, R: [2], type: "V0'"}
+    - {from: A_c, to: A_c, R: [3], type: "V0''"}
+
+  couplings:
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t0''": {operator: "hop", value: {param: "t0''", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}
+    "V0'": {operator: "density-density", value: {param: "V0'"}}
+    "V0''": {operator: "density-density", value: {param: "V0''"}}
+    J:     {operator: "s_i . S_j", value: {param: J}}   # +J s·S (第1端点=遍歴)
+
+  onsite:
+    A_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A_s:
+      field_z:                   # 局在側にも同じ 3 成分
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
