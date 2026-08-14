@@ -78,8 +78,9 @@
      検証連鎖(パラメータ→builder→trans/intr→solver規約→物理符号)
    - 符号表(スペック §4.3 の表を転記): t 族 scale −1、mu/磁場 coeff −1、
      U/V/D/J/Kondo J は +。符号は必ずデータ(scale/coeff)に置く
-   - param 参照の一般形 {param, scale(省略時1), default(省略時0)}、
-     値 = scale × param。型制約(2S: 正整数 等)
+   - param 参照の一般形 {param, scale(省略時1), default(省略時0)}。
+     param 指定時は scale × param、未指定時は default をそのまま使用
+     (スケール適用なしの最終値)。型制約(2S: 正整数 等)
    - J 族 9 成分 tensor_terms 正準形(成分キーワード名一覧、
      ops 対 ↔ 接尾辞対応表 [Sx,Sy]↔xy 等)
    - パラメータ解決順序(実装準拠): 成分局所 > 成分大域 >
