@@ -1,0 +1,165 @@
+# StdFace wannier90 / Hubbard 小例(RESPACK/Wannier90 出力データの変換例)
+# stan.in 対応例:  model="FermionHubbard" / lattice="wannier90" / W=4 / L=4 / Height=1
+# データ出典: test/wannier90_data/{zvo_geom.dat, zvo_hr.dat, zvo_ur.dat}
+#   (2D 正方格子、単一 Wannier 軌道、最近接 t=-1.0 eV、オンサイト U=8.0 eV。
+#    zvo_jr.dat は存在せず、J(Hund/交換/ペアホッピング)チャネルは対象外
+#    — 4 フェルミオン一般項のデータモデルが CONVENTIONS §7-6 で未定のため。)
+# 出典(変換アルゴリズム): python/stdface/lattice/wannier90.py::_apply_hopping_terms /
+#   _apply_coulomb_terms、python/stdface/lattice/wannier90_io.py::_read_w90、
+#   python/stdface/lattice/interaction_builder.py::hopping/trans/coulomb、
+#   commit da80b6daed27fec0d837812b0613d8b53aa7a637
+#
+# --- Step 1: 変換規則(manual 5 章の下書きを兼ねる) --------------------------
+#
+# 規則 W1(H_mn(R) の符号): wannier90.py::_apply_hopping_terms (行 389-406) は
+#   非局所項を hopping(StdI, -Cphase*tUJ[0][it], jsite, isite, dR) として渡す
+#   (一見 -1 倍=符号反転)。しかし interaction_builder.py::hopping (行 147-191)
+#   は trans(StdI, trans0, jsite, ..., isite, ...) / trans(conj(trans0), isite,
+#   ..., jsite, ...) を追加し、trans.def の規約は物理 H = -Σ(trans値)c†c
+#   (CONVENTIONS §6.1)。この 2 つの符号反転が相殺し、
+#     物理 H の hop 係数 = +H_mn(R) (Cphase を除く。位相は system.boundary 側)
+#   となる — chain/square 系の t 族(scale=-1.0, CONVENTIONS §6.2)とは異なり、
+#   wannier90 の hop 係数は **符号反転なし(scale=+1.0)** で生データをそのまま
+#   物理係数として使う。下記 Step5 で HPhi trans.def 出力との数値突合により
+#   実証済み(W=4,L=4,Height=1 で実行し trans.def の値 +1.0 = -(H_mn) と一致)。
+#
+# 規則 W2(R=0 & m=n の対角要素 → onsite 分離):
+#   _apply_hopping_terms (行 380-388): tUJindx の R=(0,0,0) かつ m=n の項は
+#   isite ごとに trans_list へ (-tUJ[0][it], isite, spin, isite, spin) として
+#   追加され(全スピン共通)、bonds ではなく onsite 一体項として分離される。
+#   trans.def 規約(物理 H=-Σt c†c)と合わせると、物理係数は +H_mm(0) の N
+#   (両スピンの数演算子和)。本データセットでは H_11(0)=0.0
+#   (zvo_hr.dat 5 行目ヘッダ以下 7 行目)であり、cutoff_t(既定 1.0e-8, 規則 W5
+#   参照)未満のため EFFECTIVE term として採用されず、onsite には
+#   wannier 由来の項は現れない(= ゼロなので省略。規則自体は上記の通り)。
+#
+# 規則 W3(Hermite 対の正準対選択): wannier90_io.py::_read_w90 (行 355-361)。
+#   WSC(R ベクトル)ブロック単位で「ファイル出現順で先着優先」:
+#   あるブロックの R が、既に読んだ(より前の)ブロックの -R と一致する場合、
+#   そのブロック全体(全 m,n 組)を丸ごとゼロ化する(行 356-357)。
+#   R=(0,0,0) のブロックのみ別途、m>n(下三角)要素を追加でゼロ化する
+#   (行 359-361; m<=n が正準)。
+#   本データでは zvo_hr.dat の WSC 出現順は
+#     (-1,0,0)[5行目] → (0,-1,0)[6行目] → (0,0,0)[7行目]
+#     → (0,1,0)[8行目] → (1,0,0)[9行目]
+#   であり、(0,1,0) は既出 (0,-1,0) の反転と一致 → ゼロ化、
+#   (1,0,0) は既出 (-1,0,0) の反転と一致 → ゼロ化。
+#   よって正準対は R=(-1,0,0) と R=(0,-1,0) の 2 本のみ(排除された
+#   R=(0,1,0)/R=(1,0,0) は "+h.c." で自動的に再構成されるため、
+#   bonds には列挙しない)。
+#
+# 規則 W4(WS 縮退重み): wannier90_io.py::_skip_degeneracy_weights (行 56-72,
+#   呼び出しは _read_w90 行 315)。ファイルヘッダの ndegen 列
+#   (zvo_hr.dat/zvo_ur.dat の 4 行目)は読み込み後に**使用されず単に読み捨てら
+#   れる**。実際に乗算される重みは Weight_tot(初期値 1.0)のみで、これは
+#   _apply_boundary_weights (wannier90_io.py 行 129-169, 呼び出しは行 364) が
+#   W/L/Height から計算する有限クラスタ境界での 0.5 halving であり、
+#   ファイルの ndegen 値とは無関係。本データは全 ndegen=1 であるため
+#   数値上は影響しないが、規則としては「ndegen 無視」が正しい。
+#
+# 規則 W5(cutoff の適用順): wannier90_io.py::_read_w90 (行 255-370)。
+#   (1) cutoff_length(実空間長。既定: t=-1.0=無効, U/J=0.3)超過でゼロ化
+#       (行 338-341)。(2) cutoff_Vec 設定時はそれで、未設定なら整数 box
+#       cutoff_R で範囲外をゼロ化(行 343-350; U チャネルは cutoff_UR 既定
+#       (0,0,0) — 既定では R=0 のみ通過)。(3) 正準対選択(規則 W3)。
+#       (4) 境界重み(_apply_boundary_weights、有限クラスタ固有。本カタログの
+#       bonds は無限格子の単位胞相対表現のため**適用しない**)。
+#       (5) 振幅 cutoff(cutoff_t/u/j、既定 1.0e-8)未満の要素は
+#       EFFECTIVE term から除外(wannier90_io.py::_count_and_store_terms
+#       行 223)。
+#   本カタログの cutoff: **cutoff_t = cutoff_u = 1.0e-8(実装の既定値)のみを
+#   適用し、cutoff_length / cutoff_R / cutoff_Vec による追加の範囲制限は行わ
+#   ない**(本データの R は全て |R 各成分| <= 1 で、length/R/Vec 既定値の対象
+#   外にならないことを個別確認済み — U チャネルは R=0 のみなので既定
+#   cutoff_UR=(0,0,0) でも通過)。この cutoff 内の全要素(H: 2 本、U: 1 項)を
+#   以下に**全数**変換する(上位 N 件抽出ではない)。
+#
+# 規則 W6(lambda_U/lambda_J/alpha/doublecounting の作用点):
+#   - lambda_U (wannier90.py 行 889, 757-762 既定 1.0): U チャネル読込み時に
+#     生データへ乗算される(wannier90_io.py 行 353: Mat_tot=lam*(re+i*im))。
+#     本カタログでは lambda_U 既定 1.0 のため U=8.0 のまま(8.0*1.0=8.0)。
+#   - alpha (wannier90.py 行 772-776 既定 0.5) と doublecounting_mode
+#     (_apply_coulomb_terms 行 458-509, _apply_hund_terms 行 569-603) は、
+#     `_dr.dat` 密度行列ファイルが存在し doublecounting_mode != "none" の
+#     場合のみ、onsite 二重計上補正項および(FULL モードでは)追加の
+#     hopping 補正項を trans_list に追加する。本データセットには `_dr.dat`
+#     が存在せず、doublecounting_mode は既定 "none"(_DCMode.NOTCORRECT)の
+#     ため、本カタログでは**一切発動しない**(idcmode != NOTCORRECT の分岐
+#     には到達しない)。
+#
+# --- Step 5: 検算(手計算, ≥2 要素) -------------------------------------
+# 検算 1(t0): zvo_hr.dat 5 行目 "-1 0 0 1 1 -1.00000000 0.00000000"
+#   → R=(-1,0,0), m=n=1(0-index 0), H_00(R)=-1.0。振幅|-1.0|>1e-8 → 採用。
+#   規則 W1 より物理係数 = +H_00(R) = -1.0。実装を W=4,L=4,Height=1 の
+#   stan.in で実行し trans.def を確認すると "0 0 3 0  1.000000... 0.0" が
+#   出力される(site0-site3 は 4x4 格子で x 方向 NN)。trans.def 規約
+#   H_trans=-Σt(trans値)c†c より物理係数 = -(+1.0) = -1.0 = H_00(R) と一致
+#   (符号反転なし、規則 W1 の実証)。
+# 検算 2(hubbard_u): zvo_ur.dat 5 行目 "0 0 0 1 1 8.00000000 0.00000000"
+#   → R=(0,0,0), m=n=1, U_11(0)=8.0。局所項 → Cintra_list へ (8.0*1.0, site)
+#   として追加(lambda_U=1.0 既定)。同じ stan.in で coulombintra.def を
+#   確認すると各サイトの CoulombIntra 値が "8.000000000000000" — 生データの
+#   8.0 と一致(符号反転なし)。物理 H = +U n↑n↓(CONVENTIONS §6.2 表通り)。
+# 検算 3(t1, 参考): zvo_hr.dat 6 行目 "0 -1 0 1 1 -1.00000000 0.00000000"
+#   → R=(0,-1,0), H_00(R)=-1.0。同 stan.in の trans.def に
+#   "0 0 12 0  1.000000... 0.0"(site0-site12, y 方向 NN)が現れ、検算1と
+#   同様に物理係数 -1.0 と一致。
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: wannier90, model: hubbard}
+
+geometry:
+  dimension: 3
+  lattice_vectors:
+    a1: [3.0, 0.0, 0.0]     # zvo_geom.dat 1 行目
+    a2: [0.0, 3.0, 0.0]     # zvo_geom.dat 2 行目
+    a3: [0.0, 0.0, 10.0]    # zvo_geom.dat 3 行目 (真空層。物理的には 2D スラブ)
+  sites:
+    - {label: W1, frac: [0.0, 0.0, 0.0]}   # zvo_geom.dat 5 行目 (Wannier 中心)
+
+system:
+  finite: true
+  size: [4, 4, 1]              # StdFace: W, L, Height (stan.in 対応例)
+  boundary:
+    - {twist: {param: phase0}}  # 度単位
+    - {twist: {param: phase1}}
+    - {twist: {param: phase2}}
+
+model:
+  site_dof:
+    W1: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)。zvo_geom.dat: NsiteUC=1
+
+  bonds:
+    # 規則 W3 により正準対のみ列挙。排除された反転対 (0,1,0)/(1,0,0) は
+    # couplings.value の "+ h.c." (hop 演算子の定義, CONVENTIONS §6.6) で
+    # 自動的に再構成されるため、ここには書かない。
+    - {from: W1, to: W1, R: [-1, 0, 0], type: t0}  # zvo_hr.dat 5 行目
+    - {from: W1, to: W1, R: [0, -1, 0], type: t1}  # zvo_hr.dat 6 行目
+
+  couplings:
+    # 値は外部データ由来の実数値を直接記載する(param 参照不可。C7 は
+    # dict でない値をスキップするため直値記載でリンタを通る)。
+    # 規則 W1 により符号反転なし: 物理係数 = +H_mn(R) そのもの。
+    t0: {operator: "hop", value: -1.0}   # H_00(R=[-1,0,0]) = -1.0 (検算1)
+    t1: {operator: "hop", value: -1.0}   # H_00(R=[0,-1,0]) = -1.0 (検算3)
+
+  onsite:
+    W1:
+      hubbard_u:                 # +U n↑n↓ (規則 W6: lambda_U=1.0 既定を適用済み)
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: 8.0                # U_11(R=[0,0,0]) = 8.0 (検算2, 外部データ直値)
+      chemical_potential:        # -mu N (wannier データ非依存の標準 StdFace パラメータ)
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:                   # -h Sz (電子スピン)
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      # 規則 W2: R=0,m=n の wannier 由来対角要素 (H_11(0)=0.0, zvo_hr.dat 7
+      # 行目) は cutoff_t(既定 1e-8)未満のため EFFECTIVE term にならず、
+      # onsite 項としては現れない(ゼロなので省略。規則自体は非ゼロなら
+      # 上記 hubbard_u と同型で {ops:[N], coeff:1.0}, value:<H_mm(0)> となる)。

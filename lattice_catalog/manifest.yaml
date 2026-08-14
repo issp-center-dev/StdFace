@@ -437,6 +437,20 @@ files:
       A3_s: {J: 1}
     min_size_for_check: [3, 3, 3]
     source: {file: python/stdface/lattice/pyrochlore.py, func: pyrochlore, commit: 70fbecd02aeb60df04625843217a08b545c2c8b0}
+  wannier90/example_hubbard.yaml:
+    lattice: wannier90
+    model: hubbard
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 1, t1: 1}
+    coordination:
+      W1: {t0: 2, t1: 2}
+    min_size_for_check: [3, 3, 1]
+    # 出典は wannier90.py (呼出し元) を代表として記載。実際の符号・正準対・
+    # cutoff 規則の導出には wannier90_io.py::_read_w90 と
+    # interaction_builder.py::hopping/trans/coulomb も参照した
+    # (YAML 冒頭コメント参照)。データ出典は test/wannier90_data/*.dat。
+    source: {file: python/stdface/lattice/wannier90.py, func: wannier90, commit: da80b6daed27fec0d837812b0613d8b53aa7a637}
 
 # 記入例(Task 1 で実エントリを追加):
 # chain/chain_spin.yaml:
