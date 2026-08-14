@@ -193,6 +193,47 @@ files:
       B_s: {J: 1}
     min_size_for_check: [3, 3]
     source: {file: python/stdface/lattice/honeycomb_lattice.py, func: honeycomb, commit: e42ef547c5fb073d78200752c5c5ff01375d4619}
+  kagome/kagome_spin.yaml:
+    lattice: kagome
+    model: spin
+    dimension: 2
+    n_sites_uc: 3
+    bonds_per_uc: {J0: 2, J1: 2, J2: 2, "J0'": 2, "J1'": 2, "J2'": 2}
+    coordination:
+      A: {J1: 2, J2: 2, "J1'": 2, "J2'": 2}
+      B: {J0: 2, J2: 2, "J0'": 2, "J2'": 2}
+      C: {J0: 2, J1: 2, "J0'": 2, "J1'": 2}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/kagome.py, func: kagome, commit: 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73}
+  kagome/kagome_hubbard.yaml:
+    lattice: kagome
+    model: hubbard
+    dimension: 2
+    n_sites_uc: 3
+    bonds_per_uc: {t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A: {t1: 2, t2: 2, "t1'": 2, "t2'": 2, V1: 2, V2: 2, "V1'": 2, "V2'": 2}
+      B: {t0: 2, t2: 2, "t0'": 2, "t2'": 2, V0: 2, V2: 2, "V0'": 2, "V2'": 2}
+      C: {t0: 2, t1: 2, "t0'": 2, "t1'": 2, V0: 2, V1: 2, "V0'": 2, "V1'": 2}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/kagome.py, func: kagome, commit: 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73}
+  kagome/kagome_kondo.yaml:
+    lattice: kagome
+    model: kondo
+    dimension: 2
+    n_sites_uc: 6
+    bonds_per_uc: {J: 3, t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A_c: {J: 1, t1: 2, t2: 2, "t1'": 2, "t2'": 2, V1: 2, V2: 2, "V1'": 2, "V2'": 2}
+      A_s: {J: 1}
+      B_c: {J: 1, t0: 2, t2: 2, "t0'": 2, "t2'": 2, V0: 2, V2: 2, "V0'": 2, "V2'": 2}
+      B_s: {J: 1}
+      C_c: {J: 1, t0: 2, t1: 2, "t0'": 2, "t1'": 2, V0: 2, V1: 2, "V0'": 2, "V1'": 2}
+      C_s: {J: 1}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/kagome.py, func: kagome, commit: 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73}
 
 # 記入例(Task 1 で実エントリを追加):
 # chain/chain_spin.yaml:
