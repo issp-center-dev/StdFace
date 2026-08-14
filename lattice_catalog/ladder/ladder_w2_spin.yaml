@@ -1,0 +1,148 @@
+# StdFace ladder (W=2) / Spin 模型
+# stan.in 対応例:  model="Spin" / lattice="ladder" / W=2 / L=16 / J0=1.0 (rung) / J1=1.0 (leg)
+#
+# 単位胞 = 1 ラング (W サイト、W=2 → ラベル A0, A1 = 脚 0, 脚 1)。
+# ladder.py は NsiteUC=W と置いた後 StdI.W を 1 に固定する (ladder.py:80-81)。
+# rung (旧 W) 方向が open であることの根拠: (1) _BONDS の dW 成分は常に 0
+# (脚をまたぐセル方向オフセットが一度も生成されない)、(2) rung/diagonal
+# ボンドは `if uc_i < NsiteUC - 1:` の条件下でのみ生成され (ladder.py:184)、
+# 最後の脚 (uc_i=W-1) から最初の脚 (uc_i=0) へ "閉じる" 結合は生成されない。
+# よって本カタログは論理的 1 次元 (L 方向のみ周期境界) として表現する。
+# phase0 は内部 phase[1] に転写される (ladder.py:75-78: `StdI.phase[1] = StdI.phase[0]; StdI.phase[0] = 0.0`)。
+# chain と同型の内部転写であり (CONVENTIONS.md §4)、L 方向の境界位相を担う。
+#
+# W 一般化規則 (ladder.py:176-188 の動的ループを手展開):
+#   for uc_i in range(W):
+#     leg  (脚, 同一脚内):        A{uc_i}-A{uc_i}   R=[1] J1,  R=[2] J1'
+#     if uc_i < W-1:
+#       rung (ラング, セル内):    A{uc_i}-A{uc_i+1} R=[0] J0
+#       diag (斜め, L+1):         A{uc_i}-A{uc_i+1} R=[1] J2
+#       diag (斜め, L-1):         A{uc_i}-A{uc_i+1} R=[-1] J2'
+#   端の脚 (uc_i=0 または W-1) は rung/diag が片側のみ。W=2 では両脚とも
+#   端脚なので配位数は対称 (W=3 では中央の脚 A1 だけ rung/diag が両側)。
+# 検算 (W=2): 脚方向 (J1) 配位数 2、ラング (J0) 配位数 1 (両脚とも端)。
+# 検算は manifest.yaml の ladder/ladder_w2_spin.yaml エントリを参照。
+# 出典: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: ladder, model: spin}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [1.0]                    # StdFace: Llength (既定 a=1.0)。rung 方向は非周期のため lattice_vector を持たない
+  sites:
+    - {label: A0, frac: [0.0]}   # 脚 0 (端)
+    - {label: A1, frac: [0.0]}   # 脚 1 (端)
+
+system:
+  finite: true
+  size: [16]                     # StdFace: L
+  boundary:
+    - {twist: {param: phase0}}   # 度単位。内部 phase[1] へ転写 (phase[0] は常に 0)
+
+model:
+  site_dof:
+    A0: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S。既定 S=1/2
+    A1: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # 参照実装 (_BONDS) のソース順を保持: uc_i=0 のブロック → uc_i=1 のブロック
+    - {from: A0, to: A0, R: [1], type: J1}      # leg 最近接  (uc_i=0)
+    - {from: A0, to: A0, R: [2], type: "J1'"}   # leg 次近接  (uc_i=0)
+    - {from: A0, to: A1, R: [0], type: J0}      # rung, セル内 (uc_i=0 < W-1)
+    - {from: A0, to: A1, R: [1], type: J2}      # diag L+1     (uc_i=0 < W-1)
+    - {from: A0, to: A1, R: [-1], type: "J2'"}  # diag L-1     (uc_i=0 < W-1)
+    - {from: A1, to: A1, R: [1], type: J1}      # leg 最近接  (uc_i=1)
+    - {from: A1, to: A1, R: [2], type: "J1'"}   # leg 次近接  (uc_i=1)
+    # uc_i=1 = W-1 のため rung/diag は打ち切り (端の脚)
+
+  couplings:
+    # J 族は 9 成分正準形。パラメータ解決: 成分 > スカラー対角 > 大域別名 > 0
+    J0:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J0x}}
+          - {ops: [Sy, Sy], coeff: {param: J0y}}
+          - {ops: [Sz, Sz], coeff: {param: J0z}}
+          - {ops: [Sx, Sy], coeff: {param: J0xy}}
+          - {ops: [Sx, Sz], coeff: {param: J0xz}}
+          - {ops: [Sy, Sx], coeff: {param: J0yx}}
+          - {ops: [Sy, Sz], coeff: {param: J0yz}}
+          - {ops: [Sz, Sx], coeff: {param: J0zx}}
+          - {ops: [Sz, Sy], coeff: {param: J0zy}}
+    J1:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J1x}}
+          - {ops: [Sy, Sy], coeff: {param: J1y}}
+          - {ops: [Sz, Sz], coeff: {param: J1z}}
+          - {ops: [Sx, Sy], coeff: {param: J1xy}}
+          - {ops: [Sx, Sz], coeff: {param: J1xz}}
+          - {ops: [Sy, Sx], coeff: {param: J1yx}}
+          - {ops: [Sy, Sz], coeff: {param: J1yz}}
+          - {ops: [Sz, Sx], coeff: {param: J1zx}}
+          - {ops: [Sz, Sy], coeff: {param: J1zy}}
+    "J1'":
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: "J1'x"}}
+          - {ops: [Sy, Sy], coeff: {param: "J1'y"}}
+          - {ops: [Sz, Sz], coeff: {param: "J1'z"}}
+          - {ops: [Sx, Sy], coeff: {param: "J1'xy"}}
+          - {ops: [Sx, Sz], coeff: {param: "J1'xz"}}
+          - {ops: [Sy, Sx], coeff: {param: "J1'yx"}}
+          - {ops: [Sy, Sz], coeff: {param: "J1'yz"}}
+          - {ops: [Sz, Sx], coeff: {param: "J1'zx"}}
+          - {ops: [Sz, Sy], coeff: {param: "J1'zy"}}
+    J2:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J2x}}
+          - {ops: [Sy, Sy], coeff: {param: J2y}}
+          - {ops: [Sz, Sz], coeff: {param: J2z}}
+          - {ops: [Sx, Sy], coeff: {param: J2xy}}
+          - {ops: [Sx, Sz], coeff: {param: J2xz}}
+          - {ops: [Sy, Sx], coeff: {param: J2yx}}
+          - {ops: [Sy, Sz], coeff: {param: J2yz}}
+          - {ops: [Sz, Sx], coeff: {param: J2zx}}
+          - {ops: [Sz, Sy], coeff: {param: J2zy}}
+    "J2'":
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: "J2'x"}}
+          - {ops: [Sy, Sy], coeff: {param: "J2'y"}}
+          - {ops: [Sz, Sz], coeff: {param: "J2'z"}}
+          - {ops: [Sx, Sy], coeff: {param: "J2'xy"}}
+          - {ops: [Sx, Sz], coeff: {param: "J2'xz"}}
+          - {ops: [Sy, Sx], coeff: {param: "J2'yx"}}
+          - {ops: [Sy, Sz], coeff: {param: "J2'yz"}}
+          - {ops: [Sz, Sx], coeff: {param: "J2'zx"}}
+          - {ops: [Sz, Sy], coeff: {param: "J2'zy"}}
+
+  onsite:
+    A0:
+      field_z:                   # -h Sz
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:                   # -Gamma Sx
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:                   # -Gamma_y Sy
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:                   # D (Sz)^2
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
+    A1:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
