@@ -57,6 +57,41 @@ files:
       A_s: {J: 1}
     min_size_for_check: [7]
     source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: b96aef2107f1ab200565efd496606a01184e3f46}
+  square/square_spin.yaml:
+    lattice: square
+    model: spin
+    dimension: 2
+    n_sites_uc: 1
+    bonds_per_uc: {J0: 1, J1: 1, "J0'": 1, "J1'": 1, "J0''": 1, "J1''": 1}
+    coordination:
+      A: {J0: 2, J1: 2, "J0'": 2, "J1'": 2, "J0''": 2, "J1''": 2}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/square_lattice.py, func: tetragonal, commit: fe8d43f4722a880072c3ac0f3cafd99d741dff77}
+  square/square_hubbard.yaml:
+    lattice: square
+    model: hubbard
+    dimension: 2
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 1, t1: 1, "t0'": 1, "t1'": 1, "t0''": 1, "t1''": 1,
+                   V0: 1, V1: 1, "V0'": 1, "V1'": 1, "V0''": 1, "V1''": 1}
+    coordination:
+      A: {t0: 2, t1: 2, "t0'": 2, "t1'": 2, "t0''": 2, "t1''": 2,
+          V0: 2, V1: 2, "V0'": 2, "V1'": 2, "V0''": 2, "V1''": 2}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/square_lattice.py, func: tetragonal, commit: fe8d43f4722a880072c3ac0f3cafd99d741dff77}
+  square/square_kondo.yaml:
+    lattice: square
+    model: kondo
+    dimension: 2
+    n_sites_uc: 2
+    bonds_per_uc: {J: 1, t0: 1, t1: 1, "t0'": 1, "t1'": 1, "t0''": 1, "t1''": 1,
+                   V0: 1, V1: 1, "V0'": 1, "V1'": 1, "V0''": 1, "V1''": 1}
+    coordination:
+      A_c: {J: 1, t0: 2, t1: 2, "t0'": 2, "t1'": 2, "t0''": 2, "t1''": 2,
+            V0: 2, V1: 2, "V0'": 2, "V1'": 2, "V0''": 2, "V1''": 2}
+      A_s: {J: 1}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/square_lattice.py, func: tetragonal, commit: fe8d43f4722a880072c3ac0f3cafd99d741dff77}
 
 # 記入例(Task 1 で実エントリを追加):
 # chain/chain_spin.yaml:
