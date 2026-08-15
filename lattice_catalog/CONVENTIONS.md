@@ -180,9 +180,14 @@ value: {param: <名前>, scale: <実数, 省略時 1.0>, default: <数値, 省�
 個別パラメータの型制約は各キーワードの意味論に従う
 (例: `2S` は正整数)。
 
-wannier90 の `H_mn → −H_mn` 反転は上記とは別の規則であり、
-§5.5 / manual 5 章に別途明記する(本カタログの `{param, scale, default}`
-一般形の対象外)。
+wannier90 の hop チャネルは上記とは別の規則を持つ: `wannier90.py::
+_apply_hopping_terms` は非局所項を `hopping(StdI, -Cphase*tUJ[0][it],
+jsite, isite, dR)` として渡しており(builder 呼び出し自体が符号反転
+を持つ)、これと trans.def の solver 側符号反転(§6.1)が相殺した
+結果、**物理ホッピング係数は `+H_mn(R)` そのもの(符号反転なし)**と
+なる(`H_mn → −H_mn` という反転は生じない)。検証済みの導出は
+§5.5 / manual 5 章に別途明記する(本カタログの `{param, scale,
+default}` 一般形の対象外)。
 
 ### 6.4 J 族 9 成分 tensor_terms 正準形
 

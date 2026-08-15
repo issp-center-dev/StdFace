@@ -440,3 +440,895 @@ registry 正規名 `fco`。カタログの `catalog.lattice` / ディレクト�
 `kind` 別の 3 集合(keyword / lattice_alias / model_alias)を合わせて
 inventory の全 342 件が本章の表でちょうど 1 回ずつ分類されている
 (欠落・重複なし)。
+
+---
+
+## 3. 格子ごとの解説
+
+本章は 9 格子(chain, ladder(W=2/W=3 の 2 例を 1 節にまとめる), square,
+triangular, honeycomb, kagome, orthorhombic, fc_ortho, pyrochlore)の
+各 1 節からなる。各節は以下の 4 項目で構成する。
+
+- **幾何**: `geometry.lattice_vectors`(格子ベクトル)と `geometry.sites`
+  (副格子表: ラベル・分率座標)。
+- **ボンド定義表**: `model.bonds` の `type` / `from`–`to` / `R` / 意味。
+  表は代表として Spin 模型のボンド(J 系列)を掲載する。Hubbard/Kondo は
+  同じ `(from, to, R)` に対し `type` が `t`/`V` 系列に置き換わるだけの
+  並行構造を持つため(1.4 節で確認済みの chain の例と同型)、節ごとの
+  差分がある場合のみ本文で個別に注記する。Kondo はこれに加え、遍歴サイト
+  (`_c`)を第 1 端点とする Kondo 結合(`type: J`)を持つ(1.3 節(2))。
+  ボンドは参照実装の `_BONDS` テーブルのソース順をそのまま列挙し、
+  並べ替えは行わない(CONVENTIONS.md §5)。
+- **検算**: `manifest.yaml` の `bonds_per_uc` / `coordination` /
+  `min_size_for_check` の値がどう導出されるかを、ボンド表からの手計算・
+  ソース調査・またはリンタ C11(計数展開)の実行結果で示す。
+- **出典**: 参照した Python 実装ファイル・関数・コミットハッシュ
+  (`manifest.yaml` の `source` と同一)。3D 格子(orthorhombic 以降)は
+  C 実装(`src/*.c`)との突合結果も付す。
+
+### 3.1 chain
+
+**幾何**: `dimension: 1`。`a1: [1.0]`(StdFace の `a`、既定 1.0)。
+Spin/Hubbard は単一サイト `A`(`frac: [0.0]`)。Kondo は同一分率座標
+`[0.0]` を持つ 2 ラベル `A_c`(遍歴電子)・`A_s`(局在スピン)
+(1.3 節(2)の Kondo 2 ラベル規約)。
+
+**内部 2D 表現(`phase0` → 内部 `phase[1]` 転写)**: chain は論理的には
+1 次元格子だが、参照実装 `chain_lattice.py::chain` は内部的に `W=1` の
+2 次元表現(`StdI.direct` は 2×2 行列、`W` 方向と `L` 方向を持つ)を
+用いて構築されている。具体的には(`chain_lattice.py` 87–90 行相当):
+
+```python
+StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)  # ユーザ入力
+not_used_d("phase1", StdI.phase[1])
+StdI.phase[1] = StdI.phase[0]   # 内部 L 方向(周期)へ転写
+StdI.phase[0] = 0.0             # 内部 W 方向(強制 W=1)は常に 0
+```
+
+すなわちユーザが指定する `phase0` は内部的には `L` 方向(周期境界を持つ
+唯一の方向)の位相 `phase[1]` として扱われ、`W` 方向(強制的に 1 に
+固定される非周期方向)の内部 `phase[0]` は常に 0 に固定される。本カタログ
+の YAML は `dimension: 1` の論理表現のみを公開し、`system.boundary` には
+`phase0` の 1 成分のみを記載する — この内部転写は実装上の詳細であり、
+YAML の意味論には影響しない(CONVENTIONS.md §4)。同型の転写は
+3.2 節の ladder にも現れる。
+
+**ボンド定義表**(Spin, `_BONDS` 3 行そのまま):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J0` | A→A | `[1]` | 最近接(別名 `J`) |
+| `J0'` | A→A | `[2]` | 次近接(別名 `J'`) |
+| `J0''` | A→A | `[3]` | 三次近接(別名 `J''`) |
+
+Hubbard/Kondo は `t0/t0'/t0''` + `V0/V0'/V0''` が同じ `R` で並行に存在する。
+Kondo はさらに先頭に `{from: A_c, to: A_s, R: [0], type: J}` を持つ
+(`general_j(StdI.J, 1, StdI.S2, isite, jsite_kondo, ...)` の引数順 =
+遍歴 `A_c` が第 1 端点)。
+
+**検算**: `chain_spin.yaml` の `bonds_per_uc: {J0:1, J0':1, J0'':1}`
+(各 1 本/単位胞)、`coordination.A: {J0:2, J0':2, J0'':2}`(±R 両方向で
+2)。`min_size_for_check: [7]`(全 `R` のうち最大成分は `J0''` の 3、
+`2×3=6` を超える最小の奇数 7)。`chain_kondo.yaml` は `n_sites_uc: 2`、
+`coordination.A_c.J: 1` / `coordination.A_s.J: 1`(`A_c≠A_s` の単一方向
+ボンドなので二重化されない)。
+
+**出典**: `python/stdface/lattice/chain_lattice.py::chain`(`_BONDS`)、
+commit `b96aef2107f1ab200565efd496606a01184e3f46`。
+
+### 3.2 ladder(W=2 / W=3、W 一般化規則)
+
+**幾何**: `dimension: 1`。単位胞 = 1 ラング(rung、W サイト)。`a1: [1.0]`
+は脚(leg, L 方向)のみに対応し、ラング(旧 W)方向は非周期のため
+`lattice_vectors` に現れない。W=2 はラベル `A0, A1`(脚 0/1、いずれも
+frac `[0.0]`)、W=3 は `A0, A1, A2`(脚 0(端)/1(中央)/2(端))。
+
+**横方向座標が落ちる制限**: chain と同様に `system.W` は参照実装内で
+強制的に 1 に固定され(`StdI.NsiteUC = StdI.W; StdI.W = 1`、
+`ladder.py` 80–81 行)、カタログは `dimension: 1` の論理表現のみを持つ。
+そのため脚どうしの空間的な相対位置(旧 W 方向の座標)は `frac` には
+一切現れず(全ラベルが同一の `frac: [0.0]` を持つ)、脚は幾何座標では
+なく **ラベル名(`A0`/`A1`/…)のみによって区別される**。これは本カタログの
+1 次元表現が意図的に持つ制限であり、幾何座標だけを読んでラング方向の
+構造を復元することはできない(ボンドの `from`/`to` ラベルの組合せが
+構造情報を担う)。
+
+**rung 方向が非周期(open)である根拠**(`ladder.py` 176–188 行):
+
+1. `_BONDS` の各行の `dW` 成分は常に 0 — 脚をまたぐセル方向オフセットは
+   一度も生成されない。
+2. rung・diagonal ボンドは `if uc_i < NsiteUC - 1:` の条件下でのみ
+   生成され、最後の脚(`uc_i = W-1`)から最初の脚(`uc_i = 0`)へ
+   "閉じる" 結合は生成されない。
+
+**位相転写**: chain と同型(`ladder.py` 75–78 行)。ユーザ入力 `phase0`
+は内部 `phase[1]`(周期方向 = leg 方向)に転写され、内部 `phase[0]`
+(強制 W=1 の rung 方向)は常に 0。YAML は `system.boundary` に `phase0`
+1 成分のみを持つ。
+
+**W 一般化規則**(`ladder.py` 176–188 行の動的ループを手展開したもの):
+
+```
+for uc_i in range(W):
+    leg  (脚, 同一脚内):        A{uc_i}-A{uc_i}   R=[1] J1,  R=[2] J1'
+    if uc_i < W-1:
+        rung (ラング, セル内):    A{uc_i}-A{uc_i+1} R=[0] J0
+        diag (斜め, L+1):         A{uc_i}-A{uc_i+1} R=[1] J2
+        diag (斜め, L-1):         A{uc_i}-A{uc_i+1} R=[-1] J2'
+```
+
+端の脚(`uc_i=0` または `uc_i=W-1`)は rung/diag ボンドを片側しか持たない
+ため、`W=2` は両脚とも端脚で対称、`W=3` は中央脚(`A1`)のみが
+rung/diag を両側(`A0` 側・`A2` 側)に持ち、端脚(`A0`/`A2`)より配位数が
+2 倍になる。任意の `W` へは、この `for uc_i in range(W)` ループを
+そのまま伸ばせばよい。
+
+**ボンド定義表**(W=2, Spin):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J1` | A0→A0 | `[1]` | leg 最近接(`uc_i=0`) |
+| `J1'` | A0→A0 | `[2]` | leg 次近接(`uc_i=0`) |
+| `J0` | A0→A1 | `[0]` | rung, セル内(`uc_i=0<W-1`) |
+| `J2` | A0→A1 | `[1]` | diag L+1(`uc_i=0<W-1`) |
+| `J2'` | A0→A1 | `[-1]` | diag L-1(`uc_i=0<W-1`) |
+| `J1` | A1→A1 | `[1]` | leg 最近接(`uc_i=1`、端) |
+| `J1'` | A1→A1 | `[2]` | leg 次近接(`uc_i=1`、端) |
+
+W=3 は上記に `A1-A2` の rung/diag ブロック(`J0/J2/J2'`、`uc_i=1<W-1=2`)
+が追加され、`A2-A2` の leg ブロック(`J1/J1'`)で終わる(合計 12 行)。
+
+**検算**: W=2: `n_sites_uc: 2`、`bonds_per_uc: {J1:2, J1':2, J0:1, J2:1,
+J2':1}`、`coordination.A0`/`coordination.A1` はいずれも
+`{J1:2, J1':2, J0:1, J2:1, J2':1}`(両脚とも端で対称)。W=3:
+`n_sites_uc: 3`、`bonds_per_uc: {J1:3, J1':3, J0:2, J2:2, J2':2}`、
+中央脚 `coordination.A1: {J0:2, J2:2, J2':2}` は端脚
+`coordination.A0/A2: {J0:1, J2:1, J2':1}` の 2 倍。leg 系列(`J1`/`J1'`)は
+全脚とも配位数 2(並進で折り返す)。`min_size_for_check: [5]`(最大
+`|R|` 成分は `J1'` の 2、`2×2=4` を超える最小の奇数 5)。W=2/W=3 いずれも
+`ladder()` 参照実装を実際に実行し `exchange.def` 出力と手展開結果が
+一致することを確認済み(Task 6)。
+
+**出典**: `python/stdface/lattice/ladder.py::ladder`(`_BONDS`,
+176–188 行)、commit `e733ff893a52b81addd27ef7e347f77273c0d129`。
+
+### 3.3 square
+
+**幾何**: `dimension: 2`。`a1: [1.0, 0.0]`, `a2: [0.0, 1.0]`(単位行列、
+StdFace の `Wx/Wy/Lx/Ly` 既定値)。単一サイト `A`(`frac: [0.0, 0.0]`)。
+
+**ボンド定義表**(Spin, `_BONDS` 6 行):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J0` | A→A | `[1, 0]` | 最近接 W 方向 |
+| `J1` | A→A | `[0, 1]` | 最近接 L 方向 |
+| `J0'` | A→A | `[1, 1]` | 次近接 W+L 対角 |
+| `J1'` | A→A | `[1, -1]` | 次近接 W-L 対角 |
+| `J0''` | A→A | `[2, 0]` | 三次近接 2W |
+| `J1''` | A→A | `[0, 2]` | 三次近接 2L |
+
+**検算**: `n_sites_uc: 1`、全 type とも `coordination.A: 2`。最近接系列
+合計(`J0+J1`)= 4(正方格子の物理配位数と一致)、対角系列・軸三次近接
+系列もそれぞれ合計 4。`min_size_for_check: [5, 5]`(最大 `|R|` 成分 2、
+`2×2=4` を超える最小の奇数 5)。
+
+**出典**: `python/stdface/lattice/square_lattice.py::tetragonal`
+(`_BONDS`)、commit `fe8d43f4722a880072c3ac0f3cafd99d741dff77`。関数名の
+注: brief 上の想定名は `square` だったが実装上の関数名は `tetragonal`
+であり(`SquarePlugin` が `["tetragonal", "square", ...]` のエイリアス
+経由で `tetragonal()` に委譲、2.9 節のレジストリ正規名表を参照)、
+manifest には実際のソースに合わせて `func: tetragonal` を記録している。
+
+### 3.4 triangular
+
+**幾何**: `dimension: 2`。`a1: [1.0, 0.0]`,
+`a2: [0.5, 0.8660254037844386]`(= `(1/2, √3/2)`、非直交)。単一サイト
+`A`(`frac: [0.0, 0.0]`)。
+
+**ボンド定義表**(Spin, `_BONDS` 9 行。次近接ブロックはソース上
+`J1', J2', J0'` の順(数値順ではない)であり、CONVENTIONS.md §5 の
+ソース順保持規約によりそのまま列挙する):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J0` | A→A | `[1, 0]` | 最近接 W |
+| `J1` | A→A | `[0, 1]` | 最近接 L |
+| `J2` | A→A | `[1, -1]` | 最近接 W-L |
+| `J1'` | A→A | `[2, -1]` | 次近接 2W-L |
+| `J2'` | A→A | `[1, 1]` | 次近接 W+L |
+| `J0'` | A→A | `[-1, 2]` | 次近接 -W+2L |
+| `J0''` | A→A | `[2, 0]` | 三次近接 2W |
+| `J1''` | A→A | `[0, 2]` | 三次近接 2L |
+| `J2''` | A→A | `[2, -2]` | 三次近接 2W-2L |
+
+**検算**: 最近接配位数 = `J0+J1+J2` = 2+2+2 = **6**(三角格子の物理配位数
+と一致)。`min_size_for_check: [5, 5]`(最大 `|R|` 成分 2)。
+
+**出典**: `python/stdface/lattice/triangular_lattice.py::triangular`
+(`_BONDS`)、commit `c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24`。
+
+### 3.5 honeycomb
+
+**幾何**: `dimension: 2`, `n_sites_uc: 2`。`a1: [1.0, 0.0]`,
+`a2: [0.5, 0.8660254037844386]`(triangular と同じ格子ベクトル式)。
+`A`(`frac: [0.0, 0.0]`)、`B`(`frac: [0.3333333333333333,
+0.3333333333333333]` = `(1/3, 1/3)`)。
+
+**ボンド定義表**(Spin, `_BONDS` 12 行。最近接の Kitaev 対応:
+`J0` = セル内ボンド(z 型)、`J1` = W 方向(x 型)、`J2` = L 方向(y 型)):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J0` | A→B | `[0, 0]` | 最近接 セル内(Kitaev z) |
+| `J1` | B→A | `[1, 0]` | 最近接 W 方向(Kitaev x) |
+| `J2` | B→A | `[0, 1]` | 最近接 L 方向(Kitaev y) |
+| `J2'` | A→A | `[1, 0]` | 次近接 W, 副格子内(0→0) |
+| `J2'` | B→B | `[1, 0]` | 次近接 W, 副格子内(1→1) |
+| `J1'` | A→A | `[0, 1]` | 次近接 L, 副格子内(0→0) |
+| `J1'` | B→B | `[0, 1]` | 次近接 L, 副格子内(1→1) |
+| `J0'` | A→A | `[1, -1]` | 次近接 W-L, 副格子内(0→0) |
+| `J0'` | B→B | `[1, -1]` | 次近接 W-L, 副格子内(1→1) |
+| `J1''` | A→B | `[1, -1]` | 三次近接 |
+| `J0''` | A→B | `[-1, -1]` | 三次近接 |
+| `J2''` | A→B | `[-1, 1]` | 三次近接 |
+
+**検算**: `A`/`B` は対称。最近接(`J0/J1/J2` 各 1 タイプ)配位数 1 ずつ
+(合計 3 = ハニカム格子の物理配位数)、次近接(同一副格子内、`J0'/J1'/J2'`)
+配位数 2 ずつ、三次近接(`J0''/J1''/J2''`)配位数 1 ずつ。
+`min_size_for_check: [3, 3]`(最大 `|R|` 成分 1)。Kondo は 2 物理サイト
+×2 ラベル = 4 ラベル(`A_c, A_s, B_c, B_s`)、Kondo 結合 2 本
+(`A_c→A_s`, `B_c→B_s`、いずれも `R=[0,0]`)。
+
+**出典**: `python/stdface/lattice/honeycomb_lattice.py::honeycomb`
+(`_BONDS`)、commit `e42ef547c5fb073d78200752c5c5ff01375d4619`。
+
+### 3.6 kagome
+
+**幾何**: `dimension: 2`, `n_sites_uc: 3`。`a1: [1.0, 0.0]`,
+`a2: [0.5, 0.8660254037844386]`(honeycomb と同じ格子ベクトル式)。
+`A`(`frac: [0.0, 0.0]`)、`B`(`frac: [0.5, 0.0]`)、
+`C`(`frac: [0.0, 0.5]`)。三次近接(`J''` 系列)は参照実装
+(`kagome.py`)に一切現れず、本カタログにも存在しない。
+
+**ボンド定義表**(Spin, `_BONDS` 12 行: 最近接 6 + 次近接 6):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J2` | A→B | `[0, 0]` | 最近接 intra 0→1 |
+| `J1` | A→C | `[0, 0]` | 最近接 intra 0→2 |
+| `J0` | B→C | `[0, 0]` | 最近接 intra 1→2 |
+| `J2` | B→A | `[1, 0]` | 最近接 W 方向 |
+| `J1` | C→A | `[0, 1]` | 最近接 L 方向 |
+| `J0` | B→C | `[1, -1]` | 最近接 W-L 方向 |
+| `J1'` | C→A | `[1, 0]` | 次近接 W, 2→0 |
+| `J0'` | B→C | `[1, 0]` | 次近接 W, 1→2 |
+| `J2'` | B→A | `[0, 1]` | 次近接 L, 1→0 |
+| `J0'` | C→B | `[0, 1]` | 次近接 L, 2→1 |
+| `J1'` | A→C | `[1, -1]` | 次近接 W-L, 0→2 |
+| `J2'` | A→B | `[-1, 1]` | 次近接 L-W, 0→1 |
+
+**検算**: 最近接配位数 4/サイト(各ラベルは 3 タイプ中 2 タイプに触れ、
+それぞれ配位数 2: A は J1/J2、B は J0/J2、C は J0/J1)。次近接系列も
+同じパターンで配位数 4/サイト。`min_size_for_check: [3, 3]`(最大
+`|R|` 成分 1)。
+
+**出典**: `python/stdface/lattice/kagome.py::kagome`(`_BONDS`)、
+commit `20b2c3cda3a489b5dcd4c9180a19ca23e9280c73`。
+
+### 3.7 orthorhombic(単純立方、3D 基本テンプレート)
+
+**幾何**: `dimension: 3`。`a1: [1,0,0], a2: [0,1,0], a3: [0,0,1]`
+(単位行列)。単一サイト `A`(`frac: [0,0,0]`)。**境界位相の扱いが
+chain/ladder と異なる**: 内部転写は行われず、`phase0/1/2` はそのまま
+`system.boundary[0..2]` に 1:1 対応する(`orthorhombic.py` は
+`StdI.phase[0..2]` を直接 `phase0/1/2` から設定する)。
+
+**ボンド定義表**(Spin, `_BONDS` 13 行: 最近接 3 + 次近接(面対角)6 +
+三次近接(体対角)4):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J0` | A→A | `[1,0,0]` | 最近接 W 方向 |
+| `J1` | A→A | `[0,1,0]` | 最近接 L 方向 |
+| `J2` | A→A | `[0,0,1]` | 最近接 H 方向 |
+| `J0'` | A→A | `[0,1,1]` | 次近接 面対角 +L+H |
+| `J0'` | A→A | `[0,1,-1]` | 次近接 面対角 +L-H |
+| `J1'` | A→A | `[1,0,1]` | 次近接 面対角 +H+W |
+| `J1'` | A→A | `[-1,0,1]` | 次近接 面対角 +H-W |
+| `J2'` | A→A | `[1,1,0]` | 次近接 面対角 +W+L |
+| `J2'` | A→A | `[1,-1,0]` | 次近接 面対角 +W-L |
+| `J''` | A→A | `[1,1,1]` | 三次近接 体対角(単一大域 type) |
+| `J''` | A→A | `[-1,1,1]` | 三次近接 体対角 |
+| `J''` | A→A | `[1,-1,1]` | 三次近接 体対角 |
+| `J''` | A→A | `[1,1,-1]` | 三次近接 体対角 |
+
+三次近接だけは `J0''/J1''/J2''` の系列別ではなく、単一の大域 `type: "J''"`
+にまとめられる点が他の格子(chain/square/triangular)の命名規則と異なる。
+
+**検算**: 最近接配位数 2/type × 3type = 6、次近接 4/type × 3type = 12、
+三次近接 8(単一 type)— 単純立方格子の物理配位数(6/12/8)と一致。
+`min_size_for_check: [3, 3, 3]`(最大 `|R|` 成分 1)。C 実装
+`src/Orthorhombic.c` の 13 回の `StdFace_FindSite` 呼出しと 1 対 1 で
+突合済み(Task 7)。この 3D 構造(`system.boundary` の 3 成分、13 行の
+`_BONDS`)が fc_ortho・pyrochlore の 3D テンプレートとして踏襲される。
+
+**出典**: `python/stdface/lattice/orthorhombic.py::orthorhombic`
+(`_BONDS`)、commit `1cf9f86a394d01f9efe180031e14bfa5d344bfcc`
+(`src/Orthorhombic.c` と突合済み)。
+
+### 3.8 fc_ortho(面心直方格子)
+
+**幾何**: `dimension: 3`。orthorhombic の単位行列とは異なり真に
+面心構造: `a1: [0.0, 0.5, 0.5]`, `a2: [0.5, 0.0, 0.5]`,
+`a3: [0.5, 0.5, 0.0]`。単一サイト `A`(`frac: [0,0,0]`)。境界は
+orthorhombic と同じ 3 成分 `phase0/1/2`。
+
+**ボンド定義表**(Spin, `_BONDS` 9 行: 最近接 6(3 系列×等価方向 2) +
+次近接 3(系列毎 1 方向)):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J0` | A→A | `[1,0,0]` | 最近接 W(等価対 1/2) |
+| `J0` | A→A | `[0,1,-1]` | 最近接 W(等価対 2/2) |
+| `J1` | A→A | `[0,1,0]` | 最近接 L(等価対 1/2) |
+| `J1` | A→A | `[-1,0,1]` | 最近接 L(等価対 2/2) |
+| `J2` | A→A | `[0,0,1]` | 最近接 H(等価対 1/2) |
+| `J2` | A→A | `[1,-1,0]` | 最近接 H(等価対 2/2) |
+| `J0'` | A→A | `[-1,1,1]` | 次近接 -W+L+H |
+| `J1'` | A→A | `[1,-1,1]` | 次近接 -L+H+W |
+| `J2'` | A→A | `[1,1,-1]` | 次近接 -H+W+L |
+
+**`J''`/`t''`/`V''` は受理されるが無結線(dead)パラメータである**:
+`fc_ortho.py` の Spin 分岐は `input_spin_nn(StdI.Jpp, StdI.JppAll,
+StdI.J0pp, ..., "J0''")` 等(89–91 行)によって `J0''`/`J1''`/`J2''` を
+stan.in から読み取り可能なキーワードとして受理する(Hubbard/Kondo 分岐の
+`t''`/`V''` も同様)が、`_BONDS` テーブルにも `GeneralJ`/`general_j`
+呼出しにも一切現れない — **入力としては受理されるが物理ハミルトニアンには
+一切反映されない**。この挙動は C 実装 `src/FCOrtho.c` の相互作用配列
+サイジング式のコメントに明示的な痕跡が残る(210, 214 行):
+
+```c
+nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 6/*J*/ + 3/*J'*/ + 0/*J''*/) ...
+ntransMax = StdI->NCell * 2 * (2*StdI->NsiteUC/*mu+h+Gamma*/ + 12/*t*/ + 6/*t'*/ + 0/*t''*/);
+```
+
+`+ 0/*J''*/` および `+ 0/*t''*/` という記述そのものが、C 実装作者が
+`J''`/`t''`/`V''` に配列スロットを意図的に一切割り当てていない(=
+対応するボンドが存在しないことを見越している)ことを示しており、
+Python 実装(`fc_ortho.py`)にも同一の構造がある。C/Python 両実装で
+一貫した挙動であるため、上流のバグではなく意図された仕様と判断され、
+本カタログはこの現行実装のとおり `J''`/`t''`/`V''` を `bonds`/
+`couplings` から除外している。
+
+**検算**: 最近接配位数 4/type(2 ソース行×2)、次近接配位数 2/type
+(1 ソース行×2)。`min_size_for_check: [3, 3, 3]`(最大 `|R|` 成分 1)。
+
+**出典**: `python/stdface/lattice/fc_ortho.py::fc_ortho`(`_BONDS`)、
+commit `8e3601167d1254807f58ce365107333f1d505fa0`
+(`src/FCOrtho.c::StdFace_FCOrtho` と byte-for-byte の呼出し列一致を
+確認済み)。
+
+### 3.9 pyrochlore
+
+**幾何**: `dimension: 3`, `n_sites_uc: 4`(4 面体の 4 頂点)。格子ベクトルは
+fc_ortho と同じ FCC: `a1: [0,0.5,0.5], a2: [0.5,0,0.5], a3: [0.5,0.5,0]`。
+`A0`(`frac: [0,0,0]`)、`A1`(`frac: [0.5,0,0]`)、`A2`(`frac: [0,0.5,0]`)、
+`A3`(`frac: [0,0,0.5]`)。
+
+**ボンド定義表**(Spin, `_BONDS` 12 行: 四面体内(`R=[0,0,0]`)6 +
+四面体間 6):
+
+| type | from→to | R | 意味 |
+|---|---|---|---|
+| `J0` | A0→A1 | `[0,0,0]` | 四面体内 W |
+| `J1` | A0→A2 | `[0,0,0]` | 四面体内 L |
+| `J2` | A0→A3 | `[0,0,0]` | 四面体内 H |
+| `J0'` | A2→A3 | `[0,0,0]` | 四面体内 L-H |
+| `J1'` | A3→A1 | `[0,0,0]` | 四面体内 H-W |
+| `J2'` | A1→A2 | `[0,0,0]` | 四面体内 W-L |
+| `J0` | A1→A0 | `[1,0,0]` | 四面体間 W |
+| `J1` | A2→A0 | `[0,1,0]` | 四面体間 L |
+| `J2` | A3→A0 | `[0,0,1]` | 四面体間 H |
+| `J0'` | A3→A2 | `[0,-1,1]` | 四面体間 L-H |
+| `J1'` | A1→A3 | `[1,0,-1]` | 四面体間 H-W |
+| `J2'` | A2→A1 | `[-1,1,0]` | 四面体間 W-L |
+
+四面体内の `(A2,A3)`/`(A3,A1)`/`(A1,A2)` という一見エンドポイントの
+向きが揃っていない組合せは `_BONDS` の生の順序をそのまま保持したもので、
+並べ替えは行っていない(1.3 節(2))。
+
+**Kondo の非対称 J 結合(pyrochlore 固有の例外)**: 他の 8 格子はいずれも
+`X_c → X_s`(自分自身の副格子内で閉じる)という Kondo 結合パターンを
+持つが、pyrochlore のみ現行実装(C/Python 共通)が非対称である。
+`_local` 関数(`pyrochlore.py` 169–173 行)/`Pyrochlore.c`(246–251 行)は
+`general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + uc_i)` を
+`uc_i = 0..3` についてループしており、**副格子 3 の遍歴サイト `A3_c`
+のみ**が全 4 副格子の局在スピン(`A0_s..A3_s`)全てと結合する:
+
+```yaml
+- {from: A3_c, to: A0_s, R: [0, 0, 0], type: J}
+- {from: A3_c, to: A1_s, R: [0, 0, 0], type: J}
+- {from: A3_c, to: A2_s, R: [0, 0, 0], type: J}
+- {from: A3_c, to: A3_s, R: [0, 0, 0], type: J}
+```
+
+`A0_c`/`A1_c`/`A2_c` は Kondo 結合(`J`)を一切持たない(`coordination`
+に `J` キーが現れない)。この非対称性は上流実装のバグである可能性が
+あるが、本カタログの検証水準は「現行実装ソースとの突合」であるため
+上流の挙動をそのまま採用する(CONVENTIONS.md §6.7)。上流が将来
+修正された場合はカタログの schema バージョン上げが必要になる旨は
+7 章(既知の制限)で改めて記載する。
+
+**検算**: Spin/Hubbard の最近接配位数 6/サイト(3 type × 2)。
+`min_size_for_check: [3, 3, 3]`(最大 `|R|` 成分 1)。Kondo:
+`coordination.A3_c.J: 4`、`coordination.A{0,1,2,3}_s.J: 1`(各 1)、
+`A0_c`/`A1_c`/`A2_c` に `J` キーなし(計数 0 のため省略、manifest.yaml
+の記載規則どおり)。
+
+**出典**: `python/stdface/lattice/pyrochlore.py::pyrochlore`(`_local`,
+`_BONDS`)、commit `70fbecd02aeb60df04625843217a08b545c2c8b0`
+(`src/Pyrochlore.c` と byte-for-byte の一致を確認済み、Task 9)。
+
+---
+
+## 4. 模型ごとの演算子対応
+
+### 4.1 符号表と検証連鎖
+
+1.3 節(3)/CONVENTIONS.md §6.2 の符号表は「規範」として提示済みだが、
+本節ではその**導出**を示す。検証連鎖は
+
+```
+StdFace パラメータ → builder 呼び出し(interaction_builder.py)
+→ trans/intr 係数(StdI.trans_list / StdI.intr_list / StdI.Cintra_list / StdI.Cinter_list)
+→ solver 出力規約(HPhi trans.def の H = −Σ(trans 値) c†c という暗黙符号)
+→ 物理ハミルトニアンの符号
+```
+
+の 4 段階からなる。**HPhi の `trans.def` の係数規約(書かれた値の符号を
+反転して物理ハミルトニアンに使う)はソルバー自身の入力ファイル仕様であり、
+本リポジトリの Python 実装から導出されるものではなく、既知の事実として
+検証連鎖の最終段に用いる**(CONVENTIONS.md §6.1)。
+
+**チャネルごとに反転の有無が異なる**点が本節の要点である。
+
+- **`trans_list` 系チャネル**(`hop`、onsite の `mu`/`h`/`Gamma`/
+  `Gamma_y`): これらはすべて `interaction_builder.py` の `trans()`
+  (115–144 行)を経由して `StdI.trans_list` に積まれ、`trans.def` の
+  `H = −Σ(trans 値) c†c` という暗黙反転を**1 回だけ**受ける。
+  代表例として `hop`(t 族)を追跡する:
+  1. StdFace パラメータ: `input_hopp(StdI.t, StdI.t0, "t0")` が
+     stan.in から `t0`(複素数可)を解決する。
+  2. builder 呼び出し: 標準格子の `_dispatch_bond_interaction`
+     (`interaction_builder.py` 630–663 行、661 行)は
+     `hopping(StdI, Cphase * t, isite, jsite, dR)` を呼ぶ —
+     **符号は反転されず**、境界位相 `Cphase`(`|Cphase|=1`)を掛けた
+     生の `t0` がそのまま渡される。
+  3. trans 係数: `hopping()`(147–191 行)は両スピンについて
+     `trans(StdI, t0, jsite, σ, isite, σ)` と
+     `trans(StdI, conj(t0), isite, σ, jsite, σ)` を追加する —
+     ここでも符号反転はない(`trans_list` の値 = 生の `t0`)。
+  4. solver 規約: `trans.def` はこの値をそのまま出力し(`writer/
+     common_writer.py`)、HPhi は `H_trans = −Σ(trans.def 値) c†c` と
+     解釈する。
+  5. 物理符号: `H = −t0 Σσ(c†c + h.c.)`。したがって
+     `couplings[t0].value = {param: t0, scale: -1.0}` が
+     `scale × param = −t0` を与え、この物理係数と一致する。
+
+  onsite の `mu`/`h`/`Gamma`/`Gamma_y` も同じ経路(`hubbard_local_terms`/
+  `mag_field_terms`、いずれも `_trans_term` 経由で `trans_list` へ)を通り、
+  builder 側の生値がそのまま `trans_list` に入る(例:
+  `HubbardModel.build_local_terms` は `hubbard_local_terms(StdI.mu,
+  -StdI.h, -StdI.Gamma, -StdI.Gamma_y, StdI.U, isite)` を呼び、
+  `mu0 = StdI.mu` は無反転で渡る一方、`h0 = -StdI.h` のように**呼び出し側
+  で先に符号を作ってから渡す**項もある — いずれにせよ `trans_list` に
+  積まれた後は同じ 1 回の solver 側反転を受けるので、最終的な物理符号は
+  1.3 節(3)の表(`mu`: `−mu N`、`h`: `−h Sz` 等)と一致する)。
+
+- **`intr_list`/`Cintra_list`/`Cinter_list` 系チャネル**(`density-density`
+  の `V`、onsite の `U`、J 族の交換相互作用): これらは `trans.def` を
+  経由しないため、solver 側の暗黙反転を**受けない**。
+  - `coulomb(StdI, V, i, j)`(546–560 行)は `StdI.Cinter_list.append((V,
+    i, j))` と無反転で追加する → 物理係数 = `+V`(`couplings[V0].value
+    = {param: V0}`、`scale` 省略時 `+1.0`)。
+  - `hubbard_local_terms`(225–242 行)は `terms.Cintra.append((U0,
+    isite))` と無反転で追加する → 物理係数 = `+U`(onsite `coeff:
+    +1.0`)。
+  - `general_j_terms`(456–543 行)は `J[2,2]*Siz*Sjz` 等を直接
+    `terms.intr` に積む(無反転) → 物理係数 = `+J_ab S^a S^b`
+    (J 族 `coeff` はそのまま `+1.0`/`-1.0` の符号のみを表すリテラル)。
+    Kondo の `J`(`s_i . S_j`)も `general_j(StdI.J, 1, StdI.S2, isite,
+    jsite_kondo)` として同じ経路(`intr_list`)を通るため無反転
+    (`couplings[J].value = {param: J}`、`scale` 省略時 `+1.0`)。
+
+- **wannier90 の hop チャネルは例外的に 2 回反転する**:
+  `wannier90.py::_apply_hopping_terms` は非局所項を
+  `hopping(StdI, -Cphase * tUJ[0][it], jsite, isite, dR)` として渡す
+  — 標準格子の `_dispatch_bond_interaction` とは異なり、**builder
+  呼び出し自体に符号反転(`-Cphase`)が入っている**。この builder 側の
+  反転と solver 側の反転(上記 trans_list 系と同じ 1 回)が相殺し、
+  結果として `物理ホッピング係数 = +H_mn(R)`(符号反転なし)になる。
+  これが chain/square 系の t 族(`scale: -1.0`)と wannier90 の hop
+  (`scale: +1.0`)が逆に見える理由であり、詳細な検算は 5.1 節で示す。
+
+以上から、1.3 節(3)の符号表の各行は「`trans_list` 経由か
+`intr_list`/`Cintra_list`/`Cinter_list` 経由か」という**チャネルの違い**
+だけで一意に説明できる: `trans_list` 経由の項(t, mu, h, Gamma, Gamma_y)
+は solver 側の 1 回反転を打ち消すために `scale`/`coeff` に `-1.0`
+を持たせ、それ以外(V, U, J)は無反転のため `+1.0`(または省略)で
+物理係数と直接一致させる。
+
+### 4.2 Spin: 9 成分正準形とパラメータ解決規則
+
+キーワード成分表(1.3 節(5)/CONVENTIONS.md §6.4 の再掲。ops 対と
+param 接尾辞は 1 対 1 対応):
+
+| ops 対 | 接尾辞 | ops 対 | 接尾辞 | ops 対 | 接尾辞 |
+|---|---|---|---|---|---|
+| `[Sx,Sx]` | `x` | `[Sz,Sz]` | `z` | `[Sy,Sx]` | `yx` |
+| `[Sy,Sy]` | `y` | `[Sx,Sy]` | `xy` | `[Sy,Sz]` | `yz` |
+| | | `[Sx,Sz]` | `xz` | `[Sz,Sx]` | `zx` |
+| | | | | `[Sz,Sy]` | `zy` |
+
+**解決順序**(`input_params.py::_resolve_spin_matrix`、135–183 行。
+prefix `J0` を例に取ると各成分 `(i,j)` について):
+
+1. 成分局所(`J0xy` 等。`J0[i,j]` が既に設定済み)
+2. 成分大域(`Jxy` 等。フォールバック行列 `J[i,j]`)
+3. スカラー局所・対角のみ(`J0`。`i==j` の場合のみ `J0All`)
+4. スカラー大域・対角のみ(`J`。`i==j` の場合のみ `JAll`)
+5. 0(既定値)
+
+プライム系(`J0'`, `J0''`, `J1'` 等、`input_spin`)には大域 fallback が
+存在しない例外がある(1.3 節(5)、CONVENTIONS.md §6.5)。
+
+**等方入力・異方入力・同時指定エラーの 3 例**(いずれも
+`input_spin_nn`、`input_params.py` 186–227 行の実装に基づく。`J0`
+系列を例に取る):
+
+- **例 1(等方入力)**: stan.in で大域スカラー `J = 1.0` のみを指定し、
+  `J0` や `J0x` 等は無指定のまま。解決順序 1–2 は不成立(局所・大域とも
+  成分は未設定)、3 も不成立(局所スカラー `J0All` 未設定)、4 で大域
+  スカラー `JAll = 1.0` が対角成分(`x, y, z`)にのみ採用される。結果:
+  `J0x = J0y = J0z = 1.0`、非対角成分はすべて 0(等方 Heisenberg 交換)。
+- **例 2(異方入力)**: stan.in で成分局所値 `J0x = 1.0, J0y = 1.0,
+  J0z = 2.0` を指定。解決順序 1 でそれぞれの `(x,x)`/`(y,y)`/`(z,z)`
+  成分が直接採用される。結果: `J0x = J0y = 1.0 ≠ J0z = 2.0`(XXZ 型
+  異方交換)。
+- **例 3(同時指定エラー)**: stan.in で局所スカラー `J0 = 1.0` と
+  成分局所 `J0z = 2.0` を同時に指定。`input_spin_nn` は
+  `_check_scalar_vs_matrix(J0All, J0(行列), J0name, J0name)`
+  (`input_params.py` 220 行)を呼び、`J0All` が非 NaN かつ `J0` 行列内に
+  既に非 NaN 要素(`z,z`)があることを検出して
+  `ValueError("J0 and J0z conflict !")` を送出する。すなわち
+  **等方(スカラー)指定と異方(成分)指定は同一 prefix 内で同時に
+  行えない**(スカラー同士・スカラー対行列・行列対行列の全組合せが
+  同様にエラーとなる。CONVENTIONS.md §6.5 の競合規則)。
+
+### 4.3 Hubbard: hop / density-density / onsite
+
+演算子の数式(CONVENTIONS.md §6.6):
+
+- `hop` = `Σ_σ (c†_iσ c_jσ + h.c.)`(演算子自体は符号を持たない。符号は
+  4.1 節のとおり `value.scale = -1.0` に持たせ、物理寄与は
+  `−t Σσ(c†c + h.c.)`)。
+- `density-density` = `n_i n_j`(物理寄与 `+V n_i n_j`、`scale` 省略時
+  `+1.0`)。
+- onsite `U`: `tensor_terms: [{ops: [NupNdn], coeff: +1.0}]`
+  (物理寄与 `+U n↑n↓`)。
+
+**複素 `t` と反転同値(共役)**: `hopping()`(interaction_builder.py
+147–191 行)は 1 つの `(isite, jsite, R, t)` から
+`trans(StdI, t, jsite, σ, isite, σ)` と `trans(StdI, conj(t), isite, σ,
+jsite, σ)` の両方を生成する — すなわち `hop` 演算子の `+ h.c.` は
+実装上リテラルに複素共役を取ることで実現されている。カタログの
+ボンドは `(from, to, R)` の**片方向のみ**を記述するソース順保持規約
+(CONVENTIONS.md §5)を取るため、もし読み手が `(from, to, R)` を
+`(to, from, −R)` として反転読み替えする場合(通常は行わない)、その
+値は元の複素共役 `conj(t)` でなければならない — これは 1.3 節(2)の
+「反転時の係数変換(消費側規範)」がまさにこの `hopping()` の実装から
+導かれた規則であることを示す。実数の `t`(位相のない通常のホッピング)
+では `conj(t) = t` となり反転同値は自明になるが、境界位相(`phase0`
+等によるツイスト境界)や磁束(Peierls 位相)が乗ると `t` は複素数
+になり得るため、共役を取る規則は一般に必要である。
+
+### 4.4 Kondo: 2 ラベル・端点順序・サイト倍加・GC 変種
+
+**2 ラベルと端点順序**: 1.3 節(2)/CONVENTIONS.md §6.7 のとおり、Kondo
+は 1 物理サイトを `<X>_c`(遍歴電子、fermion)・`<X>_s`(局在スピン、
+spin)の 2 geometry ラベルとして表現する。Kondo 結合(`s_i . S_j`)は
+`general_j(StdI.J, 1, StdI.S2, isite, jsite_kondo, ...)` の引数順が
+そのままボンドの `from`(`isite` = 遍歴 `_c`)/`to`(`jsite_kondo` =
+局在 `_s`)に写るため、**第 1 端点(`from`)= 遍歴電子スピン、第 2 端点
+(`to`)= 局在スピン**という順序に意味を持つ(3 章の各格子のボンド表
+参照。pyrochlore のみ非対称な例外を持つ、3.9 節)。
+
+**磁場の両側適用**: `KondoModel.build_local_terms`
+(`model_plugin.py` 87–101 行)は `hubbard_local_terms(...)` で遍歴
+サイト(`isite`)に Hubbard 一式(`mu`, `U`, 磁場)を適用したのち、
+`mag_field_terms(StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y,
+jsite_kondo)` で局在サイト(`jsite_kondo`)にも磁場(`h`/`Gamma`/
+`Gamma_y`)を**改めて**適用する。したがって `A_c`/`A_s` の両方の
+onsite ブロックに `field_z`/`field_x`/`field_y` が現れる(chain_kondo
+の 1.4 節の例で確認済み)一方、`U`/`mu`/`D` は `_c` にのみ現れる。
+
+**サイト倍加(前半 = 局在)との対応**: 参照実装は Kondo 模型の内部
+サイトインデックスを **倍加**し(`set_local_spin_flags`、
+`site_util.py` 704–736 行: `StdI.nsite *= 2`)、**前半**
+(`locspinflag[:half] = StdI.S2`)を局在スピン、**後半**
+(`locspinflag[half:] = 0`)を遍歴電子(fermion)に割り当てる。この
+対応は `expand_bonds_2d`(`interaction_builder.py` 807–848 行、838–845
+行)の呼び出しにそのまま現れる:
+
+```python
+kondo_off = StdI.NsiteUC * StdI.NCell if StdI.model == ModelType.KONDO else 0
+...
+add_local_terms(StdI, base + uc + kondo_off, base + uc)
+#                      ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^
+#                      isite = 遍歴(後半、offset あり)   jsite_kondo = 局在(前半、offset なし)
+```
+
+すなわち内部インデックス空間では「前半(offset なし)= 局在スピン、
+後半(`kondo_off` 分オフセット)= 遍歴電子」という対応になっており、
+`add_local_terms(StdI, isite, jsite_kondo)` の引数順(遍歴が第 1
+引数)とは向きが逆であることに注意(引数順は「意味上の役割」、
+サイトインデックスの前半/後半は「メモリレイアウト」であり、両者は
+独立した規約である)。カタログの `geometry.sites` はこの内部
+インデックスの前半/後半を直接は反映せず、`_c`/`_s` ラベルという
+意味論のみを公開する。
+
+**GC 変種(粒子数条件は solver 層)**: HPhi は `CalcModel` の値
+(`0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC`、
+`solvers/hphi/writer.py` `MODEL_GC_TO_CALC_MODEL` 辞書、306 行)により
+通常(canonical)模型とグランドカノニカル(GC)模型を切り替える。この
+切り替えは `(ModelType, lGC)` の組で決まり、`lGC` は全電子数
+(`ncond`/`nelec`)・全 `Sz`(`2Sz`)という**粒子数セクターの指定**から
+solver 出力層で決定される — ハミルトニアンの `bonds`/`couplings`/
+`onsite` 定義そのもの(本カタログが記述する対象)には一切依存しない。
+これは 2.8 節で `ncond, nelec, 2Sz` を「対象外」(計算条件であり
+模型のハミルトニアン定義ではない)に分類した理由そのものであり、
+Kondo の GC 変種(`KondoGC`)であってもカタログ上の `bonds`/
+`couplings`/`onsite` は通常の Kondo と同一である。
+
+---
+
+## 5. wannier90 変換仕様
+
+### 5.1 概要
+
+wannier90 格子(`lattice_catalog/wannier90/`)は、他の 9 格子のように
+StdFace の解析的な格子ベクトル・ボンド式から `bonds`/`couplings`/
+`onsite` を導出するのではなく、RESPACK/Wannier90 が出力する
+`*_hr.dat`(hopping)・`*_ur.dat`(オンサイト/サイト間 Coulomb)・
+`*_jr.dat`(Hund/交換/ペアホッピング)という**外部データファイル**を
+読み込んで変換する。対応する変換ロジックは
+`python/stdface/lattice/wannier90.py`(呼出しエントリ `wannier90()`、
+842–933 行)・`wannier90_io.py::_read_w90`(データ読込み)・
+`interaction_builder.py::hopping`/`trans`/`coulomb`(4 章で確認した
+標準の trans/intr 経路)の 3 ファイルにまたがる。本章の規則(W1–W6)は
+`lattice_catalog/wannier90/example_hubbard.yaml` のヘッダコメントに
+逐語的な導出として既に記載されており(Task 10 で `trans.def`/
+`coulombintra.def` の実出力との数値突合により検証済み)、本章はそれを
+manual 側の記述として集約する。
+
+**対応模型は Spin・Hubbard のみ**であり、**Kondo は非対応**である
+(`wannier90.py::_validate_wannier_params` 618–641 行が
+`ModelType.KONDO` の場合に `ValueError("wannier + Kondo is not
+available !")` を送出する)。したがって本章に Kondo 節はない。
+
+### 5.2 Hubbard: H/U チャネル
+
+**規則 W1(`H_mn(R)` の符号 — 検証済みの正しい規則)**:
+`wannier90.py::_apply_hopping_terms`(389–406 行)は非局所項を
+
+```python
+hopping(StdI, -Cphase * tUJ[0][it], jsite, isite, dR)
+```
+
+として渡す。4.1 節で確認したとおり標準格子の `_dispatch_bond_interaction`
+は `hopping(StdI, Cphase * t, ...)` と**無反転**で呼ぶのに対し、
+wannier90 経路はここで明示的に `-Cphase`(符号反転)を掛けている。この
+builder 側の反転と、trans.def の solver 側反転(4.1 節で確認した
+`H = −Σ(trans 値) c†c`)が相殺し、
+
+```
+物理ホッピング係数 = +H_mn(R)   (符号反転なし。Cphase は境界位相であり別枠)
+```
+
+となる。標準格子の t 族が `scale: -1.0` を持つのに対し、wannier90 の
+`hop` 係数は**符号反転なし**(生データをそのまま物理係数として使う)
+という違いが生じるのはこのためである。Task 10 では `W=4, L=4,
+Height=1` で実際に `stdface_main` を実行し、`trans.def` の出力値
+(`+1.0`)が `H_00(R) = -1.0` の符号反転(`-(+1.0) = -1.0`)である
+ことを確認しており、`example_hubbard.yaml` のヘッダコメント
+「検算 1/3」に手順が記載されている。
+
+**onsite 分離(`R=0`, `m=n` の対角要素)**: `_apply_hopping_terms`
+380–388 行は `R=(0,0,0)` かつ `m=n` の項を `bonds` ではなく
+`isite` ごとの onsite 一体項として `trans_list` に分離する
+(`(-tUJ[0][it], isite, spin, isite, spin)` を両スピンに追加)。
+trans.def 規約と合わせると物理係数は `+H_mm(0)`(両スピンの数演算子和
+に掛かる)。`example_hubbard.yaml` のデータでは `H_11(0) = 0.0` であり、
+振幅 cutoff(既定 `1e-8`)未満のため実際には onsite 項として現れない
+(ゼロなので省略。規則自体は非ゼロなら `{ops:[N], coeff:1.0},
+value:<H_mm(0)>` という形になる)。
+
+**Hermite 正準対の選択(first-in-file-wins)**: `wannier90_io.py::
+_read_w90`(355–361 行)は WSC(R ベクトル)ブロック単位で「ファイル
+出現順で先着優先」の規則を持つ: あるブロックの `R` が、既に読んだ
+(より前に出現した)ブロックの `−R` と一致する場合、そのブロック
+全体(全 `m,n` 組)を丸ごとゼロ化する。`R=(0,0,0)` のブロックのみ
+別途、`m>n`(下三角)要素を追加でゼロ化する(`m<=n` が正準)。これは
+「`R>0`」のような固定的な数学規則ではなく、**ファイル中の出現順**に
+依存する規則である点に注意。排除された反転対は `hop` 演算子の定義
+(`Σσ(c†c + h.c.)`)により自動的に再構成されるため、カタログの
+`bonds` には正準対のみを列挙する(4.3 節の複素共役規則と同じ機構)。
+
+**`_hr.dat`/`_ur.dat` 自身の縮退重みは読み捨てる**:
+`wannier90_io.py::_skip_degeneracy_weights`(56–72 行、呼び出しは
+315 行)はファイルヘッダの `ndegen` 列を読み込んだ後**使用せず捨てる**。
+実際に乗算される重みは `Weight_tot`(初期値 1.0)のみで、これは
+`_apply_boundary_weights`(129–169 行、呼び出しは 364 行)が `W/L/
+Height` から計算する**有限クラスタ境界での 0.5 halving**であり、
+ファイルの `ndegen` 値とは無関係。本カタログの `bonds` は無限格子の
+単位胞相対表現であるためこの境界重みも適用しない。
+
+**cutoff の適用順**(`_read_w90`、255–370 行): (1) 実空間長の cutoff
+(`cutoff_length_t/u/j`、既定は `t` が無効・`U`/`J` が 0.3)、
+(2) `cutoff_Vec` 設定時はそれ、未設定なら整数 box cutoff
+(`cutoff_R` 系。`U` チャネルの既定 `cutoff_UR` は `(0,0,0)` — 既定では
+`R=0` のみ通過)、(3) 正準対選択(上記)、(4) 境界重み(有限クラスタ
+固有、カタログでは不適用)、(5) 振幅 cutoff(`cutoff_t`/`cutoff_u`/
+`cutoff_j`、既定 `1.0e-8`)未満の要素を EFFECTIVE term から除外。
+`example_hubbard.yaml` は既定の振幅 cutoff のみを適用し、長さ/R/Vec
+による追加制限は行わない(データの `R` は全て `|R 各成分| <= 1`)。
+
+**`lambda`/`alpha`/`doublecounting`**: `lambda_U`/`lambda_J`(既定
+1.0)は各チャネルの生データ読込み時に一様に乗算されるスケール
+(`wannier90_io.py` 353 行: `Mat_tot = lam * (re + i*im)`)。`alpha`
+(既定 0.5)と `doublecounting_mode` は `_dr.dat` 密度行列ファイルが
+存在し `doublecounting_mode != "none"` の場合のみ、onsite 二重計上
+補正項(および FULL モードでは追加の hopping 補正項)を
+`trans_list` に加える(`_apply_coulomb_terms` 458–509 行)。
+`example_hubbard.yaml` には `_dr.dat` が存在せず既定モード `"none"`
+のため一切発動しない。
+
+### 5.3 Spin: 超交換アルゴリズムと直接写像との差異
+
+**現行アルゴリズム**: Spin 模型の wannier90 変換は `_jr.dat`
+(Hund/交換チャネル)を Spin 用の交換相互作用として直接読み込む
+のではなく、`_hr.dat`(hopping)と `_ur.dat`(オンサイト U)から
+**2 次摂動の超交換公式**によって等方 Heisenberg 交換を**自動生成**
+する。`_apply_hopping_terms`(397–404 行):
+
+```python
+if StdI.model == ModelType.SPIN:
+    diag_val = (2.0 * tUJ[0][it] * np.conj(tUJ[0][it])
+                * (1.0/Uspin[m] + 1.0/Uspin[n])).real
+    Jtmp = np.diag([diag_val, diag_val, diag_val])
+    general_j(StdI, Jtmp, StdI.S2, StdI.S2, isite, jsite)
+```
+
+すなわち各非局所ホッピング要素 `t_mn = H_mn(R)` と、同じ `_ur.dat`
+から抽出したオンサイト U(`Uspin[m] = U_mm(0)`, `Uspin[n] = U_nn(0)`、
+684–694 行で `_apply_coulomb_terms` と同じ「局所項」判定ロジックを
+使って別途抽出)から、`J = 2|t_mn|²(1/U_m + 1/U_n)` という単一の
+等方対角テンソル(`J_x = J_y = J_z = J`, 非対角 0)を計算し、
+**Hubbard 模型なら `hop` ボンドになる同じ `(isite, jsite, R)` の位置に**
+J テンソルの `couplings` として書き込む。
+
+**直接写像との差異**: 「直接写像」— すなわち `_jr.dat` の交換
+チャネルの値をそのまま Spin 模型の交換係数として使う経路 — も
+別途存在するが(`_apply_hund_terms` 604–610 行、`StdI.Ex_list` に
+`ex_val`(mVMC ソルバーは `+tUJ[2][it].real`、それ以外は
+`-tUJ[2][it].real` — ソルバーによって符号が異なる)を追加する)、
+これは `_jr.dat` が存在する場合に**上記の超交換生成に追加で**働く
+副次的な経路である。つまり:
+
+- 超交換生成(`_hr.dat` + `_ur.dat` から)は `_jr.dat` の有無に関わらず
+  **常に**実行され、Spin 模型の主要な近接交換はこの経路で決まる。
+- `_jr.dat` に基づく直接写像(`Ex_list`)は `_jr.dat` が存在する場合
+  のみ**追加的に**発生し、超交換の代わりにはならない(両者は加算的)。
+- 超交換で生成される J テンソルは常に等方(対角のみ、非対角 0)である
+  のに対し、`_jr.dat` 直接写像は交換相互作用専用の別チャネルの生値を
+  そのまま使う。
+
+この非対称性(自動生成が既定・データ由来の直接値が例外的な追加項)は
+StdFace 実装が「多軌道 Hubbard/Kondo 模型を強相関極限で有効スピン
+模型へ落とし込む」という物理的な近似(超交換描像)を組み込んだ
+コンバータであることを反映しており、Wannier 軌道間ホッピングを字面
+どおり `hop` ボンドとして書き写す Hubbard 変換(5.2 節)とは根本的に
+異なるアルゴリズムである点に注意が必要である。本カタログには Spin
+用 wannier90 の YAML 例は用意していない(§7 既知の制限参照)。
+
+### 5.4 `example_hubbard.yaml` の読み解き
+
+`lattice_catalog/wannier90/example_hubbard.yaml` は
+`test/wannier90_data/{zvo_geom.dat, zvo_hr.dat, zvo_ur.dat}`
+(2D 正方格子、単一 Wannier 軌道、最近接 `t = -1.0 eV`、オンサイト
+`U = 8.0 eV`、`zvo_jr.dat` は存在しない)を Hubbard 模型として変換した
+最小例である。
+
+- `geometry.lattice_vectors`: `a1=[3,0,0], a2=[0,3,0], a3=[0,0,10]`
+  (`zvo_geom.dat` 1–3 行目そのまま。`a3` の 10 は真空層 — 物理的には
+  2D スラブ)。`sites: [{label: W1, frac: [0,0,0]}]`
+  (`zvo_geom.dat` 5 行目の Wannier 中心、`NsiteUC=1`)。
+- `model.site_dof.W1: {fermion: {orbitals: 1}}`(拡張方言、
+  CONVENTIONS.md §7-1)。
+- `model.bonds`: 規則 W3 により正準対のみを 2 本列挙する
+  (`R=[-1,0,0]` type `t0`、`R=[0,-1,0]` type `t1`。`zvo_hr.dat` の
+  WSC 出現順 `(-1,0,0)→(0,-1,0)→(0,0,0)→(0,1,0)→(1,0,0)` のうち
+  後半 2 つは前半 2 つの反転と一致するため除外される)。
+- `model.couplings.t0`/`t1`: `{operator: "hop", value: -1.0}` —
+  **`{param: ...}` ではなくリテラル数値**を直接記載している。これは
+  wannier90 由来の値が外部データそのものであり stan.in の
+  パラメータ参照に対応しないためで、`lint_catalog.py` の C7(param
+  参照の目録整合検査)は `value` が dict でない場合はチェックを
+  スキップする設計になっており、この直値記載でリンタを通過する。
+  値は規則 W1 により符号反転なし(`+H_00(R) = -1.0`、そのまま検算 1
+  に対応)。
+- `model.onsite.W1.hubbard_u`: `value: 8.0`(`U_11(0) = 8.0` の直値、
+  検算 2 に対応)。同じ `onsite.W1` ブロックには `chemical_potential`
+  (`{param: mu}`)・`field_z`/`field_x`/`field_y`
+  (`{param: h}`/`{param: Gamma}`/`{param: Gamma_y}`)という、
+  wannier データに依存しない標準 StdFace パラメータへの `{param:
+  ...}` 参照も**混在**している — wannier90 格子でも `mu`/`h`/`Gamma`/
+  `Gamma_y` は通常の stan.in パラメータとして受理されるため(4 章の
+  onsite 適用範囲の表と同じ扱い)。ただし `U` だけは例外で
+  `{param: U}` という参照形は使えない: `wannier90.py::
+  _validate_wannier_params` は `lattice="wannier90"` に対して
+  `not_used_d("U", StdI.U)` を呼ぶため、`U` は `_ur.dat` から供給
+  されなければならず、stan.in の `U` キーワードで与えることは
+  許されない(この YAML では `{param: U}` の代わりに直値 `8.0` を
+  使っている理由)。
+- ヘッダコメント末尾の「規則 W2」注記のとおり、`R=0, m=n` の wannier
+  由来 onsite 項(`H_11(0)=0.0`)は振幅 cutoff 未満のため省略されて
+  おり、`onsite.W1` に wannier 由来の追加項(`{ops:[N], coeff:1.0}`
+  型)は現れない。
+
+### 5.5 J チャネル(Hund・交換・ペアホッピング)
+
+`_jr.dat` から読み込まれる J チャネル(Hund coupling)は
+`wannier90.py::_apply_hund_terms`(512–611 行)で処理される。局所項
+(`R=0, m=n`)は計算対象外とし(553–555 行)、非局所項(または `R=0`
+かつ `m≠n` の軌道間項)についてのみ、単一の係数 `J_mn = tUJ[2][it]`
+(実数部)から以下の**3 つの異なる 2 体演算子**を**同時に**生成する
+(いずれも符号反転なし、無反転で `StdI.Hund_list`/`Ex_list`/
+`PairHopp_list` に積まれ、それぞれ HPhi の `hund.def`/`exchange.def`/
+`pairhopp.def` に対応する — `writer/interaction_writer.py` の
+`_InteractionMeta` テーブルで確認済み):
+
+- **Hund 項**(`Hund_list`、Hubbard/Spin 共通で常に追加): 軌道 `m,n`
+  間の Hund 型密度相互作用。
+- **交換項**(`Ex_list`): Hubbard では Hund と同じ係数で追加。Spin
+  では 5.3 節の直接写像経路として、ソルバーにより符号が異なる
+  (mVMC: `+J_mn`、それ以外: `−J_mn`)値で追加される。
+- **ペアホッピング項**(`PairHopp_list`、Hubbard のみ): 軌道間の
+  ペア(2 電子)ホッピング `c†_{i↑}c†_{i↓}c_{j↓}c_{j↑}` 型。
+
+すなわち **1 個の J チャネル行列要素が、Hund 密度項・スピン交換項・
+ペアホッピング項という 3 つの異なる 4 フェルミオン演算子を同時に
+規定する**(多軌道 Hubbard-Kanamori 型相互作用に共通する構造)。
+二重計数補正は U チャネル(5.2 節、重み `alpha`)と非対称で、J チャネル
+側は重み `(1 - alpha)` を使う(`_apply_hund_terms` 577, 585 行:
+`-(1.0 - StdI.alpha) * tUJ[2][it].real * DenMat0`)。
+
+**YAML 例が対象外である理由**: 本カタログの拡張方言(1.3 節(3)/
+CONVENTIONS.md §7)が定義する演算子語彙は、2 端点の名前付き演算子
+(`hop`, `density-density`, `s_i . S_j`)と 9 成分 J テンソル
+(spin–spin)の 2 種類のみであり、いずれも「1 つのボンド `(i,j,R)`
+に対して 1 つの物理量」という前提を持つ。J チャネルは 1 つの係数
+から Hund/交換/ペアホッピングという**独立した 3 つの 4 フェルミオン
+演算子**を同時に生成するため、現行の演算子語彙では表現できない —
+これを表現するには、順序付き生成消滅演算子列と site/orbital 束縛を
+持つ**一般的な 4 フェルミオン項スキーマ**が必要になる。この
+スキーマは draft 仕様にも本カタログの拡張方言にも未定義であるため
+(CONVENTIONS.md §7 項目 6)、`lattice_catalog/wannier90/` には J
+チャネルの YAML 例を用意していない。
+
+一般項スキーマの素描(6 章の拡張提案 6 項目のうち第 6 項として
+記載予定 — 順序付き生成消滅演算子列 `[c†_{i,σ,orb}, c_{j,σ',orb'},
+...]` と、各演算子への site/orbital 束縛、係数 1 つを持つ表現。
+名前付き演算子(`hop` 等)はこの一般形の省略記法という位置づけに
+なる)は、本タスクの範囲外である 6 章(仕様拡張提案)に委ねる。
