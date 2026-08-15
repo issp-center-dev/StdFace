@@ -407,6 +407,41 @@ def test_c2_negative_mixed_type_duplicate_labels_no_crash() -> None:
           f"the string duplicate 'A' must still be reported, got {errs}")
 
 
+def test_c2_negative_non_string_label_sanitized_downstream_no_crash() -> None:
+    """Sanitization: a non-string site label (5) must be diagnosed by C2
+    and then dropped from the context passed to C4-C12 -- it must not
+    reach `sorted()` on a mixed str/int set (labels vs. site_dof keys) in
+    check_c4, which previously raised TypeError and collapsed all
+    diagnostics into a single generic 'exception while checking' entry.
+    """
+    d = base_doc()
+    d["geometry"]["sites"] = [{"label": "B", "frac": [0.0]}, {"label": 5, "frac": [0.0]}]
+    d["model"]["site_dof"] = {"A": {"spin": {"param": "2S", "scale": 0.5, "default": 0.5}}}
+    errs = lint(d)
+    check("C2" in only_ids(errs), f"non-string label must raise C2, got {errs}")
+    check("C4" in only_ids(errs), f"sites/site_dof mismatch must raise C4, got {errs}")
+    check(not any("exception while checking" in e for e in errs),
+          f"must not fall through to a generic exception diagnostic, got {errs}")
+
+
+def test_c2_negative_malformed_bond_sanitized_downstream_no_crash() -> None:
+    """Sanitization: a bond with a non-string `type` (a list) and a
+    non-string `from` (a dict) must be diagnosed by C2 and then dropped
+    from the bonds passed to C4-C12 -- it must not reach the unhashable
+    set-building in check_c5 (`{b["type"] for b in bonds}`) or the
+    unhashable tuple-keying in check_c6's reversal_dup(), either of which
+    previously raised TypeError and collapsed all diagnostics into a
+    single generic 'exception while checking' entry.
+    """
+    d = base_doc()
+    d["model"]["bonds"][0]["type"] = ["J0"]
+    d["model"]["bonds"][0]["from"] = {"x": 1}
+    errs = lint(d)
+    check("C2" in only_ids(errs), f"malformed bond fields must raise C2, got {errs}")
+    check(not any("exception while checking" in e for e in errs),
+          f"must not fall through to a generic exception diagnostic, got {errs}")
+
+
 # ---------------------------------------------------------------------------
 #  C3
 # ---------------------------------------------------------------------------
@@ -906,6 +941,41 @@ def test_c12_wannier90_plain_number_exempt() -> None:
                "bonds_per_uc": {"t0": 1}, "coordination": {"A": {"t0": 2}}}}
     errs = lint(d, m)
     check("C12" not in only_ids(errs), f"wannier90 plain-number hop value must not raise C12, got {errs}")
+
+
+def _wannier90_hop_doc_and_manifest(value) -> tuple[dict, dict]:
+    d = base_doc()
+    d["catalog"]["lattice"] = "wannier90"
+    d["model"]["site_dof"]["A"] = {"fermion": {"orbitals": 1}}
+    d["model"]["bonds"] = [{"type": "t0", "from": "A", "to": "A", "R": [1]}]
+    d["model"]["couplings"] = {"t0": {"operator": "hop", "value": value}}
+    d["model"]["onsite"] = {}
+    m = {REL: {**base_manifest()[REL], "lattice": "wannier90",
+               "bonds_per_uc": {"t0": 1}, "coordination": {"A": {"t0": 2}}}}
+    return d, m
+
+
+def test_c12_wannier90_negative_dict_without_param() -> None:
+    """The wannier90 plain-number exception (Rule W1) covers only *bare
+    numeric literals*, not dicts. ``value: {"scale": -1.0}`` is neither a
+    valid ``{param, ...}`` reference nor a plain number, so it must still
+    raise C12 even under the wannier90 dialect -- pins the existing
+    ``_is_number``/dict-shape branching in check_c12()."""
+    d, m = _wannier90_hop_doc_and_manifest({"scale": -1.0})
+    errs = lint(d, m)
+    check("C12" in only_ids(errs),
+          f"wannier90 hop value={{'scale': -1.0}} (dict without param) must raise C12, got {errs}")
+
+
+def test_c12_wannier90_negative_boolean_value() -> None:
+    """The wannier90 plain-number exception excludes booleans: ``_is_number``
+    explicitly rejects ``bool`` even though ``True == 1`` in Python, so
+    ``value: true`` must still raise C12 under the wannier90 dialect --
+    pins the existing ``_is_number`` bool-exclusion in check_c12()."""
+    d, m = _wannier90_hop_doc_and_manifest(True)
+    errs = lint(d, m)
+    check("C12" in only_ids(errs),
+          f"wannier90 hop value=True (bool, not a plain number) must raise C12, got {errs}")
 
 
 def test_c12_negative_plain_number_non_wannier90() -> None:

@@ -486,6 +486,11 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
         if len(str_labels) != len(set(str_labels)):
             dups = sorted({lb for lb in str_labels if str_labels.count(lb) > 1})
             errs.append(f"C2: duplicate site labels in geometry.sites: {dups}")
+        # Sanitize: a non-string label was already diagnosed above; it must
+        # not reach C4-C12, which do further set()/sorted() operations on
+        # site labels (heterogeneous types there raise TypeError and
+        # collapse the diagnostics into a generic top-level exception).
+        labels = str_labels
     ctx["labels"] = labels
 
     size = system.get("size")
@@ -522,21 +527,33 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
                 )
     ctx["site_dof"] = site_dof
 
-    bonds = model.get("bonds")
-    if not isinstance(bonds, list):
+    bonds_raw = model.get("bonds")
+    if not isinstance(bonds_raw, list):
         errs.append("C2: model.bonds missing or not a list")
-        bonds = []
-    for i, b in enumerate(bonds):
+        bonds_raw = []
+    # Sanitize: only bonds whose type/from/to are strings and whose R is a
+    # list of ints are passed on to C3-C12. A malformed bond (e.g. type as
+    # a list, from as a dict) is already diagnosed here; letting it reach
+    # downstream checks risks unhashable-field TypeErrors (C6's tuple keys,
+    # C5's set-building) that would collapse the diagnostics into a
+    # generic top-level exception.
+    bonds: list[dict] = []
+    for i, b in enumerate(bonds_raw):
         if not isinstance(b, dict) or not {"type", "from", "to", "R"} <= b.keys():
             errs.append(f"C2: model.bonds[{i}] missing required keys (type/from/to/R)")
             continue
+        valid = True
         for key in ("type", "from", "to"):
             if not isinstance(b[key], str):
                 errs.append(f"C2: model.bonds[{i}].{key} must be a string (got {b[key]!r})")
+                valid = False
         if not isinstance(b["R"], list) or not all(
             isinstance(x, int) and not isinstance(x, bool) for x in b["R"]
         ):
             errs.append(f"C2: model.bonds[{i}].R must be a list of integers (got {b['R']!r})")
+            valid = False
+        if valid:
+            bonds.append(b)
     ctx["bonds"] = bonds
 
     couplings = model.get("couplings")
@@ -602,8 +619,8 @@ def check_c4(ctx: dict) -> list[str]:
     if labels != set(site_dof.keys()):
         errs.append(
             "C4: geometry.sites labels != model.site_dof keys "
-            f"(sites-only: {sorted(labels - set(site_dof))}, "
-            f"site_dof-only: {sorted(set(site_dof) - labels)})"
+            f"(sites-only: {sorted(labels - set(site_dof), key=repr)}, "
+            f"site_dof-only: {sorted(set(site_dof) - labels, key=repr)})"
         )
 
     for i, b in enumerate(bonds):
@@ -623,9 +640,9 @@ def check_c5(ctx: dict) -> list[str]:
     errs = []
     used = {b["type"] for b in ctx["bonds"] if "type" in b}
     defined = set(ctx["couplings"].keys())
-    for t in sorted(used - defined):
+    for t in sorted(used - defined, key=repr):
         errs.append(f"C5: bond type {t!r} has no couplings definition")
-    for t in sorted(defined - used):
+    for t in sorted(defined - used, key=repr):
         errs.append(f"C5: couplings key {t!r} is not referenced by any bond")
     return errs
 
