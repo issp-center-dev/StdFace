@@ -1,0 +1,66 @@
+# Experimental sample 5: cylindrical geometry of a square lattice (for DMRG: periodic along W, open along L)
+# Purpose: hands-on trial of direction-dependent boundary conditions (the
+# cylindrical case in draft spec §3.1)
+#
+# Observation:
+#  (1) direction-dependent boundary specification is straightforward to
+#      write. OK
+#  (2) however, the catalog's consistency-check mechanism (C11 counting
+#      expansion) assumes a torus. When there is an open direction, the
+#      edge sites have a different coordination number and so do not match
+#      the manifest's (uniform-value) coordination.
+#      -> checking an open boundary requires distinguishing "bulk
+#         coordination number" from "edge deficit", which the current
+#         manifest schema cannot express (verification only works for the
+#         periodic example).
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: square_cylinder, model: spin}
+
+geometry:
+  dimension: 2
+  lattice_vectors:
+    a1: [1.0, 0.0]
+    a2: [0.0, 1.0]
+  sites:
+    - {label: A, frac: [0.0, 0.0]}
+
+system:
+  finite: true
+  size: [4, 16]        # W (circumference) x L (axis)
+  boundary:
+    - periodic          # W: circumferential direction
+    - open              # L: axial direction (DMRG)
+
+model:
+  site_dof:
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    - {from: A, to: A, R: [1, 0], type: J0}
+    - {from: A, to: A, R: [0, 1], type: J1}
+
+  couplings:
+    J0:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J0x}}
+          - {ops: [Sy, Sy], coeff: {param: J0y}}
+          - {ops: [Sz, Sz], coeff: {param: J0z}}
+          - {ops: [Sx, Sy], coeff: {param: J0xy}}
+          - {ops: [Sx, Sz], coeff: {param: J0xz}}
+          - {ops: [Sy, Sx], coeff: {param: J0yx}}
+          - {ops: [Sy, Sz], coeff: {param: J0yz}}
+          - {ops: [Sz, Sx], coeff: {param: J0zx}}
+          - {ops: [Sz, Sy], coeff: {param: J0zy}}
+    J1:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J1x}}
+          - {ops: [Sy, Sy], coeff: {param: J1y}}
+          - {ops: [Sz, Sz], coeff: {param: J1z}}
+          - {ops: [Sx, Sy], coeff: {param: J1xy}}
+          - {ops: [Sx, Sz], coeff: {param: J1xz}}
+          - {ops: [Sy, Sx], coeff: {param: J1yx}}
+          - {ops: [Sy, Sz], coeff: {param: J1yz}}
+          - {ops: [Sz, Sx], coeff: {param: J1zx}}
+          - {ops: [Sz, Sy], coeff: {param: J1zy}}

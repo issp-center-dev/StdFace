@@ -1,0 +1,51 @@
+# Experimental sample 2: Shastry-Sutherland lattice (writing the draft
+# spec's §7.3 flagship example in the catalog dialect)
+# Purpose: check whether the draft spec's example can be written as-is in
+# the catalog dialect
+#
+# Friction points (under observation):
+#  (1) the draft writes the isotropic operator as operator: "S_i . S_j"
+#      (a string), but the catalog dialect's operator vocabulary has no
+#      capitalized "S_i . S_j" (spin-spin) entry (s_i . S_j is
+#      fermion-spin only). Here we use the draft's notation as-is and
+#      observe the linter's behavior.
+#  (2) J1/J2 are names that exist in the StdFace inventory, but their
+#      meaning in StdFace (a direction class) conflicts with their meaning
+#      in this file (nn/dimer).
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: shastry_sutherland, model: spin}
+
+geometry:
+  dimension: 2
+  lattice_vectors:
+    a1: [1.0, 1.0]
+    a2: [1.0, -1.0]
+  sites:
+    - {label: A, frac: [0.0, 0.0]}
+    - {label: B, frac: [0.5, 0.5]}
+
+system:
+  finite: true
+  size: [4, 4]
+  boundary:
+    - periodic
+    - periodic
+
+model:
+  site_dof:
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    B: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # nearest neighbor (square-lattice horizontal/vertical J1, A-B)
+    - {from: A, to: B, R: [0, 0], type: J1}
+    - {from: A, to: B, R: [-1, -1], type: J1}
+    - {from: A, to: B, R: [0, -1], type: J1}
+    - {from: A, to: B, R: [-1, 0], type: J1}
+    # next-nearest neighbor (diagonal dimer J2, alternating placement)
+    - {from: A, to: A, R: [1, 0], type: J2}    # diagonal along (1,1)
+    - {from: B, to: B, R: [0, 1], type: J2}    # diagonal along -(1,1)
+
+  couplings:
+    J1: {operator: "S_i . S_j", value: {param: J1}}
+    J2: {operator: "S_i . S_j", value: {param: J2}}

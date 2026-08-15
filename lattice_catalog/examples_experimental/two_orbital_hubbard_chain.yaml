@@ -1,0 +1,73 @@
+# Experimental sample 4: two-orbital Hubbard chain (demonstrating what cannot be written)
+# Purpose: check the expressive range of multi-orbital models
+#
+# Conclusion: cannot be written in the current dialect.
+#  (1) site_dof can "declare" {fermion: {orbitals: 2}}, but the operator
+#      side has no way to refer to an orbital:
+#      - "hop" is orbital-undecomposed (Sum_sigma c^dagger_sigma c_sigma) —
+#        orbital a->b hopping t_ab cannot be written
+#      - the onsite vocabulary (N, NupNdn, etc.) also has no orbital index
+#      - intra-orbital U / inter-orbital U' / Hund J_H / pair hopping are
+#        4-fermion terms, and the general-term schema (a sketch exists in
+#        manual §6.6) is not yet defined
+#  (2) as a workaround, "orbital = separate label" (the scheme used by the
+#      wannier90 example, placing W1/W2 at the same frac) can write the
+#      two-body density-density term (U') but not Hund/pair hopping. Also,
+#      since NupNdn can only be written within a single label, intra-orbital
+#      U can be written, but spin-selective inter-orbital terms cannot.
+#
+# Below, we write as much as can be expressed under the "orbital = separate
+# label" scheme, and mark unwritable terms with comments:
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: two_orbital_chain, model: hubbard}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [1.0]
+  sites:
+    - {label: W1, frac: [0.0]}   # orbital 1 (same atom)
+    - {label: W2, frac: [0.0]}   # orbital 2 (same atom)
+
+system:
+  finite: true
+  size: [8]
+  boundary:
+    - periodic
+
+model:
+  site_dof:
+    W1: {fermion: {orbitals: 1}}
+    W2: {fermion: {orbitals: 1}}
+
+  bonds:
+    - {from: W1, to: W1, R: [1], type: t11}    # intra-orbital hopping
+    - {from: W2, to: W2, R: [1], type: t22}
+    - {from: W1, to: W2, R: [1], type: t12}    # inter-orbital hopping
+    - {from: W1, to: W2, R: [0], type: Uprime} # inter-orbital Coulomb U' (same atom, R=0)
+
+  couplings:
+    t11: {operator: "hop", value: {param: t, scale: -1.0}}
+    t22: {operator: "hop", value: {param: t, scale: -1.0}}
+    t12: {operator: "hop", value: {param: "t'", scale: -1.0}}
+    Uprime: {operator: "density-density", value: {param: "V"}}
+
+  onsite:
+    W1:
+      hubbard_u:   # intra-orbital U
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+    W2:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+
+  # --- terms below cannot be written in the current dialect ---
+  # Hund coupling:  -J_H Sum s_{W1} . s_{W2}   <- no itinerant-itinerant spin-product
+  #                                                operator in the vocabulary
+  #                                                (s_i . S_j is fermion-spin only)
+  # pair hopping:   J_H (c^dagger_{W1,up} c^dagger_{W1,dn} c_{W2,dn} c_{W2,up} + h.c.)
+  #                                             <- 4-fermion general-term schema not
+  #                                                yet defined
+  # spin-selective terms: spin-dependent inter-orbital hopping, etc.
+  #                                             <- ops has no spin index

@@ -1,0 +1,72 @@
+# Experimental sample 1: alternating-bond (dimerized) chain (spin-Peierls / dimerization)
+# Purpose: hands-on trial of coefficient modulation (spec §5.2 "cell
+# enlargement + non-uniform coefficient assignment")
+# The unit cell is enlarged to 2 sites, with separate parameters assigned to
+# the intra-cell bond (strong) and the inter-cell bond (weak).
+#
+# Friction point: parameter names. Physically these are J_intra / J_inter,
+# but the catalog dialect's C7 requires that {param: ...} exist in the
+# StdFace keyword inventory, so the only options are to borrow an existing
+# name whose meaning doesn't fit (J0 / J1) or to accept a C7 violation.
+# Here we deliberately use J_intra / J_inter to observe C7's behavior.
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: dimer_chain, model: spin}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [2.0]                    # unit cell enlarged to 2 sites
+  sites:
+    - {label: A, frac: [0.0]}
+    - {label: B, frac: [0.5]}
+
+system:
+  finite: true
+  size: [8]
+  boundary:
+    - {twist: {param: phase0}}
+
+model:
+  site_dof:
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    B: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    - {from: A, to: B, R: [0], type: J_intra}   # strong bond (intra-cell)
+    - {from: B, to: A, R: [1], type: J_inter}   # weak bond (inter-cell)
+
+  couplings:
+    J_intra:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J_intrax}}
+          - {ops: [Sy, Sy], coeff: {param: J_intray}}
+          - {ops: [Sz, Sz], coeff: {param: J_intraz}}
+          - {ops: [Sx, Sy], coeff: {param: J_intraxy}}
+          - {ops: [Sx, Sz], coeff: {param: J_intraxz}}
+          - {ops: [Sy, Sx], coeff: {param: J_intrayx}}
+          - {ops: [Sy, Sz], coeff: {param: J_intrayz}}
+          - {ops: [Sz, Sx], coeff: {param: J_intrazx}}
+          - {ops: [Sz, Sy], coeff: {param: J_intrazy}}
+    J_inter:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J_interx}}
+          - {ops: [Sy, Sy], coeff: {param: J_intery}}
+          - {ops: [Sz, Sz], coeff: {param: J_interz}}
+          - {ops: [Sx, Sy], coeff: {param: J_interxy}}
+          - {ops: [Sx, Sz], coeff: {param: J_interxz}}
+          - {ops: [Sy, Sx], coeff: {param: J_interyx}}
+          - {ops: [Sy, Sz], coeff: {param: J_interyz}}
+          - {ops: [Sz, Sx], coeff: {param: J_interzx}}
+          - {ops: [Sz, Sy], coeff: {param: J_interzy}}
+
+  onsite:
+    A:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+    B:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}

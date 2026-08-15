@@ -1,0 +1,90 @@
+# Experimental sample 3: kagome with DM interaction (nearest-neighbor D-vector z component)
+# Purpose: check whether antisymmetric exchange (DM) can be expressed in the
+# 9-component tensor form
+#
+# Result (observation):
+#  (1) the DM z component D_z (S_i x S_j)_z = D_z (Sx_i Sy_j - Sy_i Sx_j) can
+#      be written naturally in tensor form as the antisymmetric components
+#      Jxy = +D_z, Jyx = -D_z. OK
+#  (2) however, in kagome physics it is standard for the DM sign to flip
+#      between the up-triangle and the down-triangle. The up-triangle
+#      (= intra-cell bond, R=0) and the down-triangle (= inter-cell bond)
+#      can be distinguished by "row", but if the coupling type is the same
+#      (e.g. J1), the same tensor is applied to both, so the sign flip
+#      cannot be expressed.
+#      -> expressing it requires splitting type into J1_up / J1_dn, which
+#         breaks the correspondence with StdFace parameter names (a
+#         premise of the catalog dialect).
+#  (3) furthermore, since the DM sign is determined by the bond's
+#      "orientation", under the source-order-preservation convention each
+#      bond row's orientation directly fixes the sign. If the draft spec's
+#      "orientation canonicalization" were applied, the DM sign information
+#      would be destroyed — this confirms that switching the catalog
+#      dialect to source-order preservation was also the right call for
+#      handling DM.
+#
+# Below is an example that attaches D_z only to the up-triangle (the
+# down-triangle's sign flip is abandoned since it would require splitting
+# type):
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: kagome_dm, model: spin}
+
+geometry:
+  dimension: 2
+  lattice_vectors:
+    a1: [1.0, 0.0]
+    a2: [0.5, 0.8660254037844386]
+  sites:
+    - {label: A, frac: [0.0, 0.0]}
+    - {label: B, frac: [0.5, 0.0]}
+    - {label: C, frac: [0.0, 0.5]}
+
+system:
+  finite: true
+  size: [4, 4]
+  boundary:
+    - {twist: {param: phase0}}
+    - {twist: {param: phase1}}
+
+model:
+  site_dof:
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    B: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    C: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # up-triangle (intra-cell, with DM) — type split off as up-triangle-only
+    - {from: A, to: B, R: [0, 0], type: J_up}
+    - {from: B, to: C, R: [0, 0], type: J_up}
+    - {from: C, to: A, R: [0, 0], type: J_up}
+    # down-triangle (inter-cell) — the DM sign needs to flip, which can't be
+    # written under the same type, so it gets a separate type
+    - {from: B, to: A, R: [1, 0], type: J_dn}
+    - {from: C, to: B, R: [1, -1], type: J_dn}
+    - {from: A, to: C, R: [0, -1], type: J_dn}
+
+  couplings:
+    J_up:   # isotropic J + DM z component (+D_z): Jxy = +Dz, Jyx = -Dz
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J_upx}}
+          - {ops: [Sy, Sy], coeff: {param: J_upy}}
+          - {ops: [Sz, Sz], coeff: {param: J_upz}}
+          - {ops: [Sx, Sy], coeff: {param: Dz, scale: 1.0}}
+          - {ops: [Sy, Sx], coeff: {param: Dz, scale: -1.0}}
+          - {ops: [Sx, Sz], coeff: {param: J_upxz}}
+          - {ops: [Sy, Sz], coeff: {param: J_upyz}}
+          - {ops: [Sz, Sx], coeff: {param: J_upzx}}
+          - {ops: [Sz, Sy], coeff: {param: J_upzy}}
+    J_dn:   # sign-flipped DM version: Jxy = -Dz, Jyx = +Dz
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J_dnx}}
+          - {ops: [Sy, Sy], coeff: {param: J_dny}}
+          - {ops: [Sz, Sz], coeff: {param: J_dnz}}
+          - {ops: [Sx, Sy], coeff: {param: Dz, scale: -1.0}}
+          - {ops: [Sy, Sx], coeff: {param: Dz, scale: 1.0}}
+          - {ops: [Sx, Sz], coeff: {param: J_dnxz}}
+          - {ops: [Sy, Sz], coeff: {param: J_dnyz}}
+          - {ops: [Sz, Sx], coeff: {param: J_dnzx}}
+          - {ops: [Sz, Sy], coeff: {param: J_dnzy}}
