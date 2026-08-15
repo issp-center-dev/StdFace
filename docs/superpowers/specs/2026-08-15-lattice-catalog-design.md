@@ -190,7 +190,7 @@ lattice_catalog/
 4. 模型ごとの解説(**符号表と検証連鎖の導出**、解決規則、Kondo 対応、
    GC 変種)
 5. wannier90 変換仕様(模型別):
-   - Hubbard: H_mn(R) の符号反転、R=0 対角の onsite 分離、Hermite
+   - Hubbard: H_mn(R) の符号規則(反転なし、物理係数 = +H_mn)、R=0 対角の onsite 分離、Hermite
      正準対と縮退重み、cutoff、λ/α、doublecounting
    - Spin: 超交換 `2|t|²(1/U_m+1/U_n)` 生成
    - **5.5 J チャネル**: Hund・exchange・pair-hopping の変換規則を散文で

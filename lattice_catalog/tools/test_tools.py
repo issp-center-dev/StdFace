@@ -608,11 +608,64 @@ def test_c11_positive() -> None:
     check("C11" not in only_ids(errs), "correct coordination must not raise C11")
 
 
+def test_c11_positive_expand_and_count_direct() -> None:
+    """C11: expand_and_count() genuinely expands the torus (not decorative).
+
+    chain nn bond A-A, R=[1], on a size=[7] ring: each site instance has
+    exactly one bond as 'from' and one as 'to' -> coordination 2, and no
+    folding-degeneracy errors (7 cells * 1 bond = 7 distinct instance-pairs,
+    which is exactly what a 1D ring of length 7 with a nn bond gives).
+    """
+    bonds = [{"type": "J0", "from": "A", "to": "A", "R": [1]}]
+    measured, errs = lc.expand_and_count(1, ["A"], bonds, [7])
+    check(measured == {"A": {"J0": 2}}, f"expected coordination A:{{J0:2}}, got {measured}")
+    check(errs == [], f"valid min_size_for_check must not raise C11 expansion errors, got {errs}")
+
+
 def test_c11_negative_wrong_coordination() -> None:
     m = base_manifest()
     m[REL]["coordination"] = {"A": {"J0": 4}}
     errs = lint(base_doc(), m)
     check("C11" in only_ids(errs), f"wrong coordination must raise C11, got {errs}")
+
+
+def test_c11_negative_folding_degeneracy() -> None:
+    """C11: an artificially small min_size_for_check must be caught.
+
+    The same chain nn bond (A-A, R=[1]) on a size=[2] ring folds: the two
+    directed bonds (cell 0 -> cell 1) and (cell 1 -> cell 0, i.e. cell 1 ->
+    cell 0 via R=1 wrap) land on the *same* unordered instance pair
+    {(cell 0, A), (cell 1, A)}. This is exactly the min_size_for_check-too-
+    small case the field exists to guard against, so expand_and_count()
+    must report it directly.
+    """
+    bonds = [{"type": "J0", "from": "A", "to": "A", "R": [1]}]
+    measured, errs = lc.expand_and_count(1, ["A"], bonds, [2])
+    check(any("C11" in e and "folding" in e for e in errs),
+          f"min_size_for_check=[2] must raise a C11 folding-degeneracy error, got {errs}")
+
+    # ...and the same must hold end-to-end through lint_document() when the
+    # manifest declares an undersized min_size_for_check.
+    m = base_manifest()
+    m[REL]["min_size_for_check"] = [2]
+    errs = lint(base_doc(), m)
+    check("C11" in only_ids(errs),
+          f"undersized manifest.min_size_for_check must raise C11 via lint(), got {errs}")
+
+
+# NOTE: a per-label instance mismatch (translation non-invariance) is not
+# reachable through the public expand_and_count() interface: for a fixed
+# bond list, every cell contributes exactly one 'from'-incidence to
+# (cell, b['from']) and exactly one 'to'-incidence to ((cell+R) mod size,
+# b['to']) per bond, and cell -> (cell+R) mod size is a bijection of the
+# torus for any fixed R. So the per-instance touch count for a given label
+# is a sum of per-bond contributions that is, by construction, identical
+# for every cell -- independent of any folding collisions. Folding degrades
+# the *distinctness* of expanded bonds (covered above), not the coordination
+# sum. There is therefore no way to reach the "mismatch" branch by
+# constructing a bonds/size input; it is retained purely as a defensive
+# invariant check. Per the task instructions we skip a dedicated negative
+# test for it (unreachable by construction).
 
 
 # ---------------------------------------------------------------------------

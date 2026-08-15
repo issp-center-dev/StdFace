@@ -147,24 +147,93 @@ def check_j_coupling(type_name: str, tensor_terms: list[dict]) -> list[str]:
     return errs
 
 
-def expand_and_count(dim: int, labels: list[str], bonds: list[dict],
-                      size: list[int]) -> dict[str, dict[str, int]]:
-    """C11: min_size トーラス上でボンドを展開し、
-    ラベル×type の配位数(そのラベルのサイト 1 個に接続する本数)を返す。
+def expand_and_count(
+    dim: int, labels: list[str], bonds: list[dict], size: list[int],
+) -> tuple[dict[str, dict[str, int]], list[str]]:
+    """C11: min_size トーラス上に実際にボンドを展開し、ラベル×type の
+    配位数(実測)を計数する。
 
-    from/to 双方の接続を数える。R=0 の同一ラベル自己ボンドは現行
-    StdFace に存在しない前提とし、呼び出し側が事前検査する。
+    各セル ``c``(``0 <= c[k] < size[k]``)と各ボンド ``b`` について、
+    始点インスタンス ``(c, b['from'])`` と終点インスタンス
+    ``((c + b['R']) mod size, b['to'])`` の間に type=``b['type']`` の
+    展開ボンドを 1 本張る(``mod`` はトーラスの周期境界条件)。
+
+    - **配位数**: 各ラベルについて、そのラベルを持つ任意の 1 インスタンス
+      に接続する展開ボンド数を type 別に数える。トーラスは並進対称なので
+      理論上は全インスタンスが同じ値を持つはずであり、それを実際に
+      全インスタンスについて検証する(食い違えば C11 エラー)。
+    - **折り畳み縮退**: 展開ボンドは ``(type, {始点インスタンス, 終点
+      インスタンス})``(順序なしペア)をキーとすると、本来
+      ``len(bonds) * ncells`` 個の相異なるキーを持つはずである。2 本の
+      展開ボンドが同じキーに縮退した場合、``min_size_for_check`` が
+      小さすぎて異なる R が同一サイト対に折り畳まれていることを意味し、
+      C11 エラーとして報告する。
+
+    Parameters
+    ----------
+    dim : int
+        次元(``len(size)`` と一致)。
+    labels : list of str
+        単位胞内のサイトラベル一覧(``geometry.sites`` の順序)。
+    bonds : list of dict
+        ``{type, from, to, R}`` を持つボンド定義のリスト。
+    size : list of int
+        トーラスの各方向のセル数(manifest の ``min_size_for_check``)。
+
+    Returns
+    -------
+    tuple[dict, list[str]]
+        ``(measured, errs)``。``measured`` はラベル→{type: 配位数}。
+        ``errs`` は折り畳み縮退・並進非対称が見つかった場合の C11
+        診断メッセージのリスト(通常は空)。
     """
-    ncells = 1
-    for s in size:
-        ncells *= s
-    touch: dict[str, dict[str, int]] = {lb: {} for lb in labels}
-    for _cell in itertools.product(*[range(s) for s in size]):
+    errs: list[str] = []
+    cells = list(itertools.product(*[range(s) for s in size]))
+    ncells = len(cells)
+
+    touch: dict[tuple, dict[str, int]] = {(c, lb): {} for c in cells for lb in labels}
+    pair_counts: dict[tuple, int] = {}
+
+    for c in cells:
         for b in bonds:
             t = b["type"]
-            touch[b["from"]][t] = touch[b["from"]].get(t, 0) + 1
-            touch[b["to"]][t] = touch[b["to"]].get(t, 0) + 1
-    return {lb: {t: n // ncells for t, n in d.items()} for lb, d in touch.items()}
+            r = b["R"]
+            a_inst = (c, b["from"])
+            b_cell = tuple((c[k] + r[k]) % size[k] for k in range(dim))
+            b_inst = (b_cell, b["to"])
+
+            touch[a_inst][t] = touch[a_inst].get(t, 0) + 1
+            touch[b_inst][t] = touch[b_inst].get(t, 0) + 1
+
+            endpoints = (a_inst, b_inst) if a_inst <= b_inst else (b_inst, a_inst)
+            key = (t, endpoints)
+            pair_counts[key] = pair_counts.get(key, 0) + 1
+
+    n_expected = len(bonds) * ncells
+    n_distinct = len(pair_counts)
+    if n_distinct != n_expected:
+        errs.append(
+            "C11: folding degeneracy — expanded bonds collide on the "
+            f"min_size_for_check torus (size={size!r}): {n_distinct} distinct "
+            f"instance-pairs found, expected {n_expected} (= len(bonds) * ncells); "
+            "min_size_for_check is too small"
+        )
+
+    measured: dict[str, dict[str, int]] = {}
+    for lb in labels:
+        rep_cell = cells[0]
+        rep = touch[(rep_cell, lb)]
+        for c in cells[1:]:
+            got = touch[(c, lb)]
+            if got != rep:
+                errs.append(
+                    f"C11: coordination is not translation-invariant for label "
+                    f"{lb!r}: instance at cell {c} has {got!r}, expected {rep!r} "
+                    f"(same as cell {rep_cell})"
+                )
+        measured[lb] = rep
+
+    return measured, errs
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +660,8 @@ def check_c10_c11(doc: dict, ctx: dict, rel_path: str,
         # Already reported by C4; skip the expansion to avoid a KeyError.
         return errs
 
-    measured = expand_and_count(dimension, labels, bonds, min_size)
+    measured, expand_errs = expand_and_count(dimension, labels, bonds, min_size)
+    errs.extend(expand_errs)
     expected = entry["coordination"]
     if measured != expected:
         errs.append(f"C11: coordination mismatch: manifest={expected!r} != measured={measured!r}")

@@ -310,7 +310,7 @@ J 族の 9 成分×全 prefix など)は**族単位で 1 行にまとめる**こ
 
 | StdFace キーワード | 出典テーブル | 新フォーマットでの対応 | 備考 |
 |---|---|---|---|
-| `W, L, Height` | common | `system.size`(整数配列) | 検査で用いる代表値。manifest の `min_size_for_check` と対応 |
+| `W, L, Height` | common | `system.size`(整数配列) | stan.in の代表値。manifest の `min_size_for_check`(最大 \|R\| 成分から独立に導出されるリンタ検査サイズ。各方向 `2*max|R|` を超える最小の奇数)とは独立 |
 | `phase0, phase1, phase2` | common | `system.boundary[*].twist`(`{param: phaseN}`) | 度単位。境界を n 回横断する経路の位相因子は `exp(i·n·π·θ/180)` |
 | `a0w, a0l, a0h, a1w, a1l, a1h, a2w, a2l, a2h`(box 行列 9 成分) | common | `system.supercell`(`A_super = S·A`、`det(S)≠0`) | 1.3 節(1)参照。`box[i][j] = S[i][j]`(行=超格子ベクトル番号 a0/a1/a2、列=元の方向 w/l/h)。`size` と排他利用。本カタログの YAML は `size` 表現のみ使用 |
 

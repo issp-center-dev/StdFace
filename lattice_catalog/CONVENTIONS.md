@@ -59,8 +59,10 @@ model:    { ... }   # §5, §6
 ## 4. system 規約
 
 - `W, L, Height` などの繰り返し数は `system.size`(整数配列)に写す。
-  検査で用いる代表値は `system.size` の各成分そのもの
-  (manifest の `min_size_for_check` と対応)。
+  `system.size` は stan.in の代表値を示すのみであり、リンタの検査サイズ
+  (manifest の `min_size_for_check`)とは独立である。`min_size_for_check`
+  は各ボンドの最大 `|R|` 成分から独立に導出される検査サイズであり、
+  各方向について `2 * max|R|` を超える最小の奇数を用いる。
 - `phase0`–`phase2` は `system.boundary`(配列。各要素は
   `{twist: {param: phaseN}}`)に写し、境界を n 回横断する経路の
   位相因子は `exp(i · n · π · θ / 180)` として消費側が解釈する
