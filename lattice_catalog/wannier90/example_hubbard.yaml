@@ -1,156 +1,156 @@
-# StdFace wannier90 / Hubbard 小例(RESPACK/Wannier90 出力データの変換例)
-# stan.in 対応例:  model="FermionHubbard" / lattice="wannier90" / W=4 / L=4 / Height=1
-# データ出典: test/wannier90_data/{zvo_geom.dat, zvo_hr.dat, zvo_ur.dat}
-#   (2D 正方格子、単一 Wannier 軌道、最近接 t=-1.0 eV、オンサイト U=8.0 eV。
-#    zvo_jr.dat は存在せず、J(Hund/交換/ペアホッピング)チャネルは対象外
-#    — 4 フェルミオン一般項のデータモデルが CONVENTIONS §7-6 で未定のため。)
-# 出典(変換アルゴリズム): python/stdface/lattice/wannier90.py::_apply_hopping_terms /
-#   _apply_coulomb_terms、python/stdface/lattice/wannier90_io.py::_read_w90、
-#   python/stdface/lattice/interaction_builder.py::hopping/trans/coulomb、
+# StdFace wannier90 / Hubbard mini-example (a conversion example of RESPACK/Wannier90 output data)
+# Corresponding stan.in input:  model="FermionHubbard" / lattice="wannier90" / W=4 / L=4 / Height=1
+# Data source: test/wannier90_data/{zvo_geom.dat, zvo_hr.dat, zvo_ur.dat}
+#   (2D square lattice, single Wannier orbital, nearest-neighbor t=-1.0 eV, onsite U=8.0 eV.
+#    zvo_jr.dat does not exist, so the J (Hund/exchange/pair-hopping) channel is out of scope
+#    — because the data model for the 4-fermion general term is not yet defined in CONVENTIONS §7-6.)
+# Source (conversion algorithm): python/stdface/lattice/wannier90.py::_apply_hopping_terms /
+#   _apply_coulomb_terms, python/stdface/lattice/wannier90_io.py::_read_w90,
+#   python/stdface/lattice/interaction_builder.py::hopping/trans/coulomb,
 #   commit da80b6daed27fec0d837812b0613d8b53aa7a637
 #
-# --- Step 1: 変換規則(manual 5 章の下書きを兼ねる) --------------------------
+# --- Step 1: Conversion rules (doubles as a draft for manual Section 5) --------------------------
 #
-# 規則 W1(H_mn(R) の符号): wannier90.py::_apply_hopping_terms (行 389-406) は
-#   非局所項を hopping(StdI, -Cphase*tUJ[0][it], jsite, isite, dR) として渡す
-#   (一見 -1 倍=符号反転)。しかし interaction_builder.py::hopping (行 147-191)
-#   は trans(StdI, trans0, jsite, ..., isite, ...) / trans(conj(trans0), isite,
-#   ..., jsite, ...) を追加し、trans.def の規約は物理 H = -Σ(trans値)c†c
-#   (CONVENTIONS §6.1)。この 2 つの符号反転が相殺し、
-#     物理 H の hop 係数 = +H_mn(R) (Cphase を除く。位相は system.boundary 側)
-#   となる — chain/square 系の t 族(scale=-1.0, CONVENTIONS §6.2)とは異なり、
-#   wannier90 の hop 係数は **符号反転なし(scale=+1.0)** で生データをそのまま
-#   物理係数として使う。下記 Step5 で HPhi trans.def 出力との数値突合により
-#   実証済み(W=4,L=4,Height=1 で実行し trans.def の値 +1.0 = -(H_mn) と一致)。
+# Rule W1 (sign of H_mn(R)): wannier90.py::_apply_hopping_terms (lines 389-406) passes the
+#   non-local term as hopping(StdI, -Cphase*tUJ[0][it], jsite, isite, dR)
+#   (apparently multiplied by -1, i.e. a sign flip). However interaction_builder.py::hopping
+#   (lines 147-191) adds trans(StdI, trans0, jsite, ..., isite, ...) / trans(conj(trans0), isite,
+#   ..., jsite, ...), and the convention of trans.def is physical H = -Sum(trans value) c^dagger c
+#   (CONVENTIONS §6.1). These two sign flips cancel out, giving
+#     physical H's hop coefficient = +H_mn(R) (excluding Cphase; the phase is handled on the system.boundary side)
+#   — unlike the t family of the chain/square systems (scale=-1.0, CONVENTIONS §6.2), the
+#   wannier90 hop coefficient uses **no sign flip (scale=+1.0)** and takes the raw data directly
+#   as the physical coefficient. This has been demonstrated below in Step 5 by numerically
+#   cross-checking against the HPhi trans.def output (run with W=4,L=4,Height=1, the trans.def
+#   value +1.0 = -(H_mn), consistent).
 #
-# 規則 W2(R=0 & m=n の対角要素 → onsite 分離):
-#   _apply_hopping_terms (行 380-388): tUJindx の R=(0,0,0) かつ m=n の項は
-#   isite ごとに trans_list へ (-tUJ[0][it], isite, spin, isite, spin) として
-#   追加され(全スピン共通)、bonds ではなく onsite 一体項として分離される。
-#   trans.def 規約(物理 H=-Σt c†c)と合わせると、物理係数は +H_mm(0) の N
-#   (両スピンの数演算子和)。本データセットでは H_11(0)=0.0
-#   (zvo_hr.dat 5 行目ヘッダ以下 7 行目)であり、cutoff_t(既定 1.0e-8, 規則 W5
-#   参照)未満のため EFFECTIVE term として採用されず、onsite には
-#   wannier 由来の項は現れない(= ゼロなので省略。規則自体は上記の通り)。
+# Rule W2 (R=0 & m=n diagonal elements -> separated into onsite):
+#   _apply_hopping_terms (lines 380-388): terms of tUJindx with R=(0,0,0) and m=n are added to
+#   trans_list per isite as (-tUJ[0][it], isite, spin, isite, spin) (common to all spins), and are
+#   separated out as an onsite unary term rather than a bond.
+#   Combined with the trans.def convention (physical H=-Sum t c^dagger c), the physical coefficient
+#   is +H_mm(0) times N (the sum of number operators over both spins). In this dataset H_11(0)=0.0
+#   (zvo_hr.dat, row 7, below the 5-line header), and since this is below cutoff_t (default 1.0e-8,
+#   see rule W5), it is not adopted as an EFFECTIVE term, so no wannier-derived term appears in
+#   onsite (= it is zero, so it is omitted; the rule itself is as described above).
 #
-# 規則 W3(Hermite 対の正準対選択): wannier90_io.py::_read_w90 (行 355-361)。
-#   WSC(R ベクトル)ブロック単位で「ファイル出現順で先着優先」:
-#   あるブロックの R が、既に読んだ(より前の)ブロックの -R と一致する場合、
-#   そのブロック全体(全 m,n 組)を丸ごとゼロ化する(行 356-357)。
-#   R=(0,0,0) のブロックのみ別途、m>n(下三角)要素を追加でゼロ化する
-#   (行 359-361; m<=n が正準)。
-#   本データでは zvo_hr.dat の WSC 出現順は
-#     (-1,0,0)[5行目] → (0,-1,0)[6行目] → (0,0,0)[7行目]
-#     → (0,1,0)[8行目] → (1,0,0)[9行目]
-#   であり、(0,1,0) は既出 (0,-1,0) の反転と一致 → ゼロ化、
-#   (1,0,0) は既出 (-1,0,0) の反転と一致 → ゼロ化。
-#   よって正準対は R=(-1,0,0) と R=(0,-1,0) の 2 本のみ(排除された
-#   R=(0,1,0)/R=(1,0,0) は "+h.c." で自動的に再構成されるため、
-#   bonds には列挙しない)。
+# Rule W3 (canonical-pair selection for a Hermitian pair): wannier90_io.py::_read_w90 (lines 355-361).
+#   Per WSC (R vector) block, "first occurrence in file order wins":
+#   if the R of a block matches the -R of an already-read (earlier) block, the entire block
+#   (all m,n pairs) is zeroed out wholesale (lines 356-357).
+#   Only for the R=(0,0,0) block, the m>n (lower-triangular) elements are additionally zeroed out
+#   (lines 359-361; m<=n is canonical).
+#   In this data, the WSC appearance order in zvo_hr.dat is
+#     (-1,0,0)[row 5] -> (0,-1,0)[row 6] -> (0,0,0)[row 7]
+#     -> (0,1,0)[row 8] -> (1,0,0)[row 9]
+#   and (0,1,0) matches the reversal of the already-seen (0,-1,0) -> zeroed out,
+#   (1,0,0) matches the reversal of the already-seen (-1,0,0) -> zeroed out.
+#   So the only canonical pairs are R=(-1,0,0) and R=(0,-1,0) (the excluded
+#   R=(0,1,0)/R=(1,0,0) are automatically reconstructed via "+h.c.", so they are not
+#   enumerated in bonds).
 #
-# 規則 W4(WS 縮退重み): wannier90_io.py::_skip_degeneracy_weights (行 56-72,
-#   呼び出しは _read_w90 行 315)。ファイルヘッダの ndegen 列
-#   (zvo_hr.dat/zvo_ur.dat の 4 行目)は読み込み後に**使用されず単に読み捨てら
-#   れる**。実際に乗算される重みは Weight_tot(初期値 1.0)のみで、これは
-#   _apply_boundary_weights (wannier90_io.py 行 129-169, 呼び出しは行 364) が
-#   W/L/Height から計算する有限クラスタ境界での 0.5 halving であり、
-#   ファイルの ndegen 値とは無関係。本データは全 ndegen=1 であるため
-#   数値上は影響しないが、規則としては「ndegen 無視」が正しい。
+# Rule W4 (WS degeneracy weights): wannier90_io.py::_skip_degeneracy_weights (lines 56-72,
+#   called from _read_w90 line 315). The ndegen column in the file header
+#   (row 4 of zvo_hr.dat/zvo_ur.dat) is read but **simply discarded and never used** afterward.
+#   The only weight actually multiplied in is Weight_tot (initial value 1.0), which is the 0.5
+#   halving at the finite-cluster boundary computed from W/L/Height by _apply_boundary_weights
+#   (wannier90_io.py lines 129-169, called at line 364); it is unrelated to the file's ndegen
+#   values. In this data all ndegen=1, so numerically it has no effect, but as a rule
+#   "ndegen is ignored" is the correct statement.
 #
-# 規則 W5(cutoff の適用順): wannier90_io.py::_read_w90 (行 255-370)。
-#   (1) cutoff_length(実空間長。既定: t=-1.0=無効, U/J=0.3)超過でゼロ化
-#       (行 338-341)。(2) cutoff_Vec 設定時はそれで、未設定なら整数 box
-#       cutoff_R で範囲外をゼロ化(行 343-350; U チャネルは cutoff_UR 既定
-#       (0,0,0) — 既定では R=0 のみ通過)。(3) 正準対選択(規則 W3)。
-#       (4) 境界重み(_apply_boundary_weights、有限クラスタ固有。本カタログの
-#       bonds は無限格子の単位胞相対表現のため**適用しない**)。
-#       (5) 振幅 cutoff(cutoff_t/u/j、既定 1.0e-8)未満の要素は
-#       EFFECTIVE term から除外(wannier90_io.py::_count_and_store_terms
-#       行 223)。
-#   本カタログの cutoff: **cutoff_t = cutoff_u = 1.0e-8(実装の既定値)のみを
-#   適用し、cutoff_length / cutoff_R / cutoff_Vec による追加の範囲制限は行わ
-#   ない**(本データの R は全て |R 各成分| <= 1 で、length/R/Vec 既定値の対象
-#   外にならないことを個別確認済み — U チャネルは R=0 のみなので既定
-#   cutoff_UR=(0,0,0) でも通過)。この cutoff 内の全要素(H: 2 本、U: 1 項)を
-#   以下に**全数**変換する(上位 N 件抽出ではない)。
+# Rule W5 (order in which cutoffs are applied): wannier90_io.py::_read_w90 (lines 255-370).
+#   (1) Zero out anything exceeding cutoff_length (real-space length; default: t=-1.0=disabled,
+#       U/J=0.3) (lines 338-341). (2) If cutoff_Vec is set, use it; otherwise zero out anything
+#       outside the integer box cutoff_R (lines 343-350; the U channel's cutoff_UR defaults to
+#       (0,0,0) — by default only R=0 passes). (3) Canonical-pair selection (rule W3).
+#       (4) Boundary weights (_apply_boundary_weights, specific to a finite cluster; the bonds
+#       of this catalog are a unit-cell-relative representation of an infinite lattice, so this
+#       **does not apply**). (5) Elements below the amplitude cutoff (cutoff_t/u/j, default
+#       1.0e-8) are excluded from the EFFECTIVE terms (wannier90_io.py::_count_and_store_terms
+#       line 223).
+#   This catalog's cutoff: it **applies only cutoff_t = cutoff_u = 1.0e-8 (the implementation's
+#   default values), and does not apply any additional range restriction via cutoff_length /
+#   cutoff_R / cutoff_Vec** (it has been individually confirmed that all R in this data satisfy
+#   |each R component| <= 1, and so are not subject to the length/R/Vec defaults — the U channel
+#   is R=0 only, so it also passes the default cutoff_UR=(0,0,0)). All elements within this
+#   cutoff (H: 2 bonds, U: 1 term) are converted below **in full** (this is not a top-N extraction).
 #
-# 規則 W6(lambda_U/lambda_J/alpha/doublecounting の作用点):
-#   - lambda_U (wannier90.py 行 889, 757-762 既定 1.0): U チャネル読込み時に
-#     生データへ乗算される(wannier90_io.py 行 353: Mat_tot=lam*(re+i*im))。
-#     本カタログでは lambda_U 既定 1.0 のため U=8.0 のまま(8.0*1.0=8.0)。
-#   - alpha (wannier90.py 行 772-776 既定 0.5) と doublecounting_mode
-#     (_apply_coulomb_terms 行 458-509, _apply_hund_terms 行 569-603) は、
-#     `_dr.dat` 密度行列ファイルが存在し doublecounting_mode != "none" の
-#     場合のみ、onsite 二重計上補正項および(FULL モードでは)追加の
-#     hopping 補正項を trans_list に追加する。本データセットには `_dr.dat`
-#     が存在せず、doublecounting_mode は既定 "none"(_DCMode.NOTCORRECT)の
-#     ため、本カタログでは**一切発動しない**(idcmode != NOTCORRECT の分岐
-#     には到達しない)。
+# Rule W6 (where lambda_U/lambda_J/alpha/doublecounting act):
+#   - lambda_U (wannier90.py line 889, 757-762, default 1.0): multiplied into the raw data when
+#     the U channel is read (wannier90_io.py line 353: Mat_tot=lam*(re+i*im)).
+#     In this catalog lambda_U defaults to 1.0, so U=8.0 is unchanged (8.0*1.0=8.0).
+#   - alpha (wannier90.py lines 772-776, default 0.5) and doublecounting_mode
+#     (_apply_coulomb_terms lines 458-509, _apply_hund_terms lines 569-603) only add an onsite
+#     double-counting correction term (and, in FULL mode, an additional hopping correction term)
+#     to trans_list when a `_dr.dat` density-matrix file exists and doublecounting_mode != "none".
+#     This dataset has no `_dr.dat`, and doublecounting_mode defaults to "none"
+#     (_DCMode.NOTCORRECT), so **none of this is triggered at all** in this catalog (the branch
+#     for idcmode != NOTCORRECT is never reached).
 #
-# --- Step 5: 検算(手計算, ≥2 要素) -------------------------------------
-# 検算 1(t0): zvo_hr.dat 5 行目 "-1 0 0 1 1 -1.00000000 0.00000000"
-#   → R=(-1,0,0), m=n=1(0-index 0), H_00(R)=-1.0。振幅|-1.0|>1e-8 → 採用。
-#   規則 W1 より物理係数 = +H_00(R) = -1.0。実装を W=4,L=4,Height=1 の
-#   stan.in で実行し trans.def を確認すると "0 0 3 0  1.000000... 0.0" が
-#   出力される(site0-site3 は 4x4 格子で x 方向 NN)。trans.def 規約
-#   H_trans=-Σt(trans値)c†c より物理係数 = -(+1.0) = -1.0 = H_00(R) と一致
-#   (符号反転なし、規則 W1 の実証)。
-# 検算 2(hubbard_u): zvo_ur.dat 5 行目 "0 0 0 1 1 8.00000000 0.00000000"
-#   → R=(0,0,0), m=n=1, U_11(0)=8.0。局所項 → Cintra_list へ (8.0*1.0, site)
-#   として追加(lambda_U=1.0 既定)。同じ stan.in で coulombintra.def を
-#   確認すると各サイトの CoulombIntra 値が "8.000000000000000" — 生データの
-#   8.0 と一致(符号反転なし)。物理 H = +U n↑n↓(CONVENTIONS §6.2 表通り)。
-# 検算 3(t1, 参考): zvo_hr.dat 6 行目 "0 -1 0 1 1 -1.00000000 0.00000000"
-#   → R=(0,-1,0), H_00(R)=-1.0。同 stan.in の trans.def に
-#   "0 0 12 0  1.000000... 0.0"(site0-site12, y 方向 NN)が現れ、検算1と
-#   同様に物理係数 -1.0 と一致。
+# --- Step 5: Consistency check (by hand, >= 2 elements) -------------------------------------
+# Check 1 (t0): zvo_hr.dat row 5 "-1 0 0 1 1 -1.00000000 0.00000000"
+#   -> R=(-1,0,0), m=n=1 (0-index 0), H_00(R)=-1.0. Amplitude |-1.0|>1e-8 -> adopted.
+#   By rule W1, physical coefficient = +H_00(R) = -1.0. Running the implementation with
+#   W=4,L=4,Height=1 and checking trans.def shows "0 0 3 0  1.000000... 0.0"
+#   is output (site0-site3 is the x-direction NN on a 4x4 lattice). By the trans.def convention
+#   H_trans=-Sum t(trans value) c^dagger c, physical coefficient = -(+1.0) = -1.0 = H_00(R), consistent
+#   (no sign flip, confirming rule W1).
+# Check 2 (hubbard_u): zvo_ur.dat row 5 "0 0 0 1 1 8.00000000 0.00000000"
+#   -> R=(0,0,0), m=n=1, U_11(0)=8.0. A local term -> added to Cintra_list as (8.0*1.0, site)
+#   (with lambda_U=1.0 default). Checking coulombintra.def in the same stan.in run shows each
+#   site's CoulombIntra value as "8.000000000000000" — consistent with the raw data's
+#   8.0 (no sign flip). Physical H = +U n↑n↓ (as tabulated in CONVENTIONS §6.2).
+# Check 3 (t1, for reference): zvo_hr.dat row 6 "0 -1 0 1 1 -1.00000000 0.00000000"
+#   -> R=(0,-1,0), H_00(R)=-1.0. In the trans.def of the same stan.in run,
+#   "0 0 12 0  1.000000... 0.0" (site0-site12, y-direction NN) appears, consistent with
+#   the physical coefficient -1.0 in the same way as Check 1.
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: wannier90, model: hubbard}
 
 geometry:
   dimension: 3
   lattice_vectors:
-    a1: [3.0, 0.0, 0.0]     # zvo_geom.dat 1 行目
-    a2: [0.0, 3.0, 0.0]     # zvo_geom.dat 2 行目
-    a3: [0.0, 0.0, 10.0]    # zvo_geom.dat 3 行目 (真空層。物理的には 2D スラブ)
+    a1: [3.0, 0.0, 0.0]     # zvo_geom.dat row 1
+    a2: [0.0, 3.0, 0.0]     # zvo_geom.dat row 2
+    a3: [0.0, 0.0, 10.0]    # zvo_geom.dat row 3 (vacuum layer. physically a 2D slab)
   sites:
-    - {label: W1, frac: [0.0, 0.0, 0.0]}   # zvo_geom.dat 5 行目 (Wannier 中心)
+    - {label: W1, frac: [0.0, 0.0, 0.0]}   # zvo_geom.dat row 5 (Wannier center)
 
 system:
   finite: true
-  size: [4, 4, 1]              # StdFace: W, L, Height (stan.in 対応例)
+  size: [4, 4, 1]              # StdFace: W, L, Height (corresponding stan.in input)
   boundary:
-    - {twist: {param: phase0}}  # 度単位
+    - {twist: {param: phase0}}  # in degrees
     - {twist: {param: phase1}}
     - {twist: {param: phase2}}
 
 model:
   site_dof:
-    W1: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)。zvo_geom.dat: NsiteUC=1
+    W1: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7). zvo_geom.dat: NsiteUC=1
 
   bonds:
-    # 規則 W3 により正準対のみ列挙。排除された反転対 (0,1,0)/(1,0,0) は
-    # couplings.value の "+ h.c." (hop 演算子の定義, CONVENTIONS §6.6) で
-    # 自動的に再構成されるため、ここには書かない。
-    - {from: W1, to: W1, R: [-1, 0, 0], type: t0}  # zvo_hr.dat 5 行目
-    - {from: W1, to: W1, R: [0, -1, 0], type: t1}  # zvo_hr.dat 6 行目
+    # Only canonical pairs are enumerated per rule W3. The excluded reversed pairs (0,1,0)/(1,0,0)
+    # are automatically reconstructed via "+ h.c." (the definition of the hop operator,
+    # CONVENTIONS §6.6), so they are not written here.
+    - {from: W1, to: W1, R: [-1, 0, 0], type: t0}  # zvo_hr.dat row 5
+    - {from: W1, to: W1, R: [0, -1, 0], type: t1}  # zvo_hr.dat row 6
 
   couplings:
-    # 値は外部データ由来の実数値を直接記載する(param 参照不可。C7 は
-    # dict でない値をスキップするため直値記載でリンタを通る)。
-    # 規則 W1 により符号反転なし: 物理係数 = +H_mn(R) そのもの。
-    t0: {operator: "hop", value: -1.0}   # H_00(R=[-1,0,0]) = -1.0 (検算1)
-    t1: {operator: "hop", value: -1.0}   # H_00(R=[0,-1,0]) = -1.0 (検算3)
+    # Values are the raw real numbers from external data, written directly (param references are
+    # not possible here; C7 skips values that are not a dict, so a direct literal passes the linter).
+    # Rule W1 means no sign flip: physical coefficient = +H_mn(R) as-is.
+    t0: {operator: "hop", value: -1.0}   # H_00(R=[-1,0,0]) = -1.0 (Check 1)
+    t1: {operator: "hop", value: -1.0}   # H_00(R=[0,-1,0]) = -1.0 (Check 3)
 
   onsite:
     W1:
-      hubbard_u:                 # +U n↑n↓ (規則 W6: lambda_U=1.0 既定を適用済み)
+      hubbard_u:                 # +U n↑n↓ (rule W6: applied with lambda_U=1.0 default)
         operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
-        value: 8.0                # U_11(R=[0,0,0]) = 8.0 (検算2, 外部データ直値)
-      chemical_potential:        # -mu N (wannier データ非依存の標準 StdFace パラメータ)
+        value: 8.0                # U_11(R=[0,0,0]) = 8.0 (Check 2, raw external-data literal)
+      chemical_potential:        # -mu N (a standard StdFace parameter, independent of the wannier data)
         operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
         value: {param: mu}
-      field_z:                   # -h Sz (電子スピン)
+      field_z:                   # -h Sz (electron spin)
         operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
         value: {param: h}
       field_x:
@@ -159,7 +159,7 @@ model:
       field_y:
         operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
         value: {param: Gamma_y}
-      # 規則 W2: R=0,m=n の wannier 由来対角要素 (H_11(0)=0.0, zvo_hr.dat 7
-      # 行目) は cutoff_t(既定 1e-8)未満のため EFFECTIVE term にならず、
-      # onsite 項としては現れない(ゼロなので省略。規則自体は非ゼロなら
-      # 上記 hubbard_u と同型で {ops:[N], coeff:1.0}, value:<H_mm(0)> となる)。
+      # Rule W2: the wannier-derived R=0,m=n diagonal element (H_11(0)=0.0, zvo_hr.dat row 7)
+      # is below cutoff_t (default 1e-8), so it does not become an EFFECTIVE term and does not
+      # appear as an onsite entry (it is omitted because it is zero; the rule itself, if
+      # nonzero, would take the same form as hubbard_u above: {ops:[N], coeff:1.0}, value:<H_mm(0)>).

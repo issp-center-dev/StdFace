@@ -1,16 +1,16 @@
-# StdFace face-centered orthorhombic (fc_ortho) / Spin 模型
-# stan.in 対応例:  model="Spin" / lattice="fcorthorhombic" / W=4 / L=4 / Height=4 / J0=1.0
-# 検算は manifest.yaml の fc_ortho/fc_ortho_spin.yaml エントリを参照。
-# 出典: python/stdface/lattice/fc_ortho.py::fc_ortho (_BONDS), commit 8e3601167d1254807f58ce365107333f1d505fa0
+# StdFace face-centered orthorhombic (fc_ortho) / Spin model
+# Corresponding stan.in input:  model="Spin" / lattice="fcorthorhombic" / W=4 / L=4 / Height=4 / J0=1.0
+# See the fc_ortho/fc_ortho_spin.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/fc_ortho.py::fc_ortho (_BONDS), commit 8e3601167d1254807f58ce365107333f1d505fa0
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: fc_ortho, model: spin}
 
 geometry:
   dimension: 3
   lattice_vectors:
-    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (既定: 0, Llength/2, Hlength/2)
-    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (既定: Wlength/2, 0, Hlength/2)
-    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (既定: Wlength/2, Llength/2, 0)
+    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (default: 0, Llength/2, Hlength/2)
+    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (default: Wlength/2, 0, Hlength/2)
+    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (default: Wlength/2, Llength/2, 0)
   sites:
     - {label: A, frac: [0.0, 0.0, 0.0]}
 
@@ -18,30 +18,30 @@ system:
   finite: true
   size: [4, 4, 4]                 # StdFace: W, L, Height
   boundary:
-    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase0}}    # in degrees
     - {twist: {param: phase1}}
     - {twist: {param: phase2}}
 
 model:
   site_dof:
-    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S。既定 S=1/2
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S. Default S=1/2
 
   bonds:
-    # 参照実装 (_BONDS) のソース順を保持。R = [dW, dL, dH]
-    # 最近接 (nn, 配位数12。W/L/H 各系列は 2 本の等価方向を持ち系列毎の配位数4)
+    # Preserves the source order of the reference implementation (_BONDS). R = [dW, dL, dH]
+    # nearest neighbor (nn, coordination number 12. Each of the W/L/H series has 2 equivalent directions, coordination number 4 per series)
     - {from: A, to: A, R: [1, 0, 0], type: J0}     # along W
     - {from: A, to: A, R: [0, 1, -1], type: J0}    # along W (equiv)
     - {from: A, to: A, R: [0, 1, 0], type: J1}     # along L
     - {from: A, to: A, R: [-1, 0, 1], type: J1}    # along L (equiv)
     - {from: A, to: A, R: [0, 0, 1], type: J2}     # along H
     - {from: A, to: A, R: [1, -1, 0], type: J2}    # along H (equiv)
-    # 第二近接 (配位数6。系列毎に1方向のみ、配位数2)
+    # second-nearest neighbor (coordination number 6. Only 1 direction per series, coordination number 2)
     - {from: A, to: A, R: [-1, 1, 1], type: "J0'"}  # -W+L+H
     - {from: A, to: A, R: [1, -1, 1], type: "J1'"}  # -L+H+W
     - {from: A, to: A, R: [1, 1, -1], type: "J2'"}  # -H+W+L
 
   couplings:
-    # J 族は 9 成分正準形。パラメータ解決: 成分 > スカラー対角 > 大域別名 > 0
+    # J family is in canonical 9-component form. Parameter resolution: component > scalar diagonal > global alias > 0
     J0:
       operator:
         tensor_terms:

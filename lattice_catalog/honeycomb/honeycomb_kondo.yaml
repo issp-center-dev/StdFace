@@ -1,13 +1,13 @@
-# StdFace honeycomb / Kondo 格子模型
-# stan.in 対応例:  model="Kondo" / lattice="honeycomb" / W=4 / L=4 / t=1.0 / J=1.0
-# 2 物理サイト A/B、各々を _c (遍歴電子) / _s (局在スピン) の 2 ラベルに分解
-# (CONVENTIONS 6.7章)。Kondo J ボンドは物理サイトごとに 1 本、遍歴側が
-# 第 1 端点 (A_c→A_s, B_c→B_s) — 参照実装が単位胞内の各サイトを倍加する
-# 順序をそのまま反映する。
-# 磁場 (h/Gamma/Gamma_y) は遍歴電子と局在スピンの両方に適用される
-# (python/stdface/core/model_plugin.py::KondoModel)。
-# 現行実装のサイト倍加 (前半=局在 S2, 後半=遍歴) との対応は manual 4章。
-# 出典: python/stdface/lattice/honeycomb_lattice.py::honeycomb (_BONDS), commit e42ef547c5fb073d78200752c5c5ff01375d4619
+# StdFace honeycomb / Kondo lattice model
+# Corresponding stan.in input:  model="Kondo" / lattice="honeycomb" / W=4 / L=4 / t=1.0 / J=1.0
+# The 2 physical sites A/B are each decomposed into 2 labels, _c (itinerant electron) / _s
+# (localized spin) (CONVENTIONS §6.7). The Kondo J bond is 1 per physical site, with the
+# itinerant side as the 1st endpoint (A_c->A_s, B_c->B_s) — this directly reflects the order
+# in which the reference implementation doubles each site within the unit cell.
+# The field (h/Gamma/Gamma_y) is applied to both the itinerant electrons and the localized spins
+# (python/stdface/core/model_plugin.py::KondoModel).
+# The correspondence with the current implementation's site doubling (first half = localized S2, second half = itinerant) is described in manual Section 4.
+# Source: python/stdface/lattice/honeycomb_lattice.py::honeycomb (_BONDS), commit e42ef547c5fb073d78200752c5c5ff01375d4619
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: honeycomb, model: kondo}
 
@@ -17,16 +17,16 @@ geometry:
     a1: [1.0, 0.0]                         # StdFace: Wx, Wy
     a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly
   sites:
-    - {label: A_c, frac: [0.0, 0.0]}                             # 遍歴電子 (物理サイト A, tau[0])
-    - {label: A_s, frac: [0.0, 0.0]}                             # 局在スピン (同上)
-    - {label: B_c, frac: [0.3333333333333333, 0.3333333333333333]}  # 遍歴電子 (物理サイト B, tau[1])
-    - {label: B_s, frac: [0.3333333333333333, 0.3333333333333333]}  # 局在スピン (同上)
+    - {label: A_c, frac: [0.0, 0.0]}                             # itinerant electron (physical site A, tau[0])
+    - {label: A_s, frac: [0.0, 0.0]}                             # localized spin (same as above)
+    - {label: B_c, frac: [0.3333333333333333, 0.3333333333333333]}  # itinerant electron (physical site B, tau[1])
+    - {label: B_s, frac: [0.3333333333333333, 0.3333333333333333]}  # localized spin (same as above)
 
 system:
   finite: true
   size: [3, 3]                    # StdFace: W, L
   boundary:
-    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase0}}    # in degrees
     - {twist: {param: phase1}}
 
 model:
@@ -37,38 +37,38 @@ model:
     B_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
 
   bonds:
-    # Kondo 結合はソース順 = general_j(..., 遍歴, 局在) の引数順。
-    # 遍歴 A_c/B_c が第 1 端点 (s_i . S_j の役割と一致)。物理サイト順
-    # (A then B) で単位胞内を倍加する参照実装の走査順を保持する。
-    - {from: A_c, to: A_s, R: [0, 0], type: J}   # Kondo 結合 (物理サイト A, セル内)
-    - {from: B_c, to: B_s, R: [0, 0], type: J}   # Kondo 結合 (物理サイト B, セル内)
-    # --- 最近接 (nn=1): Kitaev x/y/z 慣例で t1=x, t2=y, t0=z に対応 ---
-    - {from: A_c, to: B_c, R: [0, 0], type: t0}      # セル内ボンド (Kitaev z 相当)
-    - {from: B_c, to: A_c, R: [1, 0], type: t1}      # W 方向 (Kitaev x 相当)
-    - {from: B_c, to: A_c, R: [0, 1], type: t2}      # L 方向 (Kitaev y 相当)
-    # --- 第二近接 (nn=2) ---
+    # Kondo coupling follows the source order = argument order of general_j(..., itinerant, localized).
+    # Itinerant A_c/B_c is the 1st endpoint (matching the role of s_i . S_j). Preserves the
+    # reference implementation's traversal order, which doubles the unit cell in physical-site order (A then B).
+    - {from: A_c, to: A_s, R: [0, 0], type: J}   # Kondo coupling (physical site A, intra-cell)
+    - {from: B_c, to: B_s, R: [0, 0], type: J}   # Kondo coupling (physical site B, intra-cell)
+    # --- nearest neighbor (nn=1): Kitaev x/y/z convention, t1=x, t2=y, t0=z ---
+    - {from: A_c, to: B_c, R: [0, 0], type: t0}      # intra-cell bond (Kitaev z equivalent)
+    - {from: B_c, to: A_c, R: [1, 0], type: t1}      # W direction (Kitaev x equivalent)
+    - {from: B_c, to: A_c, R: [0, 1], type: t2}      # L direction (Kitaev y equivalent)
+    # --- second-nearest neighbor (nn=2) ---
     - {from: A_c, to: A_c, R: [1, 0], type: "t2'"}
     - {from: B_c, to: B_c, R: [1, 0], type: "t2'"}
     - {from: A_c, to: A_c, R: [0, 1], type: "t1'"}
     - {from: B_c, to: B_c, R: [0, 1], type: "t1'"}
     - {from: A_c, to: A_c, R: [1, -1], type: "t0'"}
     - {from: B_c, to: B_c, R: [1, -1], type: "t0'"}
-    # --- 第三近接 (nn=3) ---
+    # --- third-nearest neighbor (nn=3) ---
     - {from: A_c, to: B_c, R: [1, -1], type: "t1''"}
     - {from: A_c, to: B_c, R: [-1, -1], type: "t0''"}
     - {from: A_c, to: B_c, R: [-1, 1], type: "t2''"}
-    # --- 最近接 (V) ---
+    # --- nearest neighbor (V) ---
     - {from: A_c, to: B_c, R: [0, 0], type: V0}
     - {from: B_c, to: A_c, R: [1, 0], type: V1}
     - {from: B_c, to: A_c, R: [0, 1], type: V2}
-    # --- 第二近接 (V) ---
+    # --- second-nearest neighbor (V) ---
     - {from: A_c, to: A_c, R: [1, 0], type: "V2'"}
     - {from: B_c, to: B_c, R: [1, 0], type: "V2'"}
     - {from: A_c, to: A_c, R: [0, 1], type: "V1'"}
     - {from: B_c, to: B_c, R: [0, 1], type: "V1'"}
     - {from: A_c, to: A_c, R: [1, -1], type: "V0'"}
     - {from: B_c, to: B_c, R: [1, -1], type: "V0'"}
-    # --- 第三近接 (V) ---
+    # --- third-nearest neighbor (V) ---
     - {from: A_c, to: B_c, R: [1, -1], type: "V1''"}
     - {from: A_c, to: B_c, R: [-1, -1], type: "V0''"}
     - {from: A_c, to: B_c, R: [-1, 1], type: "V2''"}
@@ -92,7 +92,7 @@ model:
     "V1''": {operator: "density-density", value: {param: "V1''"}}
     "V0''": {operator: "density-density", value: {param: "V0''"}}
     "V2''": {operator: "density-density", value: {param: "V2''"}}
-    J:      {operator: "s_i . S_j", value: {param: J}}   # +J s·S (第1端点=遍歴)
+    J:      {operator: "s_i . S_j", value: {param: J}}   # +J s·S (1st endpoint = itinerant)
 
   onsite:
     A_c:
@@ -112,7 +112,7 @@ model:
         operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
         value: {param: Gamma_y}
     A_s:
-      field_z:                   # 局在側にも同じ 3 成分
+      field_z:                   # same 3 components apply to the localized side
         operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
         value: {param: h}
       field_x:

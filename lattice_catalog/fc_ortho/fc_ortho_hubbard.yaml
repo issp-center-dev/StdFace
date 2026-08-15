@@ -1,16 +1,16 @@
-# StdFace face-centered orthorhombic (fc_ortho) / Hubbard 模型
-# stan.in 対応例:  model="Hubbard" / lattice="fcorthorhombic" / W=4 / L=4 / Height=4 / t0=1.0 / U=4.0
-# 検算は manifest.yaml を参照。符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
-# 出典: python/stdface/lattice/fc_ortho.py::fc_ortho (_BONDS), commit 8e3601167d1254807f58ce365107333f1d505fa0
+# StdFace face-centered orthorhombic (fc_ortho) / Hubbard model
+# Corresponding stan.in input:  model="Hubbard" / lattice="fcorthorhombic" / W=4 / L=4 / Height=4 / t0=1.0 / U=4.0
+# See manifest.yaml for the consistency check. Signs are carried as data in scale/coeff (CONVENTIONS §6)
+# Source: python/stdface/lattice/fc_ortho.py::fc_ortho (_BONDS), commit 8e3601167d1254807f58ce365107333f1d505fa0
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: fc_ortho, model: hubbard}
 
 geometry:
   dimension: 3
   lattice_vectors:
-    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (既定: 0, Llength/2, Hlength/2)
-    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (既定: Wlength/2, 0, Hlength/2)
-    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (既定: Wlength/2, Llength/2, 0)
+    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (default: 0, Llength/2, Hlength/2)
+    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (default: Wlength/2, 0, Hlength/2)
+    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (default: Wlength/2, Llength/2, 0)
   sites:
     - {label: A, frac: [0.0, 0.0, 0.0]}
 
@@ -18,41 +18,41 @@ system:
   finite: true
   size: [4, 4, 4]                 # StdFace: W, L, Height
   boundary:
-    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase0}}    # in degrees
     - {twist: {param: phase1}}
     - {twist: {param: phase2}}
 
 model:
   site_dof:
-    A: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)
+    A: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7)
 
   bonds:
-    # 参照実装 (_BONDS) のソース順を保持。R = [dW, dL, dH]
-    # 最近接 (nn, 配位数12。W/L/H 各系列は 2 本の等価方向を持ち系列毎の配位数4)
+    # Preserves the source order of the reference implementation (_BONDS). R = [dW, dL, dH]
+    # nearest neighbor (nn, coordination number 12. Each of the W/L/H series has 2 equivalent directions, coordination number 4 per series)
     - {from: A, to: A, R: [1, 0, 0], type: t0}     # along W
     - {from: A, to: A, R: [0, 1, -1], type: t0}    # along W (equiv)
     - {from: A, to: A, R: [0, 1, 0], type: t1}     # along L
     - {from: A, to: A, R: [-1, 0, 1], type: t1}    # along L (equiv)
     - {from: A, to: A, R: [0, 0, 1], type: t2}     # along H
     - {from: A, to: A, R: [1, -1, 0], type: t2}    # along H (equiv)
-    # 第二近接 (配位数6。系列毎に1方向のみ、配位数2)
+    # second-nearest neighbor (coordination number 6. Only 1 direction per series, coordination number 2)
     - {from: A, to: A, R: [-1, 1, 1], type: "t0'"}  # -W+L+H
     - {from: A, to: A, R: [1, -1, 1], type: "t1'"}  # -L+H+W
     - {from: A, to: A, R: [1, 1, -1], type: "t2'"}  # -H+W+L
-    # 最近接 (nn, 配位数12。W/L/H 各系列は 2 本の等価方向を持ち系列毎の配位数4)
+    # nearest neighbor (nn, coordination number 12. Each of the W/L/H series has 2 equivalent directions, coordination number 4 per series)
     - {from: A, to: A, R: [1, 0, 0], type: V0}     # along W
     - {from: A, to: A, R: [0, 1, -1], type: V0}    # along W (equiv)
     - {from: A, to: A, R: [0, 1, 0], type: V1}     # along L
     - {from: A, to: A, R: [-1, 0, 1], type: V1}    # along L (equiv)
     - {from: A, to: A, R: [0, 0, 1], type: V2}     # along H
     - {from: A, to: A, R: [1, -1, 0], type: V2}    # along H (equiv)
-    # 第二近接 (配位数6。系列毎に1方向のみ、配位数2)
+    # second-nearest neighbor (coordination number 6. Only 1 direction per series, coordination number 2)
     - {from: A, to: A, R: [-1, 1, 1], type: "V0'"}  # -W+L+H
     - {from: A, to: A, R: [1, -1, 1], type: "V1'"}  # -L+H+W
     - {from: A, to: A, R: [1, 1, -1], type: "V2'"}  # -H+W+L
 
   couplings:
-    # H への寄与 = value × operator (物理係数)。-t は scale で表す。
+    # Contribution to H = value × operator (physical coefficient). -t is expressed via scale.
     t0:    {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
     t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
     t2:    {operator: "hop", value: {param: t2, scale: -1.0}}
@@ -74,7 +74,7 @@ model:
       chemical_potential:        # -mu N
         operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
         value: {param: mu}
-      field_z:                   # -h Sz (電子スピン)
+      field_z:                   # -h Sz (electron spin)
         operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
         value: {param: h}
       field_x:

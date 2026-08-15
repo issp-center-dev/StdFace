@@ -1,30 +1,30 @@
-# lattice_catalog 検算台帳
+# lattice_catalog consistency-check ledger
 #
-# 各エントリはリンタ (tools/lint_catalog.py) が YAML 本体と突合する
-# 期待値である。キーはすべて必須(欠落は C10 エラー)。
+# Each entry holds the expected values that the linter (tools/lint_catalog.py)
+# cross-checks against the YAML body. All keys are mandatory (a missing key is a C10 error).
 #
 # files:
-#   <カタログ YAML への相対パス>:  # 例: chain/chain_spin.yaml
-#     lattice: <catalog.lattice と一致>
-#     model: <catalog.model と一致>
-#     dimension: <geometry.dimension と一致する整数>
-#     n_sites_uc: <geometry.sites の要素数と一致する整数>
-#     bonds_per_uc: {<bond type>: <単位胞あたりの本数>, ...}
-#       # 全 bond type を列挙する(省略不可)
+#   <path to the catalog YAML, relative>:  # e.g. chain/chain_spin.yaml
+#     lattice: <must match catalog.lattice>
+#     model: <must match catalog.model>
+#     dimension: <integer, must match geometry.dimension>
+#     n_sites_uc: <integer, must match the number of elements in geometry.sites>
+#     bonds_per_uc: {<bond type>: <count per unit cell>, ...}
+#       # List every bond type (omission is not allowed).
 #     coordination:
-#       # サイトラベル × ボンド type ごとの配位数。
-#       # min_size_for_check のトーラス上で計数展開して実測比較する
-#       # (tools/lint_catalog.py の expand_and_count)。
-#       <label>: {<bond type>: <配位数>, ...}
-#     min_size_for_check: [<各次元のサイズ>, ...]
-#       # 異なる R が同一サイト対に折り畳まれない最小サイズ。
-#       # 各方向について L > 2 * max|R成分| を満たす奇数を記載する。
+#       # Coordination number per site label × bond type.
+#       # Measured by counting expansion on the min_size_for_check torus
+#       # and compared against the value here (expand_and_count in tools/lint_catalog.py).
+#       <label>: {<bond type>: <coordination number>, ...}
+#     min_size_for_check: [<size per dimension>, ...]
+#       # The minimum size at which distinct R values do not fold onto the same site pair.
+#       # For each direction, record the odd number satisfying L > 2 * max|R component|.
 #     source:
-#       file: <参照した python 実装ファイルの相対パス>
-#       func: <参照した関数名>
-#       commit: <参照コミットハッシュ>
+#       file: <relative path to the referenced Python implementation file>
+#       func: <name of the referenced function>
+#       commit: <referenced commit hash>
 #
-# Task 1 以降で実エントリを追加していく。
+# Real entries were added starting with Task 1.
 files:
   chain/chain_spin.yaml:
     lattice: chain
@@ -446,13 +446,13 @@ files:
     coordination:
       W1: {t0: 2, t1: 2}
     min_size_for_check: [3, 3, 1]
-    # 出典は wannier90.py (呼出し元) を代表として記載。実際の符号・正準対・
-    # cutoff 規則の導出には wannier90_io.py::_read_w90 と
-    # interaction_builder.py::hopping/trans/coulomb も参照した
-    # (YAML 冒頭コメント参照)。データ出典は test/wannier90_data/*.dat。
+    # The provenance field names wannier90.py (the caller) as the representative source.
+    # Deriving the actual sign convention, canonical-pair choice, and cutoff rule also
+    # relied on wannier90_io.py::_read_w90 and interaction_builder.py::hopping/trans/coulomb
+    # (see the comment at the top of the YAML). The data provenance is test/wannier90_data/*.dat.
     source: {file: python/stdface/lattice/wannier90.py, func: wannier90, commit: da80b6daed27fec0d837812b0613d8b53aa7a637}
 
-# 記入例(Task 1 で実エントリを追加):
+# Example entry (real entries were added in Task 1):
 # chain/chain_spin.yaml:
 #   lattice: chain
 #   model: spin

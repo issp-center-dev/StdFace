@@ -1,9 +1,9 @@
-# StdFace chain / Kondo 格子模型
-# stan.in 対応例:  model="Kondo" / lattice="chain" / L=16 / t=1.0 / J=1.0
-# 磁場 (h/Gamma/Gamma_y) は遍歴電子と局在スピンの両方に適用される
-# (python/stdface/core/model_plugin.py::KondoModel)。
-# 現行実装のサイト倍加 (前半=局在 S2, 後半=遍歴) との対応は manual 4章。
-# 出典: python/stdface/lattice/chain_lattice.py::chain (_BONDS), commit b96aef2107f1ab200565efd496606a01184e3f46
+# StdFace chain / Kondo lattice model
+# Corresponding stan.in input:  model="Kondo" / lattice="chain" / L=16 / t=1.0 / J=1.0
+# The field (h/Gamma/Gamma_y) is applied to both the itinerant electrons and the localized spins
+# (python/stdface/core/model_plugin.py::KondoModel).
+# The correspondence with the current implementation's site doubling (first half = localized S2, second half = itinerant) is described in manual Section 4.
+# Source: python/stdface/lattice/chain_lattice.py::chain (_BONDS), commit b96aef2107f1ab200565efd496606a01184e3f46
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: chain, model: kondo}
 
@@ -12,14 +12,14 @@ geometry:
   lattice_vectors:
     a1: [1.0]                    # StdFace: a
   sites:
-    - {label: A_c, frac: [0.0]}  # 遍歴電子 (1物理サイト上の自由度その1)
-    - {label: A_s, frac: [0.0]}  # 局在スピン (同・その2)
+    - {label: A_c, frac: [0.0]}  # itinerant electron (degree of freedom 1 on 1 physical site)
+    - {label: A_s, frac: [0.0]}  # localized spin (degree of freedom 2, same site)
 
 system:
   finite: true
   size: [16]                     # StdFace: L
   boundary:
-    - {twist: {param: phase0}}   # 度単位
+    - {twist: {param: phase0}}   # in degrees
 
 model:
   site_dof:
@@ -27,9 +27,9 @@ model:
     A_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
 
   bonds:
-    # Kondo 結合はソース順 = general_j(..., 遍歴, 局在) の引数順。
-    # 遍歴 A_c が第 1 端点 (s_i . S_j の役割と一致)
-    - {from: A_c, to: A_s, R: [0], type: J}   # Kondo 結合 (セル内)
+    # Kondo coupling follows the source order = argument order of general_j(..., itinerant, localized).
+    # Itinerant A_c is the 1st endpoint (matching the role of s_i . S_j)
+    - {from: A_c, to: A_s, R: [0], type: J}   # Kondo coupling (intra-cell)
     - {from: A_c, to: A_c, R: [1], type: t0}
     - {from: A_c, to: A_c, R: [2], type: "t0'"}
     - {from: A_c, to: A_c, R: [3], type: "t0''"}
@@ -44,7 +44,7 @@ model:
     V0:    {operator: "density-density", value: {param: V0}}
     "V0'": {operator: "density-density", value: {param: "V0'"}}
     "V0''": {operator: "density-density", value: {param: "V0''"}}
-    J:     {operator: "s_i . S_j", value: {param: J}}   # +J s·S (第1端点=遍歴)
+    J:     {operator: "s_i . S_j", value: {param: J}}   # +J s·S (1st endpoint = itinerant)
 
   onsite:
     A_c:
@@ -64,7 +64,7 @@ model:
         operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
         value: {param: Gamma_y}
     A_s:
-      field_z:                   # 局在側にも同じ 3 成分
+      field_z:                   # same 3 components apply to the localized side
         operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
         value: {param: h}
       field_x:

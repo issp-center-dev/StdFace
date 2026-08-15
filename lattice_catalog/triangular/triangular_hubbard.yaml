@@ -1,8 +1,8 @@
-# StdFace triangular / Hubbard 模型
-# stan.in 対応例:  model="Hubbard" / lattice="triangular" / W=4 / L=4 / t=1.0 / U=4.0
-# 検算は manifest.yaml の triangular/triangular_hubbard.yaml エントリを参照。
-# 符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
-# 出典: python/stdface/lattice/triangular_lattice.py::triangular (_BONDS), commit c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24
+# StdFace triangular / Hubbard model
+# Corresponding stan.in input:  model="Hubbard" / lattice="triangular" / W=4 / L=4 / t=1.0 / U=4.0
+# See the triangular/triangular_hubbard.yaml entry of manifest.yaml for the consistency check.
+# Signs are carried as data in scale/coeff (CONVENTIONS §6)
+# Source: python/stdface/lattice/triangular_lattice.py::triangular (_BONDS), commit c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: triangular, model: hubbard}
 
@@ -18,35 +18,35 @@ system:
   finite: true
   size: [5, 5]                    # StdFace: W, L
   boundary:
-    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase0}}    # in degrees
     - {twist: {param: phase1}}
 
 model:
   site_dof:
-    A: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)
+    A: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7)
 
   bonds:
-    - {from: A, to: A, R: [1, 0], type: t0}      # 別名 t (最近接 W 方向)
-    - {from: A, to: A, R: [0, 1], type: t1}      # 別名 t (最近接 L 方向)
-    - {from: A, to: A, R: [1, -1], type: t2}     # 別名 t (最近接 W-L 対角)
-    - {from: A, to: A, R: [2, -1], type: "t1'"}  # 別名 t' (次近接 2W-L)
-    - {from: A, to: A, R: [1, 1], type: "t2'"}   # 別名 t' (次近接 W+L)
-    - {from: A, to: A, R: [-1, 2], type: "t0'"}  # 別名 t' (次近接 -W+2L)
-    - {from: A, to: A, R: [2, 0], type: "t0''"}  # 別名 t'' (三次近接 2W)
-    - {from: A, to: A, R: [0, 2], type: "t1''"}  # 別名 t'' (三次近接 2L)
-    - {from: A, to: A, R: [2, -2], type: "t2''"} # 別名 t'' (三次近接 2W-2L)
-    - {from: A, to: A, R: [1, 0], type: V0}      # 別名 V (最近接 W 方向)
-    - {from: A, to: A, R: [0, 1], type: V1}      # 別名 V (最近接 L 方向)
-    - {from: A, to: A, R: [1, -1], type: V2}     # 別名 V (最近接 W-L 対角)
-    - {from: A, to: A, R: [2, -1], type: "V1'"}  # 別名 V' (次近接 2W-L)
-    - {from: A, to: A, R: [1, 1], type: "V2'"}   # 別名 V' (次近接 W+L)
-    - {from: A, to: A, R: [-1, 2], type: "V0'"}  # 別名 V' (次近接 -W+2L)
-    - {from: A, to: A, R: [2, 0], type: "V0''"}  # 別名 V'' (三次近接 2W)
-    - {from: A, to: A, R: [0, 2], type: "V1''"}  # 別名 V'' (三次近接 2L)
-    - {from: A, to: A, R: [2, -2], type: "V2''"} # 別名 V'' (三次近接 2W-2L)
+    - {from: A, to: A, R: [1, 0], type: t0}      # alias t (nearest neighbor, W direction)
+    - {from: A, to: A, R: [0, 1], type: t1}      # alias t (nearest neighbor, L direction)
+    - {from: A, to: A, R: [1, -1], type: t2}     # alias t (nearest neighbor, W-L diagonal)
+    - {from: A, to: A, R: [2, -1], type: "t1'"}  # alias t' (next-nearest neighbor, 2W-L)
+    - {from: A, to: A, R: [1, 1], type: "t2'"}   # alias t' (next-nearest neighbor, W+L)
+    - {from: A, to: A, R: [-1, 2], type: "t0'"}  # alias t' (next-nearest neighbor, -W+2L)
+    - {from: A, to: A, R: [2, 0], type: "t0''"}  # alias t'' (third-nearest neighbor, 2W)
+    - {from: A, to: A, R: [0, 2], type: "t1''"}  # alias t'' (third-nearest neighbor, 2L)
+    - {from: A, to: A, R: [2, -2], type: "t2''"} # alias t'' (third-nearest neighbor, 2W-2L)
+    - {from: A, to: A, R: [1, 0], type: V0}      # alias V (nearest neighbor, W direction)
+    - {from: A, to: A, R: [0, 1], type: V1}      # alias V (nearest neighbor, L direction)
+    - {from: A, to: A, R: [1, -1], type: V2}     # alias V (nearest neighbor, W-L diagonal)
+    - {from: A, to: A, R: [2, -1], type: "V1'"}  # alias V' (next-nearest neighbor, 2W-L)
+    - {from: A, to: A, R: [1, 1], type: "V2'"}   # alias V' (next-nearest neighbor, W+L)
+    - {from: A, to: A, R: [-1, 2], type: "V0'"}  # alias V' (next-nearest neighbor, -W+2L)
+    - {from: A, to: A, R: [2, 0], type: "V0''"}  # alias V'' (third-nearest neighbor, 2W)
+    - {from: A, to: A, R: [0, 2], type: "V1''"}  # alias V'' (third-nearest neighbor, 2L)
+    - {from: A, to: A, R: [2, -2], type: "V2''"} # alias V'' (third-nearest neighbor, 2W-2L)
 
   couplings:
-    # H への寄与 = value × operator (物理係数)。-t は scale で表す。
+    # Contribution to H = value × operator (physical coefficient). -t is expressed via scale.
     t0:     {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
     t1:     {operator: "hop", value: {param: t1, scale: -1.0}}
     t2:     {operator: "hop", value: {param: t2, scale: -1.0}}
@@ -74,7 +74,7 @@ model:
       chemical_potential:        # -mu N
         operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
         value: {param: mu}
-      field_z:                   # -h Sz (電子スピン)
+      field_z:                   # -h Sz (electron spin)
         operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
         value: {param: h}
       field_x:

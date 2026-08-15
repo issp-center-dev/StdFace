@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""lattice_catalog/tools の自動テスト(開発時専用)。
+"""Automated tests for lattice_catalog/tools (development-time only).
 
-pytest 非依存、assert ベース。`python3 test_tools.py` で完結し、
-成功時は最後に `all tools tests passed` を出力する。
+No pytest dependency, assert-based. Self-contained via
+`python3 test_tools.py`, printing `all tools tests passed` at the end on
+success.
 
-対象:
-- keyword_inventory.py: canonical 集約・安定ソート・重複なし・
-  ソルバーレジストリ件数下限・prime 付き成分の存在・
-  model_alias がレジストリ(MODEL_ALIASES + MODEL_ALIASES_HPHI_BOOST)と
-  完全一致すること(A1)
-- lint_catalog.py: C1-C12 の正例・負例(インライン YAML / dict fixture)。
-  C11 min_size_for_check の厳密性(A2)、C2 のスキーマ深部検査(A3)、
-  C12 符号規約検査(A4)を含む
-- param 参照の意味論(resolve_param): scale×param / default そのまま
-- 不正 YAML・null 文書での非例外動作
-- トップレベル失敗の非例外動作(A6): 破損 manifest.yaml
-  (FatalLintError)、孤立 manifest エントリ検出
+Covers:
+- keyword_inventory.py: canonical aggregation, stable sort, no
+  duplicates, solver registry count lower bound, presence of
+  prime-bearing components, and exact match of model_alias against the
+  registry (MODEL_ALIASES + MODEL_ALIASES_HPHI_BOOST) (A1)
+- lint_catalog.py: C1-C12 positive/negative cases (inline YAML / dict
+  fixtures). Includes strictness of C11's min_size_for_check (A2), C2's
+  deep schema validation (A3), and C12's sign-convention check (A4)
+- param-reference semantics (resolve_param): scale*param, or default
+  as-is
+- non-raising behavior on malformed YAML / null documents
+- non-raising behavior on top-level failures (A6): corrupted
+  manifest.yaml (FatalLintError), orphan manifest entry detection
 
-開発時依存: lint_catalog.py 経由で PyYAML (``pyyaml``) を必要とする
-(開発時専用ツール一式であり、``python/pyproject.toml`` の実行時依存
-には含めない — A5)。
+Development-time dependency: requires PyYAML (``pyyaml``) via
+lint_catalog.py (this whole tool suite is development-time only and is
+not included in ``python/pyproject.toml``'s runtime dependencies — A5).
 
 Run
 ---

@@ -1,38 +1,41 @@
 #!/usr/bin/env python3
-"""StdFace パーサーレジストリ全体からキーワード目録(JSON)を生成する。
+"""Generate the keyword inventory (JSON) from the full StdFace parser registry.
 
-母集合: core の ``_COMMON_KEYWORDS`` + ソルバーレジストリ経由で列挙した
-全プラグインのキーワードテーブル(クラスのハードコード禁止)+
-格子名/模型名の alias(lattice/model registry から)。
+Population: core's ``_COMMON_KEYWORDS`` + the keyword tables of every
+plugin enumerated via the solver registry (no hardcoding of classes),
+plus lattice-name/model-name aliases (from the lattice/model registry).
 
-出力(canonical 単位に集約、安定ソート)は以下の 2 種類のエントリからなる:
+The output (aggregated by canonical unit, stably sorted) consists of two
+kinds of entries:
 
-- keyword 種別::
+- ``keyword`` kind::
 
     {"keyword_canonical": "J0x", "keyword_lower": "j0x",
      "sources": ["common"], "kind": "keyword"}
 
-- alias 種別(lattice_alias / model_alias)::
+- alias kind (lattice_alias / model_alias)::
 
     {"keyword_canonical": "chain", "sources": ["lattice_registry"],
      "kind": "lattice_alias", "canonical_target": "chain"}
 
-ソルバーの列挙は ``stdface.plugin`` の登録済みプラグイン(id で重複排除)
-を走査して行い、4 つの具象クラス名をこのスクリプトにハードコードしない。
-これにより将来プラグインが追加された場合も自動的に目録へ反映される。
+Solvers are enumerated by scanning the registered plugins in
+``stdface.plugin`` (de-duplicated by id); the four concrete class names
+are not hardcoded into this script. This means the inventory picks up
+future plugins automatically once they are added.
 
-``model_alias`` は ``stdface.core.stdface_main.MODEL_ALIASES`` +
-``MODEL_ALIASES_HPHI_BOOST`` の全キー(``fermionhubbard``, ``hubbardgc``,
-``spingc``, ``kondolattice``, ``kondogc``, ``spingcboost`` 等、GC/Boost
-拡張を含む全 alias)を走査する — canonical な ``ModelType`` 3 値
-(spin/hubbard/kondo)だけをハードコードしない(A1 の修正点)。
-``MODEL_ALIASES_HPHI_BOOST`` 由来のエントリは ``sources`` に
-``"model_registry_hphi_boost"`` を付け、HPhi 専用 alias であることを
-区別できるようにしている。
+``model_alias`` scans every key of
+``stdface.core.stdface_main.MODEL_ALIASES`` +
+``MODEL_ALIASES_HPHI_BOOST`` (``fermionhubbard``, ``hubbardgc``,
+``spingc``, ``kondolattice``, ``kondogc``, ``spingcboost``, etc. — every
+alias including the GC/Boost extensions) — it does not hardcode only
+the 3 canonical ``ModelType`` values (spin/hubbard/kondo) (the A1 fix).
+Entries originating from ``MODEL_ALIASES_HPHI_BOOST`` are tagged with
+``"model_registry_hphi_boost"`` in ``sources`` so that HPhi-only
+aliases can be distinguished.
 
-レジストリのインポート自体が失敗した場合(``python/`` が PYTHONPATH に
-無い等)、および解決結果が空だった場合は、不完全な目録を出力せずに
-非ゼロ終了する(A6-iv)。
+If importing the registry itself fails (e.g. ``python/`` is not on
+PYTHONPATH), or if the resolved result is empty, exit non-zero without
+printing an incomplete inventory (A6-iv).
 """
 from __future__ import annotations
 
@@ -47,15 +50,16 @@ try:
     from stdface.core.keyword_parser import _COMMON_KEYWORDS  # noqa: E402
     from stdface.lattice import get_all_lattices  # noqa: E402
     from stdface import plugin as _solver_plugin_mod  # noqa: E402
-    # 模型名 alias レジストリ(A1: model_alias の母集合はここが正)。
+    # Model-name alias registry (A1: this is the authoritative population
+    # for model_alias).
     from stdface.core.stdface_main import (  # noqa: E402
         MODEL_ALIASES as _MODEL_ALIASES,
         MODEL_ALIASES_HPHI_BOOST as _MODEL_ALIASES_HPHI_BOOST,
     )
 except ImportError as e:  # pragma: no cover - environment/setup error
     sys.exit(
-        "keyword_inventory: stdface レジストリのインポートに失敗しました "
-        f"(python/ が PYTHONPATH 上にあるか確認してください): {e!r}"
+        "keyword_inventory: failed to import the stdface registry "
+        f"(check that python/ is on PYTHONPATH): {e!r}"
     )
 
 _CANON_EXCEPTIONS = {"2s": "2S", "2sz": "2Sz", "gamma": "Gamma",
@@ -79,7 +83,7 @@ def canon(kw: str) -> str:
     """
     if kw in _CANON_EXCEPTIONS:
         return _CANON_EXCEPTIONS[kw]
-    if kw and kw[0] in "jv" and len(kw) > 1:      # J/V 族は先頭大文字
+    if kw and kw[0] in "jv" and len(kw) > 1:      # J/V family: capitalize first letter
         return kw[0].upper() + kw[1:]
     return kw
 
@@ -173,11 +177,11 @@ def main() -> None:
     solver_names = [name for name, _table in iter_solver_plugins()]
     if not lattice_aliases or not model_aliases or not solver_names:
         sys.exit(
-            "keyword_inventory: レジストリが空の結果を返しました "
+            "keyword_inventory: the registry returned an empty result "
             f"(lattice_alias={len(lattice_aliases)}, "
             f"model_alias={len(model_aliases)}, "
             f"solver_plugins={len(solver_names)}) — "
-            "不完全な目録を出力せず終了します"
+            "exiting without printing an incomplete inventory"
         )
     json.dump(entries, sys.stdout, ensure_ascii=False, indent=1)
 

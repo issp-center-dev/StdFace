@@ -1,10 +1,10 @@
-# StdFace honeycomb / Hubbard 模型
-# stan.in 対応例:  model="Hubbard" / lattice="honeycomb" / W=4 / L=4 / t=1.0 / U=4.0
-# 2 サイト基底 A/B (NsiteUC=2)。t0/t1/t2 は最近接の 3 方向ボンド (Kitaev x/y/z 慣例)
-# にそれぞれ対応する: t0=セル内ボンド (z 相当), t1=W 方向 (x 相当), t2=L 方向 (y 相当)。
-# 検算: 最近接配位数は各サイト 3 (t0+t1+t2 が各 1 本)。
-# 検算は manifest.yaml を参照。符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
-# 出典: python/stdface/lattice/honeycomb_lattice.py::honeycomb (_BONDS), commit e42ef547c5fb073d78200752c5c5ff01375d4619
+# StdFace honeycomb / Hubbard model
+# Corresponding stan.in input:  model="Hubbard" / lattice="honeycomb" / W=4 / L=4 / t=1.0 / U=4.0
+# 2-site basis A/B (NsiteUC=2). t0/t1/t2 correspond respectively to the 3 nearest-neighbor bond
+# directions (Kitaev x/y/z convention): t0=intra-cell bond (z equivalent), t1=W direction (x equivalent), t2=L direction (y equivalent).
+# Consistency check: the nearest-neighbor coordination number is 3 for each site (t0+t1+t2, 1 bond each).
+# See manifest.yaml for the consistency check. Signs are carried as data in scale/coeff (CONVENTIONS §6)
+# Source: python/stdface/lattice/honeycomb_lattice.py::honeycomb (_BONDS), commit e42ef547c5fb073d78200752c5c5ff01375d4619
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: honeycomb, model: hubbard}
 
@@ -21,51 +21,51 @@ system:
   finite: true
   size: [3, 3]                    # StdFace: W, L
   boundary:
-    - {twist: {param: phase0}}    # 度単位
+    - {twist: {param: phase0}}    # in degrees
     - {twist: {param: phase1}}
 
 model:
   site_dof:
-    A: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)
+    A: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7)
     B: {fermion: {orbitals: 1}}
 
   bonds:
-    # 参照実装 (_BONDS) のソース順を保持。site 0=A, 1=B。
-    # t ブロック (hop) を _BONDS 行順で列挙した後、同じ行順で V ブロック
-    # (density-density) を列挙する (chain/square/triangular と同じ提示規約)。
-    # --- 最近接 (nn=1): Kitaev x/y/z 慣例で t1=x, t2=y, t0=z に対応 ---
-    - {from: A, to: B, R: [0, 0], type: t0}      # セル内ボンド (Kitaev z 相当)
-    - {from: B, to: A, R: [1, 0], type: t1}      # W 方向 (Kitaev x 相当)
-    - {from: B, to: A, R: [0, 1], type: t2}      # L 方向 (Kitaev y 相当)
-    # --- 第二近接 (nn=2) ---
-    - {from: A, to: A, R: [1, 0], type: "t2'"}   # W 方向, 0->0
-    - {from: B, to: B, R: [1, 0], type: "t2'"}   # W 方向, 1->1
-    - {from: A, to: A, R: [0, 1], type: "t1'"}   # L 方向, 0->0
-    - {from: B, to: B, R: [0, 1], type: "t1'"}   # L 方向, 1->1
-    - {from: A, to: A, R: [1, -1], type: "t0'"}  # W-L 方向, 0->0
-    - {from: B, to: B, R: [1, -1], type: "t0'"}  # W-L 方向, 1->1
-    # --- 第三近接 (nn=3) ---
-    - {from: A, to: B, R: [1, -1], type: "t1''"}   # W-L 方向
-    - {from: A, to: B, R: [-1, -1], type: "t0''"}  # -W-L 方向
-    - {from: A, to: B, R: [-1, 1], type: "t2''"}   # -W+L 方向
-    # --- 最近接 (V) ---
+    # Preserves the source order of the reference implementation (_BONDS). site 0=A, 1=B.
+    # The t block (hop) is enumerated in _BONDS row order, followed by the V block
+    # (density-density) in the same row order (same presentation convention as chain/square/triangular).
+    # --- nearest neighbor (nn=1): Kitaev x/y/z convention, t1=x, t2=y, t0=z ---
+    - {from: A, to: B, R: [0, 0], type: t0}      # intra-cell bond (Kitaev z equivalent)
+    - {from: B, to: A, R: [1, 0], type: t1}      # W direction (Kitaev x equivalent)
+    - {from: B, to: A, R: [0, 1], type: t2}      # L direction (Kitaev y equivalent)
+    # --- second-nearest neighbor (nn=2) ---
+    - {from: A, to: A, R: [1, 0], type: "t2'"}   # W direction, 0->0
+    - {from: B, to: B, R: [1, 0], type: "t2'"}   # W direction, 1->1
+    - {from: A, to: A, R: [0, 1], type: "t1'"}   # L direction, 0->0
+    - {from: B, to: B, R: [0, 1], type: "t1'"}   # L direction, 1->1
+    - {from: A, to: A, R: [1, -1], type: "t0'"}  # W-L direction, 0->0
+    - {from: B, to: B, R: [1, -1], type: "t0'"}  # W-L direction, 1->1
+    # --- third-nearest neighbor (nn=3) ---
+    - {from: A, to: B, R: [1, -1], type: "t1''"}   # W-L direction
+    - {from: A, to: B, R: [-1, -1], type: "t0''"}  # -W-L direction
+    - {from: A, to: B, R: [-1, 1], type: "t2''"}   # -W+L direction
+    # --- nearest neighbor (V) ---
     - {from: A, to: B, R: [0, 0], type: V0}
     - {from: B, to: A, R: [1, 0], type: V1}
     - {from: B, to: A, R: [0, 1], type: V2}
-    # --- 第二近接 (V) ---
+    # --- second-nearest neighbor (V) ---
     - {from: A, to: A, R: [1, 0], type: "V2'"}
     - {from: B, to: B, R: [1, 0], type: "V2'"}
     - {from: A, to: A, R: [0, 1], type: "V1'"}
     - {from: B, to: B, R: [0, 1], type: "V1'"}
     - {from: A, to: A, R: [1, -1], type: "V0'"}
     - {from: B, to: B, R: [1, -1], type: "V0'"}
-    # --- 第三近接 (V) ---
+    # --- third-nearest neighbor (V) ---
     - {from: A, to: B, R: [1, -1], type: "V1''"}
     - {from: A, to: B, R: [-1, -1], type: "V0''"}
     - {from: A, to: B, R: [-1, 1], type: "V2''"}
 
   couplings:
-    # H への寄与 = value × operator (物理係数)。-t は scale で表す。
+    # Contribution to H = value × operator (physical coefficient). -t is expressed via scale.
     t0:     {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
     t1:     {operator: "hop", value: {param: t1, scale: -1.0}}
     t2:     {operator: "hop", value: {param: t2, scale: -1.0}}
@@ -93,7 +93,7 @@ model:
       chemical_potential:        # -mu N
         operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
         value: {param: mu}
-      field_z:                   # -h Sz (電子スピン)
+      field_z:                   # -h Sz (electron spin)
         operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
         value: {param: h}
       field_x:

@@ -1,73 +1,73 @@
-# StdFace ladder (W=3) / Spin 模型
-# stan.in 対応例:  model="Spin" / lattice="ladder" / W=3 / L=16 / J0=1.0 (rung) / J1=1.0 (leg)
+# StdFace ladder (W=3) / Spin model
+# Corresponding stan.in input:  model="Spin" / lattice="ladder" / W=3 / L=16 / J0=1.0 (rung) / J1=1.0 (leg)
 #
-# 単位胞 = 1 ラング (W サイト、W=3 → ラベル A0, A1, A2 = 脚 0, 1, 2)。
-# ladder.py は NsiteUC=W と置いた後 StdI.W を 1 に固定する (ladder.py:80-81)。
-# rung (旧 W) 方向が open であることの根拠: (1) _BONDS の dW 成分は常に 0
-# (脚をまたぐセル方向オフセットが一度も生成されない)、(2) rung/diagonal
-# ボンドは `if uc_i < NsiteUC - 1:` の条件下でのみ生成され (ladder.py:184)、
-# 最後の脚 (uc_i=W-1=2) から最初の脚 (uc_i=0) へ "閉じる" 結合は生成されない。
-# よって本カタログは論理的 1 次元 (L 方向のみ周期境界) として表現する。
-# phase0 は内部 phase[1] に転写される (ladder.py:75-78)。chain と同型
-# (CONVENTIONS.md §4)。
+# Unit cell = 1 rung (W sites; W=3 -> labels A0, A1, A2 = leg 0, 1, 2).
+# ladder.py sets NsiteUC=W and then fixes StdI.W to 1 (ladder.py:80-81).
+# Grounds for the rung (former W) direction being open: (1) the dW component of _BONDS is always 0
+# (a cell-direction offset that crosses legs is never generated), (2) rung/diagonal
+# bonds are only generated under the condition `if uc_i < NsiteUC - 1:` (ladder.py:184),
+# so no bond is generated that "closes" from the last leg (uc_i=W-1=2) back to the first leg (uc_i=0).
+# Hence this catalog is represented as logically one-dimensional (periodic boundary only along L).
+# phase0 is transcribed into the internal phase[1] (ladder.py:75-78). Same style as chain
+# (CONVENTIONS.md §4).
 #
-# W 一般化規則 (ladder.py:176-188 の動的ループを手展開):
+# W generalization rule (manually unrolling the dynamic loop of ladder.py:176-188):
 #   for uc_i in range(W):
-#     leg  (脚, 同一脚内):        A{uc_i}-A{uc_i}   R=[1] J1,  R=[2] J1'
+#     leg  (within the same leg):        A{uc_i}-A{uc_i}   R=[1] J1,  R=[2] J1'
 #     if uc_i < W-1:
-#       rung (ラング, セル内):    A{uc_i}-A{uc_i+1} R=[0] J0
-#       diag (斜め, L+1):         A{uc_i}-A{uc_i+1} R=[1] J2
-#       diag (斜め, L-1):         A{uc_i}-A{uc_i+1} R=[-1] J2'
-# W=3: uc_i=0,1,2 を展開すると uc_i=1 (中央の脚, A1) だけが rung/diag を
-# 両側 (uc_i=0 側と uc_i=1<W-1=2 側) に持ち、端の脚 A0/A2 は片側のみ。
-# 検算 (W=2 の対称ケースとの対比): W=3 では中央脚 A1 の J0/J2/J2' 配位数が
-# 端脚 A0/A2 の 2 倍 (2 本 vs 1 本) になる。leg 方向 (J1, J1') は全脚とも
-# 配位数 2 (translational に折り返す)。manifest.yaml の C11 (min_size 5 の
-# トーラス展開実測) で突合済み。
-# 検算は manifest.yaml の ladder/ladder_w3_spin.yaml エントリを参照。
-# 出典: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
+#       rung (intra-cell):    A{uc_i}-A{uc_i+1} R=[0] J0
+#       diag (diagonal, L+1):         A{uc_i}-A{uc_i+1} R=[1] J2
+#       diag (diagonal, L-1):         A{uc_i}-A{uc_i+1} R=[-1] J2'
+# W=3: unrolling uc_i=0,1,2, only uc_i=1 (the middle leg, A1) has rung/diag on both
+# sides (the uc_i=0 side and the uc_i=1<W-1=2 side); the edge legs A0/A2 have only one side.
+# Consistency check (contrast with the symmetric W=2 case): for W=3, the middle leg A1's
+# coordination number for J0/J2/J2' is twice that of the edge legs A0/A2 (2 bonds vs. 1). Along the
+# leg direction (J1, J1') all legs have coordination number 2 (wrapping translationally). Cross-checked against
+# manifest.yaml's C11 (measured torus expansion with min_size 5).
+# See the ladder/ladder_w3_spin.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: ladder, model: spin}
 
 geometry:
   dimension: 1
   lattice_vectors:
-    a1: [1.0]                    # StdFace: Llength (既定 a=1.0)。rung 方向は非周期のため lattice_vector を持たない
+    a1: [1.0]                    # StdFace: Llength (default a=1.0). No lattice_vector for the rung direction since it is non-periodic
   sites:
-    - {label: A0, frac: [0.0]}   # 脚 0 (端)
-    - {label: A1, frac: [0.0]}   # 脚 1 (中央)
-    - {label: A2, frac: [0.0]}   # 脚 2 (端)
+    - {label: A0, frac: [0.0]}   # leg 0 (edge)
+    - {label: A1, frac: [0.0]}   # leg 1 (middle)
+    - {label: A2, frac: [0.0]}   # leg 2 (edge)
 
 system:
   finite: true
   size: [16]                     # StdFace: L
   boundary:
-    - {twist: {param: phase0}}   # 度単位。内部 phase[1] へ転写 (phase[0] は常に 0)
+    - {twist: {param: phase0}}   # in degrees. Transcribed to internal phase[1] (phase[0] is always 0)
 
 model:
   site_dof:
-    A0: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S。既定 S=1/2
+    A0: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S. Default S=1/2
     A1: {spin: {param: 2S, scale: 0.5, default: 0.5}}
     A2: {spin: {param: 2S, scale: 0.5, default: 0.5}}
 
   bonds:
-    # 参照実装 (_BONDS) のソース順を保持: uc_i=0 → uc_i=1 → uc_i=2
-    - {from: A0, to: A0, R: [1], type: J1}      # leg 最近接  (uc_i=0)
-    - {from: A0, to: A0, R: [2], type: "J1'"}   # leg 次近接  (uc_i=0)
-    - {from: A0, to: A1, R: [0], type: J0}      # rung, セル内 (uc_i=0 < W-1)
+    # Preserves the source order of the reference implementation (_BONDS): uc_i=0 -> uc_i=1 -> uc_i=2
+    - {from: A0, to: A0, R: [1], type: J1}      # leg nearest neighbor  (uc_i=0)
+    - {from: A0, to: A0, R: [2], type: "J1'"}   # leg next-nearest neighbor  (uc_i=0)
+    - {from: A0, to: A1, R: [0], type: J0}      # rung, intra-cell (uc_i=0 < W-1)
     - {from: A0, to: A1, R: [1], type: J2}      # diag L+1     (uc_i=0 < W-1)
     - {from: A0, to: A1, R: [-1], type: "J2'"}  # diag L-1     (uc_i=0 < W-1)
-    - {from: A1, to: A1, R: [1], type: J1}      # leg 最近接  (uc_i=1)
-    - {from: A1, to: A1, R: [2], type: "J1'"}   # leg 次近接  (uc_i=1)
-    - {from: A1, to: A2, R: [0], type: J0}      # rung, セル内 (uc_i=1 < W-1)
+    - {from: A1, to: A1, R: [1], type: J1}      # leg nearest neighbor  (uc_i=1)
+    - {from: A1, to: A1, R: [2], type: "J1'"}   # leg next-nearest neighbor  (uc_i=1)
+    - {from: A1, to: A2, R: [0], type: J0}      # rung, intra-cell (uc_i=1 < W-1)
     - {from: A1, to: A2, R: [1], type: J2}      # diag L+1     (uc_i=1 < W-1)
     - {from: A1, to: A2, R: [-1], type: "J2'"}  # diag L-1     (uc_i=1 < W-1)
-    - {from: A2, to: A2, R: [1], type: J1}      # leg 最近接  (uc_i=2)
-    - {from: A2, to: A2, R: [2], type: "J1'"}   # leg 次近接  (uc_i=2)
-    # uc_i=2 = W-1 のため rung/diag は打ち切り (端の脚)
+    - {from: A2, to: A2, R: [1], type: J1}      # leg nearest neighbor  (uc_i=2)
+    - {from: A2, to: A2, R: [2], type: "J1'"}   # leg next-nearest neighbor  (uc_i=2)
+    # uc_i=2 = W-1, so rung/diag is cut off (edge leg)
 
   couplings:
-    # J 族は 9 成分正準形。パラメータ解決: 成分 > スカラー対角 > 大域別名 > 0
+    # J family is in canonical 9-component form. Parameter resolution: component > scalar diagonal > global alias > 0
     J0:
       operator:
         tensor_terms:

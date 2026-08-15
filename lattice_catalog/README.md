@@ -1,35 +1,37 @@
-# StdFace 格子カタログ
+# StdFace Lattice Catalog
 
-`lattice_catalog/` は、StdFace が組み込みでサポートする格子(chain,
-ladder, square, triangular, honeycomb, kagome, orthorhombic, fc_ortho,
-pyrochlore)と模型(Spin, Hubbard, Kondo)の全組み合わせ、および
-wannier90 変換の一例を、参照仕様「格子定義仕様 (draft)」2026/07/27
-(以下「draft 仕様」)が定める geometry / system / model の三層構造
-YAML として書き起こしたものである。各 YAML は StdFace の C/Python
-実装(`_BONDS` テーブル・演算子生成ロジック・パラメータ解決規則)を
-直接読んで書き写した**ソース突合済みの記述**であり、`tools/
-lint_catalog.py` によるリンタ検査(スキーマ・ボンド重複・param 参照
-整合・演算子型整合・`manifest.yaml` との計数突合)を通過している。
-draft 仕様が未規定の事項(fermion site_dof、1 サイト演算子語彙、
-`{param, scale, default}` 参照、`catalog:` ヘッダ等)は
-`dialect: experimental` として明示された実験的拡張方言で補っている。
-ただし本カタログが保証するのは「参照実装ソースとの静的な一致」で
-あり、生成したハミルトニアンを実際に数値計算した結果が StdFace の
-出力と一致するという実行同値性(oracle 比較)までは検証していない
-(詳細は `manual.md` 1.1 節・7 章)。
+`lattice_catalog/` is a set of YAML files that transcribe every combination of the lattices
+(chain, ladder, square, triangular, honeycomb, kagome, orthorhombic, fc_ortho,
+pyrochlore) and models (Spin, Hubbard, Kondo) that StdFace supports out of the box,
+plus one example of a wannier90 conversion, into the geometry / system / model
+three-layer structure defined by the reference specification "Lattice Definition
+Specification (draft)", 2026/07/27 (hereafter the "draft spec"). Each YAML is a
+**source-cross-checked transcription**, read and copied directly from StdFace's
+C/Python implementation (the `_BONDS` table, the operator-generation logic, the
+parameter-resolution rules), and it passes the linter checks in `tools/
+lint_catalog.py` (schema, bond-duplicate detection, param-reference consistency,
+operator/type consistency, and cross-checking against `manifest.yaml`).
+Matters the draft spec leaves unspecified (fermion site_dof, the single-site
+operator vocabulary, `{param, scale, default}` references, the `catalog:` header,
+etc.) are filled in with an experimental extension dialect explicitly marked as
+`dialect: experimental`. Note, however, that what this catalog guarantees is
+"static agreement with the reference implementation's source"; it does not go so
+far as to verify runtime equivalence (an oracle comparison) -- that is, whether
+actually running the generated Hamiltonian numerically produces results matching
+StdFace's output (see `manual.md` Section 1.1 / chapter 7 for details).
 
-## ディレクトリ構成
+## Directory layout
 
 ```
 lattice_catalog/
-  README.md                 # 本ファイル
-  CONVENTIONS.md             # 記述規約(規範文書)
-  manual.md                  # 解説書(読み方・実例・全キーワード対応表)
-  manifest.yaml               # 検算台帳(bonds_per_uc/coordination 等、機械可読)
+  README.md                 # this file
+  CONVENTIONS.md             # authoring conventions (normative document)
+  manual.md                  # guide (how to read it, examples, full keyword mapping table)
+  manifest.yaml               # consistency-check ledger (bonds_per_uc/coordination, etc., machine-readable)
   tools/
-    lint_catalog.py           # 意味検査リンタ(C1–C12)
-    keyword_inventory.py      # StdFace 全キーワードの目録生成
-    test_tools.py              # tools 自体の自動テスト(開発時専用)
+    lint_catalog.py           # semantic-check linter (C1-C12)
+    keyword_inventory.py      # generates an inventory of all StdFace keywords
+    test_tools.py              # automated tests for the tools themselves (development use only)
   chain/        chain_{spin,hubbard,kondo}.yaml
   ladder/       ladder_w2_{spin,hubbard,kondo}.yaml, ladder_w3_{spin,hubbard,kondo}.yaml
   square/       square_{spin,hubbard,kondo}.yaml
@@ -42,79 +44,89 @@ lattice_catalog/
   wannier90/    example_hubbard.yaml
 ```
 
-格子 9 種 × 模型 3 種で 30 ファイル、これに wannier90 の Hubbard 例
-1 ファイルを加えた合計 **31 ファイル**が `lint_catalog.py` の検査
-対象である(`manifest.yaml` はデータファイルであり検査対象ファイル数
-には含まない)。
+With 9 lattices × 3 models, that is 30 files, plus 1 wannier90 Hubbard example
+file, for a total of **31 files** that are checked by `lint_catalog.py`
+(`manifest.yaml` is a data file and is not counted among the checked files).
 
-## リンタの使い方
+## Using the linter
 
-開発時依存: 本リンタは PyYAML (`pyyaml`) を必要とする(開発時専用
-ツールであり、`python/pyproject.toml` の実行時依存には含めていない。
-未インストールの場合は `pip install pyyaml` を促す明確なメッセージで
-終了する)。
+Development-time dependency: this linter requires PyYAML (`pyyaml`) (a development-only
+tool, not included in the runtime dependencies of `python/pyproject.toml`.
+If it is not installed, the linter exits with a clear message prompting
+`pip install pyyaml`).
 
-リポジトリルートから実行します:
+Run it from the repository root:
 
 ```bash
 python3 lattice_catalog/tools/lint_catalog.py
 ```
 
-全 31 ファイルに対して、スキーマ検査(ジオメトリ/サイト/ボンド/
-site_dof の深部型検査を含む)・ラベル整合・ボンド反転同値の重複検出・
-param 参照整合・J テンソル成分完全性・演算子と site_dof の型整合・
-符号規約(CONVENTIONS.md §6.2)、および `manifest.yaml` との突合
-(期待される `bonds_per_uc`/`coordination` を実際に指定サイズの
-トーラス上にボンドを展開して実測比較する「計数展開」検査、および
-`min_size_for_check` 自体の厳密性検査を含む)を行う。エラーがなければ
+For all 31 files, it performs schema checks (including deep type checks of
+geometry/sites/bonds/site_dof), label consistency, duplicate detection under bond
+reversal equivalence, param-reference consistency, J-tensor component
+completeness, operator/site_dof type consistency, the sign convention
+(`CONVENTIONS.md` §6.2), and cross-checking against `manifest.yaml` (a "counting
+expansion" check that actually expands the bonds onto a torus of the specified
+size and compares the measured `bonds_per_uc`/`coordination` against the
+expected values, plus a strictness check of `min_size_for_check` itself). If
+there are no errors, it prints
 
 ```
 31 files, 0 errors
 ```
 
-と出力される。個々の検査項目(C1–C12)の詳細は `CONVENTIONS.md` と
-`manual.md` 1.1 節を参照。
+For details on the individual checks (C1-C12), see `CONVENTIONS.md` and
+`manual.md` Section 1.1.
 
-`tools/` には他に、StdFace 全ソルバー(HPhi/HWAVE/UHF/mVMC)の
-キーワードを走査して一覧化する `keyword_inventory.py`、および
-リンタ・inventory ツール自体の振る舞いを検査する `test_tools.py`
-(開発時専用、pytest 不使用の自前テストランナー)がある。
+`tools/` also contains `keyword_inventory.py`, which scans and lists the
+keywords of every StdFace solver (HPhi/HWAVE/UHF/mVMC), and `test_tools.py`
+(development use only, a self-contained test runner that does not use pytest),
+which checks the behavior of the linter and inventory tools themselves.
 
-## manual.md への案内
+## Guide to manual.md
 
-本カタログの読み方・実例・全キーワードとの対応表は `manual.md` に
-まとめている。構成は以下のとおり:
+How to read this catalog, examples, and the full mapping table against every
+keyword are collected in `manual.md`. Its structure is as follows:
 
-1. **概要と読み方** — 三層仕様の要約、`dialect: experimental` の
-   位置づけ、本カタログの検証水準(ソース突合・リンタ・manifest
-   検算であって数値 oracle 比較ではない点)、ディレクトリ構成、
-   CONVENTIONS.md の主要規約の補足説明。
-2. **キーワード対応表** — `keyword_inventory.py` が報告する
-   StdFace 全キーワード(351 件: keyword 313 + lattice_alias 26 +
-   model_alias 12)を、geometry / system / bonds+couplings / onsite /
-   site_dof / wannier90 / 対象外の 7 分類に**全数**割り当てた表。
-3. **格子ごとの解説** — 9 格子それぞれの幾何・ボンド定義表・
-   manifest 検算根拠・出典。
-4. **模型ごとの演算子対応** — 符号表の導出(検証連鎖)、Spin の
-   J テンソル解決規則、Hubbard/Kondo の演算子と符号、GC 変種。
-5. **wannier90 変換仕様** — RESPACK/Wannier90 出力からの変換規則
-   (H/U チャネルの符号・cutoff・Hermite 正準対選択、Spin の超交換
-   自動生成、J チャネルの散文記述)。
-6. **仕様拡張提案** — `dialect: experimental` が導入する 6 項目の
-   拡張(fermion site_dof、1 サイト演算子語彙、名前付き 2 体演算子、
-   `{param, scale, default}` 参照、`catalog:` ヘッダ、4 フェルミオン
-   一般項の素描)を、draft 仕様への追記提案として整理。
-7. **既知の制限・未対応事項** — oracle 比較未実施、ladder の
-   W=2/3 限定、wannier90 の対応範囲、上流実装の既知の不整合など。
+1. **Overview and how to read it** -- a summary of the three-layer specification,
+   the positioning of `dialect: experimental`, this catalog's verification level
+   (source cross-checking, the linter, and manifest consistency checks -- not a
+   numeric oracle comparison), the directory layout, and supplementary
+   explanation of the main conventions in CONVENTIONS.md.
+2. **Keyword mapping table** -- a table that assigns **every one** of the
+   StdFace keywords reported by `keyword_inventory.py` (351 items: 313
+   keywords + 26 lattice_alias + 12 model_alias) to one of 7 categories:
+   geometry / system / bonds+couplings / onsite / site_dof / wannier90 / out of
+   scope.
+3. **Per-lattice notes** -- for each of the 9 lattices, its geometry, bond
+   definition table, manifest consistency-check basis, and provenance.
+4. **Per-model operator mapping** -- the derivation of the sign table (the
+   verification chain), Spin's J-tensor resolution rules, Hubbard/Kondo's
+   operators and signs, and the GC variants.
+5. **wannier90 conversion specification** -- the conversion rules from
+   RESPACK/Wannier90 output (the sign, cutoff, and Hermitian canonical-pair
+   selection for the H/U channels, automatic generation of Spin's
+   superexchange, and a prose description of the J channel).
+6. **Specification extension proposals** -- an organization, as a proposed
+   addendum to the draft spec, of the 6 extensions introduced by
+   `dialect: experimental` (fermion site_dof, the single-site operator
+   vocabulary, named two-body operators, `{param, scale, default}`
+   references, the `catalog:` header, and the sketch of general 4-fermion
+   terms).
+7. **Known limitations and unhandled items** -- the oracle comparison not yet
+   performed, the W=2/3 limitation of ladder, the scope of wannier90 support,
+   known inconsistencies in the upstream implementation, and so on.
 
-規範文書(本書と矛盾する場合に優先される文書)は `CONVENTIONS.md`
-であり、`manual.md` はその解説・実例・索引という位置づけである。
+The normative document (which takes precedence in case of conflict with this
+one) is `CONVENTIONS.md`; `manual.md` is positioned as its explanation, examples,
+and index.
 
-## 参照仕様
+## Reference specification
 
-本カタログの geometry / system / model 三層構造は、参照仕様
-「格子定義仕様 (draft)」2026/07/27(`docs/superpowers/specs/
-2026-08-15-lattice-catalog-design.md` に整理されている設計判断の
-拠り所)に準拠する。draft が明示的には規定していない事項は、本
-README・`CONVENTIONS.md` §7・`manual.md` 6 章で「実験的拡張方言」
-として文書化した上で採用している。
+The geometry / system / model three-layer structure of this catalog conforms to
+the reference specification "Lattice Definition Specification (draft)",
+2026/07/27 (the basis for the design decisions organized in
+`docs/superpowers/specs/2026-08-15-lattice-catalog-design.md`). Matters the
+draft does not explicitly specify are documented and adopted as an
+"experimental extension dialect" in this README, `CONVENTIONS.md` §7, and
+`manual.md` chapter 6.

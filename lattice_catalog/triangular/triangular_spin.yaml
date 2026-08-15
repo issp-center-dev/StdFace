@@ -1,15 +1,15 @@
-# StdFace triangular / Spin 模型
-# stan.in 対応例:  model="Spin" / lattice="triangular" / W=4 / L=4 / J=1.0 (J は J0/J1/J2 の別名)
-# 検算は manifest.yaml の triangular/triangular_spin.yaml エントリを参照。
-# 出典: python/stdface/lattice/triangular_lattice.py::triangular (_BONDS), commit c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24
+# StdFace triangular / Spin model
+# Corresponding stan.in input:  model="Spin" / lattice="triangular" / W=4 / L=4 / J=1.0 (J is an alias of J0/J1/J2)
+# See the triangular/triangular_spin.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/triangular_lattice.py::triangular (_BONDS), commit c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: triangular, model: spin}
 
 geometry:
   dimension: 2
   lattice_vectors:
-    a1: [1.0, 0.0]                         # StdFace: Wx, Wy (既定 a, 0)
-    a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly (既定 a/2, a*sqrt(3)/2)
+    a1: [1.0, 0.0]                         # StdFace: Wx, Wy (default a, 0)
+    a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly (default a/2, a*sqrt(3)/2)
   sites:
     - {label: A, frac: [0.0, 0.0]}
 
@@ -17,27 +17,27 @@ system:
   finite: true
   size: [5, 5]                    # StdFace: W, L
   boundary:
-    - {twist: {param: phase0}}    # 度単位。phase0=0 で periodic と等価
+    - {twist: {param: phase0}}    # in degrees. phase0=0 is equivalent to periodic
     - {twist: {param: phase1}}
 
 model:
   site_dof:
-    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S。既定 S=1/2
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S. Default S=1/2
 
   bonds:
-    # 参照実装 (_BONDS) のソース順を保持
-    - {from: A, to: A, R: [1, 0], type: J0}     # 最近接 W 方向 (別名 J)
-    - {from: A, to: A, R: [0, 1], type: J1}     # 最近接 L 方向 (別名 J)
-    - {from: A, to: A, R: [1, -1], type: J2}    # 最近接 W-L 対角 (別名 J)
-    - {from: A, to: A, R: [2, -1], type: "J1'"} # 次近接 2W-L (別名 J')
-    - {from: A, to: A, R: [1, 1], type: "J2'"}  # 次近接 W+L (別名 J')
-    - {from: A, to: A, R: [-1, 2], type: "J0'"} # 次近接 -W+2L (別名 J')
-    - {from: A, to: A, R: [2, 0], type: "J0''"} # 三次近接 2W (別名 J'')
-    - {from: A, to: A, R: [0, 2], type: "J1''"} # 三次近接 2L (別名 J'')
-    - {from: A, to: A, R: [2, -2], type: "J2''"} # 三次近接 2W-2L (別名 J'')
+    # Preserves the source order of the reference implementation (_BONDS)
+    - {from: A, to: A, R: [1, 0], type: J0}     # nearest neighbor, W direction (alias J)
+    - {from: A, to: A, R: [0, 1], type: J1}     # nearest neighbor, L direction (alias J)
+    - {from: A, to: A, R: [1, -1], type: J2}    # nearest neighbor, W-L diagonal (alias J)
+    - {from: A, to: A, R: [2, -1], type: "J1'"} # next-nearest neighbor, 2W-L (alias J')
+    - {from: A, to: A, R: [1, 1], type: "J2'"}  # next-nearest neighbor, W+L (alias J')
+    - {from: A, to: A, R: [-1, 2], type: "J0'"} # next-nearest neighbor, -W+2L (alias J')
+    - {from: A, to: A, R: [2, 0], type: "J0''"} # third-nearest neighbor, 2W (alias J'')
+    - {from: A, to: A, R: [0, 2], type: "J1''"} # third-nearest neighbor, 2L (alias J'')
+    - {from: A, to: A, R: [2, -2], type: "J2''"} # third-nearest neighbor, 2W-2L (alias J'')
 
   couplings:
-    # J 族は 9 成分正準形。パラメータ解決: 成分 > スカラー対角 > 大域別名 > 0
+    # J family is in canonical 9-component form. Parameter resolution: component > scalar diagonal > global alias > 0
     J0:
       operator:
         tensor_terms:

@@ -1,43 +1,50 @@
 #!/usr/bin/env python3
-"""lattice_catalog の意味検査リンタ。
+"""Semantic-validation linter for lattice_catalog.
 
-`lattice_catalog/CONVENTIONS.md` (= スペック §4/§6) が定める規約に対して、
-`lattice_catalog/**/*.yaml`(manifest.yaml を除く)を検査する。
+Checks `lattice_catalog/**/*.yaml` (excluding manifest.yaml) against the
+conventions defined in `lattice_catalog/CONVENTIONS.md` (= spec §4/§6).
 
-チェック項目(各診断メッセージは対応する ID を接頭辞に持つ):
+Checks (each diagnostic message is prefixed with its corresponding ID):
 
-- C1  catalog ヘッダ(schema/dialect の値、lattice/model の存在)
-- C2  schema 検査(必須キー・型・サイトラベル重複・dimension/R/size の整数性、
-      geometry.lattice_vectors/sites/system.boundary/site_dof の深い型検査)
-- C3  R の長さ = dimension = size の長さ
-- C4  ラベル整合(bonds の from/to、onsite のラベル、
-      geometry.sites と site_dof の集合一致)
-- C5  bonds の type ↔ couplings キー整合
-- C6  反転同値での重複ボンド検出
-- C7  param 参照の目録整合(scale/default の型検査を含む)
-- C8  J coupling の 9 成分完全性・重複なし・ops↔接尾辞対応
-- C9  演算子と site_dof の型整合、tensor_terms/onsite の ops 長
-- C10 manifest 全項目突合
-- C11 計数展開による配位数の実測比較、および min_size_for_check の
-      厳密性検査(各成分が正の奇数であり、かつ
-      `2 * max|R 成分| + 1`(その方向で bonds から実測)に厳密一致するか)
-- C12 CONVENTIONS.md §6.2 の符号規約検査(dialect: experimental のみ対象)。
-      couplings の hop/density-density/s_i.S_j の value.scale、onsite の
-      hubbard_u/aniso_z/chemical_potential/field_* の tensor_terms coeff、
-      J 族 tensor_terms coeff の形(`{param: ...}` のみで scale/default 不可)、
-      非 J couplings の value の形(`{param, ...}` dict、または wannier90
-      方言に限り生の数値リテラル)を検査する。
+- C1  catalog header (schema/dialect values, presence of lattice/model)
+- C2  schema validation (required keys, types, duplicate site labels,
+      integrality of dimension/R/size; deep type validation of
+      geometry.lattice_vectors/sites/system.boundary/site_dof)
+- C3  len(R) == dimension == len(size)
+- C4  label consistency (bonds' from/to, onsite labels, set equality
+      between geometry.sites and site_dof)
+- C5  bonds' type <-> couplings key consistency
+- C6  duplicate-bond detection under reversal equivalence
+- C7  param-reference inventory consistency (including scale/default
+      type checks)
+- C8  J-coupling: completeness of the 9 components, no duplicates,
+      ops<->suffix correspondence
+- C9  operator/site_dof type consistency, tensor_terms/onsite ops length
+- C10 full cross-check against manifest entries
+- C11 measured-vs-declared coordination comparison via counting
+      expansion, and strictness check of min_size_for_check (each
+      component must be a positive odd integer, and must exactly equal
+      `2 * max|R component| + 1`, measured from bonds in that direction)
+- C12 sign-convention check per CONVENTIONS.md §6.2 (applies only to
+      dialect: experimental). Checks: couplings hop/density-density/
+      s_i.S_j value.scale; onsite hubbard_u/aniso_z/chemical_potential/
+      field_* tensor_terms coeff; the shape of J-family tensor_terms
+      coeff (`{param: ...}` only, no scale/default allowed); and the
+      shape of non-J couplings' value (a `{param, ...}` dict, or a raw
+      numeric literal restricted to the wannier90 dialect).
 
-引数なしで実行すると `lattice_catalog/` 以下の全 `*.yaml`(manifest.yaml
-を除く)を検査する。引数を渡すとそのファイル(群)のみを検査する
-(ROOT = このスクリプトの一つ上のディレクトリ = lattice_catalog/。
-ROOT 外のパスはエラーとして報告する)。引数なし実行時は、発見した YAML
-パス集合と manifest.yaml のキー集合の完全一致も検査する(孤立した
-manifest エントリは診断として報告する — A6-ii)。
+Running with no arguments checks every `*.yaml` under `lattice_catalog/`
+(excluding manifest.yaml). Passing arguments checks only those file(s)
+(ROOT = the directory one level above this script = lattice_catalog/;
+paths outside ROOT are reported as errors). A no-argument run also
+verifies that the set of discovered YAML paths exactly matches the set
+of manifest.yaml keys (orphaned manifest entries are reported as
+diagnostics — A6-ii).
 
-開発時依存: 本ツールは PyYAML (``pyyaml``) を必要とする(開発時専用の
-lint ツールであり、``python/pyproject.toml`` の実行時依存には含めない
-— A5)。未インストールの場合は分かりやすいメッセージで終了する。
+Development-time dependency: this tool requires PyYAML (``pyyaml``) (a
+development-time-only lint tool, so it is not included in
+``python/pyproject.toml``'s runtime dependencies — A5). Exits with a
+clear message if it is not installed.
 
 Run
 ---
@@ -56,8 +63,8 @@ try:
     import yaml
 except ImportError:
     raise SystemExit(
-        "lint_catalog: PyYAML が必要です(開発時専用ツール)。"
-        "pip install pyyaml を実行してください。"
+        "lint_catalog: PyYAML is required (development-time tool only). "
+        "Run: pip install pyyaml"
     )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,7 +78,7 @@ _REQUIRED_MANIFEST_KEYS = (
 _ONSITE_FERMION_OPS = {"N", "Nup", "Ndn", "NupNdn"}
 _ONSITE_SPIN_OPS = {"Sx", "Sy", "Sz", "Szz"}
 
-_J_COMPONENTS = {  # C8: ops 対 ↔ param 接尾辞
+_J_COMPONENTS = {  # C8: ops pair <-> param suffix
     ("Sx", "Sx"): "x",  ("Sy", "Sy"): "y",  ("Sz", "Sz"): "z",
     ("Sx", "Sy"): "xy", ("Sx", "Sz"): "xz", ("Sy", "Sx"): "yx",
     ("Sy", "Sz"): "yz", ("Sz", "Sx"): "zx", ("Sz", "Sy"): "zy",
@@ -162,36 +169,39 @@ def load_manifest(manifest_path: Path | None = None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def reversal_dup(bonds: list[dict]) -> list[str]:
-    """C6: 反転同値 (type,i,j,R)~(type,j,i,-R) での重複検出。
+    """C6: detect duplicate bonds under reversal equivalence
+    (type,i,j,R)~(type,j,i,-R).
 
-    キーに type を含める — 同一幾何ボンド上の t/V 共存は正当。
+    ``type`` is included in the key — t/V coexisting on the same
+    geometric bond is legitimate.
     """
     seen, errs = set(), []
     for b in bonds:
         k = (b["type"], b["from"], b["to"], tuple(b["R"]))
         rk = (b["type"], b["to"], b["from"], tuple(-x for x in b["R"]))
         if k in seen or rk in seen:
-            errs.append(f"C6: (逆向き)重複ボンド {b}")
+            errs.append(f"C6: duplicate bond (reversal) {b}")
         seen.add(k)
     return errs
 
 
 def check_j_coupling(type_name: str, tensor_terms: list[dict]) -> list[str]:
-    """C8: 総項数 9・重複なし・ops↔接尾辞対応。
+    """C8: total term count of 9, no duplicates, ops<->suffix correspondence.
 
-    重複 ops 対は交換係数の二重加算になるため明示的にエラー。
+    A duplicate ops pair would double-count the exchange coefficient, so
+    it is flagged as an explicit error.
     """
     errs, seen = [], set()
     if len(tensor_terms) != 9:
-        errs.append(f"C8: {type_name}: 項数 {len(tensor_terms)} != 9")
+        errs.append(f"C8: {type_name}: term count {len(tensor_terms)} != 9")
     for i, tt in enumerate(tensor_terms):
         pair = tuple(tt.get("ops", []))
         suffix = _J_COMPONENTS.get(pair)
         if suffix is None:
-            errs.append(f"C8: {type_name}[{i}]: 不正な ops 対 {pair}")
+            errs.append(f"C8: {type_name}[{i}]: invalid ops pair {pair}")
             continue
         if pair in seen:
-            errs.append(f"C8: {type_name}[{i}]: ops 対 {pair} の重複")
+            errs.append(f"C8: {type_name}[{i}]: duplicate ops pair {pair}")
         seen.add(pair)
         coeff = tt.get("coeff")
         expected = f"{type_name}{suffix}"
@@ -204,42 +214,48 @@ def check_j_coupling(type_name: str, tensor_terms: list[dict]) -> list[str]:
 def expand_and_count(
     dim: int, labels: list[str], bonds: list[dict], size: list[int],
 ) -> tuple[dict[str, dict[str, int]], list[str]]:
-    """C11: min_size トーラス上に実際にボンドを展開し、ラベル×type の
-    配位数(実測)を計数する。
+    """C11: actually expand the bonds on a min_size torus, and count the
+    measured coordination number for each label x type.
 
-    各セル ``c``(``0 <= c[k] < size[k]``)と各ボンド ``b`` について、
-    始点インスタンス ``(c, b['from'])`` と終点インスタンス
-    ``((c + b['R']) mod size, b['to'])`` の間に type=``b['type']`` の
-    展開ボンドを 1 本張る(``mod`` はトーラスの周期境界条件)。
+    For each cell ``c`` (``0 <= c[k] < size[k]``) and each bond ``b``,
+    draw one expanded bond of type=``b['type']`` between the source
+    instance ``(c, b['from'])`` and the target instance
+    ``((c + b['R']) mod size, b['to'])`` (``mod`` is the torus's
+    periodic boundary condition).
 
-    - **配位数**: 各ラベルについて、そのラベルを持つ任意の 1 インスタンス
-      に接続する展開ボンド数を type 別に数える。トーラスは並進対称なので
-      理論上は全インスタンスが同じ値を持つはずであり、それを実際に
-      全インスタンスについて検証する(食い違えば C11 エラー)。
-    - **折り畳み縮退**: 展開ボンドは ``(type, {始点インスタンス, 終点
-      インスタンス})``(順序なしペア)をキーとすると、本来
-      ``len(bonds) * ncells`` 個の相異なるキーを持つはずである。2 本の
-      展開ボンドが同じキーに縮退した場合、``min_size_for_check`` が
-      小さすぎて異なる R が同一サイト対に折り畳まれていることを意味し、
-      C11 エラーとして報告する。
+    - **Coordination number**: for each label, count the number of
+      expanded bonds touching any one instance of that label, broken
+      down by type. Because the torus is translationally symmetric,
+      every instance should in theory have the same value, and this is
+      actually verified across all instances (a mismatch is a C11
+      error).
+    - **Folding degeneracy**: keying expanded bonds by ``(type,
+      {source instance, target instance})`` (an unordered pair) should
+      in principle yield ``len(bonds) * ncells`` distinct keys. If two
+      expanded bonds collapse onto the same key, it means
+      ``min_size_for_check`` is too small and distinct R values are
+      being folded onto the same site pair — reported as a C11 error.
 
     Parameters
     ----------
     dim : int
-        次元(``len(size)`` と一致)。
+        Dimension (matches ``len(size)``).
     labels : list of str
-        単位胞内のサイトラベル一覧(``geometry.sites`` の順序)。
+        List of site labels within the unit cell (in ``geometry.sites``
+        order).
     bonds : list of dict
-        ``{type, from, to, R}`` を持つボンド定義のリスト。
+        List of bond definitions, each with ``{type, from, to, R}``.
     size : list of int
-        トーラスの各方向のセル数(manifest の ``min_size_for_check``)。
+        Number of cells per direction on the torus (manifest's
+        ``min_size_for_check``).
 
     Returns
     -------
     tuple[dict, list[str]]
-        ``(measured, errs)``。``measured`` はラベル→{type: 配位数}。
-        ``errs`` は折り畳み縮退・並進非対称が見つかった場合の C11
-        診断メッセージのリスト(通常は空)。
+        ``(measured, errs)``. ``measured`` maps label -> {type:
+        coordination number}. ``errs`` is the list of C11 diagnostic
+        messages for any folding degeneracy or translation asymmetry
+        found (normally empty).
     """
     errs: list[str] = []
     cells = list(itertools.product(*[range(s) for s in size]))
@@ -1001,10 +1017,18 @@ def lint_file(path: Path, inventory: set[str], manifest_files: dict) -> list[str
 #  CLI
 # ---------------------------------------------------------------------------
 
+#: Directories excluded from the default scan. examples_experimental/ is
+#: a sample area that is *intentionally* meant to fail the linter, used
+#: to demonstrate the limits of the dialect (see feedback_draft_spec.md).
+#: Individual files can still be checked by passing an explicit path.
+_DISCOVERY_EXCLUDED_DIRS = {"examples_experimental"}
+
+
 def _discover_default_files() -> list[Path]:
     return sorted(
         p for p in ROOT.rglob("*.yaml")
         if p.name != "manifest.yaml"
+        and _DISCOVERY_EXCLUDED_DIRS.isdisjoint(p.relative_to(ROOT).parts)
     )
 
 

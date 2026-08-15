@@ -1,53 +1,53 @@
-# StdFace ladder (W=2) / Hubbard 模型
-# stan.in 対応例:  model="Hubbard" / lattice="ladder" / W=2 / L=16 / t0=1.0 (rung) / t1=1.0 (leg) / U=4.0
+# StdFace ladder (W=2) / Hubbard model
+# Corresponding stan.in input:  model="Hubbard" / lattice="ladder" / W=2 / L=16 / t0=1.0 (rung) / t1=1.0 (leg) / U=4.0
 #
-# 単位胞 = 1 ラング (W サイト、W=2 → ラベル A0, A1 = 脚 0, 脚 1)。
-# ladder.py は NsiteUC=W と置いた後 StdI.W を 1 に固定する (ladder.py:80-81)。
-# rung (旧 W) 方向が open であることの根拠: (1) _BONDS の dW 成分は常に 0、
-# (2) rung/diagonal ボンドは `if uc_i < NsiteUC - 1:` の条件下でのみ生成され
-# (ladder.py:184)、最後の脚から最初の脚へ "閉じる" 結合は生成されない。
-# よって本カタログは論理的 1 次元 (L 方向のみ周期境界) として表現する。
-# phase0 は内部 phase[1] に転写される (ladder.py:75-78)。chain と同型の
-# 内部転写 (CONVENTIONS.md §4)。
-# 符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)。
+# Unit cell = 1 rung (W sites; W=2 -> labels A0, A1 = leg 0, leg 1).
+# ladder.py sets NsiteUC=W and then fixes StdI.W to 1 (ladder.py:80-81).
+# Grounds for the rung (former W) direction being open: (1) the dW component of _BONDS is always 0,
+# (2) rung/diagonal bonds are only generated under the condition `if uc_i < NsiteUC - 1:`
+# (ladder.py:184), so no bond is generated that "closes" from the last leg back to the first leg.
+# Hence this catalog is represented as logically one-dimensional (periodic boundary only along L).
+# phase0 is transcribed into the internal phase[1] (ladder.py:75-78). This is the same style of
+# internal transcription as chain (CONVENTIONS.md §4).
+# Signs are carried as data in scale/coeff (CONVENTIONS §6).
 #
-# W 一般化規則 (ladder.py:176-188 の動的ループを手展開。J→t/V に読替):
+# W generalization rule (manually unrolling the dynamic loop of ladder.py:176-188; read J -> t/V):
 #   for uc_i in range(W):
-#     leg  (脚):                  A{uc_i}-A{uc_i}   R=[1] t1/V1,  R=[2] t1'/V1'
+#     leg:                        A{uc_i}-A{uc_i}   R=[1] t1/V1,  R=[2] t1'/V1'
 #     if uc_i < W-1:
-#       rung (セル内):            A{uc_i}-A{uc_i+1} R=[0] t0/V0
+#       rung (intra-cell):        A{uc_i}-A{uc_i+1} R=[0] t0/V0
 #       diag (L+1):                A{uc_i}-A{uc_i+1} R=[1] t2/V2
 #       diag (L-1):                A{uc_i}-A{uc_i+1} R=[-1] t2'/V2'
-#   t ボンドと V ボンドは同一の物理ボンド ((_BONDS) の同一タプル) に由来する
-#   ため、chain/square と同じ表記慣行として t ブロック → V ブロックの順に
-#   一覧化する (物理的な並び順は各ブロック内で uc_i ループ順を保持)。
-# 検算 (W=2): 脚方向 (t1) 配位数 2、ラング (t0) 配位数 1 (両脚とも端)。
-# 検算は manifest.yaml の ladder/ladder_w2_hubbard.yaml エントリを参照。
-# 出典: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
+#   The t bonds and V bonds originate from the same physical bond (the same tuple of _BONDS),
+#   so following the same presentation convention as chain/square, the t block is listed
+#   first, followed by the V block (the physical ordering within each block preserves the uc_i loop order).
+# Consistency check (W=2): coordination number 2 along the leg direction (t1), coordination number 1 for the rung (t0) (both legs are edges).
+# See the ladder/ladder_w2_hubbard.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: ladder, model: hubbard}
 
 geometry:
   dimension: 1
   lattice_vectors:
-    a1: [1.0]                    # StdFace: Llength (既定 a=1.0)。rung 方向は非周期のため lattice_vector を持たない
+    a1: [1.0]                    # StdFace: Llength (default a=1.0). No lattice_vector for the rung direction since it is non-periodic
   sites:
-    - {label: A0, frac: [0.0]}   # 脚 0 (端)
-    - {label: A1, frac: [0.0]}   # 脚 1 (端)
+    - {label: A0, frac: [0.0]}   # leg 0 (edge)
+    - {label: A1, frac: [0.0]}   # leg 1 (edge)
 
 system:
   finite: true
   size: [16]                     # StdFace: L
   boundary:
-    - {twist: {param: phase0}}   # 度単位。内部 phase[1] へ転写 (phase[0] は常に 0)
+    - {twist: {param: phase0}}   # in degrees. Transcribed to internal phase[1] (phase[0] is always 0)
 
 model:
   site_dof:
-    A0: {fermion: {orbitals: 1}}  # 拡張方言 (CONVENTIONS 7章)
+    A0: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7)
     A1: {fermion: {orbitals: 1}}
 
   bonds:
-    # --- t ブロック (leg 0 → leg 1 の uc_i ループ順) ---
+    # --- t block (uc_i loop order, leg 0 -> leg 1) ---
     - {from: A0, to: A0, R: [1], type: t1}
     - {from: A0, to: A0, R: [2], type: "t1'"}
     - {from: A0, to: A1, R: [0], type: t0}
@@ -55,7 +55,7 @@ model:
     - {from: A0, to: A1, R: [-1], type: "t2'"}
     - {from: A1, to: A1, R: [1], type: t1}
     - {from: A1, to: A1, R: [2], type: "t1'"}
-    # --- V ブロック (同一物理ボンド、同じ順序) ---
+    # --- V block (same physical bonds, same order) ---
     - {from: A0, to: A0, R: [1], type: V1}
     - {from: A0, to: A0, R: [2], type: "V1'"}
     - {from: A0, to: A1, R: [0], type: V0}
@@ -65,7 +65,7 @@ model:
     - {from: A1, to: A1, R: [2], type: "V1'"}
 
   couplings:
-    # H への寄与 = value × operator (物理係数)。-t は scale で表す。
+    # Contribution to H = value × operator (physical coefficient). -t is expressed via scale.
     t0:    {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
     t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
     "t1'": {operator: "hop", value: {param: "t1'", scale: -1.0}}
@@ -85,7 +85,7 @@ model:
       chemical_potential:        # -mu N
         operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
         value: {param: mu}
-      field_z:                   # -h Sz (電子スピン)
+      field_z:                   # -h Sz (electron spin)
         operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
         value: {param: h}
       field_x:

@@ -1,21 +1,21 @@
-# StdFace kagome / Spin 模型
-# stan.in 対応例:  model="Spin" / lattice="kagome" / W=4 / L=4 / J=1.0 (J は J0/J1/J2 の別名)
-# 3 サイト基底 A/B/C (NsiteUC=3, tau=(0,0),(1/2,0),(0,1/2))。
-# J0/J1/J2 は最近接の 3 種のセル内外ボンドにそれぞれ対応する:
-# J0=B-C 方向, J1=A-C 方向, J2=A-B 方向。プライム系 (J0'/J1'/J2') は
-# 第二近接ボンド。pp (第三近接) 系列はソースに存在しない。
-# 検算: 最近接配位数は各サイト 4 (kagome 格子の特徴。各サイトは 3 種の
-# 最近接タイプのうち 2 種のみに接続し、それぞれ配位数 2 を持つ)。
-# 検算は manifest.yaml の kagome/kagome_spin.yaml エントリを参照。
-# 出典: python/stdface/lattice/kagome.py::kagome (_BONDS, L164-179), commit 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73
+# StdFace kagome / Spin model
+# Corresponding stan.in input:  model="Spin" / lattice="kagome" / W=4 / L=4 / J=1.0 (J is an alias of J0/J1/J2)
+# 3-site basis A/B/C (NsiteUC=3, tau=(0,0),(1/2,0),(0,1/2)).
+# J0/J1/J2 correspond respectively to the 3 types of intra/inter-cell nearest-neighbor bonds:
+# J0=B-C direction, J1=A-C direction, J2=A-B direction. The primed series (J0'/J1'/J2') are
+# second-nearest-neighbor bonds. A third-nearest-neighbor (pp) series does not exist in the source.
+# Consistency check: the nearest-neighbor coordination number is 4 for each site (a feature of the
+# kagome lattice: each site connects to only 2 of the 3 nearest-neighbor bond types, each with coordination number 2).
+# See the kagome/kagome_spin.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/kagome.py::kagome (_BONDS, L164-179), commit 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: kagome, model: spin}
 
 geometry:
   dimension: 2
   lattice_vectors:
-    a1: [1.0, 0.0]                         # StdFace: Wx, Wy (既定 a, 0)
-    a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly (既定 a/2, a*sqrt(3)/2)
+    a1: [1.0, 0.0]                         # StdFace: Wx, Wy (default a, 0)
+    a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly (default a/2, a*sqrt(3)/2)
   sites:
     - {label: A, frac: [0.0, 0.0]}    # tau[0]
     - {label: B, frac: [0.5, 0.0]}    # tau[1] = (1/2, 0)
@@ -25,25 +25,25 @@ system:
   finite: true
   size: [3, 3]                    # StdFace: W, L
   boundary:
-    - {twist: {param: phase0}}    # 度単位。phase0=0 で periodic と等価
+    - {twist: {param: phase0}}    # in degrees. phase0=0 is equivalent to periodic
     - {twist: {param: phase1}}
 
 model:
   site_dof:
-    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S。既定 S=1/2
+    A: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S. Default S=1/2
     B: {spin: {param: 2S, scale: 0.5, default: 0.5}}
     C: {spin: {param: 2S, scale: 0.5, default: 0.5}}
 
   bonds:
-    # 参照実装 (_BONDS) のソース順を保持。site 0=A, 1=B, 2=C。
-    # --- 最近接 (nn=1) ---
+    # Preserves the source order of the reference implementation (_BONDS). site 0=A, 1=B, 2=C.
+    # --- nearest neighbor (nn=1) ---
     - {from: A, to: B, R: [0, 0], type: J2}     # intra 0->1
     - {from: A, to: C, R: [0, 0], type: J1}     # intra 0->2
     - {from: B, to: C, R: [0, 0], type: J0}     # intra 1->2
     - {from: B, to: A, R: [1, 0], type: J2}     # along W
     - {from: C, to: A, R: [0, 1], type: J1}     # along L
     - {from: B, to: C, R: [1, -1], type: J0}    # along W-L
-    # --- 第二近接 (nn=2) ---
+    # --- second-nearest neighbor (nn=2) ---
     - {from: C, to: A, R: [1, 0], type: "J1'"}   # along W, 2->0
     - {from: B, to: C, R: [1, 0], type: "J0'"}   # along W, 1->2
     - {from: B, to: A, R: [0, 1], type: "J2'"}   # along L, 1->0
@@ -52,7 +52,7 @@ model:
     - {from: A, to: B, R: [-1, 1], type: "J2'"}  # along L-W, 0->1
 
   couplings:
-    # J 族は 9 成分正準形。パラメータ解決: 成分 > スカラー対角 > 大域別名 > 0
+    # J family is in canonical 9-component form. Parameter resolution: component > scalar diagonal > global alias > 0
     J0:
       operator:
         tensor_terms:
