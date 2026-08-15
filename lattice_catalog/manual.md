@@ -1372,3 +1372,358 @@ CONVENTIONS.md §7)が定義する演算子語彙は、2 端点の名前付き�
 ...]` と、各演算子への site/orbital 束縛、係数 1 つを持つ表現。
 名前付き演算子(`hop` 等)はこの一般形の省略記法という位置づけに
 なる)は、本タスクの範囲外である 6 章(仕様拡張提案)に委ねる。
+
+---
+
+## 6. 仕様拡張提案(draft への追記提案)
+
+### 6.0 本章の位置づけ
+
+CONVENTIONS.md §7(拡張方言一覧)は、本カタログが `dialect:
+experimental` の下で採用している draft 仕様の未規定事項を 6 項目
+列挙している。本章はその 6 項目それぞれを、**draft 仕様本体への
+追記提案**として、(1) `tensor_terms`/YAML への展開形、(2) 各
+フィールドの型、(3) 意味論、の 3 点セットで記述し直したものである。
+提案の実体は CONVENTIONS.md §7 および design spec §4.6 に既にある
+判断の**書き起こし**であり、新たな設計判断を追加するものではない。
+1–5 は本カタログの 31 ファイルで実装・リンタ検査済みの確定仕様、
+6 のみは素描(実装対象外)であることを明示する。
+
+### 6.1 提案 1 — フェルミオン site_dof
+
+**展開形**(`model.site_dof.<label>`):
+
+```yaml
+site_dof:
+  <label>: {fermion: {orbitals: <n>}}
+```
+
+**型**: `orbitals` は正整数(`n ≥ 1`)。本カタログの全実例は
+`orbitals: 1`(単一軌道)であり、複数軌道の実例は未収録
+(§7.7 参照)。
+
+**意味論**: ラベル `<label>` の自由度がフェルミオン(生成消滅演算子
+`c†, c` を持つ)であり、軌道数が `n` であることを表す。draft 仕様が
+既に規定する `spin: {...}` 系(1.3 節(4)、`{param, scale, default}`
+一般形を伴う)と対になる site_dof の型の 1 つとして、`fermion` を
+draft の site_dof 語彙に追加することを提案する。CONVENTIONS.md §6.6
+の演算子型整合表(リンタ C9)は、`fermion` site_dof を持つラベルにのみ
+`hop`/`density-density`/`N`/`Nup`/`Ndn`/`NupNdn` を許可し、`spin`
+site_dof を持つラベルにのみ J テンソル・onsite スピン演算子を許可する
+——すなわち本提案は site_dof の型を演算子の適用可否と結び付ける
+機械的検査の前提でもある。Kondo 模型の `<X>_c` ラベル(1.4 節、
+CONVENTIONS.md §6.7)と wannier90 の `W1` ラベル(5.4 節)が実例。
+
+### 6.2 提案 2 — 1 サイト演算子語彙と tensor_terms 展開形
+
+**展開形**(`model.onsite.<label>.<term>`、CONVENTIONS.md §6.1 の
+onsite 例外形。要素 1 個の `tensor_terms` 配列):
+
+```yaml
+<term>:
+  operator: {tensor_terms: [{ops: [<OP>], coeff: <±1.0 リテラル>}]}
+  value: {param: <名前>, scale: <実数>, default: <数値>}
+```
+
+**型**: `<OP>` は以下 8 語の enum。
+
+| `<OP>` | 意味 | 要求される site_dof |
+|---|---|---|
+| `N` | 数演算子 `n↑+n↓` | fermion |
+| `Nup` | 上向きスピン数演算子 `n↑` | fermion |
+| `Ndn` | 下向きスピン数演算子 `n↓` | fermion |
+| `NupNdn` | 二重占有 `n↑n↓` | fermion |
+| `Sx` | スピン x 成分 | spin(または電子スピンとして fermion) |
+| `Sy` | スピン y 成分 | spin(または電子スピンとして fermion) |
+| `Sz` | スピン z 成分 | spin(または電子スピンとして fermion) |
+| `Szz` | 単イオン異方性 `(Sz)^2` | spin(または電子スピンとして fermion) |
+
+**意味論**: `tensor_terms[0].coeff` は符号のみを表すリテラル数値
+(`+1.0`/`-1.0`)であり、外部パラメータへの参照は同じ項の `value`
+(提案 4、`{param, scale, default}`)が担う——すなわち
+`H_onsite = value × coeff × <OP>` という 2 段構成が本提案の核心
+である(1.3 節(3)、CONVENTIONS.md §6.2 の符号表がこの 8 語×`±1.0`
+の具体例)。この分離により、同じ物理演算子(例: `Sz`)に対して模型
+ごとに異なる符号規約(`h`: `-Sz`)を、演算子語彙自体を増やすことなく
+`coeff` の値だけで表現できる。
+
+### 6.3 提案 3 — 名前付き 2 体演算子と端点順序の意味論
+
+**展開形**(`model.couplings.<type>.operator`、文字列形):
+
+```yaml
+couplings:
+  <type>: {operator: "hop" | "density-density" | "s_i . S_j", value: {...}}
+```
+
+**型**: `operator` は 3 値 enum の文字列(J 族の `tensor_terms`
+辞書形とは排他)。
+
+**意味論**:
+
+| `operator` | 数式 | 端点(site_dof)要件 | 端点順序の意味 |
+|---|---|---|---|
+| `hop` | `Σ_σ (c†_iσ c_jσ + h.c.)` | fermion – fermion | 対称(`+ h.c.` により順序非依存。ただし複素 `t` では反転時に共役、4.3 節) |
+| `density-density` | `n_i n_j` | fermion – fermion | 対称 |
+| `s_i . S_j` | `s_i・S_j`(Kondo 結合) | fermion – spin(この順) | **非対称**: 第 1 端点(`from`, i)= 遍歴電子スピン、第 2 端点(`to`, j)= 局在スピン(CONVENTIONS.md §6.6、1.3 節(2)) |
+
+端点順序が意味を持つ(`s_i . S_j`)場合、`model.bonds` の `from`/`to`
+順序がそのまま演算子の第 1/第 2 引数に対応する——これは 1.3 節(2)の
+ソース順保持規約(参照実装の `general_j(..., isite, jsite)` 引数順を
+そのまま書き写す)が、`operator` フィールドの意味論と整合する
+ように設計されている点を明示する提案である。`hop`/`density-density`
+は演算子自体が対称なため、端点順序はソース順保持のためだけに保たれ、
+物理的な非対称性は持たない。
+
+### 6.4 提案 4 — `{param, scale, default}` 参照の許容箇所
+
+**展開形**(4 箇所すべてで共通の一般形):
+
+```yaml
+value: {param: <名前>, scale: <実数, 省略時 1.0>, default: <数値, 省略時 0>}
+```
+
+**型**: `param` は文字列(参照先パラメータ名)。`scale` は実数。
+`default` は数値(整数・実数いずれも可)。
+
+**意味論**: 1.3 節(4)/CONVENTIONS.md §6.3 のとおり、**param が
+指定された場合と指定されない場合で計算式が変わる**条件分岐そのもの
+が規範である:
+
+- param 指定時: 値 = `scale × param`。
+- param 未指定時: 値 = `default`(**scale は適用しない最終値**)。
+
+この一般形は draft 仕様上、以下の**4 箇所**に共通して現れることを
+提案する(いずれも本カタログで実例あり):
+
+| 出現箇所 | 例 | 対応する物理量 |
+|---|---|---|
+| `couplings[<type>].value` | `{param: t0, scale: -1.0}` | ホッピング・Coulomb・Kondo 結合の係数 |
+| J テンソル `tensor_terms[*].coeff` | `{param: J0xy}` | 交換相互作用の各成分 |
+| `site_dof.<label>.spin` | `{param: 2S, scale: 0.5, default: 0.5}` | スピン量子数 `S`(既定 `S=0.5`) |
+| `system.boundary[*].twist` | `{param: phase0}` | 境界位相(度単位) |
+
+draft 仕様は現状これらの各箇所に対して個別の型を規定していないため、
+本提案はこの 1 つの一般形を draft の共通プリミティブとして採用する
+ことを求めるものである。
+
+### 6.5 提案 5 — `catalog:` ヘッダ
+
+**展開形**(各 YAML ファイル先頭、トップレベルキーの 1 つ):
+
+```yaml
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: <格子名>, model: <模型名>}
+```
+
+**型**: 4 フィールドいずれも文字列。`schema` は
+`<名前>/<メジャー>.<マイナー>` 形式のバージョン文字列、`dialect` は
+`experimental`(現状唯一の値)、`lattice`/`model` は
+`manifest.yaml` のエントリキー(`<lattice>/<lattice>_<model>.yaml`)
+と突合される(C10、1.4 節)。
+
+**意味論**: ファイル単体を自己記述的にする**メタデータヘッダ**として
+draft 仕様のトップレベルキーに `catalog:` を追加することを提案する。
+`schema` は将来の破壊的変更に備えたバージョン管理の起点、`dialect`
+は draft 本体からの逸脱(本提案 1–4, 6)を宣言する場であり、
+`lattice`/`model` は geometry/system/model の三層構造だけからは
+機械的に復元できない「このファイルが何の格子・模型のインスタンス
+であるか」という索引情報を提供する(ディレクトリ構成・ファイル名
+からの推測に依存しないための冗長化)。
+
+### 6.6 提案 6(素描のみ)— 4 フェルミオン一般項
+
+**位置づけ**: 本項目のみ、他の 5 項目と異なり**実装対象外の素描**
+である(5.5 節・CONVENTIONS.md §7 項目 6 で予告済み)。
+
+**動機**: 5.5 節で確認したとおり、wannier90 の J チャネル
+(`_jr.dat`)は 1 つの係数行列要素 `J_mn` から Hund 密度項・交換項
+(`Ex_list`)・ペアホッピング項(`PairHopp_list`)という**独立した
+3 つの 4 フェルミオン演算子**を同時に生成する。提案 3(名前付き
+2 体演算子)も J テンソル(spin–spin)も「1 ボンドに 1 物理量」を
+前提とするため、この構造を表現できない。
+
+**展開形の素描**(未確定。方向性のみ):
+
+```yaml
+# 素描 — draft 仕様にも本カタログの拡張方言にも未確定
+couplings:
+  <type>:
+    operator:
+      general_terms:
+        - ops:
+            - {op: "c+", site: i, orbital: m, spin: up}
+            - {op: "c",  site: j, orbital: n, spin: up}
+            - {op: "c+", site: j, orbital: n, spin: dn}
+            - {op: "c",  site: i, orbital: m, spin: dn}
+          coeff: {param: J_mn}
+```
+
+**型**: 未確定。少なくとも (a) 順序付き生成消滅演算子列
+(`c+`/`c` の並び)、(b) 各演算子への site/orbital/spin 束縛、
+(c) 演算子列全体に対する係数 1 つ、の 3 要素を持つ必要がある
+(4 フェルミオン項なので演算子列の長さは 4)。
+
+**意味論**: 名前付き演算子(`hop`, `density-density`, `s_i . S_j`)
+は、この一般形において特定の演算子列パターン(例: `hop` =
+`c†_{i↑}c_{j↑} + c†_{i↓}c_{j↓} + h.c.` を `general_terms` で書いた
+もの)に展開できる**省略記法**として再定義できる、という位置づけを
+提案する。すなわち提案 3 は本提案の特殊ケースになる。
+
+**残された課題**: 演算子列の順序(反交換関係との整合)、site/orbital
+束縛の型、複数演算子列の線形結合としての 1 つの `couplings` エントリ
+の表現(Hund/交換/ペアホッピングを 1 つの `type` にまとめるか複数
+`type` に分けるか)はいずれも未確定であり、draft 仕様側の設計判断を
+要する。本カタログは 3 体以上の多体項(現行 StdFace に存在しない、
+7.7 節)とは異なり、4 フェルミオン項自体は wannier90 の J チャネルと
+いう**既に存在するデータソース**を持つため、上記が確定すれば
+`lattice_catalog/wannier90/` に J チャネルの YAML 例を追加できる
+見込みである。
+
+---
+
+## 7. 既知の制限・未対応事項
+
+本章は本カタログの検証範囲・記述範囲の外側にある事項を列挙する。
+1.1 節で述べたとおり、本カタログの検証水準は「ソース突合 + リンタ +
+manifest 検算」であり、数値的な実行同値性検証ではない——この限界を
+筆頭に、以下の 10 項目を既知の制限として明記する。
+
+### 7.1 oracle 比較(数値同値性)未実施
+
+本カタログは「YAML の `bonds`/`couplings`/`onsite` が参照実装の
+ソースコードと一致すること」(ソース突合)を検証しているが、
+「YAML からハミルトニアンを実際に展開し、その数値が StdFace の
+生成する `trans.def`/`interall.def` 等を使った計算結果と一致する
+こと」(oracle 比較、実行同値性)は検証していない(1.1 節)。この
+検証には YAML → ハミルトニアン行列(または `trans.def` 相当の
+出力)への**展開エンジン**の実装が前提となり、現時点では未着手
+である。展開エンジン実装時の最初の検証課題として引き継ぐ。
+
+### 7.2 ladder は W=2/W=3 の例のみ、および内部 1 次元表現の制限
+
+3.2 節で導出した「W 一般化規則」(`for uc_i in range(W)` ループの
+手展開)は任意の `W` に対する `_BONDS` の**生成規則を文書化した
+もの**であり、`W=2`/`W=3` 以外の `W` に対する YAML ファイルは
+用意していない(検証済みなのはこの 2 例のみ、Task 6)。加えて、
+ladder は(chain と同様)参照実装内部で `W` が強制的に 1 に固定される
+1 次元表現を取るため、本カタログの `geometry.frac` には脚どうしの
+横方向の相対位置が一切現れず、脚は `frac` 座標ではなく**ラベル名
+のみ**によって区別される(3.2 節)。これは意図的な設計上の制限で
+あり、幾何座標だけを読んでラング方向の構造を復元することはできない。
+
+### 7.3 wannier90 は Hubbard の H/U チャネル例のみ
+
+`lattice_catalog/wannier90/example_hubbard.yaml` は Hubbard 模型の
+hopping(H)チャネルと onsite Coulomb(U)チャネルのみを対象とする
+(5.2 節・5.4 節)。以下は本カタログの範囲外である:
+
+- **J チャネル**(Hund・交換・ペアホッピングの 4 フェルミオン項、
+  5.5 節): 変換規則は散文で記述したのみで、YAML 例は存在しない。
+  4 フェルミオン一般項スキーマが未確定であるため(6.6 節)。
+- **Spin 模型の wannier90 変換**(5.3 節、超交換 `2|t|²(1/U_m+1/U_n)`
+  の自動生成): アルゴリズムは manual 上に記述したが、YAML 例は
+  用意していない。
+- **Kondo 模型の wannier90 変換**: `wannier90.py::
+  _validate_wannier_params` が `ModelType.KONDO` を明示的に拒否する
+  (5.1 節)ため、そもそも実装上非対応である。この点は仕様記述
+  (5.1 節)のみで、YAML 例が存在しないのは当然の帰結である。
+
+### 7.4 pyrochlore Kondo の `isite+3` 挙動(上流バグ疑い)
+
+3.9 節・CONVENTIONS.md §6.7 で確認したとおり、pyrochlore の Kondo
+結合は他の 8 格子と異なり非対称である: 現行実装(C/Python 共通)は
+`general_j(..., isite + 3, jsite + uc_i)` という形で**副格子 3 の
+遍歴サイト `A3_c` のみ**が全 4 副格子の局在スピンと結合する構造を
+生成し、`A0_c`/`A1_c`/`A2_c` は Kondo 結合を一切持たない。本カタログ
+は検証水準の方針(現行実装ソースとの突合)に従いこの挙動をそのまま
+`pyrochlore_kondo.yaml` に記載している。この非対称性が意図した設計
+なのか上流(C 実装)のバグなのかは本カタログの範囲では判定できない。
+**上流が将来この挙動を修正した場合、本カタログは `catalog.schema`
+のバージョンを上げた上で該当ファイルを更新する必要がある**(現行
+`schema: stdface-catalog/0.1` は「現行実装の挙動」を記述している
+という前提に立つため)。
+
+### 7.5 fc_ortho の `V''` が `not_used` 拒否リストからも欠落している上流の不整合
+
+3.8 節で詳述したとおり、`fc_ortho` の Spin 分岐は `J''` を「読んで
+から捨てる」、Hubbard/Kondo 分岐の `t''` は「読まれもしない」という
+挙動を持つのに対し、`V''`(`StdI.Vpp`)は Hubbard/Kondo 分岐から
+読まれないことに加え、**Spin 分岐の `not_used_d` 拒否リストからも
+`V''` の行が欠落している**(兄弟格子の square/triangular は
+`not_used_d("V''", StdI.Vpp)` を明示的に持つのに対し、fc_ortho の
+C 実装(`src/FCOrtho.c`)・Python 実装(`fc_ortho.py`)双方でこの
+1 行が存在しない)。本カタログはこの現行実装の挙動どおり `V''` を
+`bonds`/`couplings` から除外しているが、この欠落自体が上流実装の
+意図的な設計なのか単なる記述漏れなのかは不明であり、上流での修正を
+待つ必要がある未解決事項として記載する。
+
+### 7.6 box 行列は写像説明のみで YAML 例なし
+
+1.3 節(1)・2.3 節で `box`(`a0w, a0l, ..., a2h` の 9 成分)から
+`system.supercell`(`S`、`A_super = S・A`)への写像規則を文書化した
+が、本カタログの 31 ファイルはいずれも `supercell` 表現ではなく
+`size`(`W/L/Height`)表現のみを採用しており(CONVENTIONS.md §4)、
+`system.supercell` を実際に使う YAML 例は 1 件も存在しない。写像
+規則自体は検証済みだが、`supercell` フィールドのスキーマ的な実例
+(リンタが `supercell` を検査するケース)は本カタログの範囲外である。
+
+### 7.7 機械的識別子(prime を含む type 名)の分離は仕様確定時の課題
+
+`"J0'"`, `"J0''"`, `"t0''"` のような prime を含む `type` 名は、YAML
+上引用符付き文字列として扱わざるを得ず(1.4 節)、`'` 自体は YAML の
+構文上特別扱いされないが人間の可読性・機械パーサ双方にとって
+曖昧さの余地を残す(例: `J0'` と `J0''` を文字列比較以外の方法で
+「同じ系列の異なる次数」と機械的に認識する手段が draft 仕様上
+規定されていない)。本カタログは現行 StdFace の命名規則
+(`t/t'/t''`, `J/J'/J''` 等)をそのまま `type` 名に転写しているが、
+`type` 名から「系列」(prefix)と「次数」(prime の数)を分離した
+機械可読な識別子体系(例: `{series: J0, order: 2}` のような構造化
+表現)を draft 仕様側で規定するかどうかは、本カタログの範囲を超える
+仕様確定時の課題として残す。
+
+### 7.8 多体項(3 体以上)は対象外
+
+本カタログが扱う `couplings`/`onsite` はいずれも 1 体項(onsite)
+または 2 体項(bonds 上の couplings、6.6 節の素描を含めても
+4 フェルミオン=2 体の相互作用)までであり、3 サイト以上にまたがる
+真の多体相互作用(3 スピン交換等)は扱っていない。これは現行の
+StdFace(C/Python 実装いずれも)がそもそも 3 体以上の相互作用を
+生成する機構を持たないためであり、本カタログにとっての制限という
+よりは**参照実装の機能範囲そのものの反映**である。将来 StdFace が
+多体項生成機能を追加した場合でも、draft 仕様側の site_dof/演算子
+機構(1 体・2 体の一般化)はそのまま拡張の土台として使える見込み
+である。
+
+### 7.9 YAML・manifest・manual の三重記載と同期コスト
+
+各カタログエントリの情報(ボンド定義・検算値・出典)は、
+(a) YAML 本体(`bonds`/`couplings`/`onsite`)、(b)
+`manifest.yaml`(`bonds_per_uc`/`coordination`/`min_size_for_check`/
+`source`)、(c) manual.md 3 章の解説文、の**3 箇所**に重複して
+記載されている。この三重記載は `lint_catalog.py` の manifest 突合
+(C10)・計数展開(C11)、および `keyword_inventory.py` による inventory
+の機械照合(2 章)によって「(a) と (b) の不一致」は検出できるが、
+**(c) manual.md の解説文と (a)/(b) の不一致はリンタでは検出できない**
+(manual.md は自然文であり機械検査の対象外)。したがって、いずれかの
+格子・模型のソース実装(`python/stdface/lattice/*.py`)が変更された
+場合、変更者は (a) YAML、(b) manifest.yaml、(c) manual.md の**3 箇所
+すべて**を手動で同期更新する必要がある。この同期漏れを防ぐ機構
+(例: manual.md からボンド表を自動生成する等)は本カタログの範囲外
+である。
+
+### 7.10 manifest の `source` が単一 file/func 形式であることの限界
+
+`manifest.yaml` の各エントリが持つ `source: {file, func, commit}`
+(8 章)は「1 ファイル・1 関数」を前提とした形式である。ほとんどの
+格子(chain〜pyrochlore の 9 格子)はこの形式で十分に出典を表現できる
+一方、wannier90 の変換ロジックは 5.1 節で確認したとおり
+`wannier90.py`(呼出しエントリ・hopping/coulomb 適用)、
+`wannier90_io.py`(`_read_w90` によるデータ読込み)、
+`interaction_builder.py`(`hopping`/`trans`/`coulomb` という標準
+trans/intr 経路)の**3 ファイルにまたがる**導出である。現状は
+`manifest.yaml` の単一 `source` エントリに加え、
+`example_hubbard.yaml` のヘッダコメント(規則 W1–W6、5.1 節・5.4 節)
+に補足の出典・導出をコメント併記することでこの限界を補っている。
+複数ファイルに跨る出典を構造化して表現できる `source` の schema
+拡張(例: `source: [{file, func, commit}, ...]` のような配列化)は
+本カタログの範囲を超える将来課題として残す。
