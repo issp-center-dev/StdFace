@@ -446,7 +446,8 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
         if set(lattice_vectors.keys()) != set(expected_names):
             errs.append(
                 f"C2: geometry.lattice_vectors must have exactly the named vectors "
-                f"{expected_names} for dimension={dimension} (got {sorted(lattice_vectors.keys())})"
+                f"{expected_names} for dimension={dimension} "
+                f"(got {sorted(lattice_vectors.keys(), key=repr)})"
             )
         for name, vec in lattice_vectors.items():
             if not (isinstance(vec, list) and len(vec) == dimension and all(_is_number(x) for x in vec)):
@@ -476,8 +477,14 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
                     f"C2: geometry.sites[{i}].frac must be a numeric list of length "
                     f"{dimension} (got {frac!r})"
                 )
-        if len(labels) != len(set(labels)):
-            dups = sorted({lb for lb in labels if labels.count(lb) > 1})
+        # Only string labels are eligible for the duplicate check: a
+        # heterogeneous-type labels list (e.g. a stray non-string label,
+        # already reported above) must not reach `set()`/`sorted()` on
+        # mixed types, which can raise TypeError and mask the real
+        # diagnostics behind the generic top-level exception handler.
+        str_labels = [lb for lb in labels if isinstance(lb, str)]
+        if len(str_labels) != len(set(str_labels)):
+            dups = sorted({lb for lb in str_labels if str_labels.count(lb) > 1})
             errs.append(f"C2: duplicate site labels in geometry.sites: {dups}")
     ctx["labels"] = labels
 
@@ -771,7 +778,7 @@ def check_c12(doc: dict, ctx: dict) -> list[str]:
 
         op = c.get("operator")
         value = c.get("value")
-        if isinstance(value, dict):
+        if isinstance(value, dict) and "param" in value:
             scale = value.get("scale", 1.0)
             if op == "hop" and scale != -1.0:
                 errs.append(
@@ -808,7 +815,7 @@ def check_c12(doc: dict, ctx: dict) -> list[str]:
                 if not (isinstance(tt, list) and len(tt) == 1 and isinstance(tt[0], dict)):
                     continue
                 coeff = tt[0].get("coeff")
-                if coeff != expected:
+                if not (_is_number(coeff) and coeff == expected):
                     errs.append(
                         f"C12: model.onsite[{site!r}][{term_name!r}].operator."
                         f"tensor_terms[0].coeff must be {expected} (got {coeff!r})"

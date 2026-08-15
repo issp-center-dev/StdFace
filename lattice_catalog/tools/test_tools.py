@@ -338,6 +338,75 @@ def test_c2_negative_non_int_size() -> None:
     check("C2" in only_ids(errs), f"non-integer size must raise C2, got {errs}")
 
 
+def test_c2_negative_lattice_vectors_key_count_mismatch() -> None:
+    d = base_doc()
+    d["geometry"]["lattice_vectors"] = {"a1": [1.0], "a2": [0.0, 1.0]}
+    errs = lint(d)
+    check("C2" in only_ids(errs),
+          f"lattice_vectors with wrong key count for dimension=1 must raise C2, got {errs}")
+
+
+def test_c2_negative_lattice_vectors_dim_mismatch() -> None:
+    d = base_doc()
+    d["geometry"]["lattice_vectors"] = {"a1": [1.0, 0.0]}  # dimension=1 expects length-1 vectors
+    errs = lint(d)
+    check("C2" in only_ids(errs),
+          f"lattice_vectors[a1] with wrong vector length must raise C2, got {errs}")
+
+
+def test_c2_negative_frac_dim_mismatch() -> None:
+    d = base_doc()
+    d["geometry"]["sites"][0]["frac"] = [0.0, 0.0]  # dimension=1 expects length-1 frac
+    errs = lint(d)
+    check("C2" in only_ids(errs), f"frac with wrong dimension must raise C2, got {errs}")
+
+
+def test_c2_negative_non_string_label() -> None:
+    d = base_doc()
+    d["geometry"]["sites"][0]["label"] = 42
+    errs = lint(d)
+    check("C2" in only_ids(errs), f"non-string site label must raise C2, got {errs}")
+
+
+def test_c2_negative_boundary_length_mismatch() -> None:
+    d = base_doc()
+    d["system"]["boundary"] = [{"twist": {"param": "phase0"}}, "periodic"]  # dimension=1 expects length 1
+    errs = lint(d)
+    check("C2" in only_ids(errs), f"boundary length != dimension must raise C2, got {errs}")
+
+
+def test_c2_negative_site_dof_both_spin_and_fermion() -> None:
+    d = base_doc()
+    d["model"]["site_dof"]["A"] = {
+        "spin": {"param": "2S", "scale": 0.5, "default": 0.5},
+        "fermion": {"orbitals": 1},
+    }
+    errs = lint(d)
+    check("C2" in only_ids(errs),
+          f"site_dof entry with both spin and fermion must raise C2, got {errs}")
+
+
+def test_c2_negative_mixed_type_duplicate_labels_no_crash() -> None:
+    """C2 robustness: a duplicated *and* heterogeneous-type labels list
+    (two string 'A' duplicates plus two int `5` duplicates) must not crash
+    `sorted()` on mixed types and fall through to the generic top-level
+    'exception while checking' diagnostic -- the string duplicate must
+    still be reported cleanly."""
+    d = base_doc()
+    d["geometry"]["sites"] = [
+        {"label": "A", "frac": [0.0]},
+        {"label": "A", "frac": [0.0]},
+        {"label": 5, "frac": [0.0]},
+        {"label": 5, "frac": [0.0]},
+    ]
+    errs = lint(d)
+    check("C2" in only_ids(errs), f"mixed-type duplicate labels must raise C2, got {errs}")
+    check(not any("exception while checking" in e for e in errs),
+          f"mixed-type duplicate labels must not fall through to a generic exception, got {errs}")
+    check(any("duplicate site labels" in e and "'A'" in e for e in errs),
+          f"the string duplicate 'A' must still be reported, got {errs}")
+
+
 # ---------------------------------------------------------------------------
 #  C3
 # ---------------------------------------------------------------------------
@@ -858,14 +927,49 @@ def test_c12_negative_onsite_coeff_wrong_sign() -> None:
     check("C12" in only_ids(errs), f"aniso_z coeff=-1.0 (should be +1.0) must raise C12, got {errs}")
 
 
+def test_c12_negative_hop_value_dict_without_param() -> None:
+    """A non-J coupling `value` dict lacking a `param` key (e.g. only
+    `scale`) must be a C12 error -- it is not a valid `{param, ...}`
+    reference and is not the wannier90 plain-number exception either."""
+    d = _fermion_hop_doc()
+    d["model"]["couplings"]["t0"]["value"] = {"scale": -1.0}
+    errs = lint(d, _fermion_hop_manifest())
+    check("C12" in only_ids(errs),
+          f"hop value dict without 'param' must raise C12, got {errs}")
+
+
+def test_c12_negative_onsite_coeff_boolean() -> None:
+    """`coeff: true` must be rejected even though `True == 1.0` in Python --
+    the literal sign-convention coeff must be a real number, not a bool."""
+    d = base_doc()
+    d["model"]["onsite"]["A"]["aniso_z"]["operator"]["tensor_terms"][0]["coeff"] = True
+    errs = lint(d)
+    check("C12" in only_ids(errs), f"onsite coeff=True (bool) must raise C12, got {errs}")
+
+
 def test_c12_all_31_catalog_files_clean() -> None:
-    """A4: linting the real catalog must not raise any C12 diagnostic."""
+    """A4: linting the real catalog must not raise any C12 diagnostic
+    (kept as a targeted subset check; see
+    test_all_31_catalog_files_fully_clean() for the full-errs version)."""
     manifest_files = lc.load_manifest()
     for path in lc._discover_default_files():
         rel_path = path.resolve().relative_to(lc.ROOT).as_posix()
         errs = lc.lint_file(path, KEYWORDS, manifest_files)
         c12_errs = [e for e in errs if "C12" in e]
         check(c12_errs == [], f"{rel_path}: must have no C12 diagnostics, got {c12_errs}")
+
+
+def test_all_31_catalog_files_fully_clean() -> None:
+    """Strengthened whole-catalog check: exactly 31 catalog YAML files are
+    discovered, and each one lints with *zero* diagnostics of any kind
+    (not just no-C12)."""
+    manifest_files = lc.load_manifest()
+    files = lc._discover_default_files()
+    check(len(files) == 31, f"expected exactly 31 catalog YAML files, got {len(files)}: {files}")
+    for path in files:
+        rel_path = path.resolve().relative_to(lc.ROOT).as_posix()
+        errs = lc.lint_file(path, KEYWORDS, manifest_files)
+        check(errs == [], f"{rel_path}: must lint fully clean, got {errs}")
 
 
 # ---------------------------------------------------------------------------
