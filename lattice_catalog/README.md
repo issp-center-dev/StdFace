@@ -27,7 +27,7 @@ lattice_catalog/
   manual.md                  # 解説書(読み方・実例・全キーワード対応表)
   manifest.yaml               # 検算台帳(bonds_per_uc/coordination 等、機械可読)
   tools/
-    lint_catalog.py           # 意味検査リンタ(C1–C11)
+    lint_catalog.py           # 意味検査リンタ(C1–C12)
     keyword_inventory.py      # StdFace 全キーワードの目録生成
     test_tools.py              # tools 自体の自動テスト(開発時専用)
   chain/        chain_{spin,hubbard,kondo}.yaml
@@ -49,21 +49,30 @@ lattice_catalog/
 
 ## リンタの使い方
 
+開発時依存: 本リンタは PyYAML (`pyyaml`) を必要とする(開発時専用
+ツールであり、`python/pyproject.toml` の実行時依存には含めていない。
+未インストールの場合は `pip install pyyaml` を促す明確なメッセージで
+終了する)。
+
+リポジトリルートから実行します:
+
 ```bash
 python3 lattice_catalog/tools/lint_catalog.py
 ```
 
-全 31 ファイルに対して、スキーマ検査・ラベル整合・ボンド反転同値の
-重複検出・param 参照整合・J テンソル成分完全性・演算子と site_dof の
-型整合、および `manifest.yaml` との突合(期待される `bonds_per_uc`/
-`coordination` を実際に指定サイズのトーラス上にボンドを展開して
-実測比較する「計数展開」検査を含む)を行う。エラーがなければ
+全 31 ファイルに対して、スキーマ検査(ジオメトリ/サイト/ボンド/
+site_dof の深部型検査を含む)・ラベル整合・ボンド反転同値の重複検出・
+param 参照整合・J テンソル成分完全性・演算子と site_dof の型整合・
+符号規約(CONVENTIONS.md §6.2)、および `manifest.yaml` との突合
+(期待される `bonds_per_uc`/`coordination` を実際に指定サイズの
+トーラス上にボンドを展開して実測比較する「計数展開」検査、および
+`min_size_for_check` 自体の厳密性検査を含む)を行う。エラーがなければ
 
 ```
 31 files, 0 errors
 ```
 
-と出力される。個々の検査項目(C1–C11)の詳細は `CONVENTIONS.md` と
+と出力される。個々の検査項目(C1–C12)の詳細は `CONVENTIONS.md` と
 `manual.md` 1.1 節を参照。
 
 `tools/` には他に、StdFace 全ソルバー(HPhi/HWAVE/UHF/mVMC)の
@@ -81,8 +90,8 @@ python3 lattice_catalog/tools/lint_catalog.py
    検算であって数値 oracle 比較ではない点)、ディレクトリ構成、
    CONVENTIONS.md の主要規約の補足説明。
 2. **キーワード対応表** — `keyword_inventory.py` が報告する
-   StdFace 全キーワード(342 件: keyword 313 + lattice_alias 26 +
-   model_alias 3)を、geometry / system / bonds+couplings / onsite /
+   StdFace 全キーワード(351 件: keyword 313 + lattice_alias 26 +
+   model_alias 12)を、geometry / system / bonds+couplings / onsite /
    site_dof / wannier90 / 対象外の 7 分類に**全数**割り当てた表。
 3. **格子ごとの解説** — 9 格子それぞれの幾何・ボンド定義表・
    manifest 検算根拠・出典。

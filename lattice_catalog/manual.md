@@ -63,16 +63,16 @@ CONVENTIONS.md を規範とする(CONVENTIONS.md §1)。
    `min_size_for_check`, `source`)を機械可読な形で記録し、
    リンタが YAML 本体と突合する(C10)。
 
-すなわち、「stan.in をこの YAML から生成したハミルトニアンで実際に
-計算した結果が、StdFace が生成する `trans.def` 等の入力ファイルで
-計算した結果と数値的に一致する」という強い意味での実行同値性は、
-本カタログの範囲では検証していない。この限界は 7 章(既知の制限)で
-改めて明記する。
+すなわち、「この YAML から生成したハミルトニアンで計算した結果が、
+StdFace に `stan.in` を与えて生成した `trans.def` 等のソルバー入力
+ファイルで計算した結果と数値的に一致する」という強い意味での実行
+同値性は検証していない。この限界は 7 章(既知の制限)で改めて明記する。
 
 ### 1.2 ディレクトリ構成
 
 ```
 lattice_catalog/
+  README.md                 # 概要・クイックスタート
   CONVENTIONS.md            # 記述規約(規範文書)
   manual.md                 # 本書
   manifest.yaml             # 検算台帳(機械可読)
@@ -107,9 +107,9 @@ Hubbard(H+U チャネル)例 1 ファイルを加えた **31 件**が
 
 #### (1) geometry / system
 
-- `geometry.sites` は配列であり、配列順が draft 仕様のサイト番号に
-  機械的に一致する。サイトラベル(`A`, `A_c` 等)はファイル内で
-  一意でなければならない。
+- `geometry.sites` は配列であり、配列順(**0-indexed** — `sites[0]` が
+  サイト番号 0)が draft 仕様のサイト番号に機械的に一致する。
+  サイトラベル(`A`, `A_c` 等)はファイル内で一意でなければならない。
 - `system.size` は StdFace の `W, L, Height` に、`system.boundary` は
   `phase0`–`phase2` に対応する。境界の位相因子は
   `exp(i · n · π · θ / 180)`(**度単位**、n = 境界を横断する回数)。
@@ -158,7 +158,10 @@ solver 出力規約 → 物理ハミルトニアンの符号」という検証�
 (導出は 4 章)。
 
 符号は必ずデータ(`scale` / `coeff`)に持たせ、コメントに書いては
-ならない(機械的検証可能性のための必須規約)。代表例:
+ならない(機械的検証可能性のための必須規約)。couplings
+(`hop`/`density-density`/`s_i . S_j`)は `value.scale` で、onsite は
+`operator.tensor_terms` 内の `coeff` リテラルで符号を表現する
+(J 族の couplings は別の規約に従う — 4.1 節末尾参照)。代表例:
 
 | StdFace | 物理ハミルトニアン寄与 | YAML 表現の要点 |
 |---|---|---|
@@ -209,8 +212,10 @@ ops 対と param 接尾辞の対応:
 で解決される(カタログはこの解決規則を規範として提供し、実際の解決は
 **カタログを消費する側**が行う):
 
-1. 成分局所(例 `J0xy`) 2. 成分大域(例 `Jxy`)
-3. スカラー局所・対角のみ(例 `J0`) 4. スカラー大域・対角のみ(例 `J`)
+1. 成分局所(例 `J0xy`)
+2. 成分大域(例 `Jxy`)
+3. スカラー局所・対角のみ(例 `J0`)
+4. スカラー大域・対角のみ(例 `J`)
 5. 0(既定値)
 
 プライム系(`J0'`, `J0''`, `J1'` 等)には大域 fallback が存在しない
@@ -352,8 +357,8 @@ wannier90 変換専用パラメータは 5 章(wannier90 変換仕様)で詳説�
 | `cutoff_t`, `cutoff_tw/tl/th`, `cutoff_t_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の hopping(t)チャネル cutoff 指定 → 5 章参照 | `example_hubbard.yaml` の H(hopping)チャネルに対応する打ち切りパラメータ |
 | `cutoff_u`, `cutoff_uw/ul/uh`, `cutoff_u_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の U(Coulomb)チャネル cutoff 指定 → 5 章参照 | `example_hubbard.yaml` の U チャネルに対応する打ち切りパラメータ |
 | `cutoff_length_j, cutoff_length_t, cutoff_length_u`(3 種) | common | wannier90 変換のチャネル別・実距離での打ち切り指定 → 5 章参照 | `cutoff_j/t/u` 系(セル添字ベース)とは別軸の、実空間距離ベースの打ち切り |
-| `lambda, lambda_u, lambda_j`(3 種) | common | wannier90 `*_hr.dat` 読み込み時に全行列要素へ一様に乗じるスケール係数 → 5 章参照 | `_hr.dat` 形式自身が持つ縮退重みは読み込み時に破棄される(`wannier90_io.py::_skip_degeneracy_weights`)。`lambda*` はそれとは別に、全行列要素に一様適用されるスケール係数(`wannier90_io.py` の読み込みループで `lam * (dtmp_re + 1j*dtmp_im)` として適用)。`lambda` 未指定時は `lambda_U`/`lambda_J` の共有既定値になる |
-| `alpha` | common | wannier90 Hubbard/Hund 二重計数補正の混合重み → 5 章参照 | Hartree-Fock 二重計数補正(`doublecounting` モードで有効化)における混合重み(`wannier90.py` の `_apply_coulomb_terms` 系、範囲 [0,1]・既定 0.5)。Spin チャネルの超交換 `2\|t\|²(1/U_m+1/U_n)` 生成には関与しない(そちらは `StdI.alpha` を参照しない) |
+| `lambda, lambda_u, lambda_j`(3 種) | common | wannier90 `*_hr.dat` 読み込み時に全行列要素へ一様に乗じるスケール係数 → 5 章参照 | `_hr.dat` 形式自身が持つ縮退重みは読み込み時に破棄される(`wannier90_io.py::_skip_degeneracy_weights`)。`lambda*` はそれとは別に、全行列要素に一様適用されるスケール係数(`wannier90_io.py` の読み込みループで `lam * (dtmp_re + 1j*dtmp_im)` として適用)。`lambda` 未指定時は `lambda_u`/`lambda_j` の共有既定値になる |
+| `alpha` | common | wannier90 Hubbard/Hund 二重計数補正の混合重み → 5 章参照 | Hartree-Fock 二重計数補正(`doublecounting` モードで有効化)における混合重み(`wannier90.py` の `_apply_coulomb_terms` 系、範囲 [0,1]・既定 0.5)。Spin チャネルの超交換 `2\|t\|^2(1/U_m+1/U_n)` 生成には関与しない(そちらは `StdI.alpha` を参照しない) |
 | `doublecounting` | common | wannier90 二重計数補正モード指定 → 5 章参照 | Coulomb 相互作用の二重計数補正方式の選択 |
 
 族単位の内訳(cutoff_j 13 + cutoff_t 13 + cutoff_u 13 + cutoff_length_* 3
@@ -404,20 +409,31 @@ registry 正規名 `fco`。カタログの `catalog.lattice` / ディレクト�
 
 ### 2.10 模型名表(model_alias)
 
-`kind: "model_alias"` のエントリ(**3 件**)。
+`kind: "model_alias"` のエントリ(**12 件**)。母集合は
+`python/stdface/core/stdface_main.py` の `MODEL_ALIASES`(通常/GC 変種)
++ `MODEL_ALIASES_HPHI_BOOST`(HPhi 専用の Boost 拡張変種)であり、
+`keyword_inventory.py` はこの 2 つの alias テーブルを走査して
+`model_alias` を生成する(2.1 節・A1)。GC(グランドカノニカル)変種は
+`lGC=1` という粒子数セクター指定の違いのみを持ち、`bonds`/`couplings`/
+`onsite`(本カタログが記述する対象)は正準形と同一である(4.4 節)ため、
+対応するカタログファイルは GC 変種・正準形で共通。
 
-| StdFace の `model` 値 | 対応するカタログのファイル名末尾 |
-|---|---|
-| `spin` | `*_spin.yaml` |
-| `hubbard` | `*_hubbard.yaml` |
-| `kondo` | `*_kondo.yaml` |
+| StdFace の `model` 値(alias) | 正規模型(`canonical_target`) | 対応するカタログのファイル名末尾 | 備考 |
+|---|---|---|---|
+| `spin` | `spin` | `*_spin.yaml` | 正準(canonical)形 |
+| `hubbard`, `fermionhubbard` | `hubbard` | `*_hubbard.yaml` | 正準形。両者は同義語 |
+| `kondo`, `kondolattice` | `kondo` | `*_kondo.yaml` | 正準形。両者は同義語 |
+| `spingc` | `spin` | `*_spin.yaml` | グランドカノニカル(GC)変種(`lGC=1`)。`bonds`/`couplings`/`onsite` は正準形と同一 |
+| `hubbardgc`, `fermionhubbardgc` | `hubbard` | `*_hubbard.yaml` | 同上(GC 変種) |
+| `kondogc`, `kondolatticegc` | `kondo` | `*_kondo.yaml` | 同上(GC 変種) |
+| `spingcboost`, `spingccma` | `spin` | `*_spin.yaml` | GC + HPhi の Boost 拡張(`lBoost=1`)を有効化する**HPhi 専用** alias(他ソルバーでは使用できない) |
 
 ### 2.11 網羅性チェック
 
 `python3 lattice_catalog/tools/keyword_inventory.py` の出力は
-合計 **342 件**であり、内訳は `kind: "keyword"` が **313 件**、
+合計 **351 件**であり、内訳は `kind: "keyword"` が **313 件**、
 `kind: "lattice_alias"` が **26 件**、`kind: "model_alias"` が
-**3 件**である(`313 + 26 + 3 = 342`)。
+**12 件**である(`313 + 26 + 12 = 351`)。
 
 `kind: "keyword"` の 313 件は、2.2–2.8 節の (a)–(g) 分類にすべて
 1 回ずつ含まれる。各分類の族単位の内訳を合算すると:
@@ -436,9 +452,9 @@ registry 正規名 `fco`。カタログの `catalog.lattice` / ディレクト�
 
 `13 + 15 + 144 + 6 + 1 + 47 + 87 = 313` となり、`keyword_inventory.py`
 が報告する keyword 件数(313)と一致する。`lattice_alias`(26 件、
-2.9 節)・`model_alias`(3 件、2.10 節)は別表で全件を網羅しており、
+2.9 節)・`model_alias`(12 件、2.10 節)は別表で全件を網羅しており、
 `kind` 別の 3 集合(keyword / lattice_alias / model_alias)を合わせて
-inventory の全 342 件が本章の表でちょうど 1 回ずつ分類されている
+inventory の全 351 件が本章の表でちょうど 1 回ずつ分類されている
 (欠落・重複なし)。
 
 ---
@@ -523,15 +539,15 @@ commit `b96aef2107f1ab200565efd496606a01184e3f46`。
 `lattice_vectors` に現れない。W=2 はラベル `A0, A1`(脚 0/1、いずれも
 frac `[0.0]`)、W=3 は `A0, A1, A2`(脚 0(端)/1(中央)/2(端))。
 
-**横方向座標が落ちる制限**: chain と同様に `system.W` は参照実装内で
-強制的に 1 に固定され(`StdI.NsiteUC = StdI.W; StdI.W = 1`、
-`ladder.py` 80–81 行)、カタログは `dimension: 1` の論理表現のみを持つ。
-そのため脚どうしの空間的な相対位置(旧 W 方向の座標)は `frac` には
-一切現れず(全ラベルが同一の `frac: [0.0]` を持つ)、脚は幾何座標では
-なく **ラベル名(`A0`/`A1`/…)のみによって区別される**。これは本カタログの
-1 次元表現が意図的に持つ制限であり、幾何座標だけを読んでラング方向の
-構造を復元することはできない(ボンドの `from`/`to` ラベルの組合せが
-構造情報を担う)。
+> **横方向座標が落ちる制限**: chain と同様に `system.W` は参照実装内で
+> 強制的に 1 に固定され(`StdI.NsiteUC = StdI.W; StdI.W = 1`、
+> `ladder.py` 80–81 行)、カタログは `dimension: 1` の論理表現のみを持つ。
+> そのため脚どうしの空間的な相対位置(旧 W 方向の座標)は `frac` には
+> 一切現れず(全ラベルが同一の `frac: [0.0]` を持つ)、脚は幾何座標では
+> なく **ラベル名(`A0`/`A1`/…)のみによって区別される**。これは本カタログの
+> 1 次元表現が意図的に持つ制限であり、幾何座標だけを読んでラング方向の
+> 構造を復元することはできない(ボンドの `from`/`to` ラベルの組合せが
+> 構造情報を担う)。
 
 **rung 方向が非周期(open)である根拠**(`ladder.py` 176–188 行):
 
@@ -779,6 +795,8 @@ orthorhombic と同じ 3 成分 `phase0/1/2`。
 | `J1'` | A→A | `[1,-1,1]` | 次近接 -L+H+W |
 | `J2'` | A→A | `[1,1,-1]` | 次近接 -H+W+L |
 
+本カタログでは現行実装の挙動に基づき `J''`/`t''`/`V''` を
+`bonds`/`couplings` から除外している。内部機構は 3 通りに分かれる:
 **`J''`/`t''`/`V''` は stan.in で指定してもエラーにならず、かつ物理
 ハミルトニアンには一切反映されない**という結果だけを見ると 3 者は
 同じに見えるが、実装機構は異なる。本カタログのコードベースには
@@ -975,7 +993,8 @@ StdFace パラメータ → builder 呼び出し(interaction_builder.py)
     +1.0`)。
   - `general_j_terms`(456–543 行)は `J[2,2]*Siz*Sjz` 等を直接
     `terms.intr` に積む(無反転) → 物理係数 = `+J_ab S^a S^b`
-    (J 族 `coeff` はそのまま `+1.0`/`-1.0` の符号のみを表すリテラル)。
+    (J 族は各成分の `coeff` にパラメータ参照を直接持ち、無反転で
+    物理係数と一致する)。
     Kondo の `J`(`s_i . S_j`)も `general_j(StdI.J, 1, StdI.S2, isite,
     jsite_kondo)` として同じ経路(`intr_list`)を通るため無反転
     (`couplings[J].value = {param: J}`、`scale` 省略時 `+1.0`)。
@@ -994,8 +1013,13 @@ StdFace パラメータ → builder 呼び出し(interaction_builder.py)
 `intr_list`/`Cintra_list`/`Cinter_list` 経由か」という**チャネルの違い**
 だけで一意に説明できる: `trans_list` 経由の項(t, mu, h, Gamma, Gamma_y)
 は solver 側の 1 回反転を打ち消すために `scale`/`coeff` に `-1.0`
-を持たせ、それ以外(V, U, J)は無反転のため `+1.0`(または省略)で
-物理係数と直接一致させる。
+を持たせ、それ以外は無反転のため物理係数と直接一致する。ただし
+「直接一致」の**表現形は 2 通り**に分かれる点に注意: V/U は
+`value: {param, scale, default}` の `scale` を省略(既定 `+1.0`)する
+ことで表す一方、J 族は `scale` という概念自体を持たず、各成分の
+`coeff: {param: ...}` に物理パラメータを直接バインドすることで表す
+(`tensor_terms[*].coeff` は `{param: ...}` の param 参照であり、
+`scale`/`default` は持たない — CONVENTIONS.md §6.4)。
 
 ### 4.2 Spin: 9 成分正準形とパラメータ解決規則
 
@@ -1089,7 +1113,8 @@ spin)の 2 geometry ラベルとして表現する。Kondo 結合(`s_i . S_j`)�
 jsite_kondo)` で局在サイト(`jsite_kondo`)にも磁場(`h`/`Gamma`/
 `Gamma_y`)を**改めて**適用する。したがって `A_c`/`A_s` の両方の
 onsite ブロックに `field_z`/`field_x`/`field_y` が現れる(chain_kondo
-の 1.4 節の例で確認済み)一方、`U`/`mu`/`D` は `_c` にのみ現れる。
+の 1.4 節の例で確認済み)一方、`U`/`mu` は `_c` にのみ現れる
+(`D` は Spin 模型専用のため Kondo には現れない)。
 
 **サイト倍加(前半 = 局在)との対応**: 参照実装は Kondo 模型の内部
 サイトインデックスを **倍加**し(`set_local_spin_flags`、
@@ -1178,13 +1203,13 @@ builder 側の反転と、trans.def の solver 側反転(4.1 節で確認した
 
 となる。標準格子の t 族が `scale: -1.0` を持つのに対し、wannier90 の
 `hop` 係数は**符号反転なし**(生データをそのまま物理係数として使う)
-という違いが生じるのはこのためである。Task 10 では `W=4, L=4,
-Height=1` で実際に `stdface_main` を実行し、`trans.def` の出力値
-(`+1.0`)が `H_00(R) = -1.0` の符号反転(`-(+1.0) = -1.0`)である
-ことを確認しており、`example_hubbard.yaml` のヘッダコメント
-「検算 1/3」に手順が記載されている。
+という違いが生じるのはこのためである。この符号確認は Task 10 で
+`W=4, L=4, Height=1` として実際に `stdface_main` を実行し、`trans.def`
+の出力値(`+1.0`)が `H_00(R) = -1.0` の符号反転(`-(+1.0) = -1.0`)と
+一致することを確認したものであり、手順は `example_hubbard.yaml` の
+ヘッダコメント「検算 1/3」に記載されている。
 
-**onsite 分離(`R=0`, `m=n` の対角要素)**: `_apply_hopping_terms`
+**規則 W2(onsite 分離: `R=0`, `m=n` の対角要素)**: `_apply_hopping_terms`
 380–388 行は `R=(0,0,0)` かつ `m=n` の項を `bonds` ではなく
 `isite` ごとの onsite 一体項として `trans_list` に分離する
 (`(-tUJ[0][it], isite, spin, isite, spin)` を両スピンに追加)。
@@ -1194,7 +1219,7 @@ trans.def 規約と合わせると物理係数は `+H_mm(0)`(両スピンの数�
 (ゼロなので省略。規則自体は非ゼロなら `{ops:[N], coeff:1.0},
 value:<H_mm(0)>` という形になる)。
 
-**Hermite 正準対の選択(first-in-file-wins)**: `wannier90_io.py::
+**規則 W3(Hermite 正準対の選択: first-in-file-wins)**: `wannier90_io.py::
 _read_w90`(355–361 行)は WSC(R ベクトル)ブロック単位で「ファイル
 出現順で先着優先」の規則を持つ: あるブロックの `R` が、既に読んだ
 (より前に出現した)ブロックの `−R` と一致する場合、そのブロック
@@ -1205,7 +1230,7 @@ _read_w90`(355–361 行)は WSC(R ベクトル)ブロック単位で「ファ�
 (`Σσ(c†c + h.c.)`)により自動的に再構成されるため、カタログの
 `bonds` には正準対のみを列挙する(4.3 節の複素共役規則と同じ機構)。
 
-**`_hr.dat`/`_ur.dat` 自身の縮退重みは読み捨てる**:
+**規則 W4(WS 縮退重み: `_hr.dat`/`_ur.dat` 自身の縮退重みは読み捨てる)**:
 `wannier90_io.py::_skip_degeneracy_weights`(56–72 行、呼び出しは
 315 行)はファイルヘッダの `ndegen` 列を読み込んだ後**使用せず捨てる**。
 実際に乗算される重みは `Weight_tot`(初期値 1.0)のみで、これは
@@ -1214,7 +1239,7 @@ Height` から計算する**有限クラスタ境界での 0.5 halving**であ�
 ファイルの `ndegen` 値とは無関係。本カタログの `bonds` は無限格子の
 単位胞相対表現であるためこの境界重みも適用しない。
 
-**cutoff の適用順**(`_read_w90`、255–370 行): (1) 実空間長の cutoff
+**規則 W5(cutoff の適用順)**(`_read_w90`、255–370 行): (1) 実空間長の cutoff
 (`cutoff_length_t/u/j`、既定は `t` が無効・`U`/`J` が 0.3)、
 (2) `cutoff_Vec` 設定時はそれ、未設定なら整数 box cutoff
 (`cutoff_R` 系。`U` チャネルの既定 `cutoff_UR` は `(0,0,0)` — 既定では
@@ -1224,7 +1249,7 @@ Height` から計算する**有限クラスタ境界での 0.5 halving**であ�
 `example_hubbard.yaml` は既定の振幅 cutoff のみを適用し、長さ/R/Vec
 による追加制限は行わない(データの `R` は全て `|R 各成分| <= 1`)。
 
-**`lambda`/`alpha`/`doublecounting`**: `lambda_U`/`lambda_J`(既定
+**規則 W6(`lambda`/`alpha`/`doublecounting`)**: `lambda_U`/`lambda_J`(既定
 1.0)は各チャネルの生データ読込み時に一様に乗算されるスケール
 (`wannier90_io.py` 353 行: `Mat_tot = lam * (re + i*im)`)。`alpha`
 (既定 0.5)と `doublecounting_mode` は `_dr.dat` 密度行列ファイルが
@@ -1280,7 +1305,7 @@ StdFace 実装が「多軌道 Hubbard/Kondo 模型を強相関極限で有効ス
 コンバータであることを反映しており、Wannier 軌道間ホッピングを字面
 どおり `hop` ボンドとして書き写す Hubbard 変換(5.2 節)とは根本的に
 異なるアルゴリズムである点に注意が必要である。本カタログには Spin
-用 wannier90 の YAML 例は用意していない(§7 既知の制限参照)。
+用 wannier90 の YAML 例は用意していない(§7.3 参照)。
 
 ### 5.4 `example_hubbard.yaml` の読み解き
 
@@ -1399,8 +1424,7 @@ site_dof:
 ```
 
 **型**: `orbitals` は正整数(`n ≥ 1`)。本カタログの全実例は
-`orbitals: 1`(単一軌道)であり、複数軌道の実例は未収録
-(§7.7 参照)。
+`orbitals: 1`(単一軌道)であり、複数軌道の実例は未収録である。
 
 **意味論**: ラベル `<label>` の自由度がフェルミオン(生成消滅演算子
 `c†, c` を持つ)であり、軌道数が `n` であることを表す。draft 仕様が
@@ -1574,7 +1598,7 @@ couplings:
 の表現(Hund/交換/ペアホッピングを 1 つの `type` にまとめるか複数
 `type` に分けるか)はいずれも未確定であり、draft 仕様側の設計判断を
 要する。本カタログは 3 体以上の多体項(現行 StdFace に存在しない、
-7.7 節)とは異なり、4 フェルミオン項自体は wannier90 の J チャネルと
+7.8 節)とは異なり、4 フェルミオン項自体は wannier90 の J チャネルと
 いう**既に存在するデータソース**を持つため、上記が確定すれば
 `lattice_catalog/wannier90/` に J チャネルの YAML 例を追加できる
 見込みである。
