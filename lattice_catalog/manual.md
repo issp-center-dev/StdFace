@@ -353,7 +353,7 @@ wannier90 変換専用パラメータは 5 章(wannier90 変換仕様)で詳説�
 
 | StdFace キーワード | 出典テーブル | 新フォーマットでの対応 | 備考 |
 |---|---|---|---|
-| `cutoff_j`, `cutoff_jw/jl/jh`, `cutoff_j_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の J チャネル cutoff 指定 → 5 章参照 | J(交換)ホッピング行列要素の打ち切り半径・成分別打ち切り。J チャネルの YAML 例自体は対象外(1.3 節・design §2 参照) |
+| `cutoff_j`, `cutoff_jw/jl/jh`, `cutoff_j_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の J チャネル cutoff 指定 → 5 章参照 | J(交換)ホッピング行列要素の打ち切り半径・成分別打ち切り。J チャネルの YAML 例自体は対象外(5.5 節・7.3 節参照) |
 | `cutoff_t`, `cutoff_tw/tl/th`, `cutoff_t_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の hopping(t)チャネル cutoff 指定 → 5 章参照 | `example_hubbard.yaml` の H(hopping)チャネルに対応する打ち切りパラメータ |
 | `cutoff_u`, `cutoff_uw/ul/uh`, `cutoff_u_a0w/a0l/a0h/a1w/a1l/a1h/a2w/a2l/a2h`(13 種) | common | wannier90 変換の U(Coulomb)チャネル cutoff 指定 → 5 章参照 | `example_hubbard.yaml` の U チャネルに対応する打ち切りパラメータ |
 | `cutoff_length_j, cutoff_length_t, cutoff_length_u`(3 種) | common | wannier90 変換のチャネル別・実距離での打ち切り指定 → 5 章参照 | `cutoff_j/t/u` 系(セル添字ベース)とは別軸の、実空間距離ベースの打ち切り |
@@ -413,7 +413,7 @@ registry 正規名 `fco`。カタログの `catalog.lattice` / ディレクト�
 `python/stdface/core/stdface_main.py` の `MODEL_ALIASES`(通常/GC 変種)
 + `MODEL_ALIASES_HPHI_BOOST`(HPhi 専用の Boost 拡張変種)であり、
 `keyword_inventory.py` はこの 2 つの alias テーブルを走査して
-`model_alias` を生成する(2.1 節・A1)。GC(グランドカノニカル)変種は
+`model_alias` を生成する(2.1 節)。GC(グランドカノニカル)変種は
 `lGC=1` という粒子数セクター指定の違いのみを持ち、`bonds`/`couplings`/
 `onsite`(本カタログが記述する対象)は正準形と同一である(4.4 節)ため、
 対応するカタログファイルは GC 変種・正準形で共通。
@@ -603,7 +603,7 @@ J2':1}`、`coordination.A0`/`coordination.A1` はいずれも
 全脚とも配位数 2(並進で折り返す)。`min_size_for_check: [5]`(最大
 `|R|` 成分は `J1'` の 2、`2×2=4` を超える最小の奇数 5)。W=2/W=3 いずれも
 `ladder()` 参照実装を実際に実行し `exchange.def` 出力と手展開結果が
-一致することを確認済み(Task 6)。
+一致することを確認済み。
 
 **出典**: `python/stdface/lattice/ladder.py::ladder`(`_BONDS`,
 176–188 行)、commit `e733ff893a52b81addd27ef7e347f77273c0d129`。
@@ -766,7 +766,7 @@ chain/ladder と異なる**: 内部転写は行われず、`phase0/1/2` はそ�
 三次近接 8(単一 type)— 単純立方格子の物理配位数(6/12/8)と一致。
 `min_size_for_check: [3, 3, 3]`(最大 `|R|` 成分 1)。C 実装
 `src/Orthorhombic.c` の 13 回の `StdFace_FindSite` 呼出しと 1 対 1 で
-突合済み(Task 7)。この 3D 構造(`system.boundary` の 3 成分、13 行の
+突合済み。この 3D 構造(`system.boundary` の 3 成分、13 行の
 `_BONDS`)が fc_ortho・pyrochlore の 3D テンプレートとして踏襲される。
 
 **出典**: `python/stdface/lattice/orthorhombic.py::orthorhombic`
@@ -924,7 +924,7 @@ fc_ortho と同じ FCC: `a1: [0,0.5,0.5], a2: [0.5,0,0.5], a3: [0.5,0.5,0]`。
 
 **出典**: `python/stdface/lattice/pyrochlore.py::pyrochlore`(`_local`,
 `_BONDS`)、commit `70fbecd02aeb60df04625843217a08b545c2c8b0`
-(`src/Pyrochlore.c` と呼出し列の一対一一致を確認済み、Task 9)。
+(`src/Pyrochlore.c` と呼出し列の一対一一致を確認済み)。
 
 ---
 
@@ -1173,7 +1173,7 @@ StdFace の解析的な格子ベクトル・ボンド式から `bonds`/`coupling
 `interaction_builder.py::hopping`/`trans`/`coulomb`(4 章で確認した
 標準の trans/intr 経路)の 3 ファイルにまたがる。本章の規則(W1–W6)は
 `lattice_catalog/wannier90/example_hubbard.yaml` のヘッダコメントに
-逐語的な導出として既に記載されており(Task 10 で `trans.def`/
+逐語的な導出として既に記載されており(`trans.def`/
 `coulombintra.def` の実出力との数値突合により検証済み)、本章はそれを
 manual 側の記述として集約する。
 
@@ -1203,7 +1203,7 @@ builder 側の反転と、trans.def の solver 側反転(4.1 節で確認した
 
 となる。標準格子の t 族が `scale: -1.0` を持つのに対し、wannier90 の
 `hop` 係数は**符号反転なし**(生データをそのまま物理係数として使う)
-という違いが生じるのはこのためである。この符号確認は Task 10 で
+という違いが生じるのはこのためである。この符号確認は
 `W=4, L=4, Height=1` として実際に `stdface_main` を実行し、`trans.def`
 の出力値(`+1.0`)が `H_00(R) = -1.0` の符号反転(`-(+1.0) = -1.0`)と
 一致することを確認したものであり、手順は `example_hubbard.yaml` の
@@ -1305,7 +1305,7 @@ StdFace 実装が「多軌道 Hubbard/Kondo 模型を強相関極限で有効ス
 コンバータであることを反映しており、Wannier 軌道間ホッピングを字面
 どおり `hop` ボンドとして書き写す Hubbard 変換(5.2 節)とは根本的に
 異なるアルゴリズムである点に注意が必要である。本カタログには Spin
-用 wannier90 の YAML 例は用意していない(§7.3 参照)。
+用 wannier90 の YAML 例は用意していない(7.3 節参照)。
 
 ### 5.4 `example_hubbard.yaml` の読み解き
 
@@ -1392,7 +1392,7 @@ CONVENTIONS.md §7)が定義する演算子語彙は、2 端点の名前付き�
 (CONVENTIONS.md §7 項目 6)、`lattice_catalog/wannier90/` には J
 チャネルの YAML 例を用意していない。
 
-一般項スキーマの素描(§6.6 参照 — 順序付き生成消滅演算子列
+一般項スキーマの素描(6.6 節参照 — 順序付き生成消滅演算子列
 `[c†_{i,σ,orb}, c_{j,σ',orb'}, ...]` と、各演算子への site/orbital
 束縛、係数 1 つを持つ表現。名前付き演算子(`hop` 等)はこの一般形の
 省略記法という位置づけになる)は、本タスクの範囲外である 6 章
@@ -1409,7 +1409,7 @@ experimental` の下で採用している draft 仕様の未規定事項を 6 �
 列挙している。本章はその 6 項目それぞれを、**draft 仕様本体への
 追記提案**として、(1) `tensor_terms`/YAML への展開形、(2) 各
 フィールドの型、(3) 意味論、の 3 点セットで記述し直したものである。
-提案の実体は CONVENTIONS.md §7 および design spec §4.6 に既にある
+提案の実体は CONVENTIONS.md §7 に既にある
 判断の**書き起こし**であり、新たな設計判断を追加するものではない。
 1–5 は本カタログの 31 ファイルで実装・リンタ検査済みの確定仕様、
 6 のみは素描(実装対象外)であることを明示する。
@@ -1628,7 +1628,7 @@ manifest 検算」であり、数値的な実行同値性検証ではない—�
 3.2 節で導出した「W 一般化規則」(`for uc_i in range(W)` ループの
 手展開)は任意の `W` に対する `_BONDS` の**生成規則を文書化した
 もの**であり、`W=2`/`W=3` 以外の `W` に対する YAML ファイルは
-用意していない(検証済みなのはこの 2 例のみ、Task 6)。加えて、
+用意していない(検証済みなのはこの 2 例のみ)。加えて、
 ladder は(chain と同様)参照実装内部で `W` が強制的に 1 に固定される
 1 次元表現を取るため、本カタログの `geometry.frac` には脚どうしの
 横方向の相対位置が一切現れず、脚は `frac` 座標ではなく**ラベル名
@@ -1738,7 +1738,7 @@ StdFace(C/Python 実装いずれも)がそもそも 3 体以上の相互作用�
 ### 7.10 manifest の `source` が単一 file/func 形式であることの限界
 
 `manifest.yaml` の各エントリが持つ `source: {file, func, commit}`
-(8 章)は「1 ファイル・1 関数」を前提とした形式である。ほとんどの
+(CONVENTIONS.md §8)は「1 ファイル・1 関数」を前提とした形式である。ほとんどの
 格子(chain〜pyrochlore の 9 格子)はこの形式で十分に出典を表現できる
 一方、wannier90 の変換ロジックは 5.1 節で確認したとおり
 `wannier90.py`(呼出しエントリ・hopping/coulomb 適用)、
