@@ -7,7 +7,8 @@
 チェック項目(各診断メッセージは対応する ID を接頭辞に持つ):
 
 - C1  catalog ヘッダ(schema/dialect の値、lattice/model の存在)
-- C2  schema 検査(必須キー・型・サイトラベル重複・dimension/R/size の整数性)
+- C2  schema 検査(必須キー・型・サイトラベル重複・dimension/R/size の整数性、
+      geometry.lattice_vectors/sites/system.boundary/site_dof の深い型検査)
 - C3  R の長さ = dimension = size の長さ
 - C4  ラベル整合(bonds の from/to、onsite のラベル、
       geometry.sites と site_dof の集合一致)
@@ -17,12 +18,26 @@
 - C8  J coupling の 9 成分完全性・重複なし・ops↔接尾辞対応
 - C9  演算子と site_dof の型整合、tensor_terms/onsite の ops 長
 - C10 manifest 全項目突合
-- C11 計数展開による配位数の実測比較
+- C11 計数展開による配位数の実測比較、および min_size_for_check の
+      厳密性検査(各成分が正の奇数であり、かつ
+      `2 * max|R 成分| + 1`(その方向で bonds から実測)に厳密一致するか)
+- C12 CONVENTIONS.md §6.2 の符号規約検査(dialect: experimental のみ対象)。
+      couplings の hop/density-density/s_i.S_j の value.scale、onsite の
+      hubbard_u/aniso_z/chemical_potential/field_* の tensor_terms coeff、
+      J 族 tensor_terms coeff の形(`{param: ...}` のみで scale/default 不可)、
+      非 J couplings の value の形(`{param, ...}` dict、または wannier90
+      方言に限り生の数値リテラル)を検査する。
 
 引数なしで実行すると `lattice_catalog/` 以下の全 `*.yaml`(manifest.yaml
 を除く)を検査する。引数を渡すとそのファイル(群)のみを検査する
 (ROOT = このスクリプトの一つ上のディレクトリ = lattice_catalog/。
-ROOT 外のパスはエラーとして報告する)。
+ROOT 外のパスはエラーとして報告する)。引数なし実行時は、発見した YAML
+パス集合と manifest.yaml のキー集合の完全一致も検査する(孤立した
+manifest エントリは診断として報告する — A6-ii)。
+
+開発時依存: 本ツールは PyYAML (``pyyaml``) を必要とする(開発時専用の
+lint ツールであり、``python/pyproject.toml`` の実行時依存には含めない
+— A5)。未インストールの場合は分かりやすいメッセージで終了する。
 
 Run
 ---
@@ -37,7 +52,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
+try:
+    import yaml
+except ImportError:
+    raise SystemExit(
+        "lint_catalog: PyYAML が必要です(開発時専用ツール)。"
+        "pip install pyyaml を実行してください。"
+    )
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -61,6 +82,11 @@ _J_COMPONENTS = {  # C8: ops 対 ↔ param 接尾辞
 #  Inventory / manifest loading
 # ---------------------------------------------------------------------------
 
+class FatalLintError(RuntimeError):
+    """Raised for top-level (non-per-file) failures that must abort the run
+    with a clean diagnostic instead of a traceback (A6-i)."""
+
+
 def load_inventory_keywords() -> set[str]:
     """Run ``keyword_inventory.py`` as a subprocess and return the set of
     canonical *keyword*-kind names (param references are checked against
@@ -70,12 +96,28 @@ def load_inventory_keywords() -> set[str]:
     -------
     set[str]
         Canonical keyword names, e.g. ``{"t0", "J0x", "2S", "phase0", ...}``.
+
+    Raises
+    ------
+    FatalLintError
+        If the subprocess fails (non-zero exit) or its stdout is not valid
+        JSON — converted from a raw ``CalledProcessError``/``JSONDecodeError``
+        traceback into a clean top-level diagnostic (A6-i).
     """
-    proc = subprocess.run(
-        [sys.executable, str(TOOLS_DIR / "keyword_inventory.py")],
-        capture_output=True, text=True, check=True,
-    )
-    entries = json.loads(proc.stdout)
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(TOOLS_DIR / "keyword_inventory.py")],
+            capture_output=True, text=True, check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise FatalLintError(
+            f"keyword_inventory.py failed (exit {e.returncode}): "
+            f"{e.stderr.strip() or e.stdout.strip()}"
+        ) from e
+    try:
+        entries = json.loads(proc.stdout)
+    except json.JSONDecodeError as e:
+        raise FatalLintError(f"keyword_inventory.py produced invalid JSON: {e}") from e
     return {e["keyword_canonical"] for e in entries if e.get("kind") == "keyword"}
 
 
@@ -91,12 +133,24 @@ def load_manifest(manifest_path: Path | None = None) -> dict[str, Any]:
     -------
     dict
         The ``files`` mapping (empty dict if absent/empty).
+
+    Raises
+    ------
+    FatalLintError
+        If the manifest exists but cannot be read or parsed
+        (``OSError``/``yaml.YAMLError``) — converted into a clean top-level
+        diagnostic instead of a traceback (A6-i).
     """
     path = manifest_path if manifest_path is not None else ROOT / "manifest.yaml"
     if not path.exists():
         return {}
-    with path.open(encoding="utf-8") as f:
-        doc = yaml.safe_load(f)
+    try:
+        with path.open(encoding="utf-8") as f:
+            doc = yaml.safe_load(f)
+    except OSError as e:
+        raise FatalLintError(f"cannot read manifest {path}: {e}") from e
+    except yaml.YAMLError as e:
+        raise FatalLintError(f"YAML parse error in manifest {path}: {e}") from e
     if not isinstance(doc, dict):
         return {}
     files = doc.get("files")
@@ -382,6 +436,25 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
         dimension = None
     ctx["dimension"] = dimension
 
+    # --- geometry.lattice_vectors: mapping of exactly `dimension` named ---
+    #     vectors a1..aN, each a numeric list of length `dimension` (A3).
+    lattice_vectors = geometry.get("lattice_vectors")
+    if not isinstance(lattice_vectors, dict):
+        errs.append(f"C2: geometry.lattice_vectors missing or not a mapping (got {lattice_vectors!r})")
+    elif dimension is not None:
+        expected_names = [f"a{i}" for i in range(1, dimension + 1)]
+        if set(lattice_vectors.keys()) != set(expected_names):
+            errs.append(
+                f"C2: geometry.lattice_vectors must have exactly the named vectors "
+                f"{expected_names} for dimension={dimension} (got {sorted(lattice_vectors.keys())})"
+            )
+        for name, vec in lattice_vectors.items():
+            if not (isinstance(vec, list) and len(vec) == dimension and all(_is_number(x) for x in vec)):
+                errs.append(
+                    f"C2: geometry.lattice_vectors[{name!r}] must be a numeric list of "
+                    f"length {dimension} (got {vec!r})"
+                )
+
     sites = geometry.get("sites")
     labels: list[str] = []
     if not isinstance(sites, list) or not sites:
@@ -391,7 +464,18 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
             if not isinstance(s, dict) or "label" not in s:
                 errs.append(f"C2: geometry.sites[{i}] missing 'label'")
                 continue
-            labels.append(s["label"])
+            label = s["label"]
+            if not isinstance(label, str):
+                errs.append(f"C2: geometry.sites[{i}].label must be a string (got {label!r})")
+            labels.append(label)
+            frac = s.get("frac")
+            if dimension is not None and not (
+                isinstance(frac, list) and len(frac) == dimension and all(_is_number(x) for x in frac)
+            ):
+                errs.append(
+                    f"C2: geometry.sites[{i}].frac must be a numeric list of length "
+                    f"{dimension} (got {frac!r})"
+                )
         if len(labels) != len(set(labels)):
             dups = sorted({lb for lb in labels if labels.count(lb) > 1})
             errs.append(f"C2: duplicate site labels in geometry.sites: {dups}")
@@ -405,10 +489,30 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
         size = None
     ctx["size"] = size
 
+    # --- system.boundary: list of length `dimension` (A3) -----------------
+    boundary = system.get("boundary")
+    if not isinstance(boundary, list):
+        errs.append(f"C2: system.boundary missing or not a list (got {boundary!r})")
+    elif dimension is not None and len(boundary) != dimension:
+        errs.append(f"C2: len(system.boundary)={len(boundary)} != dimension={dimension}")
+
     site_dof = model.get("site_dof")
     if not isinstance(site_dof, dict) or not site_dof:
         errs.append("C2: model.site_dof missing or empty")
         site_dof = {}
+    else:
+        # --- site_dof values: mapping with exactly one of spin/fermion ----
+        #     (exclusive — resolves the fermion+spin ambiguity note, A3) ---
+        for label, entry in site_dof.items():
+            if not isinstance(entry, dict):
+                errs.append(f"C2: model.site_dof[{label!r}] must be a mapping (got {entry!r})")
+                continue
+            present = {k for k in ("spin", "fermion") if k in entry}
+            if len(present) != 1:
+                errs.append(
+                    f"C2: model.site_dof[{label!r}] must have exactly one of "
+                    f"'spin'/'fermion' (got {sorted(present)})"
+                )
     ctx["site_dof"] = site_dof
 
     bonds = model.get("bonds")
@@ -419,6 +523,9 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
         if not isinstance(b, dict) or not {"type", "from", "to", "R"} <= b.keys():
             errs.append(f"C2: model.bonds[{i}] missing required keys (type/from/to/R)")
             continue
+        for key in ("type", "from", "to"):
+            if not isinstance(b[key], str):
+                errs.append(f"C2: model.bonds[{i}].{key} must be a string (got {b[key]!r})")
         if not isinstance(b["R"], list) or not all(
             isinstance(x, int) and not isinstance(x, bool) for x in b["R"]
         ):
@@ -602,6 +709,114 @@ def check_c9(ctx: dict) -> list[str]:
     return errs
 
 
+# onsite term_name -> required literal tensor_terms[0].coeff sign (C12,
+# CONVENTIONS.md §6.2). Term names not listed here are outside this table
+# (e.g. any future/unrecognised onsite term) and are left unchecked.
+_ONSITE_COEFF_SIGN = {
+    "hubbard_u": 1.0,
+    "aniso_z": 1.0,
+    "chemical_potential": -1.0,
+    "field_z": -1.0,
+    "field_x": -1.0,
+    "field_y": -1.0,
+}
+
+
+def check_c12(doc: dict, ctx: dict) -> list[str]:
+    """C12: CONVENTIONS.md §6.2 sign-convention check.
+
+    Only applies to catalog files (``catalog.dialect == "experimental"`` —
+    the only dialect this catalog currently defines; kept as an explicit
+    guard rather than assumed). Checks, purely as diagnostics (never
+    raises):
+
+    - couplings ``hop`` requires ``value.scale == -1.0``.
+    - couplings ``density-density`` / ``s_i . S_j`` require ``value.scale``
+      absent or ``+1.0``.
+    - onsite ``hubbard_u`` / ``aniso_z`` require literal
+      ``tensor_terms[0].coeff == +1.0``.
+    - onsite ``chemical_potential`` / ``field_z`` / ``field_x`` /
+      ``field_y`` require literal ``tensor_terms[0].coeff == -1.0``.
+    - J-family ``tensor_terms[*].coeff`` must be a ``{param: ...}`` dict
+      *without* ``scale``/``default`` keys (those belong to the resolver,
+      not the catalog — CONVENTIONS.md §6.4).
+    - non-J coupling ``value`` must be either a ``{param, ...}`` dict, or
+      (wannier90 exception only) a plain number.
+    """
+    errs: list[str] = []
+    catalog = doc.get("catalog") if isinstance(doc.get("catalog"), dict) else {}
+    if catalog.get("dialect") != "experimental":
+        return errs
+    lattice = catalog.get("lattice")
+
+    for type_name, c in ctx["couplings"].items():
+        if not isinstance(c, dict):
+            continue
+        tt = _coupling_operator_tensor_terms(c)
+        if tt is not _MISSING:
+            if isinstance(tt, list):
+                for i, term in enumerate(tt):
+                    if not isinstance(term, dict):
+                        continue
+                    coeff = term.get("coeff")
+                    if not (
+                        isinstance(coeff, dict) and "param" in coeff
+                        and "scale" not in coeff and "default" not in coeff
+                    ):
+                        errs.append(
+                            f"C12: {type_name}.tensor_terms[{i}].coeff must be a "
+                            f"{{param: ...}} dict without scale/default (got {coeff!r})"
+                        )
+            continue
+
+        op = c.get("operator")
+        value = c.get("value")
+        if isinstance(value, dict):
+            scale = value.get("scale", 1.0)
+            if op == "hop" and scale != -1.0:
+                errs.append(
+                    f"C12: {type_name}: operator 'hop' requires value.scale == -1.0 (got {scale!r})"
+                )
+            elif op in ("density-density", "s_i . S_j") and scale != 1.0:
+                errs.append(
+                    f"C12: {type_name}: operator {op!r} requires value.scale absent or "
+                    f"+1.0 (got {scale!r})"
+                )
+        elif _is_number(value):
+            if lattice != "wannier90":
+                errs.append(
+                    f"C12: {type_name}.value is a plain number but catalog.lattice != "
+                    "'wannier90' (only the wannier90 dialect may use a non-dict value)"
+                )
+        else:
+            errs.append(
+                f"C12: {type_name}.value must be a {{param, ...}} dict, or (wannier90 "
+                f"exception) a plain number (got {value!r})"
+            )
+
+    onsite_raw = doc.get("model", {}).get("onsite") if isinstance(doc.get("model"), dict) else None
+    if isinstance(onsite_raw, dict):
+        for site, terms in onsite_raw.items():
+            if not isinstance(terms, dict):
+                continue
+            for term_name, term in terms.items():
+                expected = _ONSITE_COEFF_SIGN.get(term_name)
+                if expected is None or not isinstance(term, dict):
+                    continue
+                op = term.get("operator")
+                tt = op.get("tensor_terms") if isinstance(op, dict) else None
+                if not (isinstance(tt, list) and len(tt) == 1 and isinstance(tt[0], dict)):
+                    continue
+                coeff = tt[0].get("coeff")
+                if coeff != expected:
+                    errs.append(
+                        f"C12: model.onsite[{site!r}][{term_name!r}].operator."
+                        f"tensor_terms[0].coeff must be {expected} (got {coeff!r})"
+                    )
+
+    return errs
+
+
 def check_c10_c11(doc: dict, ctx: dict, rel_path: str,
                    manifest_files: dict) -> list[str]:
     errs: list[str] = []
@@ -648,6 +863,34 @@ def check_c10_c11(doc: dict, ctx: dict, rel_path: str,
         errs.append(f"C11: manifest.min_size_for_check length must equal dimension={dimension} (got {min_size!r})")
         return errs
 
+    # --- C11 (A2): each component must be a positive odd int, and must ----
+    #     exactly equal 2*max|R component in that direction|+1 as computed
+    #     from this file's bonds (the smallest odd integer > 2*max|R|).
+    bad_component = False
+    for i, comp in enumerate(min_size):
+        if not isinstance(comp, int) or isinstance(comp, bool) or comp <= 0 or comp % 2 == 0:
+            errs.append(
+                f"C11: manifest.min_size_for_check[{i}]={comp!r} must be a positive odd integer"
+            )
+            bad_component = True
+    if bad_component:
+        return errs
+
+    max_abs_r = [0] * dimension
+    for b in bonds:
+        R = b.get("R")
+        if isinstance(R, list) and len(R) == dimension:
+            for k, x in enumerate(R):
+                if isinstance(x, int) and not isinstance(x, bool):
+                    max_abs_r[k] = max(max_abs_r[k], abs(x))
+    expected_min_size = [2 * m + 1 for m in max_abs_r]
+    if min_size != expected_min_size:
+        errs.append(
+            f"C11: manifest.min_size_for_check={min_size!r} != expected {expected_min_size!r} "
+            "(= 2*max|R component|+1 per direction, computed from model.bonds)"
+        )
+        return errs
+
     self_loop = any(
         b.get("from") == b.get("to") and all(x == 0 for x in b.get("R", []))
         for b in bonds
@@ -675,7 +918,7 @@ def check_c10_c11(doc: dict, ctx: dict, rel_path: str,
 
 def lint_document(doc: Any, rel_path: str, inventory: set[str],
                    manifest_files: dict) -> list[str]:
-    """Run all checks (C1-C11) against a parsed YAML document.
+    """Run all checks (C1-C12) against a parsed YAML document.
 
     Never raises: any unexpected exception is converted to a C2 diagnostic.
     """
@@ -694,6 +937,7 @@ def lint_document(doc: Any, rel_path: str, inventory: set[str],
         errs.extend(check_c7(doc, inventory))
         errs.extend(check_c8(ctx))
         errs.extend(check_c9(ctx))
+        errs.extend(check_c12(doc, ctx))
         errs.extend(check_c10_c11(doc, ctx, rel_path, manifest_files))
         return errs
     except Exception as e:  # noqa: BLE001 — must never crash the linter
@@ -757,6 +1001,37 @@ def _resolve_arg_paths(args: list[str]) -> tuple[list[Path], list[str]]:
     return files, top_errors
 
 
+def find_orphan_manifest_entries(files: list[Path], manifest_files: dict) -> list[str]:
+    """A6-ii: set-equality check between discovered YAML paths and
+    ``manifest.yaml`` keys.
+
+    Parameters
+    ----------
+    files : list[Path]
+        Discovered catalog YAML files (as returned by
+        :func:`_discover_default_files`).
+    manifest_files : dict
+        The ``files`` mapping from ``manifest.yaml``.
+
+    Returns
+    -------
+    list[str]
+        One ``C10`` diagnostic per manifest entry that has no corresponding
+        discovered file (an "orphan" manifest entry), sorted by path.
+    """
+    discovered_rel: set[str] = set()
+    for p in files:
+        try:
+            discovered_rel.add(p.resolve().relative_to(ROOT).as_posix())
+        except ValueError:
+            pass
+    orphans = sorted(set(manifest_files) - discovered_rel)
+    return [
+        f"C10: manifest.yaml entry {rel!r} has no corresponding catalog YAML file"
+        for rel in orphans
+    ]
+
+
 def main() -> None:
     args = sys.argv[1:]
     if args:
@@ -764,8 +1039,19 @@ def main() -> None:
     else:
         files, top_errors = _discover_default_files(), []
 
-    inventory = load_inventory_keywords()
-    manifest_files = load_manifest()
+    try:
+        inventory = load_inventory_keywords()
+        manifest_files = load_manifest()
+    except FatalLintError as e:
+        # A6-i: top-level failures get a clean diagnostic, not a traceback.
+        print(f"C2: {e}")
+        print("0 files, 1 errors")
+        sys.exit(1)
+
+    if not args:
+        # A6-ii: default (whole-catalog) run also verifies set equality
+        # between discovered YAML paths and manifest.yaml keys.
+        top_errors.extend(find_orphan_manifest_entries(files, manifest_files))
 
     total_errors = list(top_errors)
     n_files = 0

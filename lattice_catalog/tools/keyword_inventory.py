@@ -20,6 +20,19 @@
 ソルバーの列挙は ``stdface.plugin`` の登録済みプラグイン(id で重複排除)
 を走査して行い、4 つの具象クラス名をこのスクリプトにハードコードしない。
 これにより将来プラグインが追加された場合も自動的に目録へ反映される。
+
+``model_alias`` は ``stdface.core.stdface_main.MODEL_ALIASES`` +
+``MODEL_ALIASES_HPHI_BOOST`` の全キー(``fermionhubbard``, ``hubbardgc``,
+``spingc``, ``kondolattice``, ``kondogc``, ``spingcboost`` 等、GC/Boost
+拡張を含む全 alias)を走査する — canonical な ``ModelType`` 3 値
+(spin/hubbard/kondo)だけをハードコードしない(A1 の修正点)。
+``MODEL_ALIASES_HPHI_BOOST`` 由来のエントリは ``sources`` に
+``"model_registry_hphi_boost"`` を付け、HPhi 専用 alias であることを
+区別できるようにしている。
+
+レジストリのインポート自体が失敗した場合(``python/`` が PYTHONPATH に
+無い等)、および解決結果が空だった場合は、不完全な目録を出力せずに
+非ゼロ終了する(A6-iv)。
 """
 from __future__ import annotations
 
@@ -30,10 +43,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "python"))
 
-from stdface.core.keyword_parser import _COMMON_KEYWORDS  # noqa: E402
-from stdface.core.stdface_vals import ModelType  # noqa: E402
-from stdface.lattice import get_all_lattices  # noqa: E402
-from stdface import plugin as _solver_plugin_mod  # noqa: E402
+try:
+    from stdface.core.keyword_parser import _COMMON_KEYWORDS  # noqa: E402
+    from stdface.lattice import get_all_lattices  # noqa: E402
+    from stdface import plugin as _solver_plugin_mod  # noqa: E402
+    # 模型名 alias レジストリ(A1: model_alias の母集合はここが正)。
+    from stdface.core.stdface_main import (  # noqa: E402
+        MODEL_ALIASES as _MODEL_ALIASES,
+        MODEL_ALIASES_HPHI_BOOST as _MODEL_ALIASES_HPHI_BOOST,
+    )
+except ImportError as e:  # pragma: no cover - environment/setup error
+    sys.exit(
+        "keyword_inventory: stdface レジストリのインポートに失敗しました "
+        f"(python/ が PYTHONPATH 上にあるか確認してください): {e!r}"
+    )
 
 _CANON_EXCEPTIONS = {"2s": "2S", "2sz": "2Sz", "gamma": "Gamma",
                      "gamma_y": "Gamma_y", "u": "U", "v": "V", "j": "J",
@@ -113,11 +136,16 @@ def build_inventory() -> list[dict]:
             agg[key].add("lattice_registry")
             targets[key] = lat.name
 
-    # --- model aliases -------------------------------------------------
-    for model in ModelType:
-        key = (str(model.value), "model_alias")
+    # --- model aliases (registry-driven; MODEL_ALIASES + the HPhi-only ----
+    #     Boost-extension aliases in MODEL_ALIASES_HPHI_BOOST) -------------
+    for alias, cfg in _MODEL_ALIASES.items():
+        key = (alias, "model_alias")
         agg[key].add("model_registry")
-        targets[key] = str(model.value)
+        targets[key] = str(cfg.model.value)
+    for alias, cfg in _MODEL_ALIASES_HPHI_BOOST.items():
+        key = (alias, "model_alias")
+        agg[key].add("model_registry_hphi_boost")
+        targets[key] = str(cfg.model.value)
 
     entries = []
     for (c, k), s in sorted(agg.items()):
@@ -131,8 +159,26 @@ def build_inventory() -> list[dict]:
 
 
 def main() -> None:
-    """Print the keyword/alias inventory as JSON to stdout."""
+    """Print the keyword/alias inventory as JSON to stdout.
+
+    Exits non-zero (without printing a partial inventory) if the solver
+    plugin registry or the lattice registry resolved to zero entries —
+    that always indicates a broken registry lookup rather than a
+    legitimately empty catalog, so a silent partial inventory would be
+    worse than a hard failure (A6-iv).
+    """
     entries = build_inventory()
+    lattice_aliases = [e for e in entries if e["kind"] == "lattice_alias"]
+    model_aliases = [e for e in entries if e["kind"] == "model_alias"]
+    solver_names = [name for name, _table in iter_solver_plugins()]
+    if not lattice_aliases or not model_aliases or not solver_names:
+        sys.exit(
+            "keyword_inventory: レジストリが空の結果を返しました "
+            f"(lattice_alias={len(lattice_aliases)}, "
+            f"model_alias={len(model_aliases)}, "
+            f"solver_plugins={len(solver_names)}) — "
+            "不完全な目録を出力せず終了します"
+        )
     json.dump(entries, sys.stdout, ensure_ascii=False, indent=1)
 
 

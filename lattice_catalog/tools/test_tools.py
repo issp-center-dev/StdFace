@@ -6,10 +6,20 @@ pytest 非依存、assert ベース。`python3 test_tools.py` で完結し、
 
 対象:
 - keyword_inventory.py: canonical 集約・安定ソート・重複なし・
-  ソルバーレジストリ件数下限・prime 付き成分の存在
-- lint_catalog.py: C1-C11 の正例・負例(インライン YAML / dict fixture)
+  ソルバーレジストリ件数下限・prime 付き成分の存在・
+  model_alias がレジストリ(MODEL_ALIASES + MODEL_ALIASES_HPHI_BOOST)と
+  完全一致すること(A1)
+- lint_catalog.py: C1-C12 の正例・負例(インライン YAML / dict fixture)。
+  C11 min_size_for_check の厳密性(A2)、C2 のスキーマ深部検査(A3)、
+  C12 符号規約検査(A4)を含む
 - param 参照の意味論(resolve_param): scale×param / default そのまま
 - 不正 YAML・null 文書での非例外動作
+- トップレベル失敗の非例外動作(A6): 破損 manifest.yaml
+  (FatalLintError)、孤立 manifest エントリ検出
+
+開発時依存: lint_catalog.py 経由で PyYAML (``pyyaml``) を必要とする
+(開発時専用ツール一式であり、``python/pyproject.toml`` の実行時依存
+には含めない — A5)。
 
 Run
 ---
@@ -110,6 +120,41 @@ def test_inventory_lattice_and_model_aliases() -> None:
     check({"spin", "hubbard", "kondo"} <= mdl, "model aliases spin/hubbard/kondo must be present")
 
 
+def test_inventory_model_alias_set_matches_registry() -> None:
+    """A1: model_alias must be generated from the *actual* alias registry
+    (``MODEL_ALIASES`` + ``MODEL_ALIASES_HPHI_BOOST`` in
+    ``stdface.core.stdface_main``), not a hardcoded {spin, hubbard, kondo}
+    set of the 3 canonical ``ModelType`` values.
+    """
+    entries = ki.build_inventory()
+    mdl = {x["keyword_canonical"] for x in entries if x["kind"] == "model_alias"}
+    expected = set(ki._MODEL_ALIASES) | set(ki._MODEL_ALIASES_HPHI_BOOST)
+    check(mdl == expected,
+          f"inventory model_alias set must equal the registry-derived set, "
+          f"got {mdl}, expected {expected}")
+    check(len(expected) > 3,
+          "the real alias registry has more than the 3 canonical model names "
+          f"(GC/Boost variants included); got {expected}")
+
+    targets = {x["keyword_canonical"]: x["canonical_target"]
+               for x in entries if x["kind"] == "model_alias"}
+    for alias, cfg in ki._MODEL_ALIASES.items():
+        check(targets[alias] == str(cfg.model.value),
+              f"model_alias {alias!r} canonical_target must be {cfg.model.value!r}, "
+              f"got {targets[alias]!r}")
+    for alias, cfg in ki._MODEL_ALIASES_HPHI_BOOST.items():
+        check(targets[alias] == str(cfg.model.value),
+              f"model_alias {alias!r} (HPhi Boost) canonical_target must be "
+              f"{cfg.model.value!r}, got {targets[alias]!r}")
+
+    sources = {x["keyword_canonical"]: set(x["sources"])
+               for x in entries if x["kind"] == "model_alias"}
+    for alias in ki._MODEL_ALIASES_HPHI_BOOST:
+        check("model_registry_hphi_boost" in sources[alias],
+              f"HPhi-Boost-only alias {alias!r} must be sourced as "
+              "'model_registry_hphi_boost'")
+
+
 # ===========================================================================
 #  resolve_param semantics (C7-pinned)
 # ===========================================================================
@@ -197,7 +242,7 @@ def base_manifest() -> dict:
             "n_sites_uc": 1,
             "bonds_per_uc": {"J0": 1},
             "coordination": {"A": {"J0": 2}},
-            "min_size_for_check": [7],
+            "min_size_for_check": [3],  # = 2*max|R|+1 = 2*1+1 (bond R=[1])
             "source": {
                 "file": "python/stdface/lattice/chain_lattice.py",
                 "func": "chain",
@@ -475,7 +520,10 @@ def test_c8_negative_bad_param_name() -> None:
 # ---------------------------------------------------------------------------
 
 def _fermion_hop_doc() -> dict:
+    """A fully-valid fermion-hop fixture (catalog.model consistent with its
+    manifest, no double sign inversion — A6-iii)."""
     d = base_doc()
+    d["catalog"]["model"] = "hubbard"
     d["model"]["site_dof"] = {"A": {"fermion": {"orbitals": 1}}}
     d["model"]["bonds"] = [{"type": "t0", "from": "A", "to": "A", "R": [1]}]
     d["model"]["couplings"] = {"t0": {"operator": "hop", "value": {"param": "t0", "scale": -1.0}}}
@@ -483,7 +531,7 @@ def _fermion_hop_doc() -> dict:
         "A": {
             "chemical_potential": {
                 "operator": {"tensor_terms": [{"ops": ["N"], "coeff": -1.0}]},
-                "value": {"param": "mu", "scale": -1.0},
+                "value": {"param": "mu"},
             },
         },
     }
@@ -493,13 +541,13 @@ def _fermion_hop_doc() -> dict:
 def _fermion_hop_manifest() -> dict:
     return {REL: {"lattice": "chain", "model": "hubbard", "dimension": 1, "n_sites_uc": 1,
                   "bonds_per_uc": {"t0": 1}, "coordination": {"A": {"t0": 2}},
-                  "min_size_for_check": [7],
+                  "min_size_for_check": [3],  # = 2*max|R|+1 = 2*1+1 (bond R=[1])
                   "source": {"file": "x", "func": "y", "commit": "z"}}}
 
 
 def test_c9_positive_fermion_fermion_hop() -> None:
     errs = lint(_fermion_hop_doc(), _fermion_hop_manifest())
-    check("C9" not in only_ids(errs), f"hop on fermion-fermion must not raise C9, got {errs}")
+    check(errs == [], f"hop on fermion-fermion must be fully valid, got {errs}")
 
 
 def test_c9_negative_hop_on_spin() -> None:
@@ -511,6 +559,7 @@ def test_c9_negative_hop_on_spin() -> None:
 
 def test_c9_positive_kondo_fermion_spin() -> None:
     d = base_doc()
+    d["catalog"]["model"] = "kondo"
     d["model"]["site_dof"] = {
         "A_c": {"fermion": {"orbitals": 1}},
         "A_s": {"spin": {"param": "2S", "scale": 0.5, "default": 0.5}},
@@ -522,14 +571,15 @@ def test_c9_positive_kondo_fermion_spin() -> None:
     m = {REL: {"lattice": "chain", "model": "kondo", "dimension": 1, "n_sites_uc": 2,
                "bonds_per_uc": {"J": 1},
                "coordination": {"A_c": {"J": 1}, "A_s": {"J": 1}},
-               "min_size_for_check": [7],
+               "min_size_for_check": [1],  # = 2*max|R|+1 = 2*0+1 (bond R=[0])
                "source": {"file": "x", "func": "y", "commit": "z"}}}
     errs = lint(d, m)
-    check("C9" not in only_ids(errs), f"s_i.S_j fermion(1st)-spin(2nd) must not raise C9, got {errs}")
+    check(errs == [], f"s_i.S_j fermion(1st)-spin(2nd) must be fully valid, got {errs}")
 
 
 def test_c9_negative_kondo_wrong_order() -> None:
     d = base_doc()
+    d["catalog"]["model"] = "kondo"
     d["model"]["site_dof"] = {
         "A_c": {"fermion": {"orbitals": 1}},
         "A_s": {"spin": {"param": "2S", "scale": 0.5, "default": 0.5}},
@@ -541,7 +591,7 @@ def test_c9_negative_kondo_wrong_order() -> None:
     m = {REL: {"lattice": "chain", "model": "kondo", "dimension": 1, "n_sites_uc": 2,
                "bonds_per_uc": {"J": 1},
                "coordination": {"A_c": {"J": 1}, "A_s": {"J": 1}},
-               "min_size_for_check": [7],
+               "min_size_for_check": [1],  # = 2*max|R|+1 = 2*0+1 (bond R=[0])
                "source": {"file": "x", "func": "y", "commit": "z"}}}
     errs = lint(d, m)
     check("C9" in only_ids(errs), f"s_i.S_j with spin-first/fermion-second order must raise C9, got {errs}")
@@ -653,6 +703,57 @@ def test_c11_negative_folding_degeneracy() -> None:
           f"undersized manifest.min_size_for_check must raise C11 via lint(), got {errs}")
 
 
+# ---------------------------------------------------------------------------
+#  C11 (A2): min_size_for_check strict validation
+# ---------------------------------------------------------------------------
+
+def test_c11_negative_min_size_non_int() -> None:
+    m = base_manifest()
+    m[REL]["min_size_for_check"] = [3.5]
+    errs = lint(base_doc(), m)
+    check("C11" in only_ids(errs), f"non-int min_size_for_check must raise a clean C11 diagnostic, got {errs}")
+
+
+def test_c11_negative_min_size_zero() -> None:
+    m = base_manifest()
+    m[REL]["min_size_for_check"] = [0]
+    errs = lint(base_doc(), m)
+    check("C11" in only_ids(errs), f"min_size_for_check=0 must raise a clean C11 diagnostic, got {errs}")
+
+
+def test_c11_negative_min_size_negative() -> None:
+    m = base_manifest()
+    m[REL]["min_size_for_check"] = [-3]
+    errs = lint(base_doc(), m)
+    check("C11" in only_ids(errs), f"negative min_size_for_check must raise a clean C11 diagnostic, got {errs}")
+
+
+def test_c11_negative_min_size_wrong_equality() -> None:
+    """A positive odd value that is nonetheless not 2*max|R|+1 must be
+    rejected (base_doc()'s single bond has R=[1] -> expected [3], not [5])."""
+    m = base_manifest()
+    m[REL]["min_size_for_check"] = [5]
+    errs = lint(base_doc(), m)
+    check("C11" in only_ids(errs),
+          f"min_size_for_check not equal to 2*max|R|+1 must raise C11, got {errs}")
+
+
+def test_c11_manifest_min_size_matches_all_catalog_files() -> None:
+    """A2: every real manifest.yaml entry's min_size_for_check must already
+    satisfy the strict equality (2*max|R component|+1 per direction,
+    computed from that file's actual model.bonds) -- i.e. linting the real
+    catalog must not raise any C11 min_size_for_check diagnostic."""
+    manifest_files = lc.load_manifest()
+    check(len(manifest_files) > 0, "real manifest.yaml must be loadable and non-empty")
+    for path in lc._discover_default_files():
+        rel_path = path.resolve().relative_to(lc.ROOT).as_posix()
+        errs = lc.lint_file(path, KEYWORDS, manifest_files)
+        min_size_errs = [e for e in errs if e.startswith("C11") and "min_size_for_check" in e]
+        check(min_size_errs == [],
+              f"{rel_path}: min_size_for_check must already satisfy the strict "
+              f"A2 equality, got {min_size_errs}")
+
+
 # NOTE: a per-label instance mismatch (translation non-invariance) is not
 # reachable through the public expand_and_count() interface: for a fixed
 # bond list, every cell contributes exactly one 'from'-incidence to
@@ -666,6 +767,148 @@ def test_c11_negative_folding_degeneracy() -> None:
 # constructing a bonds/size input; it is retained purely as a defensive
 # invariant check. Per the task instructions we skip a dedicated negative
 # test for it (unreachable by construction).
+
+
+# ---------------------------------------------------------------------------
+#  C12 (A4): sign-convention checks (CONVENTIONS.md §6.2)
+# ---------------------------------------------------------------------------
+
+def test_c12_positive() -> None:
+    errs = lint(base_doc())
+    check("C12" not in only_ids(errs), f"correctly-signed base_doc() must not raise C12, got {errs}")
+
+
+def test_c12_positive_fermion_hop() -> None:
+    errs = lint(_fermion_hop_doc(), _fermion_hop_manifest())
+    check("C12" not in only_ids(errs), f"correctly-signed hop fixture must not raise C12, got {errs}")
+
+
+def test_c12_negative_inverted_hop_scale() -> None:
+    d = _fermion_hop_doc()
+    d["model"]["couplings"]["t0"]["value"]["scale"] = 1.0  # should be -1.0
+    errs = lint(d, _fermion_hop_manifest())
+    check("C12" in only_ids(errs), f"hop with scale=+1.0 (inverted) must raise C12, got {errs}")
+
+
+def test_c12_negative_doubled_sign_density_density() -> None:
+    """density-density with an extra scale=-1.0 is a doubled sign inversion
+    relative to the CONVENTIONS §6.2 table (scale absent or +1.0)."""
+    d = base_doc()
+    d["model"]["site_dof"]["A"] = {"fermion": {"orbitals": 1}}
+    d["model"]["bonds"] = [{"type": "V0", "from": "A", "to": "A", "R": [1]}]
+    d["model"]["couplings"] = {
+        "V0": {"operator": "density-density", "value": {"param": "V0", "scale": -1.0}},
+    }
+    d["model"]["onsite"] = {}
+    m = {REL: {**base_manifest()[REL], "bonds_per_uc": {"V0": 1},
+               "coordination": {"A": {"V0": 2}}}}
+    errs = lint(d, m)
+    check("C12" in only_ids(errs),
+          f"density-density with scale=-1.0 (doubled sign) must raise C12, got {errs}")
+
+
+def test_c12_negative_j_coeff_with_scale() -> None:
+    d = base_doc()
+    d["model"]["couplings"]["J0"]["operator"]["tensor_terms"][0]["coeff"] = {
+        "param": "J0x", "scale": 2.0,
+    }
+    errs = lint(d)
+    check("C12" in only_ids(errs), f"J tensor_terms coeff with a scale key must raise C12, got {errs}")
+
+
+def test_c12_negative_missing_value() -> None:
+    d = _fermion_hop_doc()
+    del d["model"]["couplings"]["t0"]["value"]
+    errs = lint(d, _fermion_hop_manifest())
+    check("C12" in only_ids(errs), f"hop coupling missing 'value' must raise C12, got {errs}")
+
+
+def test_c12_wannier90_plain_number_exempt() -> None:
+    """wannier90-dialect couplings may use a plain numeric value with no
+    scale requirement enforced (CONVENTIONS §6.3 Rule W1 exception) --
+    must not raise C12."""
+    d = base_doc()
+    d["catalog"]["lattice"] = "wannier90"
+    d["model"]["site_dof"]["A"] = {"fermion": {"orbitals": 1}}
+    d["model"]["bonds"] = [{"type": "t0", "from": "A", "to": "A", "R": [1]}]
+    d["model"]["couplings"] = {"t0": {"operator": "hop", "value": -1.0}}
+    d["model"]["onsite"] = {}
+    m = {REL: {**base_manifest()[REL], "lattice": "wannier90",
+               "bonds_per_uc": {"t0": 1}, "coordination": {"A": {"t0": 2}}}}
+    errs = lint(d, m)
+    check("C12" not in only_ids(errs), f"wannier90 plain-number hop value must not raise C12, got {errs}")
+
+
+def test_c12_negative_plain_number_non_wannier90() -> None:
+    d = base_doc()
+    d["model"]["site_dof"]["A"] = {"fermion": {"orbitals": 1}}
+    d["model"]["bonds"] = [{"type": "t0", "from": "A", "to": "A", "R": [1]}]
+    d["model"]["couplings"] = {"t0": {"operator": "hop", "value": -1.0}}
+    d["model"]["onsite"] = {}
+    m = {REL: {**base_manifest()[REL], "bonds_per_uc": {"t0": 1}, "coordination": {"A": {"t0": 2}}}}
+    errs = lint(d, m)
+    check("C12" in only_ids(errs),
+          f"plain-number coupling value outside wannier90 dialect must raise C12, got {errs}")
+
+
+def test_c12_negative_onsite_coeff_wrong_sign() -> None:
+    d = base_doc()
+    d["model"]["onsite"]["A"]["aniso_z"]["operator"]["tensor_terms"][0]["coeff"] = -1.0  # should be +1.0
+    errs = lint(d)
+    check("C12" in only_ids(errs), f"aniso_z coeff=-1.0 (should be +1.0) must raise C12, got {errs}")
+
+
+def test_c12_all_31_catalog_files_clean() -> None:
+    """A4: linting the real catalog must not raise any C12 diagnostic."""
+    manifest_files = lc.load_manifest()
+    for path in lc._discover_default_files():
+        rel_path = path.resolve().relative_to(lc.ROOT).as_posix()
+        errs = lc.lint_file(path, KEYWORDS, manifest_files)
+        c12_errs = [e for e in errs if "C12" in e]
+        check(c12_errs == [], f"{rel_path}: must have no C12 diagnostics, got {c12_errs}")
+
+
+# ---------------------------------------------------------------------------
+#  A6: robustness (top-level failure handling, orphan manifest entries)
+# ---------------------------------------------------------------------------
+
+def test_a6_load_manifest_bad_yaml_raises_fatal_lint_error(tmp_path=None) -> None:
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        bad = Path(d) / "manifest.yaml"
+        bad.write_text("files: [unterminated\n  - broken", encoding="utf-8")
+        try:
+            lc.load_manifest(bad)
+            raised = False
+        except lc.FatalLintError:
+            raised = True
+        except Exception as e:  # noqa: BLE001
+            raise AssertionError(f"expected FatalLintError, got {type(e).__name__}: {e}")
+        check(raised, "load_manifest() with malformed YAML must raise FatalLintError, not crash")
+
+
+def test_a6_load_manifest_missing_file_returns_empty() -> None:
+    missing = Path("/nonexistent/path/manifest.yaml")
+    check(lc.load_manifest(missing) == {}, "load_manifest() on a nonexistent path must return {}")
+
+
+def test_a6_orphan_manifest_entry_detected() -> None:
+    files = [lc.ROOT / REL]  # a real file that exists on disk
+    manifest_files = {REL: {}, "nonexistent/ghost.yaml": {}}
+    errs = lc.find_orphan_manifest_entries(files, manifest_files)
+    check(any("ghost.yaml" in e for e in errs),
+          f"a manifest entry with no corresponding file must be reported as an orphan, got {errs}")
+    check(not any("chain_spin.yaml" in e for e in errs),
+          f"a manifest entry that DOES have a corresponding file must not be reported, got {errs}")
+
+
+def test_a6_no_orphans_in_real_manifest() -> None:
+    """A6-ii end-to-end: the real manifest.yaml and the real discovered
+    catalog files must be in exact set-equality (no orphans either way)."""
+    manifest_files = lc.load_manifest()
+    files = lc._discover_default_files()
+    errs = lc.find_orphan_manifest_entries(files, manifest_files)
+    check(errs == [], f"real manifest.yaml must have no orphan entries, got {errs}")
 
 
 # ---------------------------------------------------------------------------
