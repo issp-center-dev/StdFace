@@ -495,6 +495,29 @@ def test_c4_negative_site_dof_mismatch() -> None:
     check("C4" in only_ids(errs), f"site_dof/sites mismatch must raise C4, got {errs}")
 
 
+def test_c3_c4_negative_malformed_bond_preserves_original_index() -> None:
+    """Regression: C2 sanitization drops malformed bonds from ctx["bonds"],
+    which must not renumber the bonds that follow. A malformed bond at
+    index 0 (type is a list) is dropped; the retained bond at index 1
+    fails both C3 (bad R length) and C4 (undefined endpoint) and must
+    still be cited as model.bonds[1], not model.bonds[0], by both."""
+    d = base_doc()
+    d["model"]["bonds"] = [
+        {"type": ["J0"], "from": "A", "to": "A", "R": [1]},  # malformed: type is a list -> dropped by C2
+        {"type": "J0", "from": "A", "to": "Z", "R": [1, 0]},  # retained: bad R length + undefined "to" label
+    ]
+    errs = lint(d)
+    check("C2" in only_ids(errs), f"malformed bond at index 0 must raise C2, got {errs}")
+    check(any(e.startswith("C3:") and "model.bonds[1]" in e for e in errs),
+          f"C3 must cite model.bonds[1] for the retained bond, got {errs}")
+    check(any(e.startswith("C4:") and "model.bonds[1]" in e for e in errs),
+          f"C4 must cite model.bonds[1] for the retained bond, got {errs}")
+    check(not any("model.bonds[0]" in e for e in errs if e.startswith("C3:") or e.startswith("C4:")),
+          f"C3/C4 must not misreport the retained bond as model.bonds[0], got {errs}")
+    check(not any("exception while checking" in e for e in errs),
+          f"must not fall through to a generic exception diagnostic, got {errs}")
+
+
 # ---------------------------------------------------------------------------
 #  C5
 # ---------------------------------------------------------------------------

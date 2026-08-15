@@ -538,6 +538,11 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
     # C5's set-building) that would collapse the diagnostics into a
     # generic top-level exception.
     bonds: list[dict] = []
+    # Parallel to `bonds`: bond_indices[j] is the original index of bonds[j]
+    # in bonds_raw. Sanitization drops malformed bonds, which would shift
+    # positions if downstream checks (C3, C4, ...) re-enumerated `bonds`
+    # directly — this lets them cite the original model.bonds[i] index.
+    bond_indices: list[int] = []
     for i, b in enumerate(bonds_raw):
         if not isinstance(b, dict) or not {"type", "from", "to", "R"} <= b.keys():
             errs.append(f"C2: model.bonds[{i}] missing required keys (type/from/to/R)")
@@ -554,7 +559,9 @@ def check_c2(doc: dict) -> tuple[list[str], dict]:
             valid = False
         if valid:
             bonds.append(b)
+            bond_indices.append(i)
     ctx["bonds"] = bonds
+    ctx["bond_indices"] = bond_indices
 
     couplings = model.get("couplings")
     if not isinstance(couplings, dict):
@@ -602,7 +609,7 @@ def check_c3(ctx: dict) -> list[str]:
         return errs  # already reported by C2
     if len(size) != dimension:
         errs.append(f"C3: len(system.size)={len(size)} != dimension={dimension}")
-    for i, b in enumerate(bonds):
+    for i, b in zip(ctx["bond_indices"], bonds):
         R = b.get("R")
         if isinstance(R, list) and len(R) != dimension:
             errs.append(f"C3: model.bonds[{i}].R length={len(R)} != dimension={dimension}")
@@ -623,7 +630,7 @@ def check_c4(ctx: dict) -> list[str]:
             f"site_dof-only: {sorted(set(site_dof) - labels, key=repr)})"
         )
 
-    for i, b in enumerate(bonds):
+    for i, b in zip(ctx["bond_indices"], bonds):
         for end in ("from", "to"):
             if b.get(end) not in labels:
                 errs.append(f"C4: model.bonds[{i}].{end}={b.get(end)!r} is not a defined site label")
