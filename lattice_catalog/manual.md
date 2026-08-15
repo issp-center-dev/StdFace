@@ -476,7 +476,7 @@ Spin/Hubbard は単一サイト `A`(`frac: [0.0]`)。Kondo は同一分率座標
 **内部 2D 表現(`phase0` → 内部 `phase[1]` 転写)**: chain は論理的には
 1 次元格子だが、参照実装 `chain_lattice.py::chain` は内部的に `W=1` の
 2 次元表現(`StdI.direct` は 2×2 行列、`W` 方向と `L` 方向を持つ)を
-用いて構築されている。具体的には(`chain_lattice.py` 87–90 行相当):
+用いて構築されている。具体的には(`chain_lattice.py` 92–95 行):
 
 ```python
 StdI.phase[0] = print_val_d("phase0", StdI.phase[0], 0.0)  # ユーザ入力
@@ -779,27 +779,65 @@ orthorhombic と同じ 3 成分 `phase0/1/2`。
 | `J1'` | A→A | `[1,-1,1]` | 次近接 -L+H+W |
 | `J2'` | A→A | `[1,1,-1]` | 次近接 -H+W+L |
 
-**`J''`/`t''`/`V''` は受理されるが無結線(dead)パラメータである**:
-`fc_ortho.py` の Spin 分岐は `input_spin_nn(StdI.Jpp, StdI.JppAll,
-StdI.J0pp, ..., "J0''")` 等(89–91 行)によって `J0''`/`J1''`/`J2''` を
-stan.in から読み取り可能なキーワードとして受理する(Hubbard/Kondo 分岐の
-`t''`/`V''` も同様)が、`_BONDS` テーブルにも `GeneralJ`/`general_j`
-呼出しにも一切現れない — **入力としては受理されるが物理ハミルトニアンには
-一切反映されない**。この挙動は C 実装 `src/FCOrtho.c` の相互作用配列
-サイジング式のコメントに明示的な痕跡が残る(210, 214 行):
+**`J''`/`t''`/`V''` は stan.in で指定してもエラーにならず、かつ物理
+ハミルトニアンには一切反映されない**という結果だけを見ると 3 者は
+同じに見えるが、実装機構は異なる。本カタログのコードベースには
+「未使用キーワード検出器」(未参照の入力キーワードを走査して警告する
+仕組み)は存在しないため、最終的な挙動はいずれも「黙って受理・黙って
+破棄・エラーなし」に帰着する — 以下はその内部で何が起きているかを
+区別する。
 
-```c
-nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 6/*J*/ + 3/*J'*/ + 0/*J''*/) ...
-ntransMax = StdI->NCell * 2 * (2*StdI->NsiteUC/*mu+h+Gamma*/ + 12/*t*/ + 6/*t'*/ + 0/*t''*/);
-```
+1. **`J0''`/`J1''`/`J2''`(意図的な accept-then-drop)**: Spin 分岐は
+   `input_spin_nn(StdI.Jpp, StdI.JppAll, StdI.J0pp, ..., "J0''")` 等
+   (`fc_ortho.py` 89–91 行)によって明示的に読み取り、解決済みの値を
+   `StdI.J0pp` 等に格納する。しかしこの値は `_BONDS` テーブルにも
+   `general_j` 呼出しにも一切現れない — **読み取ってから捨てる**、
+   意図的な設計判断であることが C 実装 `src/FCOrtho.c` の相互作用
+   配列サイジング式のコメントから確認できる(210 行):
+   ```c
+   nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 6/*J*/ + 3/*J'*/ + 0/*J''*/) ...
+   ```
+   `+ 0/*J''*/` という記述自体が、C 実装作者が `J''` に配列スロットを
+   意図的に一切割り当てていない(= 対応するボンドが存在しないことを
+   見越している)ことを示す。
+2. **`t''`(`StdI.tpp`)(未参照)**: Hubbard/Kondo 分岐(`else`,
+   108–121 行)は `t0/t1/t2` を `input_hopp(StdI.t, ...)` から、
+   `t0'/t1'/t2'` を `input_hopp(StdI.tp, ...)` から解決するが、
+   単一プライムの系列で打ち切られており、`t0''/t1''/t2''` を
+   `input_hopp(StdI.tpp, ...)` から解決する呼出しは**存在しない**
+   — すなわち `StdI.tpp` は Hubbard/Kondo 分岐のロジックから一度も
+   参照されない(共通キーワードパーサが stan.in の `t''` の値を
+   `StdI.tpp` に格納するだけで、fc_ortho 側は読みも捨てもしない)。
+   J'' のような「読み取ってから捨てる」明示的な処理とは異なる。
+   (Spin 分岐にある `not_used_d("t''", StdI.tpp)`(103 行)は、
+   t 族全体を spin 模型では使わないという定型的な拒否リストの一部
+   であり、Hubbard/Kondo 分岐での `t''` の扱いとは無関係。)
+   C 実装(`src/FCOrtho.c` 147–152 行)も同型で、`InputHopp` 呼出しは
+   `t0'/t1'/t2'` までで打ち切られている。
+3. **`V''`(`StdI.Vpp`)(未参照、かつ拒否リストからも欠落)**:
+   `t''` と同様、Hubbard/Kondo 分岐に `V0''/V1''/V2''` を
+   `input_coulomb_v(StdI.Vpp, ...)` から解決する呼出しは存在しない
+   (153–158 行は `V0'/V1'/V2'` までで打ち切り)。**さらに**、Spin
+   分岐の `not_used_d` 拒否リスト(93–107 行)も `V'`(`StdI.Vp`、
+   107 行)までで打ち切られており、`not_used_d("V''", StdI.Vpp)` に
+   相当する行が**存在しない**。これは兄弟格子である
+   `square_lattice.py`(Spin 分岐、110 行:
+   `not_used_d("V''", StdI.Vpp)`)や `triangular_lattice.py`
+   (Spin 分岐、113 行:同様の呼出し)が `V''` を明示的に拒否リストへ
+   含めているのと対照的であり、C 実装 `src/FCOrtho.c` を確認しても
+   同じ欠落が存在する(139–142 行の `StdFace_NotUsed_d` 系列は
+   `V'` で打ち切られ、`V''` の行がない)。C/Python 両実装で一貫して
+   `V''` だけが拒否リストから欠けているため、`J''` のような意図的な
+   設計判断というよりは**上流(C 実装)側の実装上の空隙(不整合)が
+   Python 移植にもそのまま引き継がれた可能性が高い** — 7 章
+   (既知の制限)で改めて記載する。
 
-`+ 0/*J''*/` および `+ 0/*t''*/` という記述そのものが、C 実装作者が
-`J''`/`t''`/`V''` に配列スロットを意図的に一切割り当てていない(=
-対応するボンドが存在しないことを見越している)ことを示しており、
-Python 実装(`fc_ortho.py`)にも同一の構造がある。C/Python 両実装で
-一貫した挙動であるため、上流のバグではなく意図された仕様と判断され、
-本カタログはこの現行実装のとおり `J''`/`t''`/`V''` を `bonds`/
-`couplings` から除外している。
+以上のとおり、`J''` は「読んで捨てる」、`t''` は「(Hubbard/Kondo
+分岐からは)読まれもしない」、`V''` は「読まれもせず、かつ Spin 分岐の
+拒否リストからも漏れている」という 3 通りの異なる内部機構でありながら、
+ユーザから見た挙動(エラーなく受理され、ハミルトニアンには反映されない)
+だけが共通している。本カタログはこの現行実装のとおり `J''`/`t''`/
+`V''` を `bonds`/`couplings` から除外している。
 
 **検算**: 最近接配位数 4/type(2 ソース行×2)、次近接配位数 2/type
 (1 ソース行×2)。`min_size_for_check: [3, 3, 3]`(最大 `|R|` 成分 1)。
@@ -1079,9 +1117,11 @@ add_local_terms(StdI, base + uc + kondo_off, base + uc)
 意味論のみを公開する。
 
 **GC 変種(粒子数条件は solver 層)**: HPhi は `CalcModel` の値
-(`0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC`、
-`solvers/hphi/writer.py` `MODEL_GC_TO_CALC_MODEL` 辞書、306 行)により
-通常(canonical)模型とグランドカノニカル(GC)模型を切り替える。この
+(`0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC` —
+この説明文字列は `calcmod.def` に出力される、`solvers/hphi/writer.py`
+306 行。対応表そのものは同ファイル `MODEL_GC_TO_CALC_MODEL` 辞書、
+80–87 行)により通常(canonical)模型とグランドカノニカル(GC)模型を
+切り替える。この
 切り替えは `(ModelType, lGC)` の組で決まり、`lGC` は全電子数
 (`ncond`/`nelec`)・全 `Sz`(`2Sz`)という**粒子数セクターの指定**から
 solver 出力層で決定される — ハミルトニアンの `bonds`/`couplings`/
