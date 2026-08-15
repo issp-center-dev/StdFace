@@ -38,7 +38,7 @@ from stdface import plugin as _solver_plugin_mod  # noqa: E402
 _CANON_EXCEPTIONS = {"2s": "2S", "2sz": "2Sz", "gamma": "Gamma",
                      "gamma_y": "Gamma_y", "u": "U", "v": "V", "j": "J",
                      "d": "D", "k": "K", "l": "L", "w": "W", "h": "h",
-                     "mu": "mu"}
+                     "mu": "mu", "height": "Height"}
 
 
 def canon(kw: str) -> str:

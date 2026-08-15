@@ -1,6 +1,7 @@
 # StdFace triangular / Hubbard 模型
 # stan.in 対応例:  model="Hubbard" / lattice="triangular" / W=4 / L=4 / t=1.0 / U=4.0
-# 検算は manifest.yaml を参照。符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
+# 検算は manifest.yaml の triangular/triangular_hubbard.yaml エントリを参照。
+# 符号は scale/coeff がデータとして持つ (CONVENTIONS 6章)
 # 出典: python/stdface/lattice/triangular_lattice.py::triangular (_BONDS), commit c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24
 
 catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: triangular, model: hubbard}

@@ -139,6 +139,13 @@ StdFace パラメータ → builder 呼び出し (interaction_builder.py)
 表す**リテラル数値**(`+1.0` / `-1.0` 等)である。実際の外部パラメータ
 参照は同じ項の `value`(`{param, scale, default}`、§6.3)が担う。
 
+**外部データ由来の値(wannier90 例)**: `_ur.dat` 等の外部データから
+読み取った具体的な数値(`H_mn(R)` の実測値など)は `value` に数値
+リテラルを直接書いてよい(`{param, scale, default}` の一般形は必須
+ではない)。C7 は `_find_param_refs` により `param` キーを持つ dict の
+みを走査対象とするため、非 dict の `value`(数値リテラル)は検査対象
+外である(`lattice_catalog/wannier90/example_hubbard.yaml` 参照)。
+
 ### 6.2 符号表(規範)
 
 | StdFace | 物理ハミルトニアン寄与 | YAML 表現 |

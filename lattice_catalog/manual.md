@@ -47,7 +47,7 @@ CONVENTIONS.md を規範とする(CONVENTIONS.md §1)。
 1. **ソース突合**: 各 YAML の `bonds` / `couplings` / `onsite` は、
    参照実装(`python/stdface/lattice/*.py` の `_BONDS` テーブル、
    `python/stdface/core/model_plugin.py` の演算子生成、
-   `python/stdface/core/input_params.py` のパラメータ解決規則)を
+   `python/stdface/lattice/input_params.py` のパラメータ解決規則)を
    直接読んで書き写したものであり、各ファイル末尾に
    `source: {file, func, commit}` として出典を記録する
    (CONVENTIONS.md §8)。
@@ -844,7 +844,7 @@ orthorhombic と同じ 3 成分 `phase0/1/2`。
 
 **出典**: `python/stdface/lattice/fc_ortho.py::fc_ortho`(`_BONDS`)、
 commit `8e3601167d1254807f58ce365107333f1d505fa0`
-(`src/FCOrtho.c::StdFace_FCOrtho` と byte-for-byte の呼出し列一致を
+(`src/FCOrtho.c::StdFace_FCOrtho` と呼出し列の一対一一致を
 確認済み)。
 
 ### 3.9 pyrochlore
@@ -906,7 +906,7 @@ fc_ortho と同じ FCC: `a1: [0,0.5,0.5], a2: [0.5,0,0.5], a3: [0.5,0.5,0]`。
 
 **出典**: `python/stdface/lattice/pyrochlore.py::pyrochlore`(`_local`,
 `_BONDS`)、commit `70fbecd02aeb60df04625843217a08b545c2c8b0`
-(`src/Pyrochlore.c` と byte-for-byte の一致を確認済み、Task 9)。
+(`src/Pyrochlore.c` と呼出し列の一対一一致を確認済み、Task 9)。
 
 ---
 
@@ -1367,11 +1367,11 @@ CONVENTIONS.md §7)が定義する演算子語彙は、2 端点の名前付き�
 (CONVENTIONS.md §7 項目 6)、`lattice_catalog/wannier90/` には J
 チャネルの YAML 例を用意していない。
 
-一般項スキーマの素描(6 章の拡張提案 6 項目のうち第 6 項として
-記載予定 — 順序付き生成消滅演算子列 `[c†_{i,σ,orb}, c_{j,σ',orb'},
-...]` と、各演算子への site/orbital 束縛、係数 1 つを持つ表現。
-名前付き演算子(`hop` 等)はこの一般形の省略記法という位置づけに
-なる)は、本タスクの範囲外である 6 章(仕様拡張提案)に委ねる。
+一般項スキーマの素描(§6.6 参照 — 順序付き生成消滅演算子列
+`[c†_{i,σ,orb}, c_{j,σ',orb'}, ...]` と、各演算子への site/orbital
+束縛、係数 1 つを持つ表現。名前付き演算子(`hop` 等)はこの一般形の
+省略記法という位置づけになる)は、本タスクの範囲外である 6 章
+(仕様拡張提案)に委ねる。
 
 ---
 

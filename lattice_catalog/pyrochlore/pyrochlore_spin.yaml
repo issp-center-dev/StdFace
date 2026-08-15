@@ -2,7 +2,7 @@
 # stan.in 対応例:  model="Spin" / lattice="pyrochlore" / W=4 / L=4 / Height=4 / J0=1.0
 # 4 副格子 (A0..A3、NsiteUC=4)。FCC 格子ベクトル既定。四面体内 (R=[0,0,0])
 # の 6 本と四面体間 (R != 0) の 6 本の区別は下記ボンド表のコメント参照。
-# 検算: 最近接配位数は各サイト 6 (四面体内 2 本+四面体間 2 本 × 3 隣接副格子系列)。
+# 検算: 最近接配位数は各サイト 6 (3 系列 × (四面体内 1 本 + 四面体間 1 本) = 6)。
 # 検算は manifest.yaml の pyrochlore/pyrochlore_spin.yaml エントリを参照。
 # 出典: python/stdface/lattice/pyrochlore.py::pyrochlore (_BONDS), commit 70fbecd02aeb60df04625843217a08b545c2c8b0
 
