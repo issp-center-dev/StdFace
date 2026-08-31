@@ -466,6 +466,24 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         assert s.nsite == 8
         assert len(s.trans_list) > 0
 
+    def test_fc_ortho_hubbard_rejects_vpp(self, tmp_path, monkeypatch):
+        """V'' is rejected in the fermion branch (C bug: fc_ortho has no
+        third-neighbor bonds, but V'' was accepted and silently dropped)."""
+        monkeypatch.chdir(tmp_path)
+        s = make_hubbard_fc_ortho(2, 2, 2)
+        s.Vpp = 1.0
+        with pytest.raises(ValueError):
+            fc_ortho(s)
+
+    def test_fc_ortho_hubbard_rejects_tpp(self, tmp_path, monkeypatch):
+        """t'' is rejected in the fermion branch (same silently-dropped
+        family as V'')."""
+        monkeypatch.chdir(tmp_path)
+        s = make_hubbard_fc_ortho(2, 2, 2)
+        s.tpp = complex(0.5, 0.0)
+        with pytest.raises(ValueError):
+            fc_ortho(s)
+
     def test_pyrochlore_hubbard_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         s = make_hubbard_pyrochlore(2, 2, 2)
