@@ -1,0 +1,102 @@
+# StdFace face-centered orthorhombic (fc_ortho) / Kondo lattice model
+# Corresponding stan.in input:  model="Kondo" / lattice="fcorthorhombic" / W=4 / L=4 / Height=4 / t0=1.0 / J=1.0
+# The field (h/Gamma/Gamma_y) is applied to both the itinerant electrons and the localized spins
+# (python/stdface/core/model_plugin.py::KondoModel).
+# The correspondence with the current implementation's site doubling (first half = localized S2, second half = itinerant) is described in manual Section 4.
+# Source: python/stdface/lattice/fc_ortho.py::fc_ortho (_BONDS), commit 8e3601167d1254807f58ce365107333f1d505fa0
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: fc_ortho, model: kondo}
+
+geometry:
+  dimension: 3
+  lattice_vectors:
+    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (default: 0, Llength/2, Hlength/2)
+    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (default: Wlength/2, 0, Hlength/2)
+    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (default: Wlength/2, Llength/2, 0)
+  sites:
+    - {label: A_c, frac: [0.0, 0.0, 0.0]}  # itinerant electron (degree of freedom 1 on 1 physical site)
+    - {label: A_s, frac: [0.0, 0.0, 0.0]}  # localized spin (degree of freedom 2, same site)
+
+system:
+  finite: true
+  size: [4, 4, 4]                 # StdFace: W, L, Height
+  boundary:
+    - {twist: {param: phase0}}    # in degrees
+    - {twist: {param: phase1}}
+    - {twist: {param: phase2}}
+
+model:
+  site_dof:
+    A_c: {fermion: {orbitals: 1}}
+    A_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # Kondo coupling follows the source order = argument order of general_j(..., itinerant, localized).
+    # Itinerant A_c is the 1st endpoint (matching the role of s_i . S_j)
+    - {from: A_c, to: A_s, R: [0, 0, 0], type: J}   # Kondo coupling (intra-cell)
+    # Preserves the source order of the reference implementation (_BONDS). R = [dW, dL, dH]
+    # nearest neighbor (nn, coordination number 12. Each of the W/L/H series has 2 equivalent directions, coordination number 4 per series)
+    - {from: A_c, to: A_c, R: [1, 0, 0], type: t0}     # along W
+    - {from: A_c, to: A_c, R: [0, 1, -1], type: t0}    # along W (equiv)
+    - {from: A_c, to: A_c, R: [0, 1, 0], type: t1}     # along L
+    - {from: A_c, to: A_c, R: [-1, 0, 1], type: t1}    # along L (equiv)
+    - {from: A_c, to: A_c, R: [0, 0, 1], type: t2}     # along H
+    - {from: A_c, to: A_c, R: [1, -1, 0], type: t2}    # along H (equiv)
+    # second-nearest neighbor (coordination number 6. Only 1 direction per series, coordination number 2)
+    - {from: A_c, to: A_c, R: [-1, 1, 1], type: "t0'"}  # -W+L+H
+    - {from: A_c, to: A_c, R: [1, -1, 1], type: "t1'"}  # -L+H+W
+    - {from: A_c, to: A_c, R: [1, 1, -1], type: "t2'"}  # -H+W+L
+    # nearest neighbor (nn, coordination number 12. Each of the W/L/H series has 2 equivalent directions, coordination number 4 per series)
+    - {from: A_c, to: A_c, R: [1, 0, 0], type: V0}     # along W
+    - {from: A_c, to: A_c, R: [0, 1, -1], type: V0}    # along W (equiv)
+    - {from: A_c, to: A_c, R: [0, 1, 0], type: V1}     # along L
+    - {from: A_c, to: A_c, R: [-1, 0, 1], type: V1}    # along L (equiv)
+    - {from: A_c, to: A_c, R: [0, 0, 1], type: V2}     # along H
+    - {from: A_c, to: A_c, R: [1, -1, 0], type: V2}    # along H (equiv)
+    # second-nearest neighbor (coordination number 6. Only 1 direction per series, coordination number 2)
+    - {from: A_c, to: A_c, R: [-1, 1, 1], type: "V0'"}  # -W+L+H
+    - {from: A_c, to: A_c, R: [1, -1, 1], type: "V1'"}  # -L+H+W
+    - {from: A_c, to: A_c, R: [1, 1, -1], type: "V2'"}  # -H+W+L
+
+  couplings:
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}
+    t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
+    t2:    {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t1'": {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    "t2'": {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}
+    V1:    {operator: "density-density", value: {param: V1}}
+    V2:    {operator: "density-density", value: {param: V2}}
+    "V0'": {operator: "density-density", value: {param: "V0'"}}
+    "V1'": {operator: "density-density", value: {param: "V1'"}}
+    "V2'": {operator: "density-density", value: {param: "V2'"}}
+    J:     {operator: "s_i . S_j", value: {param: J}}   # +J s·S (1st endpoint = itinerant)
+
+  onsite:
+    A_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A_s:
+      field_z:                   # same 3 components apply to the localized side
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}

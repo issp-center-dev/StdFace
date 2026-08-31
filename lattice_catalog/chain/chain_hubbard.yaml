@@ -1,0 +1,58 @@
+# StdFace chain / Hubbard model
+# Corresponding stan.in input:  model="Hubbard" / lattice="chain" / L=16 / t=1.0 / U=4.0
+# See manifest.yaml for the consistency check. Signs are carried as data in scale/coeff (CONVENTIONS §6)
+# Source: python/stdface/lattice/chain_lattice.py::chain (_BONDS), commit b96aef2107f1ab200565efd496606a01184e3f46
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: chain, model: hubbard}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [1.0]                    # StdFace: a
+  sites:
+    - {label: A, frac: [0.0]}
+
+system:
+  finite: true
+  size: [16]                     # StdFace: L
+  boundary:
+    - {twist: {param: phase0}}   # in degrees
+
+model:
+  site_dof:
+    A: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7)
+
+  bonds:
+    - {from: A, to: A, R: [1], type: t0}     # alias t
+    - {from: A, to: A, R: [2], type: "t0'"}  # alias t'
+    - {from: A, to: A, R: [3], type: "t0''"} # alias t''
+    - {from: A, to: A, R: [1], type: V0}     # alias V
+    - {from: A, to: A, R: [2], type: "V0'"}  # alias V'
+    - {from: A, to: A, R: [3], type: "V0''"} # alias V''
+
+  couplings:
+    # Contribution to H = value × operator (physical coefficient). -t is expressed via scale.
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t0''": {operator: "hop", value: {param: "t0''", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}    # +V n_i n_j
+    "V0'": {operator: "density-density", value: {param: "V0'"}}
+    "V0''": {operator: "density-density", value: {param: "V0''"}}
+
+  onsite:
+    A:
+      hubbard_u:                 # +U n↑n↓
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:        # -mu N
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:                   # -h Sz (electron spin)
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}

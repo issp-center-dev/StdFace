@@ -1,0 +1,216 @@
+# StdFace pyrochlore / Kondo lattice model
+# Corresponding stan.in input:  model="Kondo" / lattice="pyrochlore" / W=4 / L=4 / Height=4 / t0=1.0 / J=1.0
+# The 4 sublattices (A0..A3) are each decomposed into 2 labels, _c (itinerant electron) / _s
+# (localized spin) (CONVENTIONS §6.7).
+#
+# Kondo coupling: the current implementation couples A3_c (the itinerant site of sublattice 3)
+# to all localized spins (unlike the per-sublattice correspondence used in other lattices. This
+# may be a bug in the upstream implementation — see manual Section 7. If upstream is fixed, the
+# catalog will need versioning).
+# Source order is preserved: in the argument order of general_j(..., isite+3, jsite+uc_i), the
+# itinerant A3_c is always the 1st endpoint (matching the role of s_i . S_j).
+#
+# The field (h/Gamma/Gamma_y) is applied to both the itinerant electrons and the localized spins
+# (python/stdface/lattice/pyrochlore.py::_local — hubbard_local is called individually for all
+# _c, mag_field for all _s).
+# The correspondence with the current implementation's site doubling (first half = localized S2, second half = itinerant) is described in manual Section 4.
+# Source: python/stdface/lattice/pyrochlore.py::pyrochlore (_local, _BONDS), commit 70fbecd02aeb60df04625843217a08b545c2c8b0
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: pyrochlore, model: kondo}
+
+geometry:
+  dimension: 3
+  lattice_vectors:
+    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (default: 0, Llength/2, Hlength/2) — FCC
+    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (default: Wlength/2, 0, Hlength/2)
+    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (default: Wlength/2, Llength/2, 0)
+  sites:
+    - {label: A0_c, frac: [0.0, 0.0, 0.0]}  # itinerant electron (physical site A0, tau[0])
+    - {label: A0_s, frac: [0.0, 0.0, 0.0]}  # localized spin (same as above)
+    - {label: A1_c, frac: [0.5, 0.0, 0.0]}  # itinerant electron (physical site A1, tau[1])
+    - {label: A1_s, frac: [0.5, 0.0, 0.0]}  # localized spin (same as above)
+    - {label: A2_c, frac: [0.0, 0.5, 0.0]}  # itinerant electron (physical site A2, tau[2])
+    - {label: A2_s, frac: [0.0, 0.5, 0.0]}  # localized spin (same as above)
+    - {label: A3_c, frac: [0.0, 0.0, 0.5]}  # itinerant electron (physical site A3, tau[3])
+    - {label: A3_s, frac: [0.0, 0.0, 0.5]}  # localized spin (same as above)
+
+system:
+  finite: true
+  size: [4, 4, 4]                 # StdFace: W, L, Height
+  boundary:
+    - {twist: {param: phase0}}    # in degrees
+    - {twist: {param: phase1}}
+    - {twist: {param: phase2}}
+
+model:
+  site_dof:
+    A0_c: {fermion: {orbitals: 1}}
+    A0_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    A1_c: {fermion: {orbitals: 1}}
+    A1_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    A2_c: {fermion: {orbitals: 1}}
+    A2_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    A3_c: {fermion: {orbitals: 1}}
+    A3_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # Kondo coupling: the current implementation couples A3_c (the itinerant site of sublattice 3)
+    # to all localized spins (unlike the per-sublattice correspondence used in other lattices. This
+    # may be a bug in the upstream implementation — see manual Section 7. If upstream is fixed, the
+    # catalog will need versioning).
+    # Source order is preserved: in the argument order of general_j(..., isite+3, jsite+uc_i), the
+    # itinerant A3_c is always the 1st endpoint (matching the role of s_i . S_j)
+    - {from: A3_c, to: A0_s, R: [0, 0, 0], type: J}
+    - {from: A3_c, to: A1_s, R: [0, 0, 0], type: J}
+    - {from: A3_c, to: A2_s, R: [0, 0, 0], type: J}
+    - {from: A3_c, to: A3_s, R: [0, 0, 0], type: J}
+    # Preserves the source order of the reference implementation (_BONDS). R = [dW, dL, dH].
+    # --- intra-tetrahedron (R = [0,0,0], 6 bonds within the unit cell) ---
+    - {from: A0_c, to: A1_c, R: [0, 0, 0], type: t0}    # along W
+    - {from: A0_c, to: A2_c, R: [0, 0, 0], type: t1}    # along L
+    - {from: A0_c, to: A3_c, R: [0, 0, 0], type: t2}    # along H
+    - {from: A2_c, to: A3_c, R: [0, 0, 0], type: "t0'"}  # along L-H
+    - {from: A3_c, to: A1_c, R: [0, 0, 0], type: "t1'"}  # along H-W
+    - {from: A1_c, to: A2_c, R: [0, 0, 0], type: "t2'"}  # along W-L
+    # --- inter-tetrahedron (R != [0,0,0], 6 bonds to neighboring unit cells) ---
+    - {from: A1_c, to: A0_c, R: [1, 0, 0], type: t0}     # along W
+    - {from: A2_c, to: A0_c, R: [0, 1, 0], type: t1}     # along L
+    - {from: A3_c, to: A0_c, R: [0, 0, 1], type: t2}     # along H
+    - {from: A3_c, to: A2_c, R: [0, -1, 1], type: "t0'"}  # along L-H
+    - {from: A1_c, to: A3_c, R: [1, 0, -1], type: "t1'"}  # along H-W
+    - {from: A2_c, to: A1_c, R: [-1, 1, 0], type: "t2'"}  # along W-L
+    # --- intra-tetrahedron (V, R = [0,0,0]) ---
+    - {from: A0_c, to: A1_c, R: [0, 0, 0], type: V0}    # along W
+    - {from: A0_c, to: A2_c, R: [0, 0, 0], type: V1}    # along L
+    - {from: A0_c, to: A3_c, R: [0, 0, 0], type: V2}    # along H
+    - {from: A2_c, to: A3_c, R: [0, 0, 0], type: "V0'"}  # along L-H
+    - {from: A3_c, to: A1_c, R: [0, 0, 0], type: "V1'"}  # along H-W
+    - {from: A1_c, to: A2_c, R: [0, 0, 0], type: "V2'"}  # along W-L
+    # --- inter-tetrahedron (V, R != [0,0,0]) ---
+    - {from: A1_c, to: A0_c, R: [1, 0, 0], type: V0}     # along W
+    - {from: A2_c, to: A0_c, R: [0, 1, 0], type: V1}     # along L
+    - {from: A3_c, to: A0_c, R: [0, 0, 1], type: V2}     # along H
+    - {from: A3_c, to: A2_c, R: [0, -1, 1], type: "V0'"}  # along L-H
+    - {from: A1_c, to: A3_c, R: [1, 0, -1], type: "V1'"}  # along H-W
+    - {from: A2_c, to: A1_c, R: [-1, 1, 0], type: "V2'"}  # along W-L
+
+  couplings:
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}
+    t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
+    t2:    {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t1'": {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    "t2'": {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}
+    V1:    {operator: "density-density", value: {param: V1}}
+    V2:    {operator: "density-density", value: {param: V2}}
+    "V0'": {operator: "density-density", value: {param: "V0'"}}
+    "V1'": {operator: "density-density", value: {param: "V1'"}}
+    "V2'": {operator: "density-density", value: {param: "V2'"}}
+    J:     {operator: "s_i . S_j", value: {param: J}}   # +J s·S (1st endpoint = itinerant A3_c)
+
+  onsite:
+    A0_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A0_s:
+      field_z:                   # same 3 components apply to the localized side
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A1_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A1_s:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A2_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A2_s:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A3_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A3_s:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}

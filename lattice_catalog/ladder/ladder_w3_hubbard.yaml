@@ -1,0 +1,140 @@
+# StdFace ladder (W=3) / Hubbard model
+# Corresponding stan.in input:  model="Hubbard" / lattice="ladder" / W=3 / L=16 / t0=1.0 (rung) / t1=1.0 (leg) / U=4.0
+#
+# Unit cell = 1 rung (W sites; W=3 -> labels A0, A1, A2 = leg 0, 1, 2).
+# ladder.py sets NsiteUC=W and then fixes StdI.W to 1 (ladder.py:80-81).
+# Grounds for the rung (former W) direction being open: (1) the dW component of _BONDS is always 0,
+# (2) rung/diagonal bonds are only generated under the condition `if uc_i < NsiteUC - 1:`
+# (ladder.py:184), so no bond is generated that "closes" from the last leg (uc_i=W-1=2) back to
+# the first leg. Hence this catalog is logically one-dimensional (periodic boundary only along L).
+# phase0 is transcribed into the internal phase[1] (ladder.py:75-78). Same style as chain
+# (CONVENTIONS.md §4). Signs are carried as data in scale/coeff (same §6).
+#
+# W generalization rule (manually unrolling the dynamic loop of ladder.py:176-188; read J -> t/V):
+#   for uc_i in range(W):
+#     leg:                        A{uc_i}-A{uc_i}   R=[1] t1/V1,  R=[2] t1'/V1'
+#     if uc_i < W-1:
+#       rung (intra-cell):        A{uc_i}-A{uc_i+1} R=[0] t0/V0
+#       diag (L+1):                A{uc_i}-A{uc_i+1} R=[1] t2/V2
+#       diag (L-1):                A{uc_i}-A{uc_i+1} R=[-1] t2'/V2'
+#   t/V originate from the same physical bond tuple, so following the same presentation
+#   convention as chain/square, the t block is listed first, followed by the V block
+#   (within each block the uc_i=0->1->2 order is preserved).
+# Consistency check (middle leg A1 vs. edge legs A0/A2): for W=3, only the middle leg A1 has
+# rung/diag (t0, t2, t2', V0, V2, V2') on both sides, so its coordination number is twice
+# that of the edge legs (2 bonds vs. 1). Along the leg direction (t1, t1') all legs have coordination number 2.
+# See the ladder/ladder_w3_hubbard.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: ladder, model: hubbard}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [1.0]                    # StdFace: Llength (default a=1.0). No lattice_vector for the rung direction since it is non-periodic
+  sites:
+    - {label: A0, frac: [0.0]}   # leg 0 (edge)
+    - {label: A1, frac: [0.0]}   # leg 1 (middle)
+    - {label: A2, frac: [0.0]}   # leg 2 (edge)
+
+system:
+  finite: true
+  size: [16]                     # StdFace: L
+  boundary:
+    - {twist: {param: phase0}}   # in degrees. Transcribed to internal phase[1] (phase[0] is always 0)
+
+model:
+  site_dof:
+    A0: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7)
+    A1: {fermion: {orbitals: 1}}
+    A2: {fermion: {orbitals: 1}}
+
+  bonds:
+    # --- t block (uc_i=0 -> 1 -> 2 order) ---
+    - {from: A0, to: A0, R: [1], type: t1}
+    - {from: A0, to: A0, R: [2], type: "t1'"}
+    - {from: A0, to: A1, R: [0], type: t0}
+    - {from: A0, to: A1, R: [1], type: t2}
+    - {from: A0, to: A1, R: [-1], type: "t2'"}
+    - {from: A1, to: A1, R: [1], type: t1}
+    - {from: A1, to: A1, R: [2], type: "t1'"}
+    - {from: A1, to: A2, R: [0], type: t0}
+    - {from: A1, to: A2, R: [1], type: t2}
+    - {from: A1, to: A2, R: [-1], type: "t2'"}
+    - {from: A2, to: A2, R: [1], type: t1}
+    - {from: A2, to: A2, R: [2], type: "t1'"}
+    # --- V block (same physical bonds, same order) ---
+    - {from: A0, to: A0, R: [1], type: V1}
+    - {from: A0, to: A0, R: [2], type: "V1'"}
+    - {from: A0, to: A1, R: [0], type: V0}
+    - {from: A0, to: A1, R: [1], type: V2}
+    - {from: A0, to: A1, R: [-1], type: "V2'"}
+    - {from: A1, to: A1, R: [1], type: V1}
+    - {from: A1, to: A1, R: [2], type: "V1'"}
+    - {from: A1, to: A2, R: [0], type: V0}
+    - {from: A1, to: A2, R: [1], type: V2}
+    - {from: A1, to: A2, R: [-1], type: "V2'"}
+    - {from: A2, to: A2, R: [1], type: V1}
+    - {from: A2, to: A2, R: [2], type: "V1'"}
+
+  couplings:
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
+    t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
+    "t1'": {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    t2:    {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t2'": {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}    # +V n_i n_j
+    V1:    {operator: "density-density", value: {param: V1}}
+    "V1'": {operator: "density-density", value: {param: "V1'"}}
+    V2:    {operator: "density-density", value: {param: V2}}
+    "V2'": {operator: "density-density", value: {param: "V2'"}}
+
+  onsite:
+    A0:
+      hubbard_u:                 # +U n↑n↓
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:        # -mu N
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:                   # -h Sz (electron spin)
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A1:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A2:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}

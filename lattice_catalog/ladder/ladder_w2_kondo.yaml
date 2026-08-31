@@ -1,0 +1,145 @@
+# StdFace ladder (W=2) / Kondo lattice model
+# Corresponding stan.in input:  model="Kondo" / lattice="ladder" / W=2 / L=16 / t0=1.0 / t1=1.0 / J=1.0
+# The field (h/Gamma/Gamma_y) is applied to both the itinerant electrons and the localized spins
+# (python/stdface/core/model_plugin.py::KondoModel).
+# The correspondence with the current implementation's site doubling (first half = localized S2, second half = itinerant) is described in manual Section 4.
+# The Kondo J coupling is 1 bond per leg, A{i}_c -> A{i}_s (itinerant is the 1st endpoint).
+#
+# Unit cell = 1 rung (W sites; W=2 -> leg 0, leg 1). Each leg is doubled by Kondo into
+# 2 labels: _c (itinerant electron) / _s (localized spin).
+# ladder.py sets NsiteUC=W and then fixes StdI.W to 1 (ladder.py:80-81).
+# Grounds for the rung (former W) direction being open: (1) the dW component of _BONDS is always 0,
+# (2) rung/diagonal bonds are only generated under the condition `if uc_i < NsiteUC - 1:`
+# (ladder.py:184), so no bond is generated that "closes" from the last leg back to the first leg.
+# Hence this catalog is represented as logically one-dimensional (periodic boundary only along L).
+# phase0 is transcribed into the internal phase[1] (ladder.py:75-78). Same style as chain
+# (CONVENTIONS.md §4).
+#
+# W generalization rule (t/V are the manually-unrolled dynamic loop of ladder.py:176-188, read J -> t/V.
+# The Kondo J is generated per leg uc_i as 1 bond A{uc_i}_c-A{uc_i}_s R=[0], in leg order
+# — following expand_bonds_2d's intra-cell loop order: the local terms (including Kondo J) are
+# added first for all legs, and only afterward are the t/V bonds of _BONDS added):
+#   for uc_i in range(W): J: A{uc_i}_c-A{uc_i}_s R=[0]           <- local-term loop (first)
+#   for uc_i in range(W):                                          <- _BONDS loop (after)
+#     leg:                        A{uc_i}_c-A{uc_i}_c   R=[1] t1/V1,  R=[2] t1'/V1'
+#     if uc_i < W-1:
+#       rung (intra-cell):        A{uc_i}_c-A{uc_i+1}_c R=[0] t0/V0
+#       diag (L+1):                A{uc_i}_c-A{uc_i+1}_c R=[1] t2/V2
+#       diag (L-1):                A{uc_i}_c-A{uc_i+1}_c R=[-1] t2'/V2'
+# Consistency check (W=2): coordination number 2 along the leg direction (t1), coordination number 1 for the rung (t0) (both legs are edges),
+# Kondo J coordination number is 1 for each site.
+# See the ladder/ladder_w2_kondo.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: ladder, model: kondo}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [1.0]                    # StdFace: Llength (default a=1.0). No lattice_vector for the rung direction since it is non-periodic
+  sites:
+    - {label: A0_c, frac: [0.0]}  # leg 0, itinerant electron
+    - {label: A0_s, frac: [0.0]}  # leg 0, localized spin
+    - {label: A1_c, frac: [0.0]}  # leg 1, itinerant electron
+    - {label: A1_s, frac: [0.0]}  # leg 1, localized spin
+
+system:
+  finite: true
+  size: [16]                     # StdFace: L
+  boundary:
+    - {twist: {param: phase0}}   # in degrees. Transcribed to internal phase[1] (phase[0] is always 0)
+
+model:
+  site_dof:
+    A0_c: {fermion: {orbitals: 1}}
+    A0_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    A1_c: {fermion: {orbitals: 1}}
+    A1_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # Kondo coupling (leg order, itinerant is the 1st endpoint)
+    - {from: A0_c, to: A0_s, R: [0], type: J}
+    - {from: A1_c, to: A1_s, R: [0], type: J}
+    # --- t block (_c to _c, uc_i loop order, leg 0 -> leg 1) ---
+    - {from: A0_c, to: A0_c, R: [1], type: t1}
+    - {from: A0_c, to: A0_c, R: [2], type: "t1'"}
+    - {from: A0_c, to: A1_c, R: [0], type: t0}
+    - {from: A0_c, to: A1_c, R: [1], type: t2}
+    - {from: A0_c, to: A1_c, R: [-1], type: "t2'"}
+    - {from: A1_c, to: A1_c, R: [1], type: t1}
+    - {from: A1_c, to: A1_c, R: [2], type: "t1'"}
+    # --- V block (same physical bonds, same order) ---
+    - {from: A0_c, to: A0_c, R: [1], type: V1}
+    - {from: A0_c, to: A0_c, R: [2], type: "V1'"}
+    - {from: A0_c, to: A1_c, R: [0], type: V0}
+    - {from: A0_c, to: A1_c, R: [1], type: V2}
+    - {from: A0_c, to: A1_c, R: [-1], type: "V2'"}
+    - {from: A1_c, to: A1_c, R: [1], type: V1}
+    - {from: A1_c, to: A1_c, R: [2], type: "V1'"}
+
+  couplings:
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}
+    t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
+    "t1'": {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    t2:    {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t2'": {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}
+    V1:    {operator: "density-density", value: {param: V1}}
+    "V1'": {operator: "density-density", value: {param: "V1'"}}
+    V2:    {operator: "density-density", value: {param: V2}}
+    "V2'": {operator: "density-density", value: {param: "V2'"}}
+    J:     {operator: "s_i . S_j", value: {param: J}}   # +J s·S (1st endpoint = itinerant)
+
+  onsite:
+    A0_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A0_s:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A1_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A1_s:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}

@@ -1,0 +1,171 @@
+# StdFace ladder (W=3) / Spin model
+# Corresponding stan.in input:  model="Spin" / lattice="ladder" / W=3 / L=16 / J0=1.0 (rung) / J1=1.0 (leg)
+#
+# Unit cell = 1 rung (W sites; W=3 -> labels A0, A1, A2 = leg 0, 1, 2).
+# ladder.py sets NsiteUC=W and then fixes StdI.W to 1 (ladder.py:80-81).
+# Grounds for the rung (former W) direction being open: (1) the dW component of _BONDS is always 0
+# (a cell-direction offset that crosses legs is never generated), (2) rung/diagonal
+# bonds are only generated under the condition `if uc_i < NsiteUC - 1:` (ladder.py:184),
+# so no bond is generated that "closes" from the last leg (uc_i=W-1=2) back to the first leg (uc_i=0).
+# Hence this catalog is represented as logically one-dimensional (periodic boundary only along L).
+# phase0 is transcribed into the internal phase[1] (ladder.py:75-78). Same style as chain
+# (CONVENTIONS.md §4).
+#
+# W generalization rule (manually unrolling the dynamic loop of ladder.py:176-188):
+#   for uc_i in range(W):
+#     leg  (within the same leg):        A{uc_i}-A{uc_i}   R=[1] J1,  R=[2] J1'
+#     if uc_i < W-1:
+#       rung (intra-cell):    A{uc_i}-A{uc_i+1} R=[0] J0
+#       diag (diagonal, L+1):         A{uc_i}-A{uc_i+1} R=[1] J2
+#       diag (diagonal, L-1):         A{uc_i}-A{uc_i+1} R=[-1] J2'
+# W=3: unrolling uc_i=0,1,2, only uc_i=1 (the middle leg, A1) has rung/diag on both
+# sides (the uc_i=0 side and the uc_i=1<W-1=2 side); the edge legs A0/A2 have only one side.
+# Consistency check (contrast with the symmetric W=2 case): for W=3, the middle leg A1's
+# coordination number for J0/J2/J2' is twice that of the edge legs A0/A2 (2 bonds vs. 1). Along the
+# leg direction (J1, J1') all legs have coordination number 2 (wrapping translationally). Cross-checked against
+# manifest.yaml's C11 (measured torus expansion with min_size 5).
+# See the ladder/ladder_w3_spin.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/ladder.py::ladder (_BONDS, L176-188), commit e733ff893a52b81addd27ef7e347f77273c0d129
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: ladder, model: spin}
+
+geometry:
+  dimension: 1
+  lattice_vectors:
+    a1: [1.0]                    # StdFace: Llength (default a=1.0). No lattice_vector for the rung direction since it is non-periodic
+  sites:
+    - {label: A0, frac: [0.0]}   # leg 0 (edge)
+    - {label: A1, frac: [0.0]}   # leg 1 (middle)
+    - {label: A2, frac: [0.0]}   # leg 2 (edge)
+
+system:
+  finite: true
+  size: [16]                     # StdFace: L
+  boundary:
+    - {twist: {param: phase0}}   # in degrees. Transcribed to internal phase[1] (phase[0] is always 0)
+
+model:
+  site_dof:
+    A0: {spin: {param: 2S, scale: 0.5, default: 0.5}}   # S = 0.5 × 2S. Default S=1/2
+    A1: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+    A2: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # Preserves the source order of the reference implementation (_BONDS): uc_i=0 -> uc_i=1 -> uc_i=2
+    - {from: A0, to: A0, R: [1], type: J1}      # leg nearest neighbor  (uc_i=0)
+    - {from: A0, to: A0, R: [2], type: "J1'"}   # leg next-nearest neighbor  (uc_i=0)
+    - {from: A0, to: A1, R: [0], type: J0}      # rung, intra-cell (uc_i=0 < W-1)
+    - {from: A0, to: A1, R: [1], type: J2}      # diag L+1     (uc_i=0 < W-1)
+    - {from: A0, to: A1, R: [-1], type: "J2'"}  # diag L-1     (uc_i=0 < W-1)
+    - {from: A1, to: A1, R: [1], type: J1}      # leg nearest neighbor  (uc_i=1)
+    - {from: A1, to: A1, R: [2], type: "J1'"}   # leg next-nearest neighbor  (uc_i=1)
+    - {from: A1, to: A2, R: [0], type: J0}      # rung, intra-cell (uc_i=1 < W-1)
+    - {from: A1, to: A2, R: [1], type: J2}      # diag L+1     (uc_i=1 < W-1)
+    - {from: A1, to: A2, R: [-1], type: "J2'"}  # diag L-1     (uc_i=1 < W-1)
+    - {from: A2, to: A2, R: [1], type: J1}      # leg nearest neighbor  (uc_i=2)
+    - {from: A2, to: A2, R: [2], type: "J1'"}   # leg next-nearest neighbor  (uc_i=2)
+    # uc_i=2 = W-1, so rung/diag is cut off (edge leg)
+
+  couplings:
+    # J family is in canonical 9-component form. Parameter resolution: component > scalar diagonal > global alias > 0
+    J0:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J0x}}
+          - {ops: [Sy, Sy], coeff: {param: J0y}}
+          - {ops: [Sz, Sz], coeff: {param: J0z}}
+          - {ops: [Sx, Sy], coeff: {param: J0xy}}
+          - {ops: [Sx, Sz], coeff: {param: J0xz}}
+          - {ops: [Sy, Sx], coeff: {param: J0yx}}
+          - {ops: [Sy, Sz], coeff: {param: J0yz}}
+          - {ops: [Sz, Sx], coeff: {param: J0zx}}
+          - {ops: [Sz, Sy], coeff: {param: J0zy}}
+    J1:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J1x}}
+          - {ops: [Sy, Sy], coeff: {param: J1y}}
+          - {ops: [Sz, Sz], coeff: {param: J1z}}
+          - {ops: [Sx, Sy], coeff: {param: J1xy}}
+          - {ops: [Sx, Sz], coeff: {param: J1xz}}
+          - {ops: [Sy, Sx], coeff: {param: J1yx}}
+          - {ops: [Sy, Sz], coeff: {param: J1yz}}
+          - {ops: [Sz, Sx], coeff: {param: J1zx}}
+          - {ops: [Sz, Sy], coeff: {param: J1zy}}
+    "J1'":
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: "J1'x"}}
+          - {ops: [Sy, Sy], coeff: {param: "J1'y"}}
+          - {ops: [Sz, Sz], coeff: {param: "J1'z"}}
+          - {ops: [Sx, Sy], coeff: {param: "J1'xy"}}
+          - {ops: [Sx, Sz], coeff: {param: "J1'xz"}}
+          - {ops: [Sy, Sx], coeff: {param: "J1'yx"}}
+          - {ops: [Sy, Sz], coeff: {param: "J1'yz"}}
+          - {ops: [Sz, Sx], coeff: {param: "J1'zx"}}
+          - {ops: [Sz, Sy], coeff: {param: "J1'zy"}}
+    J2:
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: J2x}}
+          - {ops: [Sy, Sy], coeff: {param: J2y}}
+          - {ops: [Sz, Sz], coeff: {param: J2z}}
+          - {ops: [Sx, Sy], coeff: {param: J2xy}}
+          - {ops: [Sx, Sz], coeff: {param: J2xz}}
+          - {ops: [Sy, Sx], coeff: {param: J2yx}}
+          - {ops: [Sy, Sz], coeff: {param: J2yz}}
+          - {ops: [Sz, Sx], coeff: {param: J2zx}}
+          - {ops: [Sz, Sy], coeff: {param: J2zy}}
+    "J2'":
+      operator:
+        tensor_terms:
+          - {ops: [Sx, Sx], coeff: {param: "J2'x"}}
+          - {ops: [Sy, Sy], coeff: {param: "J2'y"}}
+          - {ops: [Sz, Sz], coeff: {param: "J2'z"}}
+          - {ops: [Sx, Sy], coeff: {param: "J2'xy"}}
+          - {ops: [Sx, Sz], coeff: {param: "J2'xz"}}
+          - {ops: [Sy, Sx], coeff: {param: "J2'yx"}}
+          - {ops: [Sy, Sz], coeff: {param: "J2'yz"}}
+          - {ops: [Sz, Sx], coeff: {param: "J2'zx"}}
+          - {ops: [Sz, Sy], coeff: {param: "J2'zy"}}
+
+  onsite:
+    A0:
+      field_z:                   # -h Sz
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:                   # -Gamma Sx
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:                   # -Gamma_y Sy
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:                   # D (Sz)^2
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
+    A1:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}
+    A2:
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+      aniso_z:
+        operator: {tensor_terms: [{ops: [Szz], coeff: 1.0}]}
+        value: {param: D}

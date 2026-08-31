@@ -1,0 +1,101 @@
+# StdFace triangular / Kondo lattice model
+# Corresponding stan.in input:  model="Kondo" / lattice="triangular" / W=4 / L=4 / t=1.0 / J=1.0
+# The field (h/Gamma/Gamma_y) is applied to both the itinerant electrons and the localized spins
+# (python/stdface/core/model_plugin.py::KondoModel).
+# The correspondence with the current implementation's site doubling (first half = localized S2, second half = itinerant) is described in manual Section 4.
+# Source: python/stdface/lattice/triangular_lattice.py::triangular (_BONDS), commit c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: triangular, model: kondo}
+
+geometry:
+  dimension: 2
+  lattice_vectors:
+    a1: [1.0, 0.0]                         # StdFace: Wx, Wy
+    a2: [0.5, 0.8660254037844386]          # StdFace: Lx, Ly
+  sites:
+    - {label: A_c, frac: [0.0, 0.0]}  # itinerant electron (degree of freedom 1 on 1 physical site)
+    - {label: A_s, frac: [0.0, 0.0]}  # localized spin (degree of freedom 2, same site)
+
+system:
+  finite: true
+  size: [5, 5]                    # StdFace: W, L
+  boundary:
+    - {twist: {param: phase0}}    # in degrees
+    - {twist: {param: phase1}}
+
+model:
+  site_dof:
+    A_c: {fermion: {orbitals: 1}}
+    A_s: {spin: {param: 2S, scale: 0.5, default: 0.5}}
+
+  bonds:
+    # Kondo coupling follows the source order = argument order of general_j(..., itinerant, localized).
+    # Itinerant A_c is the 1st endpoint (matching the role of s_i . S_j)
+    - {from: A_c, to: A_s, R: [0, 0], type: J}   # Kondo coupling (intra-cell)
+    - {from: A_c, to: A_c, R: [1, 0], type: t0}
+    - {from: A_c, to: A_c, R: [0, 1], type: t1}
+    - {from: A_c, to: A_c, R: [1, -1], type: t2}
+    - {from: A_c, to: A_c, R: [2, -1], type: "t1'"}
+    - {from: A_c, to: A_c, R: [1, 1], type: "t2'"}
+    - {from: A_c, to: A_c, R: [-1, 2], type: "t0'"}
+    - {from: A_c, to: A_c, R: [2, 0], type: "t0''"}
+    - {from: A_c, to: A_c, R: [0, 2], type: "t1''"}
+    - {from: A_c, to: A_c, R: [2, -2], type: "t2''"}
+    - {from: A_c, to: A_c, R: [1, 0], type: V0}
+    - {from: A_c, to: A_c, R: [0, 1], type: V1}
+    - {from: A_c, to: A_c, R: [1, -1], type: V2}
+    - {from: A_c, to: A_c, R: [2, -1], type: "V1'"}
+    - {from: A_c, to: A_c, R: [1, 1], type: "V2'"}
+    - {from: A_c, to: A_c, R: [-1, 2], type: "V0'"}
+    - {from: A_c, to: A_c, R: [2, 0], type: "V0''"}
+    - {from: A_c, to: A_c, R: [0, 2], type: "V1''"}
+    - {from: A_c, to: A_c, R: [2, -2], type: "V2''"}
+
+  couplings:
+    t0:     {operator: "hop", value: {param: t0, scale: -1.0}}
+    t1:     {operator: "hop", value: {param: t1, scale: -1.0}}
+    t2:     {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t0'":  {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t1'":  {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    "t2'":  {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    "t0''": {operator: "hop", value: {param: "t0''", scale: -1.0}}
+    "t1''": {operator: "hop", value: {param: "t1''", scale: -1.0}}
+    "t2''": {operator: "hop", value: {param: "t2''", scale: -1.0}}
+    V0:     {operator: "density-density", value: {param: V0}}
+    V1:     {operator: "density-density", value: {param: V1}}
+    V2:     {operator: "density-density", value: {param: V2}}
+    "V0'":  {operator: "density-density", value: {param: "V0'"}}
+    "V1'":  {operator: "density-density", value: {param: "V1'"}}
+    "V2'":  {operator: "density-density", value: {param: "V2'"}}
+    "V0''": {operator: "density-density", value: {param: "V0''"}}
+    "V1''": {operator: "density-density", value: {param: "V1''"}}
+    "V2''": {operator: "density-density", value: {param: "V2''"}}
+    J:      {operator: "s_i . S_j", value: {param: J}}   # +J s·S (1st endpoint = itinerant)
+
+  onsite:
+    A_c:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A_s:
+      field_z:                   # same 3 components apply to the localized side
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}

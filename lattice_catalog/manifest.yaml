@@ -1,0 +1,465 @@
+# lattice_catalog consistency-check ledger
+#
+# Each entry holds the expected values that the linter (tools/lint_catalog.py)
+# cross-checks against the YAML body. All keys are mandatory (a missing key is a C10 error).
+#
+# files:
+#   <path to the catalog YAML, relative>:  # e.g. chain/chain_spin.yaml
+#     lattice: <must match catalog.lattice>
+#     model: <must match catalog.model>
+#     dimension: <integer, must match geometry.dimension>
+#     n_sites_uc: <integer, must match the number of elements in geometry.sites>
+#     bonds_per_uc: {<bond type>: <count per unit cell>, ...}
+#       # List every bond type (omission is not allowed).
+#     coordination:
+#       # Coordination number per site label × bond type.
+#       # Measured by counting expansion on the min_size_for_check torus
+#       # and compared against the value here (expand_and_count in tools/lint_catalog.py).
+#       <label>: {<bond type>: <coordination number>, ...}
+#     min_size_for_check: [<size per dimension>, ...]
+#       # The minimum size at which distinct R values do not fold onto the same site pair.
+#       # For each direction, record the odd number satisfying L > 2 * max|R component|.
+#     source:
+#       file: <relative path to the referenced Python implementation file>
+#       func: <name of the referenced function>
+#       commit: <referenced commit hash>
+#
+# Real entries were added starting with Task 1.
+files:
+  chain/chain_spin.yaml:
+    lattice: chain
+    model: spin
+    dimension: 1
+    n_sites_uc: 1
+    bonds_per_uc: {J0: 1, "J0'": 1, "J0''": 1}
+    coordination:
+      A: {J0: 2, "J0'": 2, "J0''": 2}
+    min_size_for_check: [7]
+    source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: b96aef2107f1ab200565efd496606a01184e3f46}
+  chain/chain_hubbard.yaml:
+    lattice: chain
+    model: hubbard
+    dimension: 1
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 1, "t0'": 1, "t0''": 1, V0: 1, "V0'": 1, "V0''": 1}
+    coordination:
+      A: {t0: 2, "t0'": 2, "t0''": 2, V0: 2, "V0'": 2, "V0''": 2}
+    min_size_for_check: [7]
+    source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: b96aef2107f1ab200565efd496606a01184e3f46}
+  chain/chain_kondo.yaml:
+    lattice: chain
+    model: kondo
+    dimension: 1
+    n_sites_uc: 2
+    bonds_per_uc: {J: 1, t0: 1, "t0'": 1, "t0''": 1, V0: 1, "V0'": 1, "V0''": 1}
+    coordination:
+      A_c: {J: 1, t0: 2, "t0'": 2, "t0''": 2, V0: 2, "V0'": 2, "V0''": 2}
+      A_s: {J: 1}
+    min_size_for_check: [7]
+    source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: b96aef2107f1ab200565efd496606a01184e3f46}
+  square/square_spin.yaml:
+    lattice: square
+    model: spin
+    dimension: 2
+    n_sites_uc: 1
+    bonds_per_uc: {J0: 1, J1: 1, "J0'": 1, "J1'": 1, "J0''": 1, "J1''": 1}
+    coordination:
+      A: {J0: 2, J1: 2, "J0'": 2, "J1'": 2, "J0''": 2, "J1''": 2}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/square_lattice.py, func: tetragonal, commit: fe8d43f4722a880072c3ac0f3cafd99d741dff77}
+  square/square_hubbard.yaml:
+    lattice: square
+    model: hubbard
+    dimension: 2
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 1, t1: 1, "t0'": 1, "t1'": 1, "t0''": 1, "t1''": 1,
+                   V0: 1, V1: 1, "V0'": 1, "V1'": 1, "V0''": 1, "V1''": 1}
+    coordination:
+      A: {t0: 2, t1: 2, "t0'": 2, "t1'": 2, "t0''": 2, "t1''": 2,
+          V0: 2, V1: 2, "V0'": 2, "V1'": 2, "V0''": 2, "V1''": 2}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/square_lattice.py, func: tetragonal, commit: fe8d43f4722a880072c3ac0f3cafd99d741dff77}
+  square/square_kondo.yaml:
+    lattice: square
+    model: kondo
+    dimension: 2
+    n_sites_uc: 2
+    bonds_per_uc: {J: 1, t0: 1, t1: 1, "t0'": 1, "t1'": 1, "t0''": 1, "t1''": 1,
+                   V0: 1, V1: 1, "V0'": 1, "V1'": 1, "V0''": 1, "V1''": 1}
+    coordination:
+      A_c: {J: 1, t0: 2, t1: 2, "t0'": 2, "t1'": 2, "t0''": 2, "t1''": 2,
+            V0: 2, V1: 2, "V0'": 2, "V1'": 2, "V0''": 2, "V1''": 2}
+      A_s: {J: 1}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/square_lattice.py, func: tetragonal, commit: fe8d43f4722a880072c3ac0f3cafd99d741dff77}
+  triangular/triangular_spin.yaml:
+    lattice: triangular
+    model: spin
+    dimension: 2
+    n_sites_uc: 1
+    bonds_per_uc: {J0: 1, J1: 1, J2: 1, "J0'": 1, "J1'": 1, "J2'": 1,
+                   "J0''": 1, "J1''": 1, "J2''": 1}
+    coordination:
+      A: {J0: 2, J1: 2, J2: 2, "J0'": 2, "J1'": 2, "J2'": 2,
+          "J0''": 2, "J1''": 2, "J2''": 2}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/triangular_lattice.py, func: triangular, commit: c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24}
+  triangular/triangular_hubbard.yaml:
+    lattice: triangular
+    model: hubbard
+    dimension: 2
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 1, t1: 1, t2: 1, "t0'": 1, "t1'": 1, "t2'": 1,
+                   "t0''": 1, "t1''": 1, "t2''": 1,
+                   V0: 1, V1: 1, V2: 1, "V0'": 1, "V1'": 1, "V2'": 1,
+                   "V0''": 1, "V1''": 1, "V2''": 1}
+    coordination:
+      A: {t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+          "t0''": 2, "t1''": 2, "t2''": 2,
+          V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2,
+          "V0''": 2, "V1''": 2, "V2''": 2}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/triangular_lattice.py, func: triangular, commit: c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24}
+  triangular/triangular_kondo.yaml:
+    lattice: triangular
+    model: kondo
+    dimension: 2
+    n_sites_uc: 2
+    bonds_per_uc: {J: 1, t0: 1, t1: 1, t2: 1, "t0'": 1, "t1'": 1, "t2'": 1,
+                   "t0''": 1, "t1''": 1, "t2''": 1,
+                   V0: 1, V1: 1, V2: 1, "V0'": 1, "V1'": 1, "V2'": 1,
+                   "V0''": 1, "V1''": 1, "V2''": 1}
+    coordination:
+      A_c: {J: 1, t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+            "t0''": 2, "t1''": 2, "t2''": 2,
+            V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2,
+            "V0''": 2, "V1''": 2, "V2''": 2}
+      A_s: {J: 1}
+    min_size_for_check: [5, 5]
+    source: {file: python/stdface/lattice/triangular_lattice.py, func: triangular, commit: c9ef7c9df93fc73afcf9076cd8bacddbf1d9bf24}
+  honeycomb/honeycomb_spin.yaml:
+    lattice: honeycomb
+    model: spin
+    dimension: 2
+    n_sites_uc: 2
+    bonds_per_uc: {J0: 1, J1: 1, J2: 1, "J2'": 2, "J1'": 2, "J0'": 2,
+                   "J1''": 1, "J0''": 1, "J2''": 1}
+    coordination:
+      A: {J0: 1, J1: 1, J2: 1, "J2'": 2, "J1'": 2, "J0'": 2,
+          "J1''": 1, "J0''": 1, "J2''": 1}
+      B: {J0: 1, J1: 1, J2: 1, "J2'": 2, "J1'": 2, "J0'": 2,
+          "J1''": 1, "J0''": 1, "J2''": 1}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/honeycomb_lattice.py, func: honeycomb, commit: e42ef547c5fb073d78200752c5c5ff01375d4619}
+  honeycomb/honeycomb_hubbard.yaml:
+    lattice: honeycomb
+    model: hubbard
+    dimension: 2
+    n_sites_uc: 2
+    bonds_per_uc: {t0: 1, t1: 1, t2: 1, "t2'": 2, "t1'": 2, "t0'": 2,
+                   "t1''": 1, "t0''": 1, "t2''": 1,
+                   V0: 1, V1: 1, V2: 1, "V2'": 2, "V1'": 2, "V0'": 2,
+                   "V1''": 1, "V0''": 1, "V2''": 1}
+    coordination:
+      A: {t0: 1, t1: 1, t2: 1, "t2'": 2, "t1'": 2, "t0'": 2,
+          "t1''": 1, "t0''": 1, "t2''": 1,
+          V0: 1, V1: 1, V2: 1, "V2'": 2, "V1'": 2, "V0'": 2,
+          "V1''": 1, "V0''": 1, "V2''": 1}
+      B: {t0: 1, t1: 1, t2: 1, "t2'": 2, "t1'": 2, "t0'": 2,
+          "t1''": 1, "t0''": 1, "t2''": 1,
+          V0: 1, V1: 1, V2: 1, "V2'": 2, "V1'": 2, "V0'": 2,
+          "V1''": 1, "V0''": 1, "V2''": 1}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/honeycomb_lattice.py, func: honeycomb, commit: e42ef547c5fb073d78200752c5c5ff01375d4619}
+  honeycomb/honeycomb_kondo.yaml:
+    lattice: honeycomb
+    model: kondo
+    dimension: 2
+    n_sites_uc: 4
+    bonds_per_uc: {J: 2, t0: 1, t1: 1, t2: 1, "t2'": 2, "t1'": 2, "t0'": 2,
+                   "t1''": 1, "t0''": 1, "t2''": 1,
+                   V0: 1, V1: 1, V2: 1, "V2'": 2, "V1'": 2, "V0'": 2,
+                   "V1''": 1, "V0''": 1, "V2''": 1}
+    coordination:
+      A_c: {J: 1, t0: 1, t1: 1, t2: 1, "t2'": 2, "t1'": 2, "t0'": 2,
+            "t1''": 1, "t0''": 1, "t2''": 1,
+            V0: 1, V1: 1, V2: 1, "V2'": 2, "V1'": 2, "V0'": 2,
+            "V1''": 1, "V0''": 1, "V2''": 1}
+      A_s: {J: 1}
+      B_c: {J: 1, t0: 1, t1: 1, t2: 1, "t2'": 2, "t1'": 2, "t0'": 2,
+            "t1''": 1, "t0''": 1, "t2''": 1,
+            V0: 1, V1: 1, V2: 1, "V2'": 2, "V1'": 2, "V0'": 2,
+            "V1''": 1, "V0''": 1, "V2''": 1}
+      B_s: {J: 1}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/honeycomb_lattice.py, func: honeycomb, commit: e42ef547c5fb073d78200752c5c5ff01375d4619}
+  kagome/kagome_spin.yaml:
+    lattice: kagome
+    model: spin
+    dimension: 2
+    n_sites_uc: 3
+    bonds_per_uc: {J0: 2, J1: 2, J2: 2, "J0'": 2, "J1'": 2, "J2'": 2}
+    coordination:
+      A: {J1: 2, J2: 2, "J1'": 2, "J2'": 2}
+      B: {J0: 2, J2: 2, "J0'": 2, "J2'": 2}
+      C: {J0: 2, J1: 2, "J0'": 2, "J1'": 2}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/kagome.py, func: kagome, commit: 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73}
+  kagome/kagome_hubbard.yaml:
+    lattice: kagome
+    model: hubbard
+    dimension: 2
+    n_sites_uc: 3
+    bonds_per_uc: {t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A: {t1: 2, t2: 2, "t1'": 2, "t2'": 2, V1: 2, V2: 2, "V1'": 2, "V2'": 2}
+      B: {t0: 2, t2: 2, "t0'": 2, "t2'": 2, V0: 2, V2: 2, "V0'": 2, "V2'": 2}
+      C: {t0: 2, t1: 2, "t0'": 2, "t1'": 2, V0: 2, V1: 2, "V0'": 2, "V1'": 2}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/kagome.py, func: kagome, commit: 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73}
+  kagome/kagome_kondo.yaml:
+    lattice: kagome
+    model: kondo
+    dimension: 2
+    n_sites_uc: 6
+    bonds_per_uc: {J: 3, t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A_c: {J: 1, t1: 2, t2: 2, "t1'": 2, "t2'": 2, V1: 2, V2: 2, "V1'": 2, "V2'": 2}
+      A_s: {J: 1}
+      B_c: {J: 1, t0: 2, t2: 2, "t0'": 2, "t2'": 2, V0: 2, V2: 2, "V0'": 2, "V2'": 2}
+      B_s: {J: 1}
+      C_c: {J: 1, t0: 2, t1: 2, "t0'": 2, "t1'": 2, V0: 2, V1: 2, "V0'": 2, "V1'": 2}
+      C_s: {J: 1}
+    min_size_for_check: [3, 3]
+    source: {file: python/stdface/lattice/kagome.py, func: kagome, commit: 20b2c3cda3a489b5dcd4c9180a19ca23e9280c73}
+  ladder/ladder_w2_spin.yaml:
+    lattice: ladder
+    model: spin
+    dimension: 1
+    n_sites_uc: 2
+    bonds_per_uc: {J1: 2, "J1'": 2, J0: 1, J2: 1, "J2'": 1}
+    coordination:
+      A0: {J1: 2, "J1'": 2, J0: 1, J2: 1, "J2'": 1}
+      A1: {J1: 2, "J1'": 2, J0: 1, J2: 1, "J2'": 1}
+    min_size_for_check: [5]
+    source: {file: python/stdface/lattice/ladder.py, func: ladder, commit: e733ff893a52b81addd27ef7e347f77273c0d129}
+  ladder/ladder_w2_hubbard.yaml:
+    lattice: ladder
+    model: hubbard
+    dimension: 1
+    n_sites_uc: 2
+    bonds_per_uc: {t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+                   V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+    coordination:
+      A0: {t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+           V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+      A1: {t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+           V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+    min_size_for_check: [5]
+    source: {file: python/stdface/lattice/ladder.py, func: ladder, commit: e733ff893a52b81addd27ef7e347f77273c0d129}
+  ladder/ladder_w2_kondo.yaml:
+    lattice: ladder
+    model: kondo
+    dimension: 1
+    n_sites_uc: 4
+    bonds_per_uc: {J: 2, t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+                   V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+    coordination:
+      A0_c: {J: 1, t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+             V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+      A0_s: {J: 1}
+      A1_c: {J: 1, t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+             V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+      A1_s: {J: 1}
+    min_size_for_check: [5]
+    source: {file: python/stdface/lattice/ladder.py, func: ladder, commit: e733ff893a52b81addd27ef7e347f77273c0d129}
+  ladder/ladder_w3_spin.yaml:
+    lattice: ladder
+    model: spin
+    dimension: 1
+    n_sites_uc: 3
+    bonds_per_uc: {J1: 3, "J1'": 3, J0: 2, J2: 2, "J2'": 2}
+    coordination:
+      A0: {J1: 2, "J1'": 2, J0: 1, J2: 1, "J2'": 1}
+      A1: {J1: 2, "J1'": 2, J0: 2, J2: 2, "J2'": 2}
+      A2: {J1: 2, "J1'": 2, J0: 1, J2: 1, "J2'": 1}
+    min_size_for_check: [5]
+    source: {file: python/stdface/lattice/ladder.py, func: ladder, commit: e733ff893a52b81addd27ef7e347f77273c0d129}
+  ladder/ladder_w3_hubbard.yaml:
+    lattice: ladder
+    model: hubbard
+    dimension: 1
+    n_sites_uc: 3
+    bonds_per_uc: {t1: 3, "t1'": 3, t0: 2, t2: 2, "t2'": 2,
+                   V1: 3, "V1'": 3, V0: 2, V2: 2, "V2'": 2}
+    coordination:
+      A0: {t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+           V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+      A1: {t1: 2, "t1'": 2, t0: 2, t2: 2, "t2'": 2,
+           V1: 2, "V1'": 2, V0: 2, V2: 2, "V2'": 2}
+      A2: {t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+           V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+    min_size_for_check: [5]
+    source: {file: python/stdface/lattice/ladder.py, func: ladder, commit: e733ff893a52b81addd27ef7e347f77273c0d129}
+  ladder/ladder_w3_kondo.yaml:
+    lattice: ladder
+    model: kondo
+    dimension: 1
+    n_sites_uc: 6
+    bonds_per_uc: {J: 3, t1: 3, "t1'": 3, t0: 2, t2: 2, "t2'": 2,
+                   V1: 3, "V1'": 3, V0: 2, V2: 2, "V2'": 2}
+    coordination:
+      A0_c: {J: 1, t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+             V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+      A0_s: {J: 1}
+      A1_c: {J: 1, t1: 2, "t1'": 2, t0: 2, t2: 2, "t2'": 2,
+             V1: 2, "V1'": 2, V0: 2, V2: 2, "V2'": 2}
+      A1_s: {J: 1}
+      A2_c: {J: 1, t1: 2, "t1'": 2, t0: 1, t2: 1, "t2'": 1,
+             V1: 2, "V1'": 2, V0: 1, V2: 1, "V2'": 1}
+      A2_s: {J: 1}
+    min_size_for_check: [5]
+    source: {file: python/stdface/lattice/ladder.py, func: ladder, commit: e733ff893a52b81addd27ef7e347f77273c0d129}
+  orthorhombic/orthorhombic_spin.yaml:
+    lattice: orthorhombic
+    model: spin
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {J0: 1, J1: 1, J2: 1, "J0'": 2, "J1'": 2, "J2'": 2, "J''": 4}
+    coordination:
+      A: {J0: 2, J1: 2, J2: 2, "J0'": 4, "J1'": 4, "J2'": 4, "J''": 8}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/orthorhombic.py, func: orthorhombic, commit: 1cf9f86a394d01f9efe180031e14bfa5d344bfcc}
+  orthorhombic/orthorhombic_hubbard.yaml:
+    lattice: orthorhombic
+    model: hubbard
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 1, t1: 1, t2: 1, "t0'": 2, "t1'": 2, "t2'": 2, "t''": 4,
+                   V0: 1, V1: 1, V2: 1, "V0'": 2, "V1'": 2, "V2'": 2, "V''": 4}
+    coordination:
+      A: {t0: 2, t1: 2, t2: 2, "t0'": 4, "t1'": 4, "t2'": 4, "t''": 8,
+          V0: 2, V1: 2, V2: 2, "V0'": 4, "V1'": 4, "V2'": 4, "V''": 8}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/orthorhombic.py, func: orthorhombic, commit: 1cf9f86a394d01f9efe180031e14bfa5d344bfcc}
+  orthorhombic/orthorhombic_kondo.yaml:
+    lattice: orthorhombic
+    model: kondo
+    dimension: 3
+    n_sites_uc: 2
+    bonds_per_uc: {J: 1, t0: 1, t1: 1, t2: 1, "t0'": 2, "t1'": 2, "t2'": 2, "t''": 4,
+                   V0: 1, V1: 1, V2: 1, "V0'": 2, "V1'": 2, "V2'": 2, "V''": 4}
+    coordination:
+      A_c: {J: 1, t0: 2, t1: 2, t2: 2, "t0'": 4, "t1'": 4, "t2'": 4, "t''": 8,
+            V0: 2, V1: 2, V2: 2, "V0'": 4, "V1'": 4, "V2'": 4, "V''": 8}
+      A_s: {J: 1}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/orthorhombic.py, func: orthorhombic, commit: 1cf9f86a394d01f9efe180031e14bfa5d344bfcc}
+  fc_ortho/fc_ortho_spin.yaml:
+    lattice: fc_ortho
+    model: spin
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {J0: 2, J1: 2, J2: 2, "J0'": 1, "J1'": 1, "J2'": 1}
+    coordination:
+      A: {J0: 4, J1: 4, J2: 4, "J0'": 2, "J1'": 2, "J2'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/fc_ortho.py, func: fc_ortho, commit: 8e3601167d1254807f58ce365107333f1d505fa0}
+  fc_ortho/fc_ortho_hubbard.yaml:
+    lattice: fc_ortho
+    model: hubbard
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 2, t1: 2, t2: 2, "t0'": 1, "t1'": 1, "t2'": 1,
+                   V0: 2, V1: 2, V2: 2, "V0'": 1, "V1'": 1, "V2'": 1}
+    coordination:
+      A: {t0: 4, t1: 4, t2: 4, "t0'": 2, "t1'": 2, "t2'": 2,
+          V0: 4, V1: 4, V2: 4, "V0'": 2, "V1'": 2, "V2'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/fc_ortho.py, func: fc_ortho, commit: 8e3601167d1254807f58ce365107333f1d505fa0}
+  fc_ortho/fc_ortho_kondo.yaml:
+    lattice: fc_ortho
+    model: kondo
+    dimension: 3
+    n_sites_uc: 2
+    bonds_per_uc: {J: 1, t0: 2, t1: 2, t2: 2, "t0'": 1, "t1'": 1, "t2'": 1,
+                   V0: 2, V1: 2, V2: 2, "V0'": 1, "V1'": 1, "V2'": 1}
+    coordination:
+      A_c: {J: 1, t0: 4, t1: 4, t2: 4, "t0'": 2, "t1'": 2, "t2'": 2,
+            V0: 4, V1: 4, V2: 4, "V0'": 2, "V1'": 2, "V2'": 2}
+      A_s: {J: 1}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/fc_ortho.py, func: fc_ortho, commit: 8e3601167d1254807f58ce365107333f1d505fa0}
+  pyrochlore/pyrochlore_spin.yaml:
+    lattice: pyrochlore
+    model: spin
+    dimension: 3
+    n_sites_uc: 4
+    bonds_per_uc: {J0: 2, J1: 2, J2: 2, "J0'": 2, "J1'": 2, "J2'": 2}
+    coordination:
+      A0: {J0: 2, J1: 2, J2: 2}
+      A1: {J0: 2, "J1'": 2, "J2'": 2}
+      A2: {J1: 2, "J0'": 2, "J2'": 2}
+      A3: {J2: 2, "J0'": 2, "J1'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/pyrochlore.py, func: pyrochlore, commit: 70fbecd02aeb60df04625843217a08b545c2c8b0}
+  pyrochlore/pyrochlore_hubbard.yaml:
+    lattice: pyrochlore
+    model: hubbard
+    dimension: 3
+    n_sites_uc: 4
+    bonds_per_uc: {t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A0: {t0: 2, t1: 2, t2: 2, V0: 2, V1: 2, V2: 2}
+      A1: {t0: 2, "t1'": 2, "t2'": 2, V0: 2, "V1'": 2, "V2'": 2}
+      A2: {t1: 2, "t0'": 2, "t2'": 2, V1: 2, "V0'": 2, "V2'": 2}
+      A3: {t2: 2, "t0'": 2, "t1'": 2, V2: 2, "V0'": 2, "V1'": 2}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/pyrochlore.py, func: pyrochlore, commit: 70fbecd02aeb60df04625843217a08b545c2c8b0}
+  pyrochlore/pyrochlore_kondo.yaml:
+    lattice: pyrochlore
+    model: kondo
+    dimension: 3
+    n_sites_uc: 8
+    bonds_per_uc: {J: 4, t0: 2, t1: 2, t2: 2, "t0'": 2, "t1'": 2, "t2'": 2,
+                   V0: 2, V1: 2, V2: 2, "V0'": 2, "V1'": 2, "V2'": 2}
+    coordination:
+      A0_c: {t0: 2, t1: 2, t2: 2, V0: 2, V1: 2, V2: 2}
+      A0_s: {J: 1}
+      A1_c: {t0: 2, "t1'": 2, "t2'": 2, V0: 2, "V1'": 2, "V2'": 2}
+      A1_s: {J: 1}
+      A2_c: {t1: 2, "t0'": 2, "t2'": 2, V1: 2, "V0'": 2, "V2'": 2}
+      A2_s: {J: 1}
+      A3_c: {J: 4, t2: 2, "t0'": 2, "t1'": 2, V2: 2, "V0'": 2, "V1'": 2}
+      A3_s: {J: 1}
+    min_size_for_check: [3, 3, 3]
+    source: {file: python/stdface/lattice/pyrochlore.py, func: pyrochlore, commit: 70fbecd02aeb60df04625843217a08b545c2c8b0}
+  wannier90/example_hubbard.yaml:
+    lattice: wannier90
+    model: hubbard
+    dimension: 3
+    n_sites_uc: 1
+    bonds_per_uc: {t0: 1, t1: 1}
+    coordination:
+      W1: {t0: 2, t1: 2}
+    min_size_for_check: [3, 3, 1]
+    # The provenance field names wannier90.py (the caller) as the representative source.
+    # Deriving the actual sign convention, canonical-pair choice, and cutoff rule also
+    # relied on wannier90_io.py::_read_w90 and interaction_builder.py::hopping/trans/coulomb
+    # (see the comment at the top of the YAML). The data provenance is test/wannier90_data/*.dat.
+    source: {file: python/stdface/lattice/wannier90.py, func: wannier90, commit: da80b6daed27fec0d837812b0613d8b53aa7a637}
+
+# Example entry (real entries were added in Task 1):
+# chain/chain_spin.yaml:
+#   lattice: chain
+#   model: spin
+#   dimension: 1
+#   n_sites_uc: 1
+#   bonds_per_uc: {J0: 1, "J0'": 1, "J0''": 1}
+#   coordination:
+#     A: {J0: 2, "J0'": 2, "J0''": 2}
+#   min_size_for_check: [7]
+#   source: {file: python/stdface/lattice/chain_lattice.py, func: chain, commit: <hash>}

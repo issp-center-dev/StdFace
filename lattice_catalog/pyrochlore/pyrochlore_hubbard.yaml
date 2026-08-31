@@ -1,0 +1,148 @@
+# StdFace pyrochlore / Hubbard model
+# Corresponding stan.in input:  model="Hubbard" / lattice="pyrochlore" / W=4 / L=4 / Height=4 / t0=1.0 / U=4.0
+# 4 sublattices (A0..A3, NsiteUC=4). Default FCC lattice vectors. The distinction between the 6
+# intra-tetrahedron bonds (R=[0,0,0]) and the 6 inter-tetrahedron bonds (R != 0) is noted in the comments of the bond table below.
+# Consistency check: the nearest-neighbor coordination number is 6 for each site. Signs are carried as data in scale/coeff (CONVENTIONS §6).
+# See the pyrochlore/pyrochlore_hubbard.yaml entry of manifest.yaml for the consistency check.
+# Source: python/stdface/lattice/pyrochlore.py::pyrochlore (_BONDS), commit 70fbecd02aeb60df04625843217a08b545c2c8b0
+
+catalog: {schema: stdface-catalog/0.1, dialect: experimental, lattice: pyrochlore, model: hubbard}
+
+geometry:
+  dimension: 3
+  lattice_vectors:
+    a1: [0.0, 0.5, 0.5]           # StdFace: Wx, Wy, Wz (default: 0, Llength/2, Hlength/2) — FCC
+    a2: [0.5, 0.0, 0.5]           # StdFace: Lx, Ly, Lz (default: Wlength/2, 0, Hlength/2)
+    a3: [0.5, 0.5, 0.0]           # StdFace: Hx, Hy, Hz (default: Wlength/2, Llength/2, 0)
+  sites:
+    - {label: A0, frac: [0.0, 0.0, 0.0]}   # tau[0]
+    - {label: A1, frac: [0.5, 0.0, 0.0]}   # tau[1]
+    - {label: A2, frac: [0.0, 0.5, 0.0]}   # tau[2]
+    - {label: A3, frac: [0.0, 0.0, 0.5]}   # tau[3]
+
+system:
+  finite: true
+  size: [4, 4, 4]                 # StdFace: W, L, Height
+  boundary:
+    - {twist: {param: phase0}}    # in degrees
+    - {twist: {param: phase1}}
+    - {twist: {param: phase2}}
+
+model:
+  site_dof:
+    A0: {fermion: {orbitals: 1}}  # extended dialect (CONVENTIONS §7)
+    A1: {fermion: {orbitals: 1}}
+    A2: {fermion: {orbitals: 1}}
+    A3: {fermion: {orbitals: 1}}
+
+  bonds:
+    # Preserves the source order of the reference implementation (_BONDS). R = [dW, dL, dH].
+    # --- intra-tetrahedron (R = [0,0,0], 6 bonds within the unit cell) ---
+    - {from: A0, to: A1, R: [0, 0, 0], type: t0}    # along W
+    - {from: A0, to: A2, R: [0, 0, 0], type: t1}    # along L
+    - {from: A0, to: A3, R: [0, 0, 0], type: t2}    # along H
+    - {from: A2, to: A3, R: [0, 0, 0], type: "t0'"}  # along L-H
+    - {from: A3, to: A1, R: [0, 0, 0], type: "t1'"}  # along H-W
+    - {from: A1, to: A2, R: [0, 0, 0], type: "t2'"}  # along W-L
+    # --- inter-tetrahedron (R != [0,0,0], 6 bonds to neighboring unit cells) ---
+    - {from: A1, to: A0, R: [1, 0, 0], type: t0}     # along W
+    - {from: A2, to: A0, R: [0, 1, 0], type: t1}     # along L
+    - {from: A3, to: A0, R: [0, 0, 1], type: t2}     # along H
+    - {from: A3, to: A2, R: [0, -1, 1], type: "t0'"}  # along L-H
+    - {from: A1, to: A3, R: [1, 0, -1], type: "t1'"}  # along H-W
+    - {from: A2, to: A1, R: [-1, 1, 0], type: "t2'"}  # along W-L
+    # --- intra-tetrahedron (V, R = [0,0,0]) ---
+    - {from: A0, to: A1, R: [0, 0, 0], type: V0}    # along W
+    - {from: A0, to: A2, R: [0, 0, 0], type: V1}    # along L
+    - {from: A0, to: A3, R: [0, 0, 0], type: V2}    # along H
+    - {from: A2, to: A3, R: [0, 0, 0], type: "V0'"}  # along L-H
+    - {from: A3, to: A1, R: [0, 0, 0], type: "V1'"}  # along H-W
+    - {from: A1, to: A2, R: [0, 0, 0], type: "V2'"}  # along W-L
+    # --- inter-tetrahedron (V, R != [0,0,0]) ---
+    - {from: A1, to: A0, R: [1, 0, 0], type: V0}     # along W
+    - {from: A2, to: A0, R: [0, 1, 0], type: V1}     # along L
+    - {from: A3, to: A0, R: [0, 0, 1], type: V2}     # along H
+    - {from: A3, to: A2, R: [0, -1, 1], type: "V0'"}  # along L-H
+    - {from: A1, to: A3, R: [1, 0, -1], type: "V1'"}  # along H-W
+    - {from: A2, to: A1, R: [-1, 1, 0], type: "V2'"}  # along W-L
+
+  couplings:
+    # Contribution to H = value × operator (physical coefficient). -t is expressed via scale.
+    t0:    {operator: "hop", value: {param: t0, scale: -1.0}}   # -t Σσ(c†c+h.c.)
+    t1:    {operator: "hop", value: {param: t1, scale: -1.0}}
+    t2:    {operator: "hop", value: {param: t2, scale: -1.0}}
+    "t0'": {operator: "hop", value: {param: "t0'", scale: -1.0}}
+    "t1'": {operator: "hop", value: {param: "t1'", scale: -1.0}}
+    "t2'": {operator: "hop", value: {param: "t2'", scale: -1.0}}
+    V0:    {operator: "density-density", value: {param: V0}}    # +V n_i n_j
+    V1:    {operator: "density-density", value: {param: V1}}
+    V2:    {operator: "density-density", value: {param: V2}}
+    "V0'": {operator: "density-density", value: {param: "V0'"}}
+    "V1'": {operator: "density-density", value: {param: "V1'"}}
+    "V2'": {operator: "density-density", value: {param: "V2'"}}
+
+  onsite:
+    A0:
+      hubbard_u:                 # +U n↑n↓
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:        # -mu N
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:                   # -h Sz (electron spin)
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A1:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A2:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
+    A3:
+      hubbard_u:
+        operator: {tensor_terms: [{ops: [NupNdn], coeff: 1.0}]}
+        value: {param: U}
+      chemical_potential:
+        operator: {tensor_terms: [{ops: [N], coeff: -1.0}]}
+        value: {param: mu}
+      field_z:
+        operator: {tensor_terms: [{ops: [Sz], coeff: -1.0}]}
+        value: {param: h}
+      field_x:
+        operator: {tensor_terms: [{ops: [Sx], coeff: -1.0}]}
+        value: {param: Gamma}
+      field_y:
+        operator: {tensor_terms: [{ops: [Sy], coeff: -1.0}]}
+        value: {param: Gamma_y}
