@@ -394,6 +394,14 @@ def make_kondo_honeycomb(L: int = 2, W: int = 2) -> StdIntList:
     return s
 
 
+def make_kondo_pyrochlore(L: int = 1, W: int = 1, H: int = 1) -> StdIntList:
+    """Pyrochlore Kondo: ``input_spin`` on ``J`` and per-sublattice coupling."""
+    s = make_hubbard_pyrochlore(L, W, H)
+    s.model = "kondo"
+    s.JAll = 1.0
+    return s
+
+
 class TestChainHubbardAndKondo:
     """``chain_lattice.chain``: Hubbard and Kondo fermion branches."""
 
@@ -458,6 +466,24 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         assert s.nsite == 8
         assert len(s.trans_list) > 0
 
+    def test_fc_ortho_hubbard_rejects_vpp(self, tmp_path, monkeypatch):
+        """V'' is rejected in the fermion branch (C bug: fc_ortho has no
+        third-neighbor bonds, but V'' was accepted and silently dropped)."""
+        monkeypatch.chdir(tmp_path)
+        s = make_hubbard_fc_ortho(2, 2, 2)
+        s.Vpp = 1.0
+        with pytest.raises(ValueError):
+            fc_ortho(s)
+
+    def test_fc_ortho_hubbard_rejects_tpp(self, tmp_path, monkeypatch):
+        """t'' is rejected in the fermion branch (same silently-dropped
+        family as V'')."""
+        monkeypatch.chdir(tmp_path)
+        s = make_hubbard_fc_ortho(2, 2, 2)
+        s.tpp = complex(0.5, 0.0)
+        with pytest.raises(ValueError):
+            fc_ortho(s)
+
     def test_pyrochlore_hubbard_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         s = make_hubbard_pyrochlore(2, 2, 2)
@@ -476,6 +502,18 @@ class TestOrthorhombicPyrochloreFCOHoneycombHubbard:
         # Honeycomb has ``NsiteUC == 2`` (two sublattice sites) × ``NCell`` cells
         assert s.nsite == 8
         assert len(s.trans_list) > 0
+
+    def test_pyrochlore_kondo_couples_each_sublattice(self, tmp_path, monkeypatch):
+        """Kondo J pairs each itinerant site with its own local spin (C bug:
+        the itinerant index was fixed to sublattice 3, so only site 7 was
+        coupled, to all four local spins)."""
+        monkeypatch.chdir(tmp_path)
+        s = make_kondo_pyrochlore(1, 1, 1)
+        pyrochlore(s)
+        assert s.nsite == 8
+        expected = [(4, 0), (5, 1), (6, 2), (7, 3)]
+        assert sorted((i, j) for _, i, j in s.Hund_list) == expected
+        assert sorted((i, j) for _, i, j in s.Ex_list) == expected
 
     def test_honeycomb_kondo_runs(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

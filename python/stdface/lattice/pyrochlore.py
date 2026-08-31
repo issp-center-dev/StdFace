@@ -169,7 +169,7 @@ def pyrochlore(StdI: StdIntList) -> None:
             if StdI.model == ModelType.KONDO:
                 jsite = StdI.NsiteUC * kCell
                 for uc_i in range(StdI.NsiteUC):
-                    general_j(StdI, StdI.J, 1, StdI.S2, isite + 3, jsite + uc_i)
+                    general_j(StdI, StdI.J, 1, StdI.S2, isite + uc_i, jsite + uc_i)
                     mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite + uc_i)
 
     # Relative bond table: (dW, dL, dH, site_i, site_j, J, t, V)

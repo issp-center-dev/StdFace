@@ -311,6 +311,24 @@ class TestFcOrthoSpin:
         assert s.nsite == s.NCell
         _assert_post_spin_setup(s, nsite_uc=1)
 
+    def test_spin_rejects_j0pp(self, tmp_path, monkeypatch):
+        """J0'' is rejected in the spin model (C bug: it used to be read
+        and echoed via input_spin_nn but never wired to any bond)."""
+        monkeypatch.chdir(tmp_path)
+        s = make_spin_stdint_3d(lattice="fco", L=2, W=2, H=2)
+        s.J0ppAll = 0.5
+        with pytest.raises(ValueError):
+            fc_ortho(s)
+
+    def test_spin_rejects_vpp(self, tmp_path, monkeypatch):
+        """V'' is rejected in the spin model (C bug: it was missing from
+        the not_used list and silently ignored)."""
+        monkeypatch.chdir(tmp_path)
+        s = make_spin_stdint_3d(lattice="fco", L=2, W=2, H=2)
+        s.Vpp = 1.0
+        with pytest.raises(ValueError):
+            fc_ortho(s)
+
 
 class TestPyrochloreSpin:
     """``pyrochlore``: pyrochlore (four sites per unit cell)."""
