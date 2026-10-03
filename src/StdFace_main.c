@@ -1485,6 +1485,14 @@ static int StdFace_IsLanczosOrCGMethod(struct StdIntList *StdI)
          strcmp(StdI->method, "cg") == 0;
 }
 
+static void CheckMomentumMethod(struct StdIntList *StdI)
+{
+  if (!StdFace_IsLanczosOrCGMethod(StdI)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Lanczos and CG.\n");
+    StdFace_exit(-1);
+  }
+}
+
 static void CheckMomentumSpinSymmetry(struct StdIntList *StdI, double eps)
 {
   if (StdI->lGC != 0) {
@@ -1495,10 +1503,7 @@ static void CheckMomentumSpinSymmetry(struct StdIntList *StdI, double eps)
     fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin-1/2.\n");
     StdFace_exit(-1);
   }
-  if (!StdFace_IsLanczosOrCGMethod(StdI)) {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Lanczos and CG.\n");
-    StdFace_exit(-1);
-  }
+  CheckMomentumMethod(StdI);
   if (StdFace_HasNonZeroComplexTerms(StdI->trans, StdI->ntrans, eps) ||
       StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
       StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
@@ -1520,10 +1525,7 @@ static void CheckMomentumHubbardSymmetry(struct StdIntList *StdI, double eps)
     fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard requires nelec and 2Sz.\n");
     StdFace_exit(-1);
   }
-  if (!StdFace_IsLanczosOrCGMethod(StdI)) {
-    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Lanczos and CG.\n");
-    StdFace_exit(-1);
-  }
+  CheckMomentumMethod(StdI);
   if (StdFace_HasNonZeroReal(StdI->mu, eps) ||
       StdFace_HasNonZeroReal(StdI->h, eps) ||
       StdFace_HasNonZeroReal(StdI->Gamma, eps) ||
@@ -1558,6 +1560,7 @@ static void CheckMomentumSpinlessSymmetry(struct StdIntList *StdI, double eps)
     fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical SpinlessFermion model.\n");
     StdFace_exit(-1);
   }
+  CheckMomentumMethod(StdI);
   if (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
       StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
       StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
@@ -1613,6 +1616,9 @@ static void PrintMomentumTransSym(struct StdIntList *StdI)
   if (!StdFace_UsesMomentumSymmetry(StdI)) return;
 
   fp = fopen("qptransidx.def", "w");
+  /* Comment lines are skipped by HPhi's reader; this one records the
+     momentum index for the sector manifest and for human readers. */
+  fprintf(fp, "# MomentumIndex %d\n", StdI->MomentumIndex);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NQPTrans %10d\n", StdI->L);
   fprintf(fp, "=============================================\n");
