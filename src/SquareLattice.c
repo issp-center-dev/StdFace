@@ -131,7 +131,6 @@ void StdFace_Tetragonal(struct StdIntList *StdI)
     StdFace_InputCoulombV(StdI->Vp, &StdI->V1p, "V1'");
     StdFace_InputCoulombV(StdI->Vpp, &StdI->V0pp, "V0''");
     StdFace_InputCoulombV(StdI->Vpp, &StdI->V1pp, "V1''");
-    StdFace_PrintVal_d("V'", &StdI->Vp, 0.0);
     /**/
     StdFace_NotUsed_J("J0", StdI->J0All, StdI->J0);
     StdFace_NotUsed_J("J1", StdI->J1All, StdI->J1);

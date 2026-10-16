@@ -109,7 +109,6 @@ void StdFace_Kagome(
     StdFace_NotUsed_d("mu", StdI->mu);
     StdFace_NotUsed_d("U", StdI->U);
     StdFace_NotUsed_c("t", StdI->t);
-    StdFace_NotUsed_c("t0", StdI->t);
     StdFace_NotUsed_c("t0", StdI->t0);
     StdFace_NotUsed_c("t1", StdI->t1);
     StdFace_NotUsed_c("t2", StdI->t2);
