@@ -246,7 +246,7 @@ void StdFace_Pyrochlore(
       if (strcmp(StdI->model, "kondo") == 0) {
         jsite = StdI->NsiteUC * kCell;
         for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
-          StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite + 3, jsite + isiteUC);
+          StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite + isiteUC, jsite + isiteUC);
           StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, jsite + isiteUC);
         }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
       }/*if (strcmp(StdI->model, "kondo") == 0 )*/

@@ -121,10 +121,11 @@ void StdFace_FCOrtho(
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J0p, StdI->J0pAll, "J0'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J1p, StdI->J1pAll, "J1'");
     StdFace_InputSpinNN(StdI->Jp, StdI->JpAll, StdI->J2p, StdI->J2pAll, "J2'");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J0pp, StdI->J0ppAll, "J0''");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J1pp, StdI->J1ppAll, "J1''");
-    StdFace_InputSpinNN(StdI->Jpp, StdI->JppAll, StdI->J2pp, StdI->J2ppAll, "J2''");
     /**/
+    StdFace_NotUsed_J("J''", StdI->JppAll, StdI->Jpp);
+    StdFace_NotUsed_J("J0''", StdI->J0ppAll, StdI->J0pp);
+    StdFace_NotUsed_J("J1''", StdI->J1ppAll, StdI->J1pp);
+    StdFace_NotUsed_J("J2''", StdI->J2ppAll, StdI->J2pp);
     StdFace_NotUsed_d("mu", StdI->mu);
     StdFace_NotUsed_d("U", StdI->U);
     StdFace_NotUsed_c("t", StdI->t);
@@ -136,10 +137,21 @@ void StdFace_FCOrtho(
     StdFace_NotUsed_c("t1'", StdI->t1p);
     StdFace_NotUsed_c("t2'", StdI->t2p);
     StdFace_NotUsed_c("t''", StdI->tpp);
+    StdFace_NotUsed_c("t0''", StdI->t0pp);
+    StdFace_NotUsed_c("t1''", StdI->t1pp);
+    StdFace_NotUsed_c("t2''", StdI->t2pp);
     StdFace_NotUsed_d("V", StdI->V);
     StdFace_NotUsed_d("V0", StdI->V0);
     StdFace_NotUsed_d("V1", StdI->V1);
+    StdFace_NotUsed_d("V2", StdI->V2);
     StdFace_NotUsed_d("V'", StdI->Vp);
+    StdFace_NotUsed_d("V0'", StdI->V0p);
+    StdFace_NotUsed_d("V1'", StdI->V1p);
+    StdFace_NotUsed_d("V2'", StdI->V2p);
+    StdFace_NotUsed_d("V''", StdI->Vpp);
+    StdFace_NotUsed_d("V0''", StdI->V0pp);
+    StdFace_NotUsed_d("V1''", StdI->V1pp);
+    StdFace_NotUsed_d("V2''", StdI->V2pp);
   }/*if (strcmp(StdI->model, "spin") == 0 )*/
   else {
     StdFace_PrintVal_d("mu", &StdI->mu, 0.0);
@@ -157,6 +169,14 @@ void StdFace_FCOrtho(
     StdFace_InputCoulombV(StdI->Vp, &StdI->V1p, "V1'");
     StdFace_InputCoulombV(StdI->Vp, &StdI->V2p, "V2'");
     /**/
+    StdFace_NotUsed_c("t''", StdI->tpp);
+    StdFace_NotUsed_c("t0''", StdI->t0pp);
+    StdFace_NotUsed_c("t1''", StdI->t1pp);
+    StdFace_NotUsed_c("t2''", StdI->t2pp);
+    StdFace_NotUsed_d("V''", StdI->Vpp);
+    StdFace_NotUsed_d("V0''", StdI->V0pp);
+    StdFace_NotUsed_d("V1''", StdI->V1pp);
+    StdFace_NotUsed_d("V2''", StdI->V2pp);
     StdFace_NotUsed_J("J0", StdI->J0All, StdI->J0);
     StdFace_NotUsed_J("J1", StdI->J1All, StdI->J1);
     StdFace_NotUsed_J("J2", StdI->J2All, StdI->J2);
@@ -164,6 +184,9 @@ void StdFace_FCOrtho(
     StdFace_NotUsed_J("J1'", StdI->J1pAll, StdI->J1p);
     StdFace_NotUsed_J("J2'", StdI->J2pAll, StdI->J2p);
     StdFace_NotUsed_J("J''", StdI->JppAll, StdI->Jpp);
+    StdFace_NotUsed_J("J0''", StdI->J0ppAll, StdI->J0pp);
+    StdFace_NotUsed_J("J1''", StdI->J1ppAll, StdI->J1pp);
+    StdFace_NotUsed_J("J2''", StdI->J2ppAll, StdI->J2pp);
     StdFace_NotUsed_d("D", StdI->D[2][2]);
 
     if (strcmp(StdI->model, "hubbard") == 0 ) {
