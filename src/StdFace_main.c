@@ -1093,6 +1093,8 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   for (i = 0; i < 3; i++)StdI->VecPot[i] = NaN_d;;
   strcpy(StdI->PumpType, "****\0");
   StdI->ExpandCoef = StdI->NaN_i;
+  StdI->CheckpointInterval = StdI->NaN_i;
+  StdI->RestartSourceRanks = StdI->NaN_i;
   StdI->NGPU = StdI->NaN_i;
   StdI->Scalapack = StdI->NaN_i;
 #elif defined(_mVMC)
@@ -1741,6 +1743,10 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "PreCG          %-5d\n", 0);
   if (strcmp(StdI->method, "timeevolution") == 0)
     fprintf(fp, "ExpandCoef     %-5d\n", StdI->ExpandCoef);
+  if (StdI->CheckpointInterval != StdI->NaN_i)
+    fprintf(fp, "CheckpointInterval %-5d\n", StdI->CheckpointInterval);
+  if (StdI->RestartSourceRanks != StdI->NaN_i)
+    fprintf(fp, "RestartSourceRanks %-5d\n", StdI->RestartSourceRanks);
 #elif defined(_mVMC)
   fprintf(fp, "VMC_Cal_Parameters\n");
   fprintf(fp, "--------------------\n");
@@ -3034,6 +3040,8 @@ void StdFace_main(
     else if (strcmp(keyword, "exct") == 0) StoreWithCheckDup_i(keyword, value, &StdI->exct);
     else if (strcmp(keyword, "eigenvecio") == 0) StoreWithCheckDup_sl(keyword, value, StdI->EigenVecIO);
     else if (strcmp(keyword, "expandcoef") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ExpandCoef);
+    else if (strcmp(keyword, "checkpointinterval") == 0) StoreWithCheckDup_i(keyword, value, &StdI->CheckpointInterval);
+    else if (strcmp(keyword, "restartsourceranks") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RestartSourceRanks);
     else if (strcmp(keyword, "expecinterval") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ExpecInterval);
     else if (strcmp(keyword, "cdatafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI->CDataFileHead);
     else if (strcmp(keyword, "dt") == 0) StoreWithCheckDup_d(keyword, value, &StdI->dt);

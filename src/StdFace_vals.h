@@ -343,6 +343,8 @@ struct StdIntList {
                         and set in StdFace_trans().*/
   double **At;/**<@brief [StdIntList::nt][3] Vector potential.*/
   int ExpandCoef;/**<@brief The number of Hamiltonian-vector operation for the time-evolution*/
+  int CheckpointInterval;/**<@brief v3 continuation checkpoint period*/
+  int RestartSourceRanks;/**<@brief MPI rank count of restart files*/
 #elif defined(_mVMC)
   /*mVMC modpara*/
   char CParaFileHead[256];/**<@brief Header of the optimized wavefunction,
