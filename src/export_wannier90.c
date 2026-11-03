@@ -49,6 +49,14 @@ int is_export_all = 1;
 
 /* parameters */
 static const double eps = 1.0e-8;  /**< Small number for floating point comparisons */
+
+/**
+ * Line-1 token declaring the extended (spin-column, 9-column) format.
+ * H-wave's read_w90 decides the format by this marker, not by the column
+ * count (issp-center-dev/H-wave#323); the compact 7-column format stays
+ * unmarked. Must match the Python writer (wannier90_writer.py).
+ */
+#define SPIN_COLUMN_MARKER "w90spin/1"
   
 /**
  * @brief Structure to store interaction parameters between orbitals
@@ -214,7 +222,8 @@ void WriteWannier90(int nintr_table, IntrItem *intr_table,
   if (!fp) fatal("cannot open file: %s", fname);
 
   /* write header */
-  fprintf(fp, "%s in wannier90-like format for uhfk\n", tagname);
+  fprintf(fp, "%s in wannier90-like format for uhfk%s\n", tagname,
+          (nspin > 1) ? " " SPIN_COLUMN_MARKER : "");
   fprintf(fp, "%d\n%d\n", nsiteuc, nvol);
   for (int i = 0; i < nvol; ++i) {
     if (i > 0 && i % 15 == 0) fprintf(fp, "\n");

@@ -43,6 +43,14 @@ from ..lattice.site_util import _cell_vector
 _EPS = 1.0e-8
 """Small number for floating-point comparisons."""
 
+SPIN_COLUMN_MARKER = "w90spin/1"
+"""Line-1 token declaring the extended (spin-column, 9-column) format.
+
+H-wave's ``read_w90`` decides the format by this marker, not by the
+column count (issp-center-dev/H-wave#323); the compact 7-column format
+stays unmarked. Must match the C writer (``src/export_wannier90.c``).
+"""
+
 
 # -----------------------------------------------------------------------
 #  Control flags
@@ -349,8 +357,9 @@ class WannierInteractionData:
     def write(self, directory: Path = Path(".")) -> None:
         rr, nvol, matrix = _build_wannier_matrix(
             self._intr_table(), self.nsiteuc, self.nspin)
+        marker = f" {SPIN_COLUMN_MARKER}" if self.nspin > 1 else ""
         with open(Path(directory) / self.fname, "w") as fp_out:
-            fp_out.write(f"{self.tagname} in wannier90-like format for uhfk\n")
+            fp_out.write(f"{self.tagname} in wannier90-like format for uhfk{marker}\n")
             fp_out.write(f"{self.nsiteuc}\n{nvol}\n")
             for i in range(nvol):
                 if i > 0 and i % 15 == 0:

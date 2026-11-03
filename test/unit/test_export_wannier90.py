@@ -337,6 +337,8 @@ class TestWriteWannier90:
 
         # Header: tagname line, nsiteuc, nvol, degeneracy, then data
         assert "Test" in lines[0]
+        # the compact format carries no format marker on line 1
+        assert "w90spin" not in lines[0]
         assert int(lines[1].strip()) == 1  # nsiteuc
         assert int(lines[2].strip()) == 1  # nvol
         # degeneracy line
@@ -387,6 +389,12 @@ class TestWriteWannier90:
         with open(fname) as f:
             lines = f.readlines()
 
+        # Line 1 declares the extended format with the token H-wave keys
+        # on (issp-center-dev/H-wave#323); the tag stays in front of it
+        assert lines[0].split() == ["SpinTest", "in", "wannier90-like",
+                                    "format", "for", "uhfk",
+                                    ew.SPIN_COLUMN_MARKER]
+        assert ew.SPIN_COLUMN_MARKER == "w90spin/1"
         # Data lines should have 9 columns (rx ry rz a b s t re im)
         data_lines = [l for l in lines[4:] if l.strip()]
         for dl in data_lines:
