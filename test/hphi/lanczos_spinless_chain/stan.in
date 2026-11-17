@@ -1,0 +1,8 @@
+L = 8
+model = "SpinlessFermion"
+method = "Lanczos"
+lattice = "chain"
+t = 1.0
+t' = 0.5
+t'' = 0.25
+nelec = 4

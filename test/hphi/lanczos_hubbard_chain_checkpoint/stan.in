@@ -1,0 +1,10 @@
+L = 4
+model = "Hubbard"
+method = "Lanczos"
+lattice = "chain"
+t = 1.0
+U = 4.0
+nelec = 4
+2Sz = 0
+CheckpointInterval = 100
+RestartSourceRanks = 4

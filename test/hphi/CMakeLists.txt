@@ -496,3 +496,31 @@ add_test(
   NAME matrix_fco_kondogc
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_fco_kondogc ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
 )
+add_test(
+  NAME lanczos_spin_chain_momentum
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh lanczos_spin_chain_momentum ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME lobcg_hubbard_chain_momentum
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh lobcg_hubbard_chain_momentum ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME lanczos_spinless_chain
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh lanczos_spinless_chain ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME lobcg_spinless_chain_momentum
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh lobcg_spinless_chain_momentum ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME lanczos_hubbard_chain_checkpoint
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh lanczos_hubbard_chain_checkpoint ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME fail_momentum_heisenberg
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_momentum_heisenberg ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME fail_spinless_square
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_spinless_square ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
