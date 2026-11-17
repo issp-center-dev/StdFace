@@ -437,15 +437,16 @@ class TestSetattrUnknownNameWarning:
 class TestModelType:
     """Tests for the ModelType enum."""
 
-    def test_has_three_members(self):
-        """ModelType should have exactly 3 members."""
-        assert len(ModelType) == 3
+    def test_has_four_members(self):
+        """ModelType should have exactly 4 members."""
+        assert len(ModelType) == 4
 
     def test_values(self):
         """ModelType members should have the expected string values."""
         assert ModelType.SPIN == "spin"
         assert ModelType.HUBBARD == "hubbard"
         assert ModelType.KONDO == "kondo"
+        assert ModelType.SPINLESS_FERMION == "spinlessfermion"
 
     def test_is_str_subclass(self):
         """ModelType members should be instances of str."""

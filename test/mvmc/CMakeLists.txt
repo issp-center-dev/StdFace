@@ -15,6 +15,10 @@ add_test(
   COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check.sh HubbardChain ${CMAKE_SOURCE_DIR}/test/mvmc ${TEST_MODE}
 )
 add_test(
+  NAME HubbardChainShortSROpt
+  COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check_short_sropt.sh HubbardChainShortSROpt ${CMAKE_SOURCE_DIR}/test/mvmc ${TEST_MODE}
+)
+add_test(
   NAME HubbardChainLanczos
   COMMAND ${CMAKE_SOURCE_DIR}/test/mvmc/check.sh HubbardChainLanczos ${CMAKE_SOURCE_DIR}/test/mvmc ${TEST_MODE}
 )

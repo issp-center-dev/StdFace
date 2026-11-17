@@ -597,6 +597,20 @@ def compute_max_interactions(
     return ntransMax
 
 
+def spinless_hopping(
+    StdI: StdIntList,
+    trans0: complex,
+    isite: int,
+    jsite: int,
+) -> None:
+    """Add hopping for a spinless fermion (single channel, spin index 0).
+
+    Unlike :func:`hopping` this never feeds the time-evolution pump arrays.
+    """
+    trans(StdI, trans0, jsite, 0, isite, 0)
+    trans(StdI, np.conj(trans0), isite, 0, jsite, 0)
+
+
 def malloc_interactions(StdI: StdIntList, ntransMax: int) -> None:
     """Allocate the HPhi time-evolution pump arrays, if needed.
 
@@ -635,8 +649,9 @@ def _dispatch_bond_interaction(
 ) -> None:
     """Apply the model-dependent interaction for a single bond.
 
-    For spin models calls :func:`general_j`; for electron models calls
-    :func:`hopping` and :func:`coulomb`.
+    For spin models calls :func:`general_j`; for spinless fermions
+    :func:`spinless_hopping`; for electron models calls :func:`hopping`
+    and :func:`coulomb`.
 
     Parameters
     ----------
@@ -657,6 +672,8 @@ def _dispatch_bond_interaction(
     """
     if StdI.model == ModelType.SPIN:
         general_j(StdI, J, StdI.S2, StdI.S2, isite, jsite)
+    elif StdI.model == ModelType.SPINLESS_FERMION:
+        spinless_hopping(StdI, Cphase * t, isite, jsite)
     else:
         hopping(StdI, Cphase * t, isite, jsite, dR)
         coulomb(StdI, V, isite, jsite)

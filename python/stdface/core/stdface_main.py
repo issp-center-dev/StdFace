@@ -335,11 +335,21 @@ def _reset_vals(StdI: StdIntList) -> None:
 # ===================================================================
 
 
+def _solver_model_aliases(solver: str) -> dict:
+    """Return the model-name aliases only *solver* accepts."""
+    from ..plugin import get_plugin
+    try:
+        return get_plugin(solver).model_aliases
+    except KeyError:
+        return {}
+
+
 def _resolve_model_and_method(StdI: StdIntList, solver: str) -> None:
     """Normalise the model name and HPhi method, updating *StdI* in place.
 
     Looks up ``StdI.model`` in :data:`MODEL_ALIASES` (and, for HPhi,
-    :data:`MODEL_ALIASES_HPHI_BOOST`) to resolve the canonical
+    :data:`MODEL_ALIASES_HPHI_BOOST`), then in the solver plugin's own
+    ``model_aliases``, to resolve the canonical
     :class:`ModelType`, the grand-canonical flag ``lGC``, and the Boost
     flag ``lBoost``.
 
@@ -364,6 +374,8 @@ def _resolve_model_and_method(StdI: StdIntList, solver: str) -> None:
     model_info = MODEL_ALIASES.get(StdI.model)
     if model_info is None and solver == SolverType.HPhi:
         model_info = MODEL_ALIASES_HPHI_BOOST.get(StdI.model)
+    if model_info is None:
+        model_info = _solver_model_aliases(solver).get(StdI.model)
     if model_info is not None:
         StdI.model, StdI.lGC, StdI.lBoost = model_info
     else:
@@ -413,6 +425,14 @@ def _build_lattice_and_boost(StdI: StdIntList, solver: str) -> tuple:
     try:
         lattice_plugin = _get_lattice(lattice)
     except KeyError:
+        lattice_plugin = None
+    if (StdI.model == ModelType.SPINLESS_FERMION
+            and not getattr(lattice_plugin, "supports_spinless_fermion", False)):
+        msg = ("ERROR ! SpinlessFermion Standard mode currently supports "
+               "only chain lattice.")
+        logger.error(msg)
+        raise ValueError(msg)
+    if lattice_plugin is None:
         _unsupported_system(StdI.model, StdI.lattice)  # raises
 
     gp_data = lattice_plugin.setup(StdI)

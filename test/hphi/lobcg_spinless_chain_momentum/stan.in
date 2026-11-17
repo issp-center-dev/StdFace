@@ -1,0 +1,7 @@
+L = 6
+model = "Spinless"
+method = "CG"
+lattice = "chain"
+t = 1.0
+nelec = 3
+MomentumIndex = 5

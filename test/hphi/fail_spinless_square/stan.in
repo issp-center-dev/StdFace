@@ -1,0 +1,7 @@
+L = 2
+W = 2
+model = "SpinlessFermion"
+method = "Lanczos"
+lattice = "square"
+t = 1.0
+nelec = 2

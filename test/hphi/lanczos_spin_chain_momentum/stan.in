@@ -1,0 +1,8 @@
+L = 8
+model = "Spin"
+method = "Lanczos"
+lattice = "chain"
+Jx = 1.0
+Jy = 1.0
+2Sz = 0
+MomentumIndex = 3

@@ -289,6 +289,7 @@ struct StdIntList {
   int exct;/**<@brief The number of eigenvectors to be computed. input from file*/
   int LanczosEps;/**<@brief Convergence threshold for the Lanczos method.*/
   int LanczosTarget;/**<@brief Which eigenvector is used for the convergence check.*/
+  int MomentumIndex;/**<@brief Momentum index for HPhi TransSym generation.*/
   int NumAve;/**<@brief Number of trials for TPQ calculation.*/
   int ExpecInterval;/**<@brief Interval for the iteration when the expectation 
                     value is computed.*/
@@ -342,6 +343,8 @@ struct StdIntList {
                         and set in StdFace_trans().*/
   double **At;/**<@brief [StdIntList::nt][3] Vector potential.*/
   int ExpandCoef;/**<@brief The number of Hamiltonian-vector operation for the time-evolution*/
+  int CheckpointInterval;/**<@brief v3 continuation checkpoint period*/
+  int RestartSourceRanks;/**<@brief MPI rank count of restart files*/
 #elif defined(_mVMC)
   /*mVMC modpara*/
   char CParaFileHead[256];/**<@brief Header of the optimized wavefunction,

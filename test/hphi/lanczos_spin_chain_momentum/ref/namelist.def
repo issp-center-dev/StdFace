@@ -1,0 +1,10 @@
+         ModPara  modpara.def
+         LocSpin  locspn.def
+           Trans  trans.def
+        Exchange  exchange.def
+        OneBodyG  greenone.def
+        TwoBodyG  greentwo.def
+         CalcMod  calcmod.def
+  PairExcitation  pair.def
+        TransSym  qptransidx.def
+     SpectrumVec  zvo_eigenvec_0

@@ -33,7 +33,11 @@ class LatticePlugin(ABC):
         All recognised name aliases (including the canonical name).
     ndim : int
         Number of spatial dimensions (1, 2, or 3).
+    supports_spinless_fermion : bool
+        Whether :meth:`setup` implements the spinless-fermion model.
     """
+
+    supports_spinless_fermion: bool = False
 
     @property
     @abstractmethod

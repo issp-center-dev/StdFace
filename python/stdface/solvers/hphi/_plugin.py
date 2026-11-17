@@ -8,13 +8,16 @@ from __future__ import annotations
 import numpy as np
 
 from ...plugin import ExpertModeSolverPlugin, register, register_config
-from ...core.stdface_vals import StdIntList, SolverType, MethodType
+from ...core.stdface_vals import StdIntList, SolverType, MethodType, ModelType
 from .config import HPhiConfig
 from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_sl,
     store_with_check_dup_i, store_with_check_dup_d,
 )
 from .writer import large_value, build_calc_mod, build_excitation, build_pump
+from .momentum import (
+    uses_momentum_symmetry, check_momentum_symmetry, build_momentum_trans_sym,
+)
 
 
 class HPhiPlugin(ExpertModeSolverPlugin):
@@ -27,6 +30,10 @@ class HPhiPlugin(ExpertModeSolverPlugin):
     @property
     def keyword_table(self) -> dict[str, tuple]:
         return _HPHI_KEYWORDS
+
+    @property
+    def model_aliases(self) -> dict[str, tuple]:
+        return _HPHI_MODEL_ALIASES
 
     def set_defaults(self, StdI: StdIntList) -> None:
         from .writer import set_modpara_defaults
@@ -54,6 +61,7 @@ class HPhiPlugin(ExpertModeSolverPlugin):
         from ...writer.common_writer import unsupported_system
 
         large_value(StdI)
+        check_momentum_symmetry(StdI)
 
         if StdI.lBoost == 1:
             try:
@@ -65,7 +73,10 @@ class HPhiPlugin(ExpertModeSolverPlugin):
 
     def build_solver_files(self, StdI: StdIntList) -> list:
         """Build the HPhi-specific files (excitation / pump / calcmod)."""
-        files = [build_excitation(StdI)]
+        files = []
+        if uses_momentum_symmetry(StdI):
+            files.append(build_momentum_trans_sym(StdI))
+        files.append(build_excitation(StdI))
         if StdI.method == MethodType.TIME_EVOLUTION:
             files.append(build_pump(StdI))
         files.append(build_calc_mod(StdI))
@@ -81,6 +92,8 @@ _HPHI_KEYWORDS: dict[str, tuple] = {
     "exct":            (store_with_check_dup_i,  "exct"),
     "eigenvecio":      (store_with_check_dup_sl, "EigenVecIO"),
     "expandcoef":      (store_with_check_dup_i,  "ExpandCoef"),
+    "checkpointinterval": (store_with_check_dup_i, "CheckpointInterval"),
+    "restartsourceranks": (store_with_check_dup_i, "RestartSourceRanks"),
     "expecinterval":   (store_with_check_dup_i,  "ExpecInterval"),
     "cdatafilehead":   (store_with_check_dup_s,  "CDataFileHead"),
     "dt":              (store_with_check_dup_d,  "dt"),
@@ -94,6 +107,7 @@ _HPHI_KEYWORDS: dict[str, tuple] = {
     "lanczos_max":     (store_with_check_dup_i,  "Lanczos_max"),
     "largevalue":      (store_with_check_dup_d,  "LargeValue"),
     "method":          (store_with_check_dup_sl, "method"),
+    "momentumindex":   (store_with_check_dup_i,  "MomentumIndex"),
     "nomega":          (store_with_check_dup_i,  "Nomega"),
     "numave":          (store_with_check_dup_i,  "NumAve"),
     "nvec":            (store_with_check_dup_i,  "nvec"),
@@ -119,6 +133,11 @@ _HPHI_KEYWORDS: dict[str, tuple] = {
     "scalapack":       (store_with_check_dup_i,  "Scalapack"),
 }
 
+_HPHI_MODEL_ALIASES: dict[str, tuple] = {
+    "spinlessfermion": (ModelType.SPINLESS_FERMION, 0, 0),
+    "spinless":        (ModelType.SPINLESS_FERMION, 0, 0),
+}
+
 # -----------------------------------------------------------------------
 #  Reset tables
 # -----------------------------------------------------------------------
@@ -137,6 +156,7 @@ _RESET_SCALARS: list[tuple[str, object]] = [
     ("exct", None),
     ("LanczosEps", None),
     ("LanczosTarget", None),
+    ("MomentumIndex", None),
     ("NumAve", None),
     ("ExpecInterval", None),
     ("dt", None),
@@ -145,6 +165,8 @@ _RESET_SCALARS: list[tuple[str, object]] = [
     ("freq", None),
     ("Uquench", None),
     ("ExpandCoef", None),
+    ("CheckpointInterval", None),
+    ("RestartSourceRanks", None),
     ("NGPU", None),
     ("Scalapack", None),
 ]

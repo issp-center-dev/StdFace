@@ -1075,6 +1075,27 @@ class TestSolverDefaultsDispatch:
         _check_mod_para_mvmc(StdI)
         assert StdI.NVMCCalMode == 0
 
+    def test_mvmc_keeps_sropt_sample_default_positive(self):
+        StdI = _make_stdi_base(solver="mVMC", model="hubbard")
+        StdI.NVMCCalMode = None
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
+        StdI.NSROptItrStep = 2
+        StdI.NSROptItrSmp = None
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
+        _check_mod_para_mvmc(StdI)
+        assert StdI.NSROptItrSmp == 1
+
     def test_mvmc_sets_rndseed(self):
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
         StdI.NVMCCalMode = None
@@ -1237,9 +1258,14 @@ class TestCheckConservedQuantities:
 class TestConservedQtyRulesTable:
     """Tests for the _CONSERVED_QTY_RULES dispatch table structure."""
 
-    def test_has_12_entries(self):
-        """Test that table has exactly 12 entries (3 models × 2 hphi × 2 lGC)."""
-        assert len(_CONSERVED_QTY_RULES) == 12
+    def test_has_14_entries(self):
+        """12 entries (3 models × 2 hphi × 2 lGC) + HPhi-only spinless × 2 lGC."""
+        assert len(_CONSERVED_QTY_RULES) == 14
+
+    def test_spinless_fermion_is_hphi_only(self):
+        flags = {key[1] for key in _CONSERVED_QTY_RULES
+                 if key[0] == ModelType.SPINLESS_FERMION}
+        assert flags == {True}
 
     def test_all_models_present(self):
         """Test that all three model types appear in the rules."""

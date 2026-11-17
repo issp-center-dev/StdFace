@@ -144,6 +144,16 @@ class SolverPlugin(ABC):
             The parameter structure (modified in place).
         """
 
+    @property
+    def model_aliases(self) -> dict[str, tuple]:
+        """Model-name aliases only this solver accepts (default: none).
+
+        Maps a lower-cased user-facing name to ``(ModelType, lGC, lBoost)``.
+        Consulted after the solver-independent alias table, so a model a
+        solver does not list is rejected as an unsupported system.
+        """
+        return {}
+
     def wants_lattice_gp(self, StdI: StdIntList) -> bool:
         """Whether the solver-independent ``lattice.gp`` should be built.
 

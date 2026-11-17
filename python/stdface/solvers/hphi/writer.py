@@ -84,6 +84,8 @@ MODEL_GC_TO_CALC_MODEL: dict[tuple, int] = {
     (ModelType.SPIN,    1): 4,
     (ModelType.KONDO,   0): 2,
     (ModelType.KONDO,   1): 5,
+    (ModelType.SPINLESS_FERMION, 0): 7,
+    (ModelType.SPINLESS_FERMION, 1): 8,
 }
 """Maps ``(ModelType, lGC)`` to the ``CalcModel`` integer code."""
 
@@ -1127,6 +1129,8 @@ def namelist_entries(StdI: StdIntList) -> list:
             entries.append(("TEOneBody", "teone.def"))
         elif StdI.PumpBody == 2:
             entries.append(("TETwoBody", "tetwo.def"))
+    if StdI.MomentumIndex is not None:
+        entries.append(("TransSym", "qptransidx.def"))
     entries.append(("SpectrumVec", f"{StdI.CDataFileHead}_eigenvec_0"))
     if StdI.lBoost == 1:
         entries.append(("Boost", "boost.def"))
@@ -1168,6 +1172,11 @@ def modpara_lines(StdI: StdIntList) -> list:
     ]
     if StdI.method == MethodType.TIME_EVOLUTION:
         lines.append(("kv", "ExpandCoef", StdI.ExpandCoef, "<5d"))
+    # These keys overflow the 15-column pad; C separates them by one space.
+    if StdI.CheckpointInterval is not None:
+        lines.append(("kv", "CheckpointInterval ", StdI.CheckpointInterval, "<5d"))
+    if StdI.RestartSourceRanks is not None:
+        lines.append(("kv", "RestartSourceRanks ", StdI.RestartSourceRanks, "<5d"))
     return lines
 
 

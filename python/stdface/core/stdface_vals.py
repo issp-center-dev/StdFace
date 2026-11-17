@@ -41,11 +41,14 @@ class ModelType(str, Enum):
         Fermion Hubbard model.
     KONDO : str
         Kondo lattice model (itinerant + localised spins).
+    SPINLESS_FERMION : str
+        Spinless fermion model (HPhi only, chain lattice only).
     """
 
     SPIN = "spin"
     HUBBARD = "hubbard"
     KONDO = "kondo"
+    SPINLESS_FERMION = "spinlessfermion"
 
 
 class SolverType(str, Enum):
@@ -712,6 +715,12 @@ class StdIntList:
         (HPhi) Vector potential time series (dynamic 2D float array).
     ExpandCoef : int
         (HPhi) The number of Hamiltonian-vector operations for time evolution.
+    MomentumIndex : int
+        (HPhi) Momentum sector index; when given, ``qptransidx.def`` is generated.
+    CheckpointInterval : int
+        (HPhi) Continuation checkpoint period; written only when given.
+    RestartSourceRanks : int
+        (HPhi) MPI rank count of the restart files; written only when given.
     CParaFileHead : str
         (mVMC) Header of the optimized wavefunction, input from file.
     NVMCCalMode : int
