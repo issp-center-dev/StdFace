@@ -36,6 +36,7 @@ class HPhiConfig:
     exct: int | None = None
     LanczosEps: int | None = None
     LanczosTarget: int | None = None
+    MomentumIndex: int | None = None
     NumAve: int | None = None
     ExpecInterval: int | None = None
     LargeValue: float | None = None

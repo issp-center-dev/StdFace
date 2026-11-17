@@ -1127,6 +1127,8 @@ def namelist_entries(StdI: StdIntList) -> list:
             entries.append(("TEOneBody", "teone.def"))
         elif StdI.PumpBody == 2:
             entries.append(("TETwoBody", "tetwo.def"))
+    if StdI.MomentumIndex is not None:
+        entries.append(("TransSym", "qptransidx.def"))
     entries.append(("SpectrumVec", f"{StdI.CDataFileHead}_eigenvec_0"))
     if StdI.lBoost == 1:
         entries.append(("Boost", "boost.def"))

@@ -15,6 +15,9 @@ from ...core.keyword_parser import (
     store_with_check_dup_i, store_with_check_dup_d,
 )
 from .writer import large_value, build_calc_mod, build_excitation, build_pump
+from .momentum import (
+    uses_momentum_symmetry, check_momentum_symmetry, build_momentum_trans_sym,
+)
 
 
 class HPhiPlugin(ExpertModeSolverPlugin):
@@ -54,6 +57,7 @@ class HPhiPlugin(ExpertModeSolverPlugin):
         from ...writer.common_writer import unsupported_system
 
         large_value(StdI)
+        check_momentum_symmetry(StdI)
 
         if StdI.lBoost == 1:
             try:
@@ -65,7 +69,10 @@ class HPhiPlugin(ExpertModeSolverPlugin):
 
     def build_solver_files(self, StdI: StdIntList) -> list:
         """Build the HPhi-specific files (excitation / pump / calcmod)."""
-        files = [build_excitation(StdI)]
+        files = []
+        if uses_momentum_symmetry(StdI):
+            files.append(build_momentum_trans_sym(StdI))
+        files.append(build_excitation(StdI))
         if StdI.method == MethodType.TIME_EVOLUTION:
             files.append(build_pump(StdI))
         files.append(build_calc_mod(StdI))
@@ -96,6 +103,7 @@ _HPHI_KEYWORDS: dict[str, tuple] = {
     "lanczos_max":     (store_with_check_dup_i,  "Lanczos_max"),
     "largevalue":      (store_with_check_dup_d,  "LargeValue"),
     "method":          (store_with_check_dup_sl, "method"),
+    "momentumindex":   (store_with_check_dup_i,  "MomentumIndex"),
     "nomega":          (store_with_check_dup_i,  "Nomega"),
     "numave":          (store_with_check_dup_i,  "NumAve"),
     "nvec":            (store_with_check_dup_i,  "nvec"),
@@ -139,6 +147,7 @@ _RESET_SCALARS: list[tuple[str, object]] = [
     ("exct", None),
     ("LanczosEps", None),
     ("LanczosTarget", None),
+    ("MomentumIndex", None),
     ("NumAve", None),
     ("ExpecInterval", None),
     ("dt", None),
