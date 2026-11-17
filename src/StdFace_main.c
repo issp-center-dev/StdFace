@@ -130,6 +130,10 @@ static void PrintCalcMod(struct StdIntList *StdI)
     if (StdI->lGC == 0)iCalcModel = 2;
     else iCalcModel = 5;
   }/*if (strcmp(StdI->model, "kondo") == 0)*/
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+    if (StdI->lGC == 0)iCalcModel = 7;
+    else iCalcModel = 8;
+  }/*if (strcmp(StdI->model, "spinlessfermion") == 0)*/
   /*
   Restart
   */
@@ -1078,6 +1082,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->exct = StdI->NaN_i;
   StdI->LanczosEps = StdI->NaN_i;
   StdI->LanczosTarget = StdI->NaN_i;
+  StdI->MomentumIndex = StdI->NaN_i;
   StdI->NumAve = StdI->NaN_i;
   StdI->ExpecInterval = StdI->NaN_i;
   StdI->dt = NaN_d;
@@ -1088,6 +1093,8 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   for (i = 0; i < 3; i++)StdI->VecPot[i] = NaN_d;;
   strcpy(StdI->PumpType, "****\0");
   StdI->ExpandCoef = StdI->NaN_i;
+  StdI->CheckpointInterval = StdI->NaN_i;
+  StdI->RestartSourceRanks = StdI->NaN_i;
   StdI->NGPU = StdI->NaN_i;
   StdI->Scalapack = StdI->NaN_i;
 #elif defined(_mVMC)
@@ -1432,6 +1439,212 @@ static void PrintTrans(struct StdIntList *StdI){
   fclose(fp);
   fprintf(stdout, "      trans.def is written.\n");
 }/*static void PrintTrans*/
+#if defined(_HPhi)
+static int StdFace_UsesMomentumSymmetry(struct StdIntList *StdI)
+{
+  return StdI->MomentumIndex != StdI->NaN_i;
+}
+
+static int StdFace_IsChainLattice(struct StdIntList *StdI)
+{
+  return strcmp(StdI->lattice, "chain") == 0 ||
+         strcmp(StdI->lattice, "chainlattice") == 0;
+}
+
+static int StdFace_HasNonZeroRealTerms(double *terms, int nterms, double eps)
+{
+  int iterm;
+  for (iterm = 0; iterm < nterms; iterm++) {
+    if (fabs(terms[iterm]) > eps) return 1;
+  }
+  return 0;
+}
+
+static int StdFace_HasNonZeroComplexTerms(double complex *terms, int nterms, double eps)
+{
+  int iterm;
+  for (iterm = 0; iterm < nterms; iterm++) {
+    if (cabs(terms[iterm]) > eps) return 1;
+  }
+  return 0;
+}
+
+static int StdFace_HasNonZeroReal(double term, double eps)
+{
+  return isnan(term) == 0 && fabs(term) > eps;
+}
+
+static int StdFace_HasNonZeroComplex(double complex term, double eps)
+{
+  return isnan(creal(term)) == 0 && cabs(term) > eps;
+}
+
+static int StdFace_IsLanczosOrCGMethod(struct StdIntList *StdI)
+{
+  return strcmp(StdI->method, "****") == 0 ||
+         strcmp(StdI->method, "lanczos") == 0 ||
+         strcmp(StdI->method, "lanczosenergy") == 0 ||
+         strcmp(StdI->method, "cg") == 0;
+}
+
+static void CheckMomentumMethod(struct StdIntList *StdI)
+{
+  if (!StdFace_IsLanczosOrCGMethod(StdI)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Lanczos and CG.\n");
+    StdFace_exit(-1);
+  }
+}
+
+static void CheckMomentumSpinSymmetry(struct StdIntList *StdI, double eps)
+{
+  if (StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Spin model.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->S2 != 1) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin-1/2.\n");
+    StdFace_exit(-1);
+  }
+  CheckMomentumMethod(StdI);
+  if (StdFace_HasNonZeroComplexTerms(StdI->trans, StdI->ntrans, eps) ||
+      StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only exchange-only Spin-1/2 chain with Jz = 0 and no field/general/pair terms.\n");
+    StdFace_exit(-1);
+  }
+}
+
+static void CheckMomentumHubbardSymmetry(struct StdIntList *StdI, double eps)
+{
+  if (StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical Hubbard model.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->ncond == StdI->NaN_i || StdI->Sz2 == StdI->NaN_i) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard requires nelec and 2Sz.\n");
+    StdFace_exit(-1);
+  }
+  CheckMomentumMethod(StdI);
+  if (StdFace_HasNonZeroReal(StdI->mu, eps) ||
+      StdFace_HasNonZeroReal(StdI->h, eps) ||
+      StdFace_HasNonZeroReal(StdI->Gamma, eps) ||
+      StdFace_HasNonZeroReal(StdI->Gamma_y, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard does not support mu/h/Gamma/Gamma_y terms.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroComplex(StdI->t0p, eps) ||
+      StdFace_HasNonZeroComplex(StdI->t0pp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard does not support next-neighbor hopping terms.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroReal(StdI->V0, eps) ||
+      StdFace_HasNonZeroReal(StdI->V0p, eps) ||
+      StdFace_HasNonZeroReal(StdI->V0pp, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard does not support V/CoulombInter terms.\n");
+    StdFace_exit(-1);
+  }
+  if (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex for Hubbard supports only nearest-neighbor hopping and onsite U.\n");
+    StdFace_exit(-1);
+  }
+}
+
+static void CheckMomentumSpinlessSymmetry(struct StdIntList *StdI, double eps)
+{
+  if (StdI->lGC != 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only canonical SpinlessFermion model.\n");
+    StdFace_exit(-1);
+  }
+  CheckMomentumMethod(StdI);
+  if (StdFace_HasNonZeroComplexTerms(StdI->intr, StdI->nintr, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Cinter, StdI->NCinter, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->Hund, StdI->NHund, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairLift, StdI->NPairLift, eps) ||
+      StdFace_HasNonZeroRealTerms(StdI->PairHopp, StdI->NPairHopp, eps)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only hopping-only SpinlessFermion chain with no density/general/pair terms.\n");
+    StdFace_exit(-1);
+  }
+}
+
+static void CheckMomentumSymmetry(struct StdIntList *StdI)
+{
+  double eps = 1.0e-12;
+  int idim;
+  if (!StdFace_UsesMomentumSymmetry(StdI)) return;
+  if (!StdFace_IsChainLattice(StdI)) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only chain lattice.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->L <= 0) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex requires positive L.\n");
+    StdFace_exit(-1);
+  }
+  if (StdI->MomentumIndex < 0 || StdI->MomentumIndex >= StdI->L) {
+    fprintf(stdout, "\n ERROR ! MomentumIndex must satisfy 0 <= MomentumIndex < L.\n");
+    StdFace_exit(-1);
+  }
+  for (idim = 0; idim < 3; idim++) {
+    if (fabs(StdI->phase[idim]) > eps || StdI->AntiPeriod[idim] != 0) {
+      fprintf(stdout, "\n ERROR ! MomentumIndex does not support boundary phase in v1.\n");
+      StdFace_exit(-1);
+    }
+  }
+  if (strcmp(StdI->model, "spin") == 0) {
+    CheckMomentumSpinSymmetry(StdI, eps);
+  }
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+    CheckMomentumSpinlessSymmetry(StdI, eps);
+  }
+  else if (strcmp(StdI->model, "hubbard") == 0) {
+    CheckMomentumHubbardSymmetry(StdI, eps);
+  }
+  else {
+    fprintf(stdout, "\n ERROR ! MomentumIndex currently supports only Spin, SpinlessFermion, and Hubbard models.\n");
+    StdFace_exit(-1);
+  }
+}
+
+static void PrintMomentumTransSym(struct StdIntList *StdI)
+{
+  FILE *fp;
+  int op, site;
+  if (!StdFace_UsesMomentumSymmetry(StdI)) return;
+
+  fp = fopen("qptransidx.def", "w");
+  /* Comment lines are skipped by HPhi's reader; this one records the
+     momentum index for the sector manifest and for human readers. */
+  fprintf(fp, "# MomentumIndex %d\n", StdI->MomentumIndex);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NQPTrans %10d\n", StdI->L);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n");
+  fprintf(fp, "=============================================\n");
+  for (op = 0; op < StdI->L; op++) {
+    double angle = -2.0 * StdI->pi * (double)StdI->MomentumIndex * (double)op / (double)StdI->L;
+    double re = cos(angle);
+    double im = sin(angle);
+    if (fabs(re) < 1.0e-14) re = 0.0;
+    if (fabs(im) < 1.0e-14) im = 0.0;
+    fprintf(fp, "%d %25.15f %25.15f\n", op, re, im);
+  }
+  for (op = 0; op < StdI->L; op++) {
+    for (site = 0; site < StdI->L; site++) {
+      fprintf(fp, "%5d  %5d  %5d  %5d\n", op, site, (site + op) % StdI->L, 1);
+    }
+  }
+
+  fflush(fp);
+  fclose(fp);
+  fprintf(stdout, " qptransidx.def is written for MomentumIndex = %d.\n", StdI->MomentumIndex);
+}/*static void PrintMomentumTransSym*/
+#endif
 /**
  * @brief Print namelist.def
  * @author Mitsuaki Kawamura (The University of Tokyo)
@@ -1471,6 +1684,8 @@ static void PrintNamelist(struct StdIntList *StdI){
     else if (StdI->PumpBody == 2)
       fprintf(fp, "       TETwoBody  tetwo.def\n");
   }/*if (strcmp(StdI->method, "timeevolution") == 0)*/
+  if (StdFace_UsesMomentumSymmetry(StdI))
+    fprintf(                       fp, "        TransSym  qptransidx.def\n");
   fprintf(                         fp, "     SpectrumVec  %s_eigenvec_0\n",
                                    StdI->CDataFileHead);
   if (StdI->lBoost == 1) fprintf(  fp, "           Boost  boost.def\n");
@@ -1528,6 +1743,10 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "PreCG          %-5d\n", 0);
   if (strcmp(StdI->method, "timeevolution") == 0)
     fprintf(fp, "ExpandCoef     %-5d\n", StdI->ExpandCoef);
+  if (StdI->CheckpointInterval != StdI->NaN_i)
+    fprintf(fp, "CheckpointInterval %-5d\n", StdI->CheckpointInterval);
+  if (StdI->RestartSourceRanks != StdI->NaN_i)
+    fprintf(fp, "RestartSourceRanks %-5d\n", StdI->RestartSourceRanks);
 #elif defined(_mVMC)
   fprintf(fp, "VMC_Cal_Parameters\n");
   fprintf(fp, "--------------------\n");
@@ -1972,6 +2191,8 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_d("OmegaOrg", &StdI->OmegaOrg, 0.0);
   StdFace_PrintVal_d("OmegaIm", &StdI->OmegaIm, 0.01* (int)StdI->LargeValue);
 #elif defined(_mVMC)
+  int nSROptItrSmpDefault;
+
   if (strcmp(StdI->CParaFileHead, "****") == 0) {
     strcpy(StdI->CParaFileHead, "zqp\0");
     fprintf(stdout, "    CParaFileHead = %-12s######  DEFAULT VALUE IS USED  ######\n", StdI->CParaFileHead);
@@ -1999,7 +2220,9 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1000);
   
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrSmp", StdI->NSROptItrSmp);
-  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, StdI->NSROptItrStep/10);
+  nSROptItrSmpDefault = StdI->NSROptItrStep/10;
+  if (nSROptItrSmpDefault < 1) nSROptItrSmpDefault = 1;
+  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, nSROptItrSmpDefault);
 
   StdFace_PrintVal_i("NVMCWarmUp", &StdI->NVMCWarmUp, 10);
   StdFace_PrintVal_i("NVMCInterval", &StdI->NVMCInterval, 1);
@@ -2073,6 +2296,17 @@ static void CheckModPara(struct StdIntList *StdI)
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
+  else if (strcmp(StdI->model, "spinlessfermion") == 0) {
+#if defined(_HPhi)
+    if (StdI->lGC == 0) StdFace_RequiredVal_i("ncond", StdI->ncond);
+    else {
+      StdFace_NotUsed_i("nelec", StdI->ncond);
+    }
+    StdFace_NotUsed_i("2Sz", StdI->Sz2);
+#else
+    UnsupportedSystem(StdI->model, StdI->lattice);
+#endif
+  }/*else if (strcmp(StdI->model, "spinlessfermion") == 0)*/
 }/*static void CheckModPara*/
 /**
  * @brief Output .def files for specific interactions (Coulomb, Hund, Exchange, etc.)
@@ -2806,6 +3040,8 @@ void StdFace_main(
     else if (strcmp(keyword, "exct") == 0) StoreWithCheckDup_i(keyword, value, &StdI->exct);
     else if (strcmp(keyword, "eigenvecio") == 0) StoreWithCheckDup_sl(keyword, value, StdI->EigenVecIO);
     else if (strcmp(keyword, "expandcoef") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ExpandCoef);
+    else if (strcmp(keyword, "checkpointinterval") == 0) StoreWithCheckDup_i(keyword, value, &StdI->CheckpointInterval);
+    else if (strcmp(keyword, "restartsourceranks") == 0) StoreWithCheckDup_i(keyword, value, &StdI->RestartSourceRanks);
     else if (strcmp(keyword, "expecinterval") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ExpecInterval);
     else if (strcmp(keyword, "cdatafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI->CDataFileHead);
     else if (strcmp(keyword, "dt") == 0) StoreWithCheckDup_d(keyword, value, &StdI->dt);
@@ -2819,6 +3055,7 @@ void StdFace_main(
     else if (strcmp(keyword, "lanczos_max") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Lanczos_max);
     else if (strcmp(keyword, "largevalue") == 0) StoreWithCheckDup_d(keyword, value, &StdI->LargeValue);
     else if (strcmp(keyword, "method") == 0) StoreWithCheckDup_sl(keyword, value, StdI->method);
+    else if (strcmp(keyword, "momentumindex") == 0) StoreWithCheckDup_i(keyword, value, &StdI->MomentumIndex);
     else if (strcmp(keyword, "nomega") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Nomega);
     else if (strcmp(keyword, "numave") == 0) StoreWithCheckDup_i(keyword, value, &StdI->NumAve);
     else if (strcmp(keyword, "nvec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nvec);
@@ -2971,6 +3208,11 @@ void StdFace_main(
     strcpy(StdI->model, "kondo\0");
     StdI->lGC = 1;
   }
+#if defined(_HPhi)
+  else if (strcmp(StdI->model, "spinlessfermion") == 0
+    || strcmp(StdI->model, "spinless") == 0)
+    strcpy(StdI->model, "spinlessfermion\0");
+#endif
   else UnsupportedSystem(StdI->model, StdI->lattice);
 #if defined(_HPhi)
   /*
@@ -2987,6 +3229,11 @@ void StdFace_main(
   Compute vector potential and electrical field
   */
   if (strcmp(StdI->method, "timeevolution") == 0) VectorPotential(StdI);
+  if (strcmp(StdI->model, "spinlessfermion") == 0 &&
+      !StdFace_IsChainLattice(StdI)) {
+    fprintf(stdout, "\n ERROR ! SpinlessFermion Standard mode currently supports only chain lattice.\n");
+    StdFace_exit(-1);
+  }
 #endif
   /*>>
   Generate Hamiltonian definition files
@@ -3021,6 +3268,7 @@ void StdFace_main(
   /**/
 #if defined(_HPhi)
   StdFace_LargeValue(StdI);
+  CheckMomentumSymmetry(StdI);
   /*
   Generate Hamiltonian for Boost
   */
@@ -3045,6 +3293,7 @@ void StdFace_main(
   PrintLocSpin(StdI);
   PrintTrans(StdI);
   PrintInteractions(StdI);
+  PrintMomentumTransSym(StdI);
   CheckModPara(StdI);
   PrintModPara(StdI);
 

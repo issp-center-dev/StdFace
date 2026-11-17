@@ -1075,6 +1075,27 @@ class TestSolverDefaultsDispatch:
         _check_mod_para_mvmc(StdI)
         assert StdI.NVMCCalMode == 0
 
+    def test_mvmc_keeps_sropt_sample_default_positive(self):
+        StdI = _make_stdi_base(solver="mVMC", model="hubbard")
+        StdI.NVMCCalMode = None
+        StdI.NLanczosMode = None
+        StdI.NDataIdxStart = None
+        StdI.NDataQtySmp = None
+        StdI.NSPGaussLeg = None
+        StdI.NSPStot = None
+        StdI.NMPTrans = None
+        StdI.NSROptItrStep = 2
+        StdI.NSROptItrSmp = None
+        StdI.NVMCWarmUp = None
+        StdI.NVMCInterval = None
+        StdI.NVMCSample = None
+        StdI.RndSeed = None
+        StdI.NSplitSize = None
+        StdI.NStore = None
+        StdI.NSRCG = None
+        _check_mod_para_mvmc(StdI)
+        assert StdI.NSROptItrSmp == 1
+
     def test_mvmc_sets_rndseed(self):
         StdI = _make_stdi_base(solver="mVMC", model="hubbard")
         StdI.NVMCCalMode = None

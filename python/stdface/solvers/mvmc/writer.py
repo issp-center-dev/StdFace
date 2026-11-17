@@ -599,7 +599,7 @@ def set_modpara_defaults(StdI: StdIntList) -> None:
     if StdI.NVMCCalMode == 1:
         not_used_i("NSROptItrSmp", StdI.NSROptItrSmp)
     StdI.NSROptItrSmp = print_val_i(
-        "NSROptItrSmp", StdI.NSROptItrSmp, StdI.NSROptItrStep // 10
+        "NSROptItrSmp", StdI.NSROptItrSmp, max(1, StdI.NSROptItrStep // 10)
     )
 
     StdI.NVMCWarmUp = print_val_i("NVMCWarmUp", StdI.NVMCWarmUp, 10)
