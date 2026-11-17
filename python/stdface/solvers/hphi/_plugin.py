@@ -81,6 +81,8 @@ _HPHI_KEYWORDS: dict[str, tuple] = {
     "exct":            (store_with_check_dup_i,  "exct"),
     "eigenvecio":      (store_with_check_dup_sl, "EigenVecIO"),
     "expandcoef":      (store_with_check_dup_i,  "ExpandCoef"),
+    "checkpointinterval": (store_with_check_dup_i, "CheckpointInterval"),
+    "restartsourceranks": (store_with_check_dup_i, "RestartSourceRanks"),
     "expecinterval":   (store_with_check_dup_i,  "ExpecInterval"),
     "cdatafilehead":   (store_with_check_dup_s,  "CDataFileHead"),
     "dt":              (store_with_check_dup_d,  "dt"),
@@ -145,6 +147,8 @@ _RESET_SCALARS: list[tuple[str, object]] = [
     ("freq", None),
     ("Uquench", None),
     ("ExpandCoef", None),
+    ("CheckpointInterval", None),
+    ("RestartSourceRanks", None),
     ("NGPU", None),
     ("Scalapack", None),
 ]

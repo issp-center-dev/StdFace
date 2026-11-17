@@ -74,3 +74,7 @@ class HPhiConfig:
     pump: None = None
     At: None = None
     ExpandCoef: int | None = None
+
+    # Checkpoint / restart
+    CheckpointInterval: int | None = None
+    RestartSourceRanks: int | None = None

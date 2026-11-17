@@ -1168,6 +1168,11 @@ def modpara_lines(StdI: StdIntList) -> list:
     ]
     if StdI.method == MethodType.TIME_EVOLUTION:
         lines.append(("kv", "ExpandCoef", StdI.ExpandCoef, "<5d"))
+    # These keys overflow the 15-column pad; C separates them by one space.
+    if StdI.CheckpointInterval is not None:
+        lines.append(("kv", "CheckpointInterval ", StdI.CheckpointInterval, "<5d"))
+    if StdI.RestartSourceRanks is not None:
+        lines.append(("kv", "RestartSourceRanks ", StdI.RestartSourceRanks, "<5d"))
     return lines
 
 

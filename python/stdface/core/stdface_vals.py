@@ -712,6 +712,10 @@ class StdIntList:
         (HPhi) Vector potential time series (dynamic 2D float array).
     ExpandCoef : int
         (HPhi) The number of Hamiltonian-vector operations for time evolution.
+    CheckpointInterval : int
+        (HPhi) Continuation checkpoint period; written only when given.
+    RestartSourceRanks : int
+        (HPhi) MPI rank count of the restart files; written only when given.
     CParaFileHead : str
         (mVMC) Header of the optimized wavefunction, input from file.
     NVMCCalMode : int

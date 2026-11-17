@@ -1213,3 +1213,35 @@ class TestWriteCalcmodFile:
         content = (tmp_path / "calcmod.def").read_text()
         assert "NGPU" not in content
         assert "Scalapack" not in content
+
+
+class TestRestartParameters:
+    """CheckpointInterval / RestartSourceRanks reach modpara.def only when given."""
+
+    _INPUT = {"model": "Hubbard", "lattice": "chain", "L": 4,
+              "t": 1.0, "U": 4.0, "nelec": 4, "2Sz": 0, "method": "Lanczos"}
+
+    @staticmethod
+    def _modpara(tmp_path, data):
+        from stdface import generate
+        generate(data, solver="HPhi", output_dir=tmp_path)
+        return (tmp_path / "modpara.def").read_text().splitlines()
+
+    def test_omitted_when_not_given(self, tmp_path):
+        lines = self._modpara(tmp_path, self._INPUT)
+        assert not any(ln.startswith("CheckpointInterval") for ln in lines)
+        assert not any(ln.startswith("RestartSourceRanks") for ln in lines)
+
+    def test_written_after_precg_in_c_format(self, tmp_path):
+        data = {**self._INPUT, "CheckpointInterval": 100, "RestartSourceRanks": 4}
+        lines = self._modpara(tmp_path, data)
+        i = next(n for n, ln in enumerate(lines) if ln.startswith("PreCG"))
+        assert lines[i + 1:i + 3] == [
+            "CheckpointInterval 100  ",
+            "RestartSourceRanks 4    ",
+        ]
+
+    def test_each_is_independent(self, tmp_path):
+        lines = self._modpara(tmp_path, {**self._INPUT, "RestartSourceRanks": 8})
+        assert "RestartSourceRanks 8    " in lines
+        assert not any(ln.startswith("CheckpointInterval") for ln in lines)
