@@ -82,8 +82,22 @@ def _check_hubbard(StdI: StdIntList) -> None:
               "hopping and onsite U.")
 
 
+def _check_spinless(StdI: StdIntList) -> None:
+    if StdI.lGC != 0:
+        _fail("MomentumIndex currently supports only canonical "
+              "SpinlessFermion model.")
+    _check_method(StdI)
+    if (_any_nonzero(StdI.intr_list) or _any_nonzero(StdI.Cinter_list)
+            or _any_nonzero(StdI.Hund_list)
+            or _any_nonzero(StdI.PairLift_list)
+            or _any_nonzero(StdI.PairHopp_list)):
+        _fail("MomentumIndex currently supports only hopping-only "
+              "SpinlessFermion chain with no density/general/pair terms.")
+
+
 _MODEL_CHECKS = {
     ModelType.SPIN: _check_spin,
+    ModelType.SPINLESS_FERMION: _check_spinless,
     ModelType.HUBBARD: _check_hubbard,
 }
 

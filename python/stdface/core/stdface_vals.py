@@ -41,11 +41,14 @@ class ModelType(str, Enum):
         Fermion Hubbard model.
     KONDO : str
         Kondo lattice model (itinerant + localised spins).
+    SPINLESS_FERMION : str
+        Spinless fermion model (HPhi only, chain lattice only).
     """
 
     SPIN = "spin"
     HUBBARD = "hubbard"
     KONDO = "kondo"
+    SPINLESS_FERMION = "spinlessfermion"
 
 
 class SolverType(str, Enum):

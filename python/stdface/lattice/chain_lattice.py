@@ -56,11 +56,12 @@ def chain(StdI: StdIntList) -> "GnuplotData | None":
 
     Notes
     -----
-    This function handles three different model types:
+    This function handles four different model types:
 
     - Spin model
     - Hubbard model
     - Kondo model
+    - Spinless fermion model (hopping only)
 
     The function performs the following steps:
 
@@ -117,11 +118,11 @@ def chain(StdI: StdIntList) -> "GnuplotData | None":
     not_used_d("V1'", StdI.V1p)
     not_used_d("V2'", StdI.V2p)
     not_used_d("K", StdI.K)
-    StdI.h = print_val_d("h", StdI.h, 0.0)
-    StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
-    StdI.Gamma_y = print_val_d("Gamma_y", StdI.Gamma_y, 0.0)
 
     if StdI.model == ModelType.SPIN:
+        StdI.h = print_val_d("h", StdI.h, 0.0)
+        StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
+        StdI.Gamma_y = print_val_d("Gamma_y", StdI.Gamma_y, 0.0)
         StdI.S2 = print_val_i("2S", StdI.S2, 1)
         StdI.D[2, 2] = print_val_d("D", StdI.D[2, 2], 0.0)
         input_spin_nn(StdI.J, StdI.JAll, StdI.J0, StdI.J0All, "J0")
@@ -136,7 +137,32 @@ def chain(StdI: StdIntList) -> "GnuplotData | None":
         not_used_d("V", StdI.V)
         not_used_d("V0", StdI.V0)
         not_used_d("V'", StdI.Vp)
+    elif StdI.model == ModelType.SPINLESS_FERMION:
+        not_used_d("h", StdI.h)
+        not_used_d("Gamma", StdI.Gamma)
+        not_used_d("Gamma_y", StdI.Gamma_y)
+        StdI.t0 = input_hopp(StdI.t, StdI.t0, "t0")
+        StdI.t0p = input_hopp(StdI.tp, StdI.t0p, "t0'")
+        StdI.t0pp = input_hopp(StdI.tpp, StdI.t0pp, "t0''")
+
+        not_used_d("mu", StdI.mu)
+        not_used_d("U", StdI.U)
+        not_used_d("V", StdI.V)
+        not_used_d("V0", StdI.V0)
+        not_used_d("V'", StdI.Vp)
+        not_used_d("V0'", StdI.V0p)
+        not_used_d("V''", StdI.Vpp)
+        not_used_d("V0''", StdI.V0pp)
+        not_used_j("J", StdI.JAll, StdI.J)
+        not_used_j("J0", StdI.J0All, StdI.J0)
+        not_used_j("J0'", StdI.J0pAll, StdI.J0p)
+        not_used_j("J0''", StdI.J0ppAll, StdI.J0pp)
+        not_used_d("D", StdI.D[2, 2])
+        not_used_i("2S", StdI.S2)
     else:
+        StdI.h = print_val_d("h", StdI.h, 0.0)
+        StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
+        StdI.Gamma_y = print_val_d("Gamma_y", StdI.Gamma_y, 0.0)
         StdI.mu = print_val_d("mu", StdI.mu, 0.0)
         StdI.U = print_val_d("U", StdI.U, 0.0)
         StdI.t0 = input_hopp(StdI.t, StdI.t0, "t0")
@@ -166,6 +192,8 @@ def chain(StdI: StdIntList) -> "GnuplotData | None":
     # (4) Compute upper limit of Transfer (for pump arrays) and allocate
     if StdI.model == ModelType.SPIN:
         ntransMax = StdI.L * (StdI.S2 + 1 + 2 * StdI.S2)
+    elif StdI.model == ModelType.SPINLESS_FERMION:
+        ntransMax = StdI.L * (2 + 2 + 2)
     else:
         ntransMax = StdI.L * 2 * (2 * StdI.NsiteUC + 2 + 2 + 2)
         if StdI.model == ModelType.KONDO:
@@ -283,6 +311,8 @@ from . import LatticePlugin, register_lattice
 
 class ChainPlugin(LatticePlugin):
     """Plugin for the 1D chain lattice."""
+
+    supports_spinless_fermion = True
 
     @property
     def name(self) -> str:

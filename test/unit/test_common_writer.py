@@ -1258,9 +1258,14 @@ class TestCheckConservedQuantities:
 class TestConservedQtyRulesTable:
     """Tests for the _CONSERVED_QTY_RULES dispatch table structure."""
 
-    def test_has_12_entries(self):
-        """Test that table has exactly 12 entries (3 models × 2 hphi × 2 lGC)."""
-        assert len(_CONSERVED_QTY_RULES) == 12
+    def test_has_14_entries(self):
+        """12 entries (3 models × 2 hphi × 2 lGC) + HPhi-only spinless × 2 lGC."""
+        assert len(_CONSERVED_QTY_RULES) == 14
+
+    def test_spinless_fermion_is_hphi_only(self):
+        flags = {key[1] for key in _CONSERVED_QTY_RULES
+                 if key[0] == ModelType.SPINLESS_FERMION}
+        assert flags == {True}
 
     def test_all_models_present(self):
         """Test that all three model types appear in the rules."""

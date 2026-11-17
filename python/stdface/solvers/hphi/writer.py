@@ -84,6 +84,8 @@ MODEL_GC_TO_CALC_MODEL: dict[tuple, int] = {
     (ModelType.SPIN,    1): 4,
     (ModelType.KONDO,   0): 2,
     (ModelType.KONDO,   1): 5,
+    (ModelType.SPINLESS_FERMION, 0): 7,
+    (ModelType.SPINLESS_FERMION, 1): 8,
 }
 """Maps ``(ModelType, lGC)`` to the ``CalcModel`` integer code."""
 

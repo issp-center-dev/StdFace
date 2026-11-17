@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 
 from ...plugin import ExpertModeSolverPlugin, register, register_config
-from ...core.stdface_vals import StdIntList, SolverType, MethodType
+from ...core.stdface_vals import StdIntList, SolverType, MethodType, ModelType
 from .config import HPhiConfig
 from ...core.keyword_parser import (
     store_with_check_dup_s, store_with_check_dup_sl,
@@ -30,6 +30,10 @@ class HPhiPlugin(ExpertModeSolverPlugin):
     @property
     def keyword_table(self) -> dict[str, tuple]:
         return _HPHI_KEYWORDS
+
+    @property
+    def model_aliases(self) -> dict[str, tuple]:
+        return _HPHI_MODEL_ALIASES
 
     def set_defaults(self, StdI: StdIntList) -> None:
         from .writer import set_modpara_defaults
@@ -127,6 +131,11 @@ _HPHI_KEYWORDS: dict[str, tuple] = {
     "2s":              (store_with_check_dup_i,  "S2"),
     "ngpu":            (store_with_check_dup_i,  "NGPU"),
     "scalapack":       (store_with_check_dup_i,  "Scalapack"),
+}
+
+_HPHI_MODEL_ALIASES: dict[str, tuple] = {
+    "spinlessfermion": (ModelType.SPINLESS_FERMION, 0, 0),
+    "spinless":        (ModelType.SPINLESS_FERMION, 0, 0),
 }
 
 # -----------------------------------------------------------------------

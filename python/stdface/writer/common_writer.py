@@ -796,6 +796,9 @@ _CONSERVED_QTY_RULES: dict[tuple, _ConservedQtyRule] = {
     (ModelType.KONDO,   True,  1): _ConservedQtyRule("nelec", "not_used", "not_used"),
     (ModelType.KONDO,   False, 0): _ConservedQtyRule("ncond", "required", "default_0"),
     (ModelType.KONDO,   False, 1): _ConservedQtyRule("ncond", "required", "not_used"),
+    # Spinless fermion (HPhi only)
+    (ModelType.SPINLESS_FERMION, True, 0): _ConservedQtyRule("ncond", "required", "not_used"),
+    (ModelType.SPINLESS_FERMION, True, 1): _ConservedQtyRule("nelec", "not_used", "not_used"),
 }
 """Rules for validating ``ncond`` and ``2Sz`` by (model, is_hphi, lGC)."""
 
@@ -830,6 +833,8 @@ def _check_conserved_quantities(StdI: StdIntList) -> None:
     - **Kondo** (HPhi, GC): ``nelec`` and ``2Sz`` unused.
     - **Kondo** (other solvers): ``ncond`` required; ``2Sz`` defaults to 0
       in canonical, unused in GC.
+    - **Spinless fermion** (HPhi only): ``ncond`` required in canonical;
+      ``2Sz`` unused.
 
     Parameters
     ----------

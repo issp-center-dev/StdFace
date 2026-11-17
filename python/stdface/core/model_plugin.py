@@ -1,8 +1,9 @@
 """Model plugins: per-model on-site (local) Hamiltonian term generation.
 
 This is the B5 ``ModelPlugin`` layer.  Each model (SPIN / HUBBARD /
-KONDO) knows how to build the on-site local terms for a single site as a
-pure :class:`~stdface.lattice.interaction_builder.LocalTerms` value (no
+KONDO / SPINLESS_FERMION) knows how to build the on-site local terms for
+a single site as a pure
+:class:`~stdface.lattice.interaction_builder.LocalTerms` value (no
 ``StdIntList`` mutation).  The lattice builders reach this layer through
 ``add_local_terms`` (see ``interaction_builder``), which extends the
 returned terms into ``StdI``.
@@ -101,6 +102,17 @@ class KondoModel(ModelPlugin):
         return terms
 
 
+class SpinlessFermionModel(ModelPlugin):
+    """SPINLESS_FERMION model: hopping only, no on-site terms."""
+
+    name = ModelType.SPINLESS_FERMION
+
+    def build_local_terms(
+        self, StdI: StdIntList, isite: int, jsite_kondo: int
+    ) -> LocalTerms:
+        return LocalTerms()
+
+
 # ---------------------------------------------------------------------------
 #  Registry
 # ---------------------------------------------------------------------------
@@ -127,3 +139,4 @@ def get_model(model: ModelType) -> ModelPlugin:
 register_model(SpinModel())
 register_model(HubbardModel())
 register_model(KondoModel())
+register_model(SpinlessFermionModel())
