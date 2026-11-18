@@ -278,3 +278,8 @@ add_test(
   NAME tpq_spin_kagome_randomsphere
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh tpq_spin_kagome_randomsphere ${CMAKE_SOURCE_DIR}/test/hphi
 )
+add_test(
+  NAME fcc_kondo_local_field
+  COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/check_fcc_kondo_field.sh
+    $<TARGET_FILE:hphi_dry.out> ${CMAKE_CURRENT_BINARY_DIR}/fcc_kondo_local_field
+)
