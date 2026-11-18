@@ -52,5 +52,12 @@ foreach(mode hphi mvmc uhf hwave)
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/wannier-spin-u-${mode}
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/check_wannier_spin_u.cmake)
         set_tests_properties(WannierSpinU_${mode} PROPERTIES TIMEOUT 180)
+        add_test(NAME WannierInitial_${mode}
+            COMMAND ${CMAKE_COMMAND}
+                -DPROGRAM=$<TARGET_FILE:${mode}_dry.out>
+                -DMODE=${mode}
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/wannier-initial-${mode}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/check_wannier_initial.cmake)
+        set_tests_properties(WannierInitial_${mode} PROPERTIES TIMEOUT 180)
     endif()
 endforeach()

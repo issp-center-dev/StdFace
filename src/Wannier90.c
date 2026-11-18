@@ -531,8 +531,10 @@ static void PrintUHFinitial(
   double complex Cphase, **IniGuess;
 
   IniGuess = (double complex **)malloc(sizeof(double complex*) * StdI->nsite);
-  for (isite = 0; isite < StdI->nsite; isite++) 
+  for (isite = 0; isite < StdI->nsite; isite++) {
     IniGuess[isite] = (double complex *)malloc(sizeof(double complex) * StdI->nsite);
+    for (jsite = 0; jsite < StdI->nsite; jsite++) IniGuess[isite][jsite] = 0.0;
+  }
 
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     /**/
