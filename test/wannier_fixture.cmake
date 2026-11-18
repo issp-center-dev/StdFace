@@ -48,9 +48,12 @@ endfunction()
 
 function(run_wannier dir reject diagnostic)
     # Poison newly allocated memory on glibc, macOS, and ASan respectively.
-    # Preserve caller sanitizer options (including leak-check policy).
+    # glibc skips MALLOC_PERTURB_ for chunks reused from tcache, so disable it.
+    # macOS always scribbles 0xAA (about -3.7e-103 as a double), which is below
+    # the initial.def output threshold: the initial-guess regression is caught
+    # on glibc and ASan only.  Preserve caller sanitizer options.
     execute_process(COMMAND "${CMAKE_COMMAND}" -E env
-        "MALLOC_PERTURB_=191" "MallocScribble=1"
+        "MALLOC_PERTURB_=191" "GLIBC_TUNABLES=glibc.malloc.tcache_count=0" "MallocScribble=1"
         "ASAN_OPTIONS=$ENV{ASAN_OPTIONS}:malloc_fill_byte=64"
         "${PROGRAM}" stan.in WORKING_DIRECTORY "${dir}"
         RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE error TIMEOUT 20)
