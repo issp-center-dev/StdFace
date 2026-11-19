@@ -183,6 +183,7 @@ void StdFace_FCOrtho(
     StdFace_NotUsed_J("J0'", StdI->J0pAll, StdI->J0p);
     StdFace_NotUsed_J("J1'", StdI->J1pAll, StdI->J1p);
     StdFace_NotUsed_J("J2'", StdI->J2pAll, StdI->J2p);
+    StdFace_NotUsed_J("J'", StdI->JpAll, StdI->Jp);
     StdFace_NotUsed_J("J''", StdI->JppAll, StdI->Jpp);
     StdFace_NotUsed_J("J0''", StdI->J0ppAll, StdI->J0pp);
     StdFace_NotUsed_J("J1''", StdI->J1ppAll, StdI->J1pp);

@@ -67,7 +67,7 @@ function(run_input lattice model key value reject signature)
     endif()
 endfunction()
 
-foreach(lattice orthorhombic pyrochlore)
+foreach(lattice orthorhombic pyrochlore fcc)
     foreach(model Spin Hubbard Kondo)
         # Unspecified inputs remain valid in each generator/model combination.
         run_input(${lattice} ${model} "" "" FALSE unused)
@@ -76,6 +76,13 @@ foreach(lattice orthorhombic pyrochlore)
         if(lattice STREQUAL "pyrochlore")
             list(APPEND keys "t'" "t''" "V'" "V''")
             list(APPEND jkeys "J'" "J''")
+        elseif(lattice STREQUAL "fcc")
+            # No double-prime bonds at all; J' only feeds the spin model.
+            list(APPEND keys "t''" "V''")
+            list(APPEND jkeys "J''")
+            if(NOT model STREQUAL "Spin")
+                list(APPEND jkeys "J'")
+            endif()
         elseif(NOT model STREQUAL "Spin")
             list(APPEND jkeys "J'" "J''")
         endif()
@@ -102,17 +109,22 @@ foreach(lattice orthorhombic pyrochlore)
         endforeach()
         run_input(${lattice} ${model} "t1''" "0,0.375" TRUE unused)
 
-        # Directional prime parameters are active on both lattices. Scalar
-        # prime/double-prime parameters are additionally active on Orthorhombic.
+        # Directional prime parameters are active on every lattice. Scalar
+        # prime parameters are additionally active on Orthorhombic and fcc,
+        # scalar double-prime parameters on Orthorhombic only.
         if(model STREQUAL "Spin")
             set(active "J0'" "J1'" "J2'")
             if(lattice STREQUAL "orthorhombic")
                 list(APPEND active "J'" "J''")
+            elseif(lattice STREQUAL "fcc")
+                list(APPEND active "J'")
             endif()
         else()
             set(active "t0'" "t1'" "t2'" "V0'" "V1'" "V2'")
             if(lattice STREQUAL "orthorhombic")
                 list(APPEND active "t'" "t''" "V'" "V''")
+            elseif(lattice STREQUAL "fcc")
+                list(APPEND active "t'" "V'")
             endif()
         endif()
         foreach(key ${active})
