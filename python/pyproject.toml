@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stdface"
-version = "0.5.0"
+dynamic = ["version"]
 description = "Standard-mode input generator for HPhi / mVMC / UHF / H-wave"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -36,6 +36,9 @@ orthorhombic = "stdface.lattice.orthorhombic:OrthorhombicPlugin"
 fc_ortho = "stdface.lattice.fc_ortho:FCOrthoPlugin"
 pyrochlore = "stdface.lattice.pyrochlore:PyrochlorePlugin"
 wannier90 = "stdface.lattice.wannier90:Wannier90Plugin"
+
+[tool.setuptools.dynamic]
+version = {attr = "stdface.core.version.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["stdface*"]
