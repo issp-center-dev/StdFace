@@ -11,6 +11,7 @@ import logging
 # not configure logging see no output (and no "No handlers" warning).
 logging.getLogger("stdface").addHandler(logging.NullHandler())
 
+from .core.version import __version__  # noqa: E402
 from .core.stdface_main import generate  # noqa: E402
 from .core.output import (  # noqa: E402
     SolverOutput, ExpertModeOutput, WannierModeOutput,
@@ -18,6 +19,7 @@ from .core.output import (  # noqa: E402
 )
 
 __all__ = [
+    "__version__",
     "generate",
     "SolverOutput", "ExpertModeOutput", "WannierModeOutput",
     "OutputFormat", "DefFileFormat", "JSONFormat",

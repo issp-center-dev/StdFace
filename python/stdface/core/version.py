@@ -25,21 +25,16 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 from __future__ import annotations
 
-# Semantic Versioning http://semver.org
-# <major>.<minor>.<patch>-<prerelease>
-VERSION_MAJOR = 0
-VERSION_MINOR = 5
-VERSION_PATCH = 0
-VERSION_PRERELEASE = ""  # "alpha", "beta.1", etc.
+# Version of the Python package (PEP 440).  It is independent of the C
+# generator's version in src/version.h, and this is the only place it is
+# written: pyproject.toml reads it from here.
+__version__ = "0.6.0-dev"
 
 
 def print_version() -> None:
-    """Print the StdFace version string to standard output.
+    """Print the version of the Python implementation to standard output.
 
-    Prints a version string in the format ``major.minor.patch``.
-    If ``VERSION_PRERELEASE`` is non-empty, ``-<prerelease>`` is appended.
+    The ``StdFace(python)`` label tells this apart from the C dry-run
+    binaries, which print ``StdFace version <version>``.
     """
-    version_str = f"StdFace version {VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
-    if VERSION_PRERELEASE:
-        version_str += f"-{VERSION_PRERELEASE}"
-    print(version_str)
+    print(f"StdFace(python) version {__version__}")

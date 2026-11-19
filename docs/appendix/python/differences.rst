@@ -75,6 +75,17 @@ thread safety) possible.
 
 See :doc:`plugin_tutorial` for step-by-step instructions.
 
+Versioning
+----------
+
+The Python implementation is versioned independently of the C generator.
+``stdface -v`` prints ``StdFace(python) version <version>``, whereas the C
+dry-run binaries print ``StdFace version <version>``. This manual was built
+with the Python package at |py_version| and the C generator at |release|.
+
+The Python version is written only in ``python/stdface/core/version.py``;
+the package metadata reads it from there.
+
 Source-to-Module Mapping
 ------------------------
 

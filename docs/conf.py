@@ -12,6 +12,12 @@ version = "{MAJOR}.{MINOR}".format(**_number)
 release = "{MAJOR}.{MINOR}.{PATCH}".format(**_number)
 if _prerelease:
     release += "-" + _prerelease
+
+# The Python package is versioned independently, in its version module only.
+_py_module = (pathlib.Path(__file__).resolve().parent.parent
+              / "python" / "stdface" / "core" / "version.py").read_text()
+_py_version = re.search(r'^__version__\s*=\s*"([^"]+)"', _py_module, re.M).group(1)
+rst_epilog = f".. |py_version| replace:: {_py_version}\n"
 extensions = []
 templates_path = ['_templates']
 exclude_patterns = ['_meta', '._*', '_build']

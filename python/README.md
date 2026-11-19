@@ -114,6 +114,11 @@ The default solver is HPhi.
 ./stdface -v
 ```
 
+This prints `StdFace(python) version <version>`. The Python package is
+versioned independently of the C generator (whose binaries print
+`StdFace version <version>`); its version is written only in
+`stdface/core/version.py`.
+
 ### Calling from Python
 
 ```python
@@ -228,7 +233,7 @@ See `history/refactoring_log.md` for detailed refactoring history.
 | `StdFace_main.c` | `stdface/core/stdface_main.py` |
 | `StdFace_vals.h` | `stdface/core/stdface_vals.py` |
 | `StdFace_ModelUtil.c/h` | `stdface/core/stdface_model_util.py` |
-| `version.h` | `stdface/version.py` |
+| `version.h` | `stdface/core/version.py` |
 | `ChainLattice.c` | `stdface/lattice/chain_lattice.py` |
 | `SquareLattice.c` | `stdface/lattice/square_lattice.py` |
 | `Ladder.c` | `stdface/lattice/ladder.py` |
