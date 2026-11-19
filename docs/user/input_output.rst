@@ -204,6 +204,39 @@ Interaction File (zvo_ur.dat)
 Same format as zvo_hr.dat. The entry at R=(0,0,0) with value 1.0 represents
 the on-site Hubbard U interaction.
 
+Reader validation (C generators)
+""""""""""""""""""""""""""""""""
+
+The geometry count selects the first ``NsiteUC`` orbitals. It must be positive
+and no greater than ``num_wann`` in each matrix file that is read
+(``_hr.dat``, ``_ur.dat``, ``_jr.dat``, and ``_dr.dat``). Additional orbitals
+in a matrix file are validated but excluded from the generated model. Reducing
+the geometry count may leave unused centre rows at the end of the geometry
+file. A density file with fewer orbitals than the geometry is rejected rather
+than silently filling the absent orbitals with zero.
+
+Geometry vectors and the selected centres must each contain three finite real
+values. A matrix file must contain a comment line, positive ``num_wann`` and
+``nrpts`` counts on separate lines, and exactly ``nrpts`` positive integer
+degeneracies (which may span multiple lines). The degeneracy values retain
+the existing treatment; validation does not change their physical weighting.
+
+Each of the ``nrpts`` blocks contains exactly ``num_wann * num_wann`` records
+with seven fields. Every orbital pair in ``1..num_wann`` must occur once in
+that block, all records must have the same R vector, and each R block must be
+unique. The order of orbital pairs within a block is arbitrary. R and -R are
+distinct blocks; the existing inversion-symmetry reduction still applies.
+Blank lines between records, CRLF line endings and a missing final newline
+are accepted. Extra fields or matrix records, incomplete input and malformed
+integer tokens are errors. Counts and allocation products must fit the
+implementation's integer and memory limits; matrix record counts are limited
+to ``INT_MAX``. R components must fit ``int`` and cannot be ``INT_MIN``.
+
+Reader errors identify the input file and read position on ``stderr`` and
+stop generation. These structural checks do not establish physical validity,
+change the handling of nonfinite matrix values, or ensure that the density
+R domain covers every later lookup. The Python reader is unchanged.
+
 File Relationships
 """"""""""""""""""
 
@@ -282,7 +315,7 @@ The following are unspecified or not validated by StdFace:
 - Physical consistency of parameter values
 - Numerical stability or correctness of the model
 - Solver-specific parameter ranges or constraints
-- Completeness of Wannier90 input files
+- Density R-domain coverage for later Wannier90 lookups
 
 Limitations and Non-Goals
 -------------------------
