@@ -274,6 +274,7 @@ void StdFace_FCOrtho(
       if (strcmp(StdI->model, "kondo") == 0 ) {
         jsite = kCell;
         StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite, jsite);
+        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, -StdI->Gamma_y, jsite);
       }/*if (strcmp(StdI->model, "kondo") == 0 )*/
     }
     /*

@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
+#include <limits.h>
 #include "StdFace_vals.h"
 #include <string.h>
 #ifdef MPI
@@ -1397,7 +1398,8 @@ void StdFace_PrintGeometry(struct StdIntList *StdI) {
  * @brief Allocate arrays for interactions
  *
  * @param[in,out] StdI      Standard interface list
- * @param[in]     ntransMax Upper limit of the number of transfers
+ * @param[in]     ntransMax Transfer bound excluding the two Gamma_y entries
+ *                         per itinerant site (added here for Hubbard/Kondo)
  * @param[in]     nintrMax  Upper limit of the number of interactions
  */
 void StdFace_MallocInteractions(
@@ -1409,6 +1411,24 @@ void StdFace_MallocInteractions(
 #if defined(_HPhi)
   int it;
 #endif
+  if (ntransMax < 0 || nintrMax < 0) {
+    fprintf(stderr, "Error: negative interaction allocation size.\n");
+    StdFace_exit(EXIT_FAILURE);
+  }
+  /* Lattice bounds reserve four local transfers per itinerant site.
+   * HubbardLocal can append two more for the imaginary transverse field.
+   * Keep those entries separate to preserve the existing zero cutoff and
+   * accumulation order, including time-evolution pump allocations below. */
+  if (strcmp(StdI->model, "hubbard") == 0 ||
+      strcmp(StdI->model, "kondo") == 0) {
+    int itinerantSites = strcmp(StdI->model, "kondo") == 0
+      ? StdI->nsite / 2 : StdI->nsite;
+    if (StdI->nsite < 0 || itinerantSites > (INT_MAX - ntransMax) / 2) {
+      fprintf(stderr, "Error: local transfer allocation size is invalid or too large.\n");
+      StdFace_exit(EXIT_FAILURE);
+    }
+    ntransMax += 2 * itinerantSites;
+  }
   /**@brief
   (1) Transfer StdIntList::trans, StdIntList::transindx
   */

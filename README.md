@@ -12,7 +12,7 @@ StdFace reads a simple configuration file specifying the physical model and latt
 
 - [HPhi](https://github.com/issp-center-dev/HPhi) - Exact Diagonalization
 - [mVMC](https://github.com/issp-center-dev/mVMC) - Variational Monte Carlo
-- [UHF](https://github.com/issp-center-dev/UHF-dev) - Unrestricted Hartree-Fock
+- UHF (not yet public) - Unrestricted Hartree-Fock
 - [H-wave](https://github.com/issp-center-dev/H-wave) - Mean-field solver
 
 ## Features
@@ -238,5 +238,5 @@ Kazuyoshi Yoshimi, Mitsuaki Kawamura, Kota Ido, Yuichi Motoyama, and Tatsumi Aoy
 
 - [HPhi](https://github.com/issp-center-dev/HPhi) - Exact Diagonalization package
 - [mVMC](https://github.com/issp-center-dev/mVMC) - Variational Monte Carlo package
-- [UHF](https://github.com/issp-center-dev/UHF-dev) - Unrestricted Hartree-Fock package
+- UHF (not yet public) - Unrestricted Hartree-Fock package
 - [H-wave](https://github.com/issp-center-dev/H-wave) - Mean-field solver
