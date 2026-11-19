@@ -21,19 +21,19 @@ Public Macros/Constants
 
    Major version number.
 
-   **Current value**: 0
+   **Current value**: 1
 
 .. c:macro:: VERSION_MINOR
 
    Minor version number.
 
-   **Current value**: 5
+   **Current value**: 0
 
 .. c:macro:: VERSION_PATCH
 
    Patch version number.
 
-   **Current value**: 0
+   **Current value**: 1
 
 .. c:macro:: VERSION_PRERELEASE
 
@@ -54,8 +54,8 @@ The version follows `Semantic Versioning <http://semver.org>`_::
 
 Examples:
 
-- ``0.5.0`` (current release)
-- ``1.0.0-alpha`` (hypothetical prerelease)
+- ``1.0.1`` (current release)
+- ``1.1.0-alpha`` (hypothetical prerelease)
 
 Public Functions
 ----------------
