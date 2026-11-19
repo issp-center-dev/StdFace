@@ -1033,6 +1033,24 @@ class TestSolverDefaultsDispatch:
         assert StdI.OmegaMax == 40.0
         assert StdI.OmegaMin == -40.0
 
+    def test_hphi_omega_im_default_keeps_fraction_of_large_value(self):
+        StdI = _make_stdi_base(solver="HPhi", nsite=4)
+        StdI.LargeValue = 6.5
+        StdI.Lanczos_max = NaN_i
+        StdI.initial_iv = NaN_i
+        StdI.exct = NaN_i
+        StdI.LanczosEps = NaN_i
+        StdI.LanczosTarget = NaN_i
+        StdI.NumAve = NaN_i
+        StdI.ExpecInterval = NaN_i
+        StdI.Nomega = NaN_i
+        StdI.OmegaMax = float("nan")
+        StdI.OmegaMin = float("nan")
+        StdI.OmegaOrg = float("nan")
+        StdI.OmegaIm = float("nan")
+        _check_mod_para_hphi(StdI)
+        assert StdI.OmegaIm == pytest.approx(0.065)
+
     # -- mVMC handler sets defaults --
 
     def test_mvmc_sets_cpara_default(self):
