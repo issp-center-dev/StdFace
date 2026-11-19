@@ -830,11 +830,6 @@ void StdFace_Wannier90(
   (4.5) For spin system, compute super exchange interaction.
   */
   if (strcmp(StdI->model, "spin") == 0) {
-    if (NtUJ[1] == 0) {
-      fprintf(stderr, "\n  Error: _ur.dat is required for the spin model.\n");
-      fprintf(stderr, "         On-site U values are needed to compute superexchange J = 4t^2/U.\n\n");
-      StdFace_exit(-1);
-    }
     Uspin = (double *)malloc(sizeof(double) * StdI->NsiteUC);
     /* An orbital may have no on-site U after the input cutoffs. */
     for (isite = 0; isite < StdI->NsiteUC; isite++) Uspin[isite] = NAN;

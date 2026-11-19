@@ -50,8 +50,6 @@ foreach(case valid cross negative unused diagonal missing_first missing_second f
     elseif(case STREQUAL "scaled_zero")
         set(extra "${extra}lambda_U = 0\n")
         set(reject TRUE)
-        # PR62's earlier empty-U guard is also a valid diagnostic in combined builds.
-        set(diagnostic "${diagnostic}|Error: _ur.dat is required for the spin model")
     endif()
     wannier_input("${dir}" 2 Spin "${extra}")
     write_wannier("${dir}/zvo_hr.dat" 2 "-1 0 0;0 0 0;1 0 0" "${hop};${local};${hop}")
