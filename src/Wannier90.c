@@ -531,8 +531,10 @@ static void PrintUHFinitial(
   double complex Cphase, **IniGuess;
 
   IniGuess = (double complex **)malloc(sizeof(double complex*) * StdI->nsite);
-  for (isite = 0; isite < StdI->nsite; isite++) 
+  for (isite = 0; isite < StdI->nsite; isite++) {
     IniGuess[isite] = (double complex *)malloc(sizeof(double complex) * StdI->nsite);
+    for (jsite = 0; jsite < StdI->nsite; jsite++) IniGuess[isite][jsite] = 0.0;
+  }
 
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     /**/
@@ -834,6 +836,8 @@ void StdFace_Wannier90(
       StdFace_exit(-1);
     }
     Uspin = (double *)malloc(sizeof(double) * StdI->NsiteUC);
+    /* An orbital may have no on-site U after the input cutoffs. */
+    for (isite = 0; isite < StdI->NsiteUC; isite++) Uspin[isite] = NAN;
     for (it = 0; it < NtUJ[1]; it++)
       if (tUJindx[1][it][0] == 0 && tUJindx[1][it][1] == 0 && tUJindx[1][it][2] == 0
         && tUJindx[1][it][3] == tUJindx[1][it][4])
@@ -890,9 +894,16 @@ void StdFace_Wannier90(
           tUJindx[0][it][0], tUJindx[0][it][1], tUJindx[0][it][2],
           tUJindx[0][it][3], tUJindx[0][it][4], &isite, &jsite, &Cphase, dR);
         if (strcmp(StdI->model, "spin") == 0) {
+          double Ui = Uspin[tUJindx[0][it][3]];
+          double Uj = Uspin[tUJindx[0][it][4]];
+          if (!isfinite(Ui) || !isfinite(Uj) || Ui == 0.0 || Uj == 0.0) {
+            fprintf(stderr, "\n  Error: Wannier90 superexchange requires finite, nonzero on-site U for orbitals %d and %d.\n",
+              tUJindx[0][it][3] + 1, tUJindx[0][it][4] + 1);
+            StdFace_exit(-1);
+          }
           for (ii = 0; ii < 3; ii++) 
             Jtmp[ii][ii] = 2.0 * tUJ[0][it] * conj(tUJ[0][it])
-            * (1.0 / Uspin[tUJindx[0][it][3]] + 1.0 / Uspin[tUJindx[0][it][4]]);
+            * (1.0 / Ui + 1.0 / Uj);
           StdFace_GeneralJ(StdI, Jtmp, StdI->S2, StdI->S2, isite, jsite);
         }/*if (strcmp(StdI->model, "spin") == 0 )*/
         else {
