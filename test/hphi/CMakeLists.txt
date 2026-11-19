@@ -283,3 +283,8 @@ add_test(
   COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/check_fcc_kondo_field.sh
     $<TARGET_FILE:hphi_dry.out> ${CMAKE_CURRENT_BINARY_DIR}/fcc_kondo_local_field
 )
+add_test(
+  NAME pyrochlore_kondo_pairing
+  COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/check_pyrochlore_kondo_pairing.sh
+    $<TARGET_FILE:hphi_dry.out> ${CMAKE_CURRENT_BINARY_DIR}/pyrochlore_kondo_pairing
+)
