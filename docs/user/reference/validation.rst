@@ -52,7 +52,7 @@ What StdFace Does NOT Validate
 - Physical consistency of parameter values
 - Numerical stability or correctness of the model
 - Solver-specific parameter ranges or constraints
-- Completeness of Wannier90 input files
+- Density R-domain coverage for later Wannier90 lookups
 
 Limitations and Non-Goals
 --------------------------

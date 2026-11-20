@@ -524,3 +524,16 @@ add_test(
   NAME fail_spinless_square
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_spinless_square ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
 )
+# C-binary checks: base mode only.
+if(TEST_MODE STREQUAL "base")
+add_test(
+  NAME fcc_kondo_local_field
+  COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/check_fcc_kondo_field.sh
+    $<TARGET_FILE:hphi_dry.out> ${CMAKE_CURRENT_BINARY_DIR}/fcc_kondo_local_field
+)
+add_test(
+  NAME pyrochlore_kondo_pairing
+  COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/check_pyrochlore_kondo_pairing.sh
+    $<TARGET_FILE:hphi_dry.out> ${CMAKE_CURRENT_BINARY_DIR}/pyrochlore_kondo_pairing
+)
+endif()

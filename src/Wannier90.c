@@ -38,6 +38,238 @@
 #include <complex.h>
 #include <string.h>
 #include "setmemory.h"
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdint.h>
+
+/* Keep parsing shared by hopping, interactions and density.  In particular,
+ * validate all file orbitals even when geometry selects only a leading subset. */
+struct W90Reader {
+  FILE *fp;
+  const char *filename;
+  char *line;
+  size_t capacity, number;
+};
+
+static void w90_error(struct W90Reader *r, const char *message)
+{
+  fprintf(stderr, "\n  Error: Wannier90 input %s, line %zu: %s.\n",
+    r->filename, r->number, message);
+  StdFace_exit(-1);
+}
+
+static size_t w90_product(struct W90Reader *r, size_t a, size_t b)
+{
+  if (b != 0 && a > SIZE_MAX / b) w90_error(r, "dimensions are too large");
+  return a * b;
+}
+
+static void *w90_allocate(struct W90Reader *r, size_t n, size_t size)
+{
+  void *p;
+  w90_product(r, n, size);
+  p = calloc(n, size);
+  if (p == NULL && n != 0) w90_error(r, "memory allocation failed");
+  return p;
+}
+
+/* Read a physical line without a fixed length limit. Blank records are allowed
+ * between data rows, as in the old whitespace-based reader. */
+static int w90_line(struct W90Reader *r, int skip_blank)
+{
+  int c;
+  size_t n;
+  do {
+    n = 0;
+    while ((c = fgetc(r->fp)) != EOF && c != '\n') {
+      if (c == '\0') w90_error(r, "NUL byte in input");
+      if (n + 1 >= r->capacity) {
+        size_t capacity = r->capacity ? w90_product(r, r->capacity, 2) : 256;
+        char *line = realloc(r->line, capacity);
+        if (line == NULL) w90_error(r, "memory allocation failed");
+        r->line = line;
+        r->capacity = capacity;
+      }
+      r->line[n++] = (char)c;
+    }
+    if (ferror(r->fp)) w90_error(r, "file read failed");
+    if (c == EOF && n == 0) return 0;
+    r->number++;
+    if (r->line == NULL) {
+      r->capacity = 256;
+      r->line = w90_allocate(r, r->capacity, 1);
+    }
+    r->line[n] = '\0';
+    if (!skip_blank) return 1;
+    for (n = 0; isspace((unsigned char)r->line[n]); n++) { }
+  } while (r->line[n] == '\0');
+  return 1;
+}
+
+static char *w90_record(struct W90Reader *r)
+{
+  if (!w90_line(r, 1)) w90_error(r, "unexpected end of file");
+  return r->line;
+}
+
+static int w90_int(struct W90Reader *r, char **text)
+{
+  char *end;
+  long value;
+  errno = 0;
+  value = strtol(*text, &end, 10);
+  if (end == *text || errno == ERANGE || value < INT_MIN || value > INT_MAX ||
+      (*end != '\0' && !isspace((unsigned char)*end)))
+    w90_error(r, "expected an integer in the supported range");
+  *text = end;
+  return (int)value;
+}
+
+static double w90_real(struct W90Reader *r, char **text)
+{
+  char *end;
+  double value = strtod(*text, &end);
+  if (end == *text || (*end != '\0' && !isspace((unsigned char)*end)))
+    w90_error(r, "expected a real value");
+  *text = end;
+  /* Preserve existing matrix-value handling (including NaN/Inf). Geometry
+   * checks finiteness separately; spin denominators have their own guard. */
+  return value;
+}
+
+static void w90_end_record(struct W90Reader *r, char *text)
+{
+  while (isspace((unsigned char)*text)) text++;
+  if (*text != '\0') w90_error(r, "extra data in record");
+}
+
+static int w90_positive(struct W90Reader *r)
+{
+  char *text = w90_record(r);
+  int value = w90_int(r, &text);
+  w90_end_record(r, text);
+  if (value <= 0) w90_error(r, "dimension must be positive");
+  return value;
+}
+
+static int w90_compare_r(const void *a, const void *b)
+{
+  const int *ra = *(const int * const *)a, *rb = *(const int * const *)b;
+  int i;
+  for (i = 0; i < 3; i++) {
+    if (ra[i] < rb[i]) return -1;
+    if (ra[i] > rb[i]) return 1;
+  }
+  return 0;
+}
+
+/* Each block contains all nWan*nWan distinct pairs at a single R, in any
+ * order. Store only the geometry-selected leading square, after validation. */
+static void w90_matrix(struct W90Reader *r, int nsite, int *nr,
+  double complex ****matrix, int ***indices)
+{
+  int nw, block, row[5], i, j, count;
+  size_t pairs, entry, key;
+  char *text;
+  unsigned char *seen;
+  int **sorted;
+  double re, im;
+  if (!w90_line(r, 0)) w90_error(r, "missing comment header");
+  nw = w90_positive(r);
+  if (nw < nsite) w90_error(r, "file has fewer orbitals than geometry");
+  *nr = w90_positive(r);
+  pairs = w90_product(r, (size_t)nw, (size_t)nw);
+  if (w90_product(r, pairs, (size_t)*nr) > INT_MAX)
+    w90_error(r, "dimensions are too large");
+  count = 0;
+  while (count < *nr) {
+    text = w90_record(r);
+    while (1) {
+      while (isspace((unsigned char)*text)) text++;
+      if (*text == '\0') break;
+      if (count == *nr) w90_error(r, "extra degeneracy values");
+      if (w90_int(r, &text) <= 0) w90_error(r, "degeneracy must be positive");
+      count++;
+    }
+  }
+  *matrix = w90_allocate(r, (size_t)*nr, sizeof(**matrix));
+  *indices = w90_allocate(r, (size_t)*nr, sizeof(**indices));
+  seen = w90_allocate(r, pairs, sizeof(*seen));
+  for (block = 0; block < *nr; block++) {
+    (*matrix)[block] = w90_allocate(r, (size_t)nsite, sizeof(***matrix));
+    (*indices)[block] = w90_allocate(r, 3, sizeof(***indices));
+    for (i = 0; i < nsite; i++)
+      (*matrix)[block][i] = w90_allocate(r, (size_t)nsite, sizeof(****matrix));
+    memset(seen, 0, pairs);
+    for (entry = 0; entry < pairs; entry++) {
+      text = w90_record(r);
+      for (i = 0; i < 5; i++) row[i] = w90_int(r, &text);
+      re = w90_real(r, &text);
+      im = w90_real(r, &text);
+      w90_end_record(r, text);
+      for (i = 0; i < 3; i++) {
+        /* Later symmetry/weight code negates R and takes abs(R). */
+        if (row[i] == INT_MIN) w90_error(r, "R component cannot be INT_MIN");
+        if (entry == 0) (*indices)[block][i] = row[i];
+        else if (row[i] != (*indices)[block][i])
+          w90_error(r, "inconsistent R within matrix block");
+      }
+      if (row[3] < 1 || row[3] > nw || row[4] < 1 || row[4] > nw)
+        w90_error(r, "orbital index outside 1..num_wann");
+      i = row[3] - 1;
+      j = row[4] - 1;
+      key = (size_t)i * (size_t)nw + (size_t)j;
+      if (seen[key]) w90_error(r, "duplicate orbital pair in matrix block");
+      seen[key] = 1;
+      if (i < nsite && j < nsite) (*matrix)[block][i][j] = re + I * im;
+    }
+  }
+  free(seen);
+  if (w90_line(r, 1)) w90_error(r, "extra matrix records");
+  sorted = w90_allocate(r, (size_t)*nr, sizeof(*sorted));
+  memcpy(sorted, *indices, (size_t)*nr * sizeof(*sorted));
+  qsort(sorted, (size_t)*nr, sizeof(*sorted), w90_compare_r);
+  for (block = 1; block < *nr; block++) {
+    if (w90_compare_r(&sorted[block - 1], &sorted[block]) == 0)
+      w90_error(r, "duplicate R block");
+  }
+  free(sorted);
+  free(r->line);
+  r->line = NULL;
+}
+
+/* Density D(R) on the box of R vectors spanned by the density file. An R
+ * vector that the file does not list, inside or outside that box, has zero
+ * density, as an unlisted R has no term in the hopping and interaction files. */
+struct W90Density {
+  int Rmin[3], NR[3], nWan;
+  double complex *value; /* [R0][R1][R2][iWan][jWan] */
+};
+
+static const int w90_origin[3] = {0, 0, 0};
+
+/* NULL when R is outside the box of the density file. */
+static double complex *w90_density_entry(const struct W90Density *density,
+  const int *R, int iWan, int jWan)
+{
+  size_t offset = 0;
+  int ii;
+  for (ii = 0; ii < 3; ii++) {
+    long long shifted = (long long)R[ii] - density->Rmin[ii];
+    if (shifted < 0 || shifted >= density->NR[ii]) return NULL;
+    offset = offset * (size_t)density->NR[ii] + (size_t)shifted;
+  }
+  return &density->value[(offset * (size_t)density->nWan + (size_t)iWan)
+    * (size_t)density->nWan + (size_t)jWan];
+}
+
+static double complex w90_density(const struct W90Density *density,
+  const int *R, int iWan, int jWan)
+{
+  const double complex *entry = w90_density_entry(density, R, iWan, jWan);
+  return entry == NULL ? 0.0 : *entry;
+}
 
 /**
  * @brief Calculate inverse of a 3x3 matrix
@@ -114,37 +346,48 @@ static void geometry_W90(
   struct StdIntList *StdI
 )
 {
-  int isite, ii, ierr;
-  char filename[265];
+  int isite, ii, jj, nsite;
+  char filename[265], *text;
   FILE *fp;
+  struct W90Reader reader;
 
   sprintf(filename, "%s_geom.dat", StdI->CDataFileHead);
   fprintf(stdout, "    Wannier90 Geometry file = %s\n", filename);
-
   fp = fopen(filename, "r");
-  if (fp == NULL){
+  if (fp == NULL) {
     fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
     StdFace_exit(-1);
   }
-  /**@brief
-   Direct lattice vector StdIntList::direct
-  */
-  for (ii = 0; ii < 3; ii++)
-    ierr = fscanf(fp, "%lf%lf%lf", &StdI->direct[ii][0], &StdI->direct[ii][1], &StdI->direct[ii][2]);
-  if(ierr == EOF) printf("%d\n", ierr);
-  /**@brief
-   Intrinsic site position StdIntList::tau and its number StdIntList::NsiteUC
-  */
+  reader = (struct W90Reader){fp, filename, NULL, 0, 0};
+  for (ii = 0; ii < 3; ii++) {
+    text = w90_record(&reader);
+    for (jj = 0; jj < 3; jj++) {
+      StdI->direct[ii][jj] = w90_real(&reader, &text);
+      if (!isfinite(StdI->direct[ii][jj])) w90_error(&reader, "nonfinite lattice vector");
+    }
+    w90_end_record(&reader, text);
+  }
+  nsite = w90_positive(&reader);
+  if (StdI->NCell <= 0 || nsite > INT_MAX / StdI->NCell ||
+      w90_product(&reader, (size_t)nsite, (size_t)nsite) > INT_MAX)
+    w90_error(&reader, "dimensions are too large");
   for (isite = 0; isite < StdI->NsiteUC; isite++) free(StdI->tau[isite]);
   free(StdI->tau);
-  ierr = fscanf(fp, "%d", &StdI->NsiteUC);
+  StdI->NsiteUC = nsite;
   fprintf(stdout, "    Number of Correlated Sites = %d\n", StdI->NsiteUC);
-
-  StdI->tau = (double **)malloc(sizeof(double*) * StdI->NsiteUC);
-  for (ii = 0; ii < StdI->NsiteUC; ii++) StdI->tau[ii] = (double *)malloc(sizeof(double) * 3);
-
-  for (isite = 0; isite < StdI->NsiteUC; isite++)
-    ierr = fscanf(fp, "%lf%lf%lf", &StdI->tau[isite][0], &StdI->tau[isite][1], &StdI->tau[isite][2]);
+  StdI->tau = w90_allocate(&reader, (size_t)nsite, sizeof(*StdI->tau));
+  for (isite = 0; isite < nsite; isite++) {
+    text = w90_record(&reader);
+    StdI->tau[isite] = w90_allocate(&reader, 3, sizeof(**StdI->tau));
+    for (jj = 0; jj < 3; jj++) {
+      StdI->tau[isite][jj] = w90_real(&reader, &text);
+      if (!isfinite(StdI->tau[isite][jj])) w90_error(&reader, "nonfinite Wannier centre");
+    }
+    w90_end_record(&reader, text);
+  }
+  /* Geometry may select a prefix by reducing its count; leave unused centres
+   * unread, as before. Matrix files still validate every declared orbital. */
+  free(reader.line);
   fclose(fp);
 
   printf("    Direct lattice vectors:\n");
@@ -190,10 +433,10 @@ static void read_W90(
 )
 {
   FILE *fp;
-  int ierr, nWan, nWSC, iWSC, jWSC, iWan, jWan, iWan0, jWan0, ii, jj;
+  int nWan = StdI->NsiteUC, nWSC, iWSC, jWSC, iWan, jWan, ii, jj;
   int flg_vec = (cutoff_Rvec[0][0] != StdI->NaN_i);
   double dtmp[2], dR[3], length;
-  char ctmp[256], *ctmp2;
+  struct W90Reader reader;
   double complex ***Mat_tot;
   double inverse_rvec[3][3]={{},{}};
   double *Weight_tot;
@@ -211,29 +454,12 @@ static void read_W90(
       fprintf(stdout, "\n  Skip to read the file %s. \n\n", filename);
       return;
   }
-  ctmp2 = fgets(ctmp, 256, fp);
-  ierr = fscanf(fp, "%d", &nWan);
-  if (ierr == EOF) printf("%d %s\n", ierr, ctmp2);
-  ierr = fscanf(fp, "%d", &nWSC);
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    ierr = fscanf(fp, "%d", &ii);
-  }
-
-  Weight_tot = d_1d_allocate(nWSC);
-  Band_lattice = i_1d_allocate(3);
-  Model_lattice = i_1d_allocate(3);
-  /*
-  Malloc Matrix elements and their indices
-  */
-  Mat_tot = (double complex ***)malloc(sizeof(double complex **) * nWSC);
-  indx_tot = (int **)malloc(sizeof(int*) * nWSC);
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
-    indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
-    for (iWan = 0; iWan < nWan; iWan++) {
-      Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
-    }
-  }
+  reader = (struct W90Reader){fp, filename, NULL, 0, 0};
+  w90_matrix(&reader, nWan, &nWSC, &Mat_tot, &indx_tot);
+  fclose(fp);
+  Weight_tot = w90_allocate(&reader, (size_t)nWSC, sizeof(*Weight_tot));
+  Band_lattice = w90_allocate(&reader, 3, sizeof(*Band_lattice));
+  Model_lattice = w90_allocate(&reader, 3, sizeof(*Model_lattice));
 
   if(flg_vec){
     //Get Inverse Matrix for cutoff_Rvec
@@ -246,10 +472,8 @@ static void read_W90(
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     for (iWan = 0; iWan < nWan; iWan++) {
       for (jWan = 0; jWan < nWan; jWan++) {
-        ierr = fscanf(fp, "%d%d%d%d%d%lf%lf",
-          &indx_tot[iWSC][0], &indx_tot[iWSC][1], &indx_tot[iWSC][2],
-          &iWan0, &jWan0,
-          &dtmp[0], &dtmp[1]);
+        dtmp[0] = creal(Mat_tot[iWSC][iWan][jWan]);
+        dtmp[1] = cimag(Mat_tot[iWSC][iWan][jWan]);
         /*
          Compute Euclid length
         */
@@ -279,8 +503,7 @@ static void read_W90(
             dtmp[1] = 0.0;
           }
         }
-        if (iWan0 <= StdI->NsiteUC && jWan0 <= StdI->NsiteUC)
-          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = lambda *(dtmp[0] + I * dtmp[1]);
+        Mat_tot[iWSC][iWan][jWan] = lambda * (dtmp[0] + I * dtmp[1]);
       }
     }
     /**@brief
@@ -307,7 +530,6 @@ static void read_W90(
         }
       }
   }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
-  fclose(fp);
 
   /*
    * (2) Apply weight
@@ -393,102 +615,63 @@ static void read_W90(
  *
  * @details
  * Reads density matrix elements from a RESPACK format file.
- * Returns a 5D array indexed by [R0][R1][R2][i][j] where R0, R1, R2 are
- * lattice translation vector indices and i, j are orbital indices.
- * The returned array uses base-shifted pointers to allow negative R indices.
+ * Returns the elements together with the R box of the file; read them with
+ * w90_density(), which gives zero for an R vector that the file does not list.
  *
  * @param[in,out] StdI     Structure containing model parameters
  * @param[in]     filename Input filename (RESPACK _dr.dat)
- * @return 5D complex array of density matrix elements indexed by [R0][R1][R2][i][j]
+ * @return Density matrix elements D(R)[i][j] and the R box they cover
  */
-static double complex***** read_density_matrix(
+static struct W90Density read_density_matrix(
   struct StdIntList *StdI,
   char *filename
 )
 {
   FILE *fp;
-  int ierr, nWan, nWSC, iWSC, iWan, jWan, iWan0, jWan0, ii, Rmax[3], Rmin[3], NR[3], i0, i1, i2;
-  double dtmp[2];
-  char ctmp[256], *ctmp2;
-  double complex ***Mat_tot, *****DenMat;
+  int nWan = StdI->NsiteUC, nWSC, iWSC, iWan, jWan, ii, Rmax[3], Rmin[3], NR[3];
+  double complex ***Mat_tot;
+  struct W90Density DenMat;
   int **indx_tot;
-  /*
-  Header part
-  */
+  size_t entries;
+  struct W90Reader reader;
   fp = fopen(filename, "r");
   if (fp == NULL) {
     fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
     StdFace_exit(-1);
   }
-  ctmp2 = fgets(ctmp, 256, fp);
-  ierr = fscanf(fp, "%d", &nWan);
-  if (ierr == EOF) printf("%d %s\n", ierr, ctmp2);
-  ierr = fscanf(fp, "%d", &nWSC);
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    ierr = fscanf(fp, "%d", &ii);
-  }
-  /*
-  Malloc Matrix elements and their indices
-  */
-  Mat_tot = (double complex ***)malloc(sizeof(double complex **) * nWSC);
-  indx_tot = (int **)malloc(sizeof(int*) * nWSC);
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
-    indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
-    for (iWan = 0; iWan < nWan; iWan++) {
-      Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
-    }
-  }
-  /*
-  Read body
-  */
-  for (ii = 0; ii < 3; ii++) {
-    Rmin[ii] = 0;
-    Rmax[ii] = 0;
-  }
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    for (iWan = 0; iWan < nWan; iWan++) {
-      for (jWan = 0; jWan < nWan; jWan++) {
-        ierr = fscanf(fp, "%d%d%d%d%d%lf%lf",
-          &indx_tot[iWSC][0], &indx_tot[iWSC][1], &indx_tot[iWSC][2],
-          &iWan0, &jWan0,
-          &dtmp[0], &dtmp[1]);
-        if (iWan0 <= StdI->NsiteUC && jWan0 <= StdI->NsiteUC)
-          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = dtmp[0] + I * dtmp[1];
-        for (ii = 0; ii < 3; ii++) {
-          if (indx_tot[iWSC][ii] < Rmin[ii]) Rmin[ii] = indx_tot[iWSC][ii];
-          if (indx_tot[iWSC][ii] > Rmax[ii]) Rmax[ii] = indx_tot[iWSC][ii];
-        }
-      }
-    }
-  }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
+  reader = (struct W90Reader){fp, filename, NULL, 0, 0};
+  w90_matrix(&reader, nWan, &nWSC, &Mat_tot, &indx_tot);
   fclose(fp);
-  for (ii = 0; ii < 3; ii++) NR[ii] = Rmax[ii] - Rmin[ii] + 1;
+  for (ii = 0; ii < 3; ii++) Rmin[ii] = Rmax[ii] = 0;
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    for (ii = 0; ii < 3; ii++) {
+      if (indx_tot[iWSC][ii] < Rmin[ii]) Rmin[ii] = indx_tot[iWSC][ii];
+      if (indx_tot[iWSC][ii] > Rmax[ii]) Rmax[ii] = indx_tot[iWSC][ii];
+    }
+  }
+  entries = w90_product(&reader, (size_t)nWan, (size_t)nWan);
+  for (ii = 0; ii < 3; ii++) {
+    long long extent = (long long)Rmax[ii] - (long long)Rmin[ii] + 1;
+    if (extent > INT_MAX) w90_error(&reader, "density R extent is too large");
+    NR[ii] = (int)extent;
+    entries = w90_product(&reader, entries, (size_t)NR[ii]);
+  }
+  w90_product(&reader, entries, sizeof(double complex));
   fprintf(stdout, "      Minimum R : %d %d %d\n", Rmin[0], Rmin[1], Rmin[2]);
   fprintf(stdout, "      Maximum R : %d %d %d\n", Rmax[0], Rmax[1], Rmax[2]);
   fprintf(stdout, "      Numver of R : %d %d %d\n", NR[0], NR[1], NR[2]);
 
-  DenMat = (double complex *****)malloc(sizeof(double complex ****)*NR[0]);
-  DenMat = DenMat - Rmin[0]; // base shift
-  for (i0 = Rmin[0]; i0 <= Rmax[0]; i0++) {
-    DenMat[i0] = (double complex ****)malloc(sizeof(double complex ***)*NR[1]);
-    DenMat[i0] = DenMat[i0] - Rmin[1]; // base shift
-    for (i1 = Rmin[1]; i1 <= Rmax[1]; i1++) {
-      DenMat[i0][i1] = (double complex ***)malloc(sizeof(double complex **)*NR[2]);
-      DenMat[i0][i1] = DenMat[i0][i1] - Rmin[2]; // base shift
-      for (i2 = Rmin[2]; i2 <= Rmax[2]; i2++) {
-        DenMat[i0][i1][i2] = (double complex **)malloc(sizeof(double complex *) * StdI->NsiteUC);
-        for (iWan = 0; iWan < StdI->NsiteUC; iWan++) {
-          DenMat[i0][i1][i2][iWan] = (double complex *)malloc(sizeof(double complex) * StdI->NsiteUC);
-          for (jWan = 0; jWan < StdI->NsiteUC; jWan++)DenMat[i0][i1][i2][iWan][jWan] = 0.0;
-        }
-      }
-    }
+  for (ii = 0; ii < 3; ii++) {
+    DenMat.Rmin[ii] = Rmin[ii];
+    DenMat.NR[ii] = NR[ii];
   }
+  DenMat.nWan = nWan;
+  /* Zero-initialized: R vectors in the box that the file does not list. */
+  DenMat.value = w90_allocate(&reader, entries, sizeof(*DenMat.value));
   for (iWSC = 0; iWSC < nWSC; iWSC++) 
     for (iWan = 0; iWan < nWan; iWan++)
       for (jWan = 0; jWan < nWan; jWan++)
-        DenMat[indx_tot[iWSC][0]][indx_tot[iWSC][1]][indx_tot[iWSC][2]][iWan][jWan]
+        *w90_density_entry(&DenMat, indx_tot[iWSC], iWan, jWan)
         = Mat_tot[iWSC][iWan][jWan];
 
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
@@ -515,24 +698,26 @@ static double complex***** read_density_matrix(
  * @param[in] StdI    Structure containing model parameters
  * @param[in] NtUJ    Number of terms for each interaction type (array of 3)
  * @param[in] tUJ     Complex matrix elements for each interaction type
- * @param[in] DenMat  5D density matrix elements indexed by [R0][R1][R2][i][j]
+ * @param[in] DenMat  Density matrix elements; zero for R not listed in the file
  * @param[in] tUJindx Indices (R0, R1, R2, band_i, band_f) for each interaction term
  */
 static void PrintUHFinitial(
   struct StdIntList *StdI,
   int *NtUJ,
   double complex **tUJ,
-  double complex *****DenMat,
+  const struct W90Density *DenMat,
   int ***tUJindx
 ) {
   FILE *fp;
   int iW, iL, iH, kCell, it, isite, jsite ,NIniGuess, ispin;
   double dR[3];
-  double complex Cphase, **IniGuess;
+  double complex Cphase, DenMat0, **IniGuess;
 
   IniGuess = (double complex **)malloc(sizeof(double complex*) * StdI->nsite);
-  for (isite = 0; isite < StdI->nsite; isite++) 
+  for (isite = 0; isite < StdI->nsite; isite++) {
     IniGuess[isite] = (double complex *)malloc(sizeof(double complex) * StdI->nsite);
+    for (jsite = 0; jsite < StdI->nsite; jsite++) IniGuess[isite][jsite] = 0.0;
+  }
 
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     /**/
@@ -544,7 +729,7 @@ static void PrintUHFinitial(
     */
     for (isite = 0; isite < StdI->NsiteUC; isite++) {
       jsite = isite + StdI->NsiteUC*kCell;
-      IniGuess[jsite][jsite] = DenMat[0][0][0][isite][isite];
+      IniGuess[jsite][jsite] = w90_density(DenMat, w90_origin, isite, isite);
     }
     /*
     Coulomb integral (U)
@@ -553,10 +738,9 @@ static void PrintUHFinitial(
       StdFace_FindSite(StdI, iW, iL, iH,
         tUJindx[1][it][0], tUJindx[1][it][1], tUJindx[1][it][2],
         tUJindx[1][it][3], tUJindx[1][it][4], &isite, &jsite, &Cphase, dR);
-      IniGuess[isite][jsite] = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
-                                     [tUJindx[1][it][3]][tUJindx[1][it][4]];
-      IniGuess[jsite][isite] = conj(DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
-                                          [tUJindx[1][it][3]][tUJindx[1][it][4]]);
+      DenMat0 = w90_density(DenMat, tUJindx[1][it], tUJindx[1][it][3], tUJindx[1][it][4]);
+      IniGuess[isite][jsite] = DenMat0;
+      IniGuess[jsite][isite] = conj(DenMat0);
     }/*for (it = 0; it < NtUJ[1]; it++)*/
     /*
     Wxchange integral (J)
@@ -565,10 +749,9 @@ static void PrintUHFinitial(
       StdFace_FindSite(StdI, iW, iL, iH,
         tUJindx[2][it][0], tUJindx[2][it][1], tUJindx[2][it][2],
         tUJindx[2][it][3], tUJindx[2][it][4], &isite, &jsite, &Cphase, dR);
-      IniGuess[isite][jsite] = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-                                     [tUJindx[2][it][3]][tUJindx[2][it][4]];
-      IniGuess[jsite][isite] = conj(DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-                                          [tUJindx[2][it][3]][tUJindx[2][it][4]]);
+      DenMat0 = w90_density(DenMat, tUJindx[2][it], tUJindx[2][it][3], tUJindx[2][it][4]);
+      IniGuess[isite][jsite] = DenMat0;
+      IniGuess[jsite][isite] = conj(DenMat0);
     }/*for (it = 0; it < NtUJ[1]; it++)*/
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
@@ -642,7 +825,8 @@ void StdFace_Wannier90(
   double complex Cphase, DenMat0;
   double dR[3], *Uspin;
   int NtUJ[3];
-  double complex **tUJ, *****DenMat;
+  double complex **tUJ;
+  struct W90Density DenMat = {{0, 0, 0}, {0, 0, 0}, 0, NULL};
   int ***tUJindx;
   char filename[263];
   char tempwords[263];
@@ -828,12 +1012,9 @@ void StdFace_Wannier90(
   (4.5) For spin system, compute super exchange interaction.
   */
   if (strcmp(StdI->model, "spin") == 0) {
-    if (NtUJ[1] == 0) {
-      fprintf(stderr, "\n  Error: _ur.dat is required for the spin model.\n");
-      fprintf(stderr, "         On-site U values are needed to compute superexchange J = 4t^2/U.\n\n");
-      StdFace_exit(-1);
-    }
     Uspin = (double *)malloc(sizeof(double) * StdI->NsiteUC);
+    /* An orbital may have no on-site U after the input cutoffs. */
+    for (isite = 0; isite < StdI->NsiteUC; isite++) Uspin[isite] = NAN;
     for (it = 0; it < NtUJ[1]; it++)
       if (tUJindx[1][it][0] == 0 && tUJindx[1][it][1] == 0 && tUJindx[1][it][2] == 0
         && tUJindx[1][it][3] == tUJindx[1][it][4])
@@ -890,9 +1071,16 @@ void StdFace_Wannier90(
           tUJindx[0][it][0], tUJindx[0][it][1], tUJindx[0][it][2],
           tUJindx[0][it][3], tUJindx[0][it][4], &isite, &jsite, &Cphase, dR);
         if (strcmp(StdI->model, "spin") == 0) {
+          double Ui = Uspin[tUJindx[0][it][3]];
+          double Uj = Uspin[tUJindx[0][it][4]];
+          if (!isfinite(Ui) || !isfinite(Uj) || Ui == 0.0 || Uj == 0.0) {
+            fprintf(stderr, "\n  Error: Wannier90 superexchange requires finite, nonzero on-site U for orbitals %d and %d.\n",
+              tUJindx[0][it][3] + 1, tUJindx[0][it][4] + 1);
+            StdFace_exit(-1);
+          }
           for (ii = 0; ii < 3; ii++) 
             Jtmp[ii][ii] = 2.0 * tUJ[0][it] * conj(tUJ[0][it])
-            * (1.0 / Uspin[tUJindx[0][it][3]] + 1.0 / Uspin[tUJindx[0][it][4]]);
+            * (1.0 / Ui + 1.0 / Uj);
           StdFace_GeneralJ(StdI, Jtmp, StdI->S2, StdI->S2, isite, jsite);
         }/*if (strcmp(StdI->model, "spin") == 0 )*/
         else {
@@ -920,7 +1108,7 @@ void StdFace_Wannier90(
         if (idcmode != NOTCORRECT) { //Hartree or Hartree-Fock correction
           isite = StdI->NsiteUC*kCell + tUJindx[1][it][3];
           for (ispin = 0; ispin < 2; ispin++) {
-            DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
+            DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[1][it][3], tUJindx[1][it][3]);
             StdI->trans[StdI->ntrans] = StdI->alpha*creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
@@ -947,7 +1135,7 @@ void StdFace_Wannier90(
             /*
             @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
             */
-            DenMat0 = DenMat[0][0][0][tUJindx[1][it][4]][tUJindx[1][it][4]];
+            DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[1][it][4], tUJindx[1][it][4]);
             StdI->trans[StdI->ntrans] = creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
@@ -957,7 +1145,7 @@ void StdFace_Wannier90(
             /*
             @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
             */
-            DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
+            DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[1][it][3], tUJindx[1][it][3]);
             StdI->trans[StdI->ntrans] = creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = jsite;
             StdI->transindx[StdI->ntrans][1] = ispin;
@@ -969,8 +1157,7 @@ void StdFace_Wannier90(
           @f$-0.5U_{Rij} D_{Rjj}@f$
           */
           if(idcmode == FULL) { //Hartree-Forck correction
-            DenMat0 = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
-            [tUJindx[1][it][3]][tUJindx[1][it][4]];
+            DenMat0 = w90_density(&DenMat, tUJindx[1][it], tUJindx[1][it][3], tUJindx[1][it][4]);
             StdFace_Hopping(StdI, -0.5 * Cphase * creal(tUJ[1][it]) * DenMat0, jsite, isite, dR);
           }
         }/*if (StdI->double_counting == 1)*/
@@ -1014,7 +1201,7 @@ void StdFace_Wannier90(
               /*
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
-              DenMat0 = DenMat[0][0][0][tUJindx[2][it][4]][tUJindx[2][it][4]];
+              DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[2][it][4], tUJindx[2][it][4]);
               StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = isite;
               StdI->transindx[StdI->ntrans][1] = ispin;
@@ -1024,7 +1211,7 @@ void StdFace_Wannier90(
               /*
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
-              DenMat0 = DenMat[0][0][0][tUJindx[2][it][3]][tUJindx[2][it][3]];
+              DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[2][it][3], tUJindx[2][it][3]);
               StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = jsite;
               StdI->transindx[StdI->ntrans][1] = ispin;
@@ -1036,8 +1223,7 @@ void StdFace_Wannier90(
             @f$J_{Rij} (D_{Rjj}+2{\rm Re}[D_{Rjj])@f$
             */
             if(idcmode == FULL) { //Hartree-Forck correction
-              DenMat0 = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-              [tUJindx[2][it][3]][tUJindx[2][it][4]];
+              DenMat0 = w90_density(&DenMat, tUJindx[2][it], tUJindx[2][it][3], tUJindx[2][it][4]);
               StdFace_Hopping(StdI,
                               0.5 * Cphase * creal(tUJ[2][it]) * (DenMat0 + 2.0 * creal(DenMat0)), jsite, isite, dR);
             }
@@ -1058,7 +1244,7 @@ void StdFace_Wannier90(
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
   fclose(fp);
-  if(idcmode != NOTCORRECT) PrintUHFinitial(StdI, NtUJ, tUJ, DenMat, tUJindx);
+  if(idcmode != NOTCORRECT) PrintUHFinitial(StdI, NtUJ, tUJ, &DenMat, tUJindx);
   StdFace_PrintXSF(StdI);
   StdFace_PrintGeometry(StdI);
 
@@ -1072,6 +1258,7 @@ void StdFace_Wannier90(
   free(tUJindx[2]);
   free(tUJ[2]); 
   if (strcmp(StdI->model, "spin") == 0) free(Uspin);
+  free(DenMat.value);
 
   fp = fopen("wan2site.dat", "w");
   fprintf(fp, "======================== \n");

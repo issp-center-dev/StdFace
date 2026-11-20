@@ -1210,5 +1210,5 @@ def set_modpara_defaults(StdI: StdIntList) -> None:
     )
     StdI.OmegaOrg = print_val_d("OmegaOrg", StdI.OmegaOrg, 0.0)
     StdI.OmegaIm = print_val_d(
-        "OmegaIm", StdI.OmegaIm, 0.01 * int(StdI.LargeValue)
+        "OmegaIm", StdI.OmegaIm, 0.01 * StdI.LargeValue
     )
