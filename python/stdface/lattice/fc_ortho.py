@@ -183,6 +183,7 @@ def fc_ortho(StdI: StdIntList) -> None:
             if StdI.model == ModelType.KONDO:
                 jsite = kCell
                 general_j(StdI, StdI.J, 1, StdI.S2, isite, jsite)
+                mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite)
 
     # Relative bond table: (dW, dL, dH, site_i, site_j, J, t, V)
     _BONDS = (
