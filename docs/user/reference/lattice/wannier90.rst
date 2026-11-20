@@ -138,11 +138,15 @@ disabled, this correction does not change the generated terms.
 
 Reader errors identify the input file and read position on ``stderr`` and
 stop generation. These structural checks do not establish physical validity
-or change the handling of nonfinite matrix values. The Python reader is
-unchanged: it retains the old distance calculation and can disagree with the
-corrected C generators for Wannier90-order inputs with distance cutoffs.
-Selecting fewer orbitals through the geometry count can still raise
-``IndexError`` in the Python reader.
+or change the handling of nonfinite matrix values.
+
+The Python reader follows the orbital selection, the distance cutoff and the
+accepted layouts above (any record order within a block, blank lines, CRLF,
+wrapped degeneracies, no final newline), so it generates the same terms as the
+C generators for valid files. Of the structural checks it applies only two: a
+matrix file with fewer orbitals than the geometry, and a file that ends early,
+are reported as ``Wannier90 input <file>: ...``. Other malformed files may be
+accepted or fail with a different error.
 
 Density R domain
 ^^^^^^^^^^^^^^^^
