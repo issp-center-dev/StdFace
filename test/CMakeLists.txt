@@ -66,5 +66,12 @@ foreach(mode hphi mvmc uhf hwave)
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/wannier-reader-${mode}
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/check_wannier_reader.cmake)
         set_tests_properties(WannierReader_${mode} PROPERTIES TIMEOUT 180)
+        add_test(NAME WannierDensity_${mode}
+            COMMAND ${CMAKE_COMMAND}
+                -DPROGRAM=$<TARGET_FILE:${mode}_dry.out>
+                -DMODE=${mode}
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/wannier-density-${mode}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/check_wannier_density.cmake)
+        set_tests_properties(WannierDensity_${mode} PROPERTIES TIMEOUT 180)
     endif()
 endforeach()
