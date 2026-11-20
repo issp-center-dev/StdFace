@@ -144,11 +144,11 @@ corrected C generators for Wannier90-order inputs with distance cutoffs.
 Selecting fewer orbitals through the geometry count can still raise
 ``IndexError`` in the Python reader.
 
-Density R domain (C generators)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Density R domain
+^^^^^^^^^^^^^^^^
 
 With ``doublecounting`` enabled, the density file need not list every R vector
-of the interaction files. The C generators take the density at an R vector
+of the interaction files. The generators take the density at an R vector
 that ``_dr.dat`` does not list as zero, whether or not that R lies between the
 smallest and largest R of the file, just as an R vector that ``_hr.dat``,
 ``_ur.dat`` or ``_jr.dat`` does not list has no term. The Hartree corrections
@@ -158,8 +158,8 @@ adds no exchange (Fock) correction for the U and J terms at that R. No warning
 is printed, so list every R whose density should enter the correction.
 
 Earlier C generators read outside the density array when an interaction term
-had an R beyond the smallest or largest R of the density file. The Python
-reader raises ``KeyError`` for such an R.
+had an R beyond the smallest or largest R of the density file, and the Python
+reader raised ``KeyError`` for such an R. Both now follow the rule above.
 
 File Relationships
 ^^^^^^^^^^^^^^^^^^

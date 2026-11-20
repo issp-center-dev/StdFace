@@ -370,6 +370,22 @@ def _read_w90(
     )
 
 
+class _DensityMatrix(dict):
+    """Density matrix per R vector.
+
+    An R vector that the density file does not list has zero density,
+    whether or not it lies inside the R range of the file.
+    """
+
+    def __init__(self, nsite: int) -> None:
+        super().__init__()
+        self._zero = np.zeros((nsite, nsite), dtype=complex)
+        self._zero.setflags(write=False)
+
+    def __missing__(self, key: tuple[int, int, int]) -> np.ndarray:
+        return self._zero
+
+
 def _read_density_matrix(
     StdI: StdIntList,
     filename: str,
@@ -390,7 +406,8 @@ def _read_density_matrix(
     dict of tuple to numpy.ndarray
         Dictionary mapping ``(R0, R1, R2)`` lattice vector tuples to
         2D numpy arrays of shape ``(NsiteUC, NsiteUC)`` containing the
-        density matrix elements.
+        density matrix elements.  Looking up an R vector the file does
+        not list gives a zero matrix.
     """
 
 
@@ -438,7 +455,7 @@ def _read_density_matrix(
     logger.info(f"      Numver of R : {NR[0]} {NR[1]} {NR[2]}")
 
     # Build dictionary: (R0, R1, R2) -> 2D array
-    DenMat: dict[tuple[int, int, int], np.ndarray] = {}
+    DenMat = _DensityMatrix(StdI.NsiteUC)
     for i0, i1, i2 in itertools.product(
         range(Rmin[0], Rmax[0] + 1),
         range(Rmin[1], Rmax[1] + 1),
