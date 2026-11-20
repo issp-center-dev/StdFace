@@ -105,7 +105,7 @@ void StdFace_Triangular(struct StdIntList *StdI)
     StdFace_NotUsed_c("t0'", StdI->t0p);
     StdFace_NotUsed_c("t1'", StdI->t1p);
     StdFace_NotUsed_c("t2'", StdI->t2p);
-    StdFace_NotUsed_c("t''", StdI->tp);
+    StdFace_NotUsed_c("t''", StdI->tpp);
     StdFace_NotUsed_c("t0''", StdI->t0pp);
     StdFace_NotUsed_c("t1''", StdI->t1pp);
     StdFace_NotUsed_c("t2''", StdI->t2pp);

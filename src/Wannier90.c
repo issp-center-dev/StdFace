@@ -880,6 +880,10 @@ void StdFace_Wannier90(
   }
   tUJ = (double complex **)malloc(sizeof(double complex*) * 3);
   tUJindx = (int ***)malloc(sizeof(int**) * 3);
+  for (ii = 0; ii < 3; ii++) {
+    tUJ[ii] = NULL;
+    tUJindx[ii] = NULL;
+  }
 
   /*
   Read Hopping
@@ -893,9 +897,10 @@ void StdFace_Wannier90(
 
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
-      if (StdI->box[i][j] != StdI->NaN_i)
+      if (StdI->box[i][j] != StdI->NaN_i) {
         sprintf(tempwords, "cutoff_tVec[%d][%d]", i, j);
         StdFace_PrintVal_d(tempwords, &StdI->cutoff_tVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+      }
     }
   }
 
@@ -914,9 +919,10 @@ void StdFace_Wannier90(
   StdFace_PrintVal_i("cutoff_UR[2]", &StdI->cutoff_UR[2], 0);
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
-      if (StdI->box[i][j] != StdI->NaN_i)
+      if (StdI->box[i][j] != StdI->NaN_i) {
         sprintf(tempwords, "cutoff_UVec[%d][%d]", i, j);
-      StdFace_PrintVal_d(tempwords, &StdI->cutoff_UVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+        StdFace_PrintVal_d(tempwords, &StdI->cutoff_UVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+      }
     }
   }
 
@@ -935,9 +941,10 @@ void StdFace_Wannier90(
   StdFace_PrintVal_i("cutoff_JR[2]", &StdI->cutoff_JR[2], 0);
   for(i = 0; i <3 ; i++) {
     for(j = 0; j <3 ; j++) {
-      if (StdI->box[i][j] != StdI->NaN_i)
+      if (StdI->box[i][j] != StdI->NaN_i) {
         sprintf(tempwords, "cutoff_JVec[%d][%d]", i, j);
-      StdFace_PrintVal_d(tempwords, &StdI->cutoff_JVec[i][j],  ((double)(StdI->box[i][j]) * 0.5));
+        StdFace_PrintVal_d(tempwords, &StdI->cutoff_JVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+      }
     }
   }
 
@@ -1010,7 +1017,7 @@ void StdFace_Wannier90(
     for (isite = 0; isite < StdI->NsiteUC; isite++) Uspin[isite] = NAN;
     for (it = 0; it < NtUJ[1]; it++)
       if (tUJindx[1][it][0] == 0 && tUJindx[1][it][1] == 0 && tUJindx[1][it][2] == 0
-        && tUJindx[1][it][3] == tUJindx[1][it][4])     
+        && tUJindx[1][it][3] == tUJindx[1][it][4])
         Uspin[tUJindx[1][it][3]] = creal(tUJ[1][it]);
   }/*if (strcmp(StdI->model, "spin") == 0)*/
   /**@brief
