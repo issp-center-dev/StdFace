@@ -239,6 +239,38 @@ static void w90_matrix(struct W90Reader *r, int nsite, int *nr,
   r->line = NULL;
 }
 
+/* Density D(R) on the box of R vectors spanned by the density file. An R
+ * vector that the file does not list, inside or outside that box, has zero
+ * density, as an unlisted R has no term in the hopping and interaction files. */
+struct W90Density {
+  int Rmin[3], NR[3], nWan;
+  double complex *value; /* [R0][R1][R2][iWan][jWan] */
+};
+
+static const int w90_origin[3] = {0, 0, 0};
+
+/* NULL when R is outside the box of the density file. */
+static double complex *w90_density_entry(const struct W90Density *density,
+  const int *R, int iWan, int jWan)
+{
+  size_t offset = 0;
+  int ii;
+  for (ii = 0; ii < 3; ii++) {
+    long long shifted = (long long)R[ii] - density->Rmin[ii];
+    if (shifted < 0 || shifted >= density->NR[ii]) return NULL;
+    offset = offset * (size_t)density->NR[ii] + (size_t)shifted;
+  }
+  return &density->value[(offset * (size_t)density->nWan + (size_t)iWan)
+    * (size_t)density->nWan + (size_t)jWan];
+}
+
+static double complex w90_density(const struct W90Density *density,
+  const int *R, int iWan, int jWan)
+{
+  const double complex *entry = w90_density_entry(density, R, iWan, jWan);
+  return entry == NULL ? 0.0 : *entry;
+}
+
 /**
  * @brief Calculate inverse of a 3x3 matrix
  *
@@ -583,22 +615,22 @@ static void read_W90(
  *
  * @details
  * Reads density matrix elements from a RESPACK format file.
- * Returns a 5D array indexed by [R0][R1][R2][i][j] where R0, R1, R2 are
- * lattice translation vector indices and i, j are orbital indices.
- * The returned array uses base-shifted pointers to allow negative R indices.
+ * Returns the elements together with the R box of the file; read them with
+ * w90_density(), which gives zero for an R vector that the file does not list.
  *
  * @param[in,out] StdI     Structure containing model parameters
  * @param[in]     filename Input filename (RESPACK _dr.dat)
- * @return 5D complex array of density matrix elements indexed by [R0][R1][R2][i][j]
+ * @return Density matrix elements D(R)[i][j] and the R box they cover
  */
-static double complex***** read_density_matrix(
+static struct W90Density read_density_matrix(
   struct StdIntList *StdI,
   char *filename
 )
 {
   FILE *fp;
-  int nWan = StdI->NsiteUC, nWSC, iWSC, iWan, jWan, ii, Rmax[3], Rmin[3], NR[3], i0, i1, i2;
-  double complex ***Mat_tot, *****DenMat;
+  int nWan = StdI->NsiteUC, nWSC, iWSC, iWan, jWan, ii, Rmax[3], Rmin[3], NR[3];
+  double complex ***Mat_tot;
+  struct W90Density DenMat;
   int **indx_tot;
   size_t entries;
   struct W90Reader reader;
@@ -629,27 +661,17 @@ static double complex***** read_density_matrix(
   fprintf(stdout, "      Maximum R : %d %d %d\n", Rmax[0], Rmax[1], Rmax[2]);
   fprintf(stdout, "      Numver of R : %d %d %d\n", NR[0], NR[1], NR[2]);
 
-  DenMat = w90_allocate(&reader, (size_t)NR[0], sizeof(*DenMat));
-  DenMat = DenMat - Rmin[0]; // base shift
-  for (i0 = Rmin[0]; i0 <= Rmax[0]; i0++) {
-    DenMat[i0] = w90_allocate(&reader, (size_t)NR[1], sizeof(**DenMat));
-    DenMat[i0] = DenMat[i0] - Rmin[1]; // base shift
-    for (i1 = Rmin[1]; i1 <= Rmax[1]; i1++) {
-      DenMat[i0][i1] = w90_allocate(&reader, (size_t)NR[2], sizeof(***DenMat));
-      DenMat[i0][i1] = DenMat[i0][i1] - Rmin[2]; // base shift
-      for (i2 = Rmin[2]; i2 <= Rmax[2]; i2++) {
-        DenMat[i0][i1][i2] = w90_allocate(&reader, (size_t)nWan, sizeof(****DenMat));
-        for (iWan = 0; iWan < StdI->NsiteUC; iWan++) {
-          DenMat[i0][i1][i2][iWan] = w90_allocate(&reader, (size_t)nWan, sizeof(*****DenMat));
-          for (jWan = 0; jWan < StdI->NsiteUC; jWan++)DenMat[i0][i1][i2][iWan][jWan] = 0.0;
-        }
-      }
-    }
+  for (ii = 0; ii < 3; ii++) {
+    DenMat.Rmin[ii] = Rmin[ii];
+    DenMat.NR[ii] = NR[ii];
   }
+  DenMat.nWan = nWan;
+  /* Zero-initialized: R vectors in the box that the file does not list. */
+  DenMat.value = w90_allocate(&reader, entries, sizeof(*DenMat.value));
   for (iWSC = 0; iWSC < nWSC; iWSC++) 
     for (iWan = 0; iWan < nWan; iWan++)
       for (jWan = 0; jWan < nWan; jWan++)
-        DenMat[indx_tot[iWSC][0]][indx_tot[iWSC][1]][indx_tot[iWSC][2]][iWan][jWan]
+        *w90_density_entry(&DenMat, indx_tot[iWSC], iWan, jWan)
         = Mat_tot[iWSC][iWan][jWan];
 
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
@@ -676,20 +698,20 @@ static double complex***** read_density_matrix(
  * @param[in] StdI    Structure containing model parameters
  * @param[in] NtUJ    Number of terms for each interaction type (array of 3)
  * @param[in] tUJ     Complex matrix elements for each interaction type
- * @param[in] DenMat  5D density matrix elements indexed by [R0][R1][R2][i][j]
+ * @param[in] DenMat  Density matrix elements; zero for R not listed in the file
  * @param[in] tUJindx Indices (R0, R1, R2, band_i, band_f) for each interaction term
  */
 static void PrintUHFinitial(
   struct StdIntList *StdI,
   int *NtUJ,
   double complex **tUJ,
-  double complex *****DenMat,
+  const struct W90Density *DenMat,
   int ***tUJindx
 ) {
   FILE *fp;
   int iW, iL, iH, kCell, it, isite, jsite ,NIniGuess, ispin;
   double dR[3];
-  double complex Cphase, **IniGuess;
+  double complex Cphase, DenMat0, **IniGuess;
 
   IniGuess = (double complex **)malloc(sizeof(double complex*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
@@ -707,7 +729,7 @@ static void PrintUHFinitial(
     */
     for (isite = 0; isite < StdI->NsiteUC; isite++) {
       jsite = isite + StdI->NsiteUC*kCell;
-      IniGuess[jsite][jsite] = DenMat[0][0][0][isite][isite];
+      IniGuess[jsite][jsite] = w90_density(DenMat, w90_origin, isite, isite);
     }
     /*
     Coulomb integral (U)
@@ -716,10 +738,9 @@ static void PrintUHFinitial(
       StdFace_FindSite(StdI, iW, iL, iH,
         tUJindx[1][it][0], tUJindx[1][it][1], tUJindx[1][it][2],
         tUJindx[1][it][3], tUJindx[1][it][4], &isite, &jsite, &Cphase, dR);
-      IniGuess[isite][jsite] = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
-                                     [tUJindx[1][it][3]][tUJindx[1][it][4]];
-      IniGuess[jsite][isite] = conj(DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
-                                          [tUJindx[1][it][3]][tUJindx[1][it][4]]);
+      DenMat0 = w90_density(DenMat, tUJindx[1][it], tUJindx[1][it][3], tUJindx[1][it][4]);
+      IniGuess[isite][jsite] = DenMat0;
+      IniGuess[jsite][isite] = conj(DenMat0);
     }/*for (it = 0; it < NtUJ[1]; it++)*/
     /*
     Wxchange integral (J)
@@ -728,10 +749,9 @@ static void PrintUHFinitial(
       StdFace_FindSite(StdI, iW, iL, iH,
         tUJindx[2][it][0], tUJindx[2][it][1], tUJindx[2][it][2],
         tUJindx[2][it][3], tUJindx[2][it][4], &isite, &jsite, &Cphase, dR);
-      IniGuess[isite][jsite] = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-                                     [tUJindx[2][it][3]][tUJindx[2][it][4]];
-      IniGuess[jsite][isite] = conj(DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-                                          [tUJindx[2][it][3]][tUJindx[2][it][4]]);
+      DenMat0 = w90_density(DenMat, tUJindx[2][it], tUJindx[2][it][3], tUJindx[2][it][4]);
+      IniGuess[isite][jsite] = DenMat0;
+      IniGuess[jsite][isite] = conj(DenMat0);
     }/*for (it = 0; it < NtUJ[1]; it++)*/
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
@@ -805,7 +825,8 @@ void StdFace_Wannier90(
   double complex Cphase, DenMat0;
   double dR[3], *Uspin;
   int NtUJ[3];
-  double complex **tUJ, *****DenMat;
+  double complex **tUJ;
+  struct W90Density DenMat = {{0, 0, 0}, {0, 0, 0}, 0, NULL};
   int ***tUJindx;
   char filename[263];
   char tempwords[263];
@@ -1080,7 +1101,7 @@ void StdFace_Wannier90(
         if (idcmode != NOTCORRECT) { //Hartree or Hartree-Fock correction
           isite = StdI->NsiteUC*kCell + tUJindx[1][it][3];
           for (ispin = 0; ispin < 2; ispin++) {
-            DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
+            DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[1][it][3], tUJindx[1][it][3]);
             StdI->trans[StdI->ntrans] = StdI->alpha*creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
@@ -1107,7 +1128,7 @@ void StdFace_Wannier90(
             /*
             @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
             */
-            DenMat0 = DenMat[0][0][0][tUJindx[1][it][4]][tUJindx[1][it][4]];
+            DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[1][it][4], tUJindx[1][it][4]);
             StdI->trans[StdI->ntrans] = creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
@@ -1117,7 +1138,7 @@ void StdFace_Wannier90(
             /*
             @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
             */
-            DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
+            DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[1][it][3], tUJindx[1][it][3]);
             StdI->trans[StdI->ntrans] = creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = jsite;
             StdI->transindx[StdI->ntrans][1] = ispin;
@@ -1129,8 +1150,7 @@ void StdFace_Wannier90(
           @f$-0.5U_{Rij} D_{Rjj}@f$
           */
           if(idcmode == FULL) { //Hartree-Forck correction
-            DenMat0 = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
-            [tUJindx[1][it][3]][tUJindx[1][it][4]];
+            DenMat0 = w90_density(&DenMat, tUJindx[1][it], tUJindx[1][it][3], tUJindx[1][it][4]);
             StdFace_Hopping(StdI, -0.5 * Cphase * creal(tUJ[1][it]) * DenMat0, jsite, isite, dR);
           }
         }/*if (StdI->double_counting == 1)*/
@@ -1174,7 +1194,7 @@ void StdFace_Wannier90(
               /*
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
-              DenMat0 = DenMat[0][0][0][tUJindx[2][it][4]][tUJindx[2][it][4]];
+              DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[2][it][4], tUJindx[2][it][4]);
               StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = isite;
               StdI->transindx[StdI->ntrans][1] = ispin;
@@ -1184,7 +1204,7 @@ void StdFace_Wannier90(
               /*
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
-              DenMat0 = DenMat[0][0][0][tUJindx[2][it][3]][tUJindx[2][it][3]];
+              DenMat0 = w90_density(&DenMat, w90_origin, tUJindx[2][it][3], tUJindx[2][it][3]);
               StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = jsite;
               StdI->transindx[StdI->ntrans][1] = ispin;
@@ -1196,8 +1216,7 @@ void StdFace_Wannier90(
             @f$J_{Rij} (D_{Rjj}+2{\rm Re}[D_{Rjj])@f$
             */
             if(idcmode == FULL) { //Hartree-Forck correction
-              DenMat0 = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-              [tUJindx[2][it][3]][tUJindx[2][it][4]];
+              DenMat0 = w90_density(&DenMat, tUJindx[2][it], tUJindx[2][it][3], tUJindx[2][it][4]);
               StdFace_Hopping(StdI,
                               0.5 * Cphase * creal(tUJ[2][it]) * (DenMat0 + 2.0 * creal(DenMat0)), jsite, isite, dR);
             }
@@ -1218,7 +1237,7 @@ void StdFace_Wannier90(
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
   fclose(fp);
-  if(idcmode != NOTCORRECT) PrintUHFinitial(StdI, NtUJ, tUJ, DenMat, tUJindx);
+  if(idcmode != NOTCORRECT) PrintUHFinitial(StdI, NtUJ, tUJ, &DenMat, tUJindx);
   StdFace_PrintXSF(StdI);
   StdFace_PrintGeometry(StdI);
 
@@ -1232,6 +1251,7 @@ void StdFace_Wannier90(
   free(tUJindx[2]);
   free(tUJ[2]); 
   if (strcmp(StdI->model, "spin") == 0) free(Uspin);
+  free(DenMat.value);
 
   fp = fopen("wan2site.dat", "w");
   fprintf(fp, "======================== \n");

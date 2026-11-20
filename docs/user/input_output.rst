@@ -248,12 +248,29 @@ distances may fall on opposite sides of the cutoff. With distance cutoffs
 disabled, this correction does not change the generated terms.
 
 Reader errors identify the input file and read position on ``stderr`` and
-stop generation. These structural checks do not establish physical validity,
-change the handling of nonfinite matrix values, or ensure that the density
-R domain covers every later lookup. The Python reader is unchanged: it retains
-the old distance calculation and can disagree with the corrected C generators
-for Wannier90-order inputs with distance cutoffs. Selecting fewer orbitals
-through the geometry count can still raise ``IndexError`` in the Python reader.
+stop generation. These structural checks do not establish physical validity
+or change the handling of nonfinite matrix values. The Python reader is
+unchanged: it retains the old distance calculation and can disagree with the
+corrected C generators for Wannier90-order inputs with distance cutoffs.
+Selecting fewer orbitals through the geometry count can still raise
+``IndexError`` in the Python reader.
+
+Density R domain (C generators)
+"""""""""""""""""""""""""""""""
+
+With ``doublecounting`` enabled, the density file need not list every R vector
+of the interaction files. The C generators take the density at an R vector
+that ``_dr.dat`` does not list as zero, whether or not that R lies between the
+smallest and largest R of the file, just as an R vector that ``_hr.dat``,
+``_ur.dat`` or ``_jr.dat`` does not list has no term. The Hartree corrections
+use only the density at R = 0 and are not affected. For an unlisted R,
+``initial.def`` gets no off-diagonal element, and ``doublecounting = "full"``
+adds no exchange (Fock) correction for the U and J terms at that R. No warning
+is printed, so list every R whose density should enter the correction.
+
+Earlier C generators read outside the density array when an interaction term
+had an R beyond the smallest or largest R of the density file. The Python
+reader raises ``KeyError`` for such an R.
 
 File Relationships
 """"""""""""""""""
