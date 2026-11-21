@@ -2277,7 +2277,9 @@ static void CheckModPara(struct StdIntList *StdI)
   }
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("ncond", StdI->ncond);
-#if defined(_mVMC)
+#if !defined(_HPhi)
+    /* No conduction electrons. HPhi omits an unset Ncond from modpara.def;
+       the other generators always write it. */
     StdI->ncond = 0;
 #endif
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
