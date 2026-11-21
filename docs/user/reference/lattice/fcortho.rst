@@ -36,9 +36,8 @@ Interactions
    * - 2nd nearest neighbor
      - 0, 1, 2
      - ``t0'``, ``V0'``, ``J0'``; ``t1'``, ``V1'``, ``J1'``; ``t2'``, ``V2'``, ``J2'``
-   * - 3rd nearest neighbor
-     - 0, 1, 2
-     - ``t0''``, ``V0''``, ``J0''``; ``t1''``, ``V1''``, ``J1''``; ``t2''``, ``V2''``, ``J2''``
    * - On-site
      - —
      - ``U``, ``mu``, ``h``, ``Gamma``, ``Gamma_y``, ``D``
+
+The face-centered orthorhombic lattice does not support 3rd nearest-neighbor interactions.
