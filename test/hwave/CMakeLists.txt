@@ -429,3 +429,37 @@ add_test(
   NAME matrix_ladder_w3_spin_uhfk_large
   COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_ladder_w3_spin_uhfk_large ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
 )
+
+# --- wannier90 tests (auto-generated) ---
+add_test(
+  NAME wannier90_hubbard_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_hubbard_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME wannier90_hubbard_uhfk
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_hubbard_uhfk ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME wannier90_hubbardgc_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_hubbardgc_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME wannier90_hubbardgc_uhfk
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_hubbardgc_uhfk ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME wannier90_spin_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_spin_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME wannier90_spin_uhfk
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_spin_uhfk ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME wannier90_spingc_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_spingc_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME wannier90_spingc_uhfk
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh wannier90_spingc_uhfk ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
