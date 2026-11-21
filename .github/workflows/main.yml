@@ -42,7 +42,7 @@ jobs:
       - name: ctest
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest -V
+        run: ctest -V -j4
 
   # C (base-mode) regression: run the C dry binaries against ref/.
   # 33 cases are excluded because their refs were intentionally regenerated
@@ -77,7 +77,7 @@ jobs:
       - name: ctest
         working-directory: ${{runner.workspace}}/build-base
         shell: bash
-        run: ctest -V -E '(fulldiag_spin_ladder_extended|boundary_spin_ladder_twist|lanczos_spinGC_DM|lobcg_genspin_ladder|matrix_(square|triangular|honeycomb|kagome|orthorhombic|pyrochlore|fco)_(hubbardgc|hubbard|spingc|spin)_uhfk$)'
+        run: ctest -V -j4 -E '(fulldiag_spin_ladder_extended|boundary_spin_ladder_twist|lanczos_spinGC_DM|lobcg_genspin_ladder|matrix_(square|triangular|honeycomb|kagome|orthorhombic|pyrochlore|fco)_(hubbardgc|hubbard|spingc|spin)_uhfk$)'
 
   pytest:
     runs-on: ${{ matrix.os }}
