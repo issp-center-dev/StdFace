@@ -53,6 +53,9 @@ What StdFace Does NOT Validate
 - Numerical stability or correctness of the model
 - Solver-specific parameter ranges or constraints
 - Density R-domain coverage for later Wannier90 lookups
+- Structure of Wannier90 input files in the Python generator, apart from the
+  three checks listed under "Reader validation" in :doc:`lattice/wannier90`
+  (the C generators validate the full structure)
 
 Limitations and Non-Goals
 --------------------------
