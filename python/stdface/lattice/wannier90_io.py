@@ -8,7 +8,7 @@ Pure reading layer for the Wannier90 / RESPACK data files consumed by
 - ``_read_density_matrix``-- ``*_dr.dat``
 
 File names are resolved against ``StdI.input_dir`` (see ``_input_path``).
-Moved verbatim from ``wannier90.py`` (F-1).
+Split out of ``wannier90.py`` (F-1).
 
 License
 -------
@@ -65,13 +65,18 @@ def _records(fp: TextIO) -> Iterator[list[str]]:
             yield fields
 
 
+def _input_error(filename: str, reason: str) -> ValueError:
+    """Log and build the error for a malformed input file."""
+    msg = f"Wannier90 input {filename}: {reason}"
+    logger.error(msg)
+    return ValueError(msg)
+
+
 def _next_record(records: Iterator[list[str]], filename: str) -> list[str]:
     """Return the next record, or raise ``ValueError`` at end of file."""
     fields = next(records, None)
     if fields is None:
-        msg = f"Wannier90 input {filename}: unexpected end of file"
-        logger.error(msg)
-        raise ValueError(msg)
+        raise _input_error(filename, "unexpected end of file")
     return fields
 
 
@@ -110,10 +115,9 @@ def _read_matrix_file(
     records = _records(fp)
     nWan = int(_next_record(records, filename)[0])
     if nWan < nsite:
-        msg = (f"Wannier90 input {filename}: file has fewer orbitals "
-               f"({nWan}) than geometry ({nsite})")
-        logger.error(msg)
-        raise ValueError(msg)
+        raise _input_error(
+            filename,
+            f"file has fewer orbitals ({nWan}) than geometry ({nsite})")
     nWSC = int(_next_record(records, filename)[0])
 
     # Degeneracy weights are not used (boundary weights are recomputed).
@@ -126,6 +130,8 @@ def _read_matrix_file(
     for iWSC in range(nWSC):
         for _ in range(nWan * nWan):
             vals = _next_record(records, filename)
+            if len(vals) < 7:
+                raise _input_error(filename, "incomplete matrix record")
             indx_tot[iWSC, :] = [int(vals[0]), int(vals[1]), int(vals[2])]
             iWan0 = int(vals[3])
             jWan0 = int(vals[4])
@@ -180,8 +186,7 @@ def _geometry_w90(StdI: StdIntList) -> None:
         StdI.NsiteUC = int(_next_record(records, filename)[0])
         logger.info(f"    Number of Correlated Sites = {StdI.NsiteUC}")
 
-        # Allocate and read Wannier centre positions.  A count smaller than
-        # the matrix files' num_wann selects their leading orbitals.
+        # A count below the matrix files' num_wann selects leading orbitals
         StdI.tau = np.zeros((StdI.NsiteUC, 3))
         for isite in range(StdI.NsiteUC):
             StdI.tau[isite, :] = [
@@ -260,7 +265,7 @@ def _count_and_store_terms(
     Parameters
     ----------
     Mat_tot : numpy.ndarray
-        Matrix elements, shape ``(nWSC, nWan, nWan)``, dtype complex.
+        Matrix elements, shape ``(nWSC, NsiteUC, NsiteUC)``, dtype complex.
     indx_tot : numpy.ndarray
         R-vector indices, shape ``(nWSC, 3)``, dtype int.
     Weight_tot : numpy.ndarray
