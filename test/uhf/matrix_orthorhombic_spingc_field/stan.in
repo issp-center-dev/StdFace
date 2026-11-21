@@ -1,0 +1,8 @@
+L = 2
+W = 2
+Height = 2
+model = "SpinGC"
+lattice = "orthorhombic"
+J = 1.0
+h = 0.5
+Gamma = 0.3

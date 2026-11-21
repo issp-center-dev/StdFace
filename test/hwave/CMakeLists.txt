@@ -392,6 +392,42 @@ add_test(
   NAME matrix_fco_kondogc_uhfr
   COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_fco_kondogc_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
 )
+add_test(
+  NAME matrix_orthorhombic_hubbardgc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_orthorhombic_hubbardgc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_orthorhombic_spingc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_orthorhombic_spingc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_orthorhombic_kondogc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_orthorhombic_kondogc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_pyrochlore_hubbardgc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_pyrochlore_hubbardgc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_pyrochlore_spingc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_pyrochlore_spingc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_pyrochlore_kondogc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_pyrochlore_kondogc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_fco_hubbardgc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_fco_hubbardgc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_fco_spingc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_fco_spingc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
+add_test(
+  NAME matrix_fco_kondogc_field_uhfr
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hwave/check.sh matrix_fco_kondogc_field_uhfr ${CMAKE_SOURCE_DIR}/test/hwave ${TEST_MODE}
+)
 
 # L1: large-lattice UHFk cases (correct-usage regime; no boundary wrap-around).
 # Verify the size-independent Wannier output and anchor the relative-model refactor.
