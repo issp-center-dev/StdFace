@@ -146,6 +146,7 @@ def fc_ortho(StdI: StdIntList) -> None:
         not_used_j("J0'", StdI.J0pAll, StdI.J0p)
         not_used_j("J1'", StdI.J1pAll, StdI.J1p)
         not_used_j("J2'", StdI.J2pAll, StdI.J2p)
+        not_used_j("J'", StdI.JpAll, StdI.Jp)
         not_used_j("J''", StdI.JppAll, StdI.Jpp)
         not_used_j("J0''", StdI.J0ppAll, StdI.J0pp)
         not_used_j("J1''", StdI.J1ppAll, StdI.J1pp)
@@ -183,6 +184,7 @@ def fc_ortho(StdI: StdIntList) -> None:
             if StdI.model == ModelType.KONDO:
                 jsite = kCell
                 general_j(StdI, StdI.J, 1, StdI.S2, isite, jsite)
+                mag_field(StdI, StdI.S2, -StdI.h, -StdI.Gamma, -StdI.Gamma_y, jsite)
 
     # Relative bond table: (dW, dL, dH, site_i, site_j, J, t, V)
     _BONDS = (

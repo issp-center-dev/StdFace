@@ -112,8 +112,9 @@ def _write_hr_file_split_degeneracy_weights(
 ):
     """Write *_hr.dat with several WSC blocks and degeneracy integers on multiple lines.
 
-    Exercises :func:`wannier90._skip_degeneracy_weights` when one line does not
-    hold all ``nWSC`` weight values.
+    Exercises the degeneracy-list reading in
+    :func:`wannier90_io._read_matrix_file` when one line does not hold all
+    ``nWSC`` weight values.
     """
     filename = os.path.join(path, f"{prefix}_hr.dat")
     nWan = NsiteUC

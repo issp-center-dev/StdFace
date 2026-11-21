@@ -395,10 +395,19 @@ def _apply_hopping_terms(
                 int(tUJindx[0][it, 3]), int(tUJindx[0][it, 4]),
             )
             if StdI.model == ModelType.SPIN:
+                iorb = int(tUJindx[0][it, 3])
+                jorb = int(tUJindx[0][it, 4])
+                Ui, Uj = Uspin[iorb], Uspin[jorb]
+                if (not np.isfinite(Ui) or not np.isfinite(Uj)
+                        or Ui == 0.0 or Uj == 0.0):
+                    msg = ("Error: Wannier90 superexchange requires finite, "
+                           f"nonzero on-site U for orbitals {iorb + 1} and "
+                           f"{jorb + 1}.")
+                    logger.error(msg)
+                    raise ValueError(msg)
                 diag_val = (
                     2.0 * tUJ[0][it] * np.conj(tUJ[0][it])
-                    * (1.0 / Uspin[int(tUJindx[0][it, 3])]
-                       + 1.0 / Uspin[int(tUJindx[0][it, 4])])
+                    * (1.0 / Ui + 1.0 / Uj)
                 ).real
                 Jtmp = np.diag([diag_val, diag_val, diag_val])
                 general_j(StdI, Jtmp, StdI.S2, StdI.S2, isite, jsite)
@@ -685,7 +694,8 @@ def _build_wannier_interactions(
     # For spin systems, compute super-exchange interaction on-site U
     Uspin = None
     if StdI.model == ModelType.SPIN:
-        Uspin = np.zeros(StdI.NsiteUC)
+        # An orbital may have no on-site U after the input cutoffs.
+        Uspin = np.full(StdI.NsiteUC, np.nan)
         if tUJindx[1] is not None:
             for it in range(NtUJ[1]):
                 if (tUJindx[1][it, 0] == 0 and tUJindx[1][it, 1] == 0

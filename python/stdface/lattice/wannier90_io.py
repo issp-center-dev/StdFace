@@ -8,7 +8,7 @@ Pure reading layer for the Wannier90 / RESPACK data files consumed by
 - ``_read_density_matrix``-- ``*_dr.dat``
 
 File names are resolved against ``StdI.input_dir`` (see ``_input_path``).
-Moved verbatim from ``wannier90.py`` (F-1).
+Split out of ``wannier90.py`` (F-1).
 
 License
 -------
@@ -25,7 +25,7 @@ from __future__ import annotations
 import itertools
 import logging
 import os
-from typing import TextIO
+from typing import Iterator, TextIO
 
 import numpy as np
 
@@ -53,23 +53,93 @@ def _check_in_box(rvec: np.ndarray, inverse_matrix: np.ndarray) -> bool:
     return bool(np.all(np.abs(judge_vec) <= 1))
 
 
-def _skip_degeneracy_weights(fp: TextIO, n_wigner_seitz: int) -> None:
-    """Skip the degeneracy-weight lines in a Wannier90 ``*_hr.dat`` file.
+def _records(fp: TextIO) -> Iterator[list[str]]:
+    """Yield the whitespace-separated fields of each non-blank line.
 
-    The weights are written as whitespace-separated integers, potentially
-    spanning multiple lines.  This helper reads and discards exactly
-    *n_wigner_seitz* values.
+    Blank and whitespace-only lines are not records (C reader, #72).
+    CRLF line ends are handled by text-mode universal newlines.
+    """
+    for line in fp:
+        fields = line.split()
+        if fields:
+            yield fields
+
+
+def _input_error(filename: str, reason: str) -> ValueError:
+    """Log and build the error for a malformed input file."""
+    msg = f"Wannier90 input {filename}: {reason}"
+    logger.error(msg)
+    return ValueError(msg)
+
+
+def _next_record(records: Iterator[list[str]], filename: str) -> list[str]:
+    """Return the next record, or raise ``ValueError`` at end of file."""
+    fields = next(records, None)
+    if fields is None:
+        raise _input_error(filename, "unexpected end of file")
+    return fields
+
+
+def _read_matrix_file(
+    fp: TextIO,
+    filename: str,
+    nsite: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Read a Wannier90-format matrix file (``*_hr/_ur/_jr/_dr.dat``).
+
+    The layout is a comment line, ``num_wann``, ``nrpts``, the degeneracy
+    list (any number of lines), then ``nrpts`` blocks of
+    ``num_wann * num_wann`` records ``R0 R1 R2 i j re im``.  Blocks are
+    contiguous, but the records inside a block may come in any order
+    (Wannier90 writes ``i`` fastest, RESPACK ``j``).  Only the leading
+    *nsite* orbitals (the geometry's count) are kept.
 
     Parameters
     ----------
     fp : TextIO
-        Open file positioned just after the ``nWSC`` header line.
-    n_wigner_seitz : int
-        Total number of Wigner-Seitz cells (degeneracy entries to skip).
+        Open file positioned at the comment line.
+    filename : str
+        File name used in diagnostics.
+    nsite : int
+        Number of orbitals selected by the geometry file.
+
+    Returns
+    -------
+    indx_tot : numpy.ndarray
+        R vector of each block, shape ``(nWSC, 3)``, dtype int.
+    Mat_tot : numpy.ndarray
+        Matrix elements indexed by the records' own orbital numbers,
+        shape ``(nWSC, nsite, nsite)``, dtype complex.
     """
+    fp.readline()  # comment line
+    records = _records(fp)
+    nWan = int(_next_record(records, filename)[0])
+    if nWan < nsite:
+        raise _input_error(
+            filename,
+            f"file has fewer orbitals ({nWan}) than geometry ({nsite})")
+    nWSC = int(_next_record(records, filename)[0])
+
+    # Degeneracy weights are not used (boundary weights are recomputed).
     count = 0
-    while count < n_wigner_seitz:
-        count += len(fp.readline().split())
+    while count < nWSC:
+        count += len(_next_record(records, filename))
+
+    Mat_tot = np.zeros((nWSC, nsite, nsite), dtype=complex)
+    indx_tot = np.zeros((nWSC, 3), dtype=int)
+    for iWSC in range(nWSC):
+        for _ in range(nWan * nWan):
+            vals = _next_record(records, filename)
+            if len(vals) < 7:
+                raise _input_error(filename, "incomplete matrix record")
+            indx_tot[iWSC, :] = [int(vals[0]), int(vals[1]), int(vals[2])]
+            iWan0 = int(vals[3])
+            jWan0 = int(vals[4])
+            if iWan0 <= nsite and jWan0 <= nsite:
+                Mat_tot[iWSC, iWan0 - 1, jWan0 - 1] = (
+                    float(vals[5]) + 1j * float(vals[6])
+                )
+    return indx_tot, Mat_tot
 
 
 def _input_path(StdI: StdIntList, fname: str) -> str:
@@ -105,18 +175,23 @@ def _geometry_w90(StdI: StdIntList) -> None:
         raise FileNotFoundError(filename) from exc
 
     with fp_geom:
+        records = _records(fp_geom)
         # Read direct lattice vectors
         for ii in range(3):
-            StdI.direct[ii, :] = [float(x) for x in fp_geom.readline().split()[:3]]
+            StdI.direct[ii, :] = [
+                float(x) for x in _next_record(records, filename)[:3]
+            ]
 
         # Read number of correlated sites
-        StdI.NsiteUC = int(fp_geom.readline().split()[0])
+        StdI.NsiteUC = int(_next_record(records, filename)[0])
         logger.info(f"    Number of Correlated Sites = {StdI.NsiteUC}")
 
-        # Allocate and read Wannier centre positions
+        # A count below the matrix files' num_wann selects leading orbitals
         StdI.tau = np.zeros((StdI.NsiteUC, 3))
         for isite in range(StdI.NsiteUC):
-            StdI.tau[isite, :] = [float(x) for x in fp_geom.readline().split()[:3]]
+            StdI.tau[isite, :] = [
+                float(x) for x in _next_record(records, filename)[:3]
+            ]
 
     logger.info("    Direct lattice vectors:")
     for row in StdI.direct:
@@ -190,7 +265,7 @@ def _count_and_store_terms(
     Parameters
     ----------
     Mat_tot : numpy.ndarray
-        Matrix elements, shape ``(nWSC, nWan, nWan)``, dtype complex.
+        Matrix elements, shape ``(nWSC, NsiteUC, NsiteUC)``, dtype complex.
     indx_tot : numpy.ndarray
         R-vector indices, shape ``(nWSC, 3)``, dtype int.
     Weight_tot : numpy.ndarray
@@ -306,59 +381,41 @@ def _read_w90(
         return
 
     with fp_hr:
-        # Header part
-        _header_line = fp_hr.readline()  # comment line
-        nWan = int(fp_hr.readline().split()[0])
-        nWSC = int(fp_hr.readline().split()[0])
+        indx_tot, Mat_tot = _read_matrix_file(fp_hr, filename, StdI.NsiteUC)
+    nWSC = indx_tot.shape[0]
+    Weight_tot = np.ones(nWSC)
 
-        # Skip degeneracy weights
-        _skip_degeneracy_weights(fp_hr, nWSC)
+    if flg_vec:
+        inverse_rvec = np.linalg.inv(cutoff_Rvec.astype(float))
 
-        # Allocate arrays
-        Weight_tot = np.ones(nWSC)
-        Mat_tot = np.zeros((nWSC, nWan, nWan), dtype=complex)
-        indx_tot = np.zeros((nWSC, 3), dtype=int)
+    for iWSC in range(nWSC):
+        for iWan in range(StdI.NsiteUC):
+            for jWan in range(StdI.NsiteUC):
+                # Python complex, so lam * dtmp keeps the pre-#72 arithmetic
+                dtmp = complex(Mat_tot[iWSC, iWan, jWan])
+                # Distance between the record's own orbitals (C: #72)
+                tau_diff = StdI.tau[jWan, :] - StdI.tau[iWan, :] + indx_tot[iWSC, :]
+                dR = StdI.direct.T @ tau_diff
+                length = np.linalg.norm(dR)
+                if length > cutoff_length > 0.0:
+                    dtmp = 0j
 
-        if flg_vec:
-            inverse_rvec = np.linalg.inv(cutoff_Rvec.astype(float))
+                if flg_vec:
+                    if not _check_in_box(indx_tot[iWSC], inverse_rvec):
+                        dtmp = 0j
+                else:
+                    if np.any(np.abs(indx_tot[iWSC]) > cutoff_R):
+                        dtmp = 0j
 
-        # Read body
-        for iWSC in range(nWSC):
-            for iWan in range(nWan):
-                for jWan in range(nWan):
-                    vals = fp_hr.readline().split()
-                    indx_tot[iWSC, :] = [int(vals[0]), int(vals[1]), int(vals[2])]
-                    iWan0 = int(vals[3])
-                    jWan0 = int(vals[4])
-                    dtmp_re = float(vals[5])
-                    dtmp_im = float(vals[6])
-                    # Compute Euclidean length
-                    tau_diff = StdI.tau[jWan, :] - StdI.tau[iWan, :] + indx_tot[iWSC, :]
-                    dR = StdI.direct.T @ tau_diff
-                    length = np.linalg.norm(dR)
-                    if length > cutoff_length > 0.0:
-                        dtmp_re = 0.0
-                        dtmp_im = 0.0
+                Mat_tot[iWSC, iWan, jWan] = lam * dtmp
 
-                    if flg_vec:
-                        if not _check_in_box(indx_tot[iWSC], inverse_rvec):
-                            dtmp_re = 0.0
-                            dtmp_im = 0.0
-                    else:
-                        if np.any(np.abs(indx_tot[iWSC]) > cutoff_R):
-                            dtmp_re = 0.0
-                            dtmp_im = 0.0
+        # Apply inversion symmetry and delete duplication
+        if iWSC > 0 and np.any(np.all(indx_tot[iWSC] == -indx_tot[:iWSC], axis=1)):
+            Mat_tot[iWSC, :, :] = 0.0
 
-                    if iWan0 <= StdI.NsiteUC and jWan0 <= StdI.NsiteUC:
-                        Mat_tot[iWSC, iWan0 - 1, jWan0 - 1] = lam * (dtmp_re + 1j * dtmp_im)
-
-            # Apply inversion symmetry and delete duplication
-            if iWSC > 0 and np.any(np.all(indx_tot[iWSC] == -indx_tot[:iWSC], axis=1)):
-                Mat_tot[iWSC, :, :] = 0.0
-
-            if np.all(indx_tot[iWSC] == 0):
-                for iWan in range(StdI.NsiteUC):
-                    Mat_tot[iWSC, iWan, :iWan] = 0.0
+        if np.all(indx_tot[iWSC] == 0):
+            for iWan in range(StdI.NsiteUC):
+                Mat_tot[iWSC, iWan, :iWan] = 0.0
 
     # Apply boundary-halving weights
     _apply_boundary_weights(indx_tot, Weight_tot, nWSC, StdI)
@@ -368,6 +425,22 @@ def _read_w90(
         Mat_tot, indx_tot, Weight_tot, nWSC,
         StdI.NsiteUC, cutoff, itUJ, NtUJ, tUJindx, tUJ,
     )
+
+
+class _DensityMatrix(dict):
+    """Density matrix per R vector.
+
+    An R vector that the density file does not list has zero density,
+    whether or not it lies inside the R range of the file.
+    """
+
+    def __init__(self, nsite: int) -> None:
+        super().__init__()
+        self._zero = np.zeros((nsite, nsite), dtype=complex)
+        self._zero.setflags(write=False)
+
+    def __missing__(self, key: tuple[int, int, int]) -> np.ndarray:
+        return self._zero
 
 
 def _read_density_matrix(
@@ -390,7 +463,8 @@ def _read_density_matrix(
     dict of tuple to numpy.ndarray
         Dictionary mapping ``(R0, R1, R2)`` lattice vector tuples to
         2D numpy arrays of shape ``(NsiteUC, NsiteUC)`` containing the
-        density matrix elements.
+        density matrix elements.  Looking up an R vector the file does
+        not list gives a zero matrix.
     """
 
 
@@ -402,43 +476,18 @@ def _read_density_matrix(
         raise FileNotFoundError(filename) from exc
 
     with fp_dr:
-        # Header
-        _header_line = fp_dr.readline()
-        nWan = int(fp_dr.readline().split()[0])
-        nWSC = int(fp_dr.readline().split()[0])
+        indx_tot, Mat_tot = _read_matrix_file(fp_dr, filename, StdI.NsiteUC)
+    nWSC = indx_tot.shape[0]
 
-        _skip_degeneracy_weights(fp_dr, nWSC)
-
-        # Allocate
-        Mat_tot = np.zeros((nWSC, nWan, nWan), dtype=complex)
-        indx_tot = np.zeros((nWSC, 3), dtype=int)
-
-        Rmin = np.zeros(3, dtype=int)
-        Rmax = np.zeros(3, dtype=int)
-
-        # Read body
-        for iWSC in range(nWSC):
-            for iWan in range(nWan):
-                for jWan in range(nWan):
-                    vals = fp_dr.readline().split()
-                    indx_tot[iWSC, :] = [int(vals[0]), int(vals[1]), int(vals[2])]
-                    iWan0 = int(vals[3])
-                    jWan0 = int(vals[4])
-                    dtmp_re = float(vals[5])
-                    dtmp_im = float(vals[6])
-
-                    if iWan0 <= StdI.NsiteUC and jWan0 <= StdI.NsiteUC:
-                        Mat_tot[iWSC, iWan0 - 1, jWan0 - 1] = dtmp_re + 1j * dtmp_im
-                    Rmin = np.minimum(Rmin, indx_tot[iWSC])
-                    Rmax = np.maximum(Rmax, indx_tot[iWSC])
-
+    Rmin = indx_tot.min(axis=0, initial=0)
+    Rmax = indx_tot.max(axis=0, initial=0)
     NR = Rmax - Rmin + 1
     logger.info(f"      Minimum R : {Rmin[0]} {Rmin[1]} {Rmin[2]}")
     logger.info(f"      Maximum R : {Rmax[0]} {Rmax[1]} {Rmax[2]}")
     logger.info(f"      Numver of R : {NR[0]} {NR[1]} {NR[2]}")
 
     # Build dictionary: (R0, R1, R2) -> 2D array
-    DenMat: dict[tuple[int, int, int], np.ndarray] = {}
+    DenMat = _DensityMatrix(StdI.NsiteUC)
     for i0, i1, i2 in itertools.product(
         range(Rmin[0], Rmax[0] + 1),
         range(Rmin[1], Rmax[1] + 1),
@@ -450,6 +499,6 @@ def _read_density_matrix(
 
     for iWSC in range(nWSC):
         key = tuple(indx_tot[iWSC].astype(int))
-        DenMat[key][:, :] = Mat_tot[iWSC, :nWan, :nWan]
+        DenMat[key][:, :] = Mat_tot[iWSC]
 
     return DenMat

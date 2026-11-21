@@ -72,6 +72,16 @@ def orthorhombic(StdI: StdIntList) -> None:
     # (2) check & store parameters of Hamiltonian
     logger.info("\n  @ Hamiltonian \n")
     not_used_d("K", StdI.K)
+    # No directional double-prime bonds are generated on this lattice.
+    not_used_d("t0''", StdI.t0pp)
+    not_used_d("t1''", StdI.t1pp)
+    not_used_d("t2''", StdI.t2pp)
+    not_used_d("V0''", StdI.V0pp)
+    not_used_d("V1''", StdI.V1pp)
+    not_used_d("V2''", StdI.V2pp)
+    not_used_j("J0''", StdI.J0ppAll, StdI.J0pp)
+    not_used_j("J1''", StdI.J1ppAll, StdI.J1pp)
+    not_used_j("J2''", StdI.J2ppAll, StdI.J2pp)
     StdI.h = print_val_d("h", StdI.h, 0.0)
     StdI.Gamma = print_val_d("Gamma", StdI.Gamma, 0.0)
     StdI.Gamma_y = print_val_d("Gamma_y", StdI.Gamma_y, 0.0)
@@ -101,6 +111,11 @@ def orthorhombic(StdI: StdIntList) -> None:
         not_used_d("V", StdI.V)
         not_used_d("V0", StdI.V0)
         not_used_d("V1", StdI.V1)
+        not_used_d("V2", StdI.V2)
+        not_used_d("V0'", StdI.V0p)
+        not_used_d("V1'", StdI.V1p)
+        not_used_d("V2'", StdI.V2p)
+        not_used_d("V''", StdI.Vpp)
         not_used_d("V'", StdI.Vp)
     else:
         StdI.mu = print_val_d("mu", StdI.mu, 0.0)
@@ -120,15 +135,14 @@ def orthorhombic(StdI: StdIntList) -> None:
         StdI.V2p = input_coulomb_v(StdI.Vp, StdI.V2p, "V2'")
         StdI.Vpp = print_val_d("Vpp", StdI.Vpp, 0.0)
 
+        not_used_j("J'", StdI.JpAll, StdI.Jp)
+        not_used_j("J''", StdI.JppAll, StdI.Jpp)
         not_used_j("J0", StdI.J0All, StdI.J0)
         not_used_j("J1", StdI.J1All, StdI.J1)
         not_used_j("J2", StdI.J2All, StdI.J2)
         not_used_j("J0'", StdI.J0pAll, StdI.J0p)
         not_used_j("J1'", StdI.J1pAll, StdI.J1p)
         not_used_j("J2'", StdI.J2pAll, StdI.J2p)
-        not_used_j("J0''", StdI.J0ppAll, StdI.J0pp)
-        not_used_j("J1''", StdI.J1ppAll, StdI.J1pp)
-        not_used_j("J2''", StdI.J2ppAll, StdI.J2pp)
         not_used_d("D", StdI.D[2, 2])
 
         if StdI.model == ModelType.HUBBARD:
