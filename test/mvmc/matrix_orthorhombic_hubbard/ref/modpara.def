@@ -12,7 +12,7 @@ NLanczosMode   0
 NDataIdxStart  1
 NDataQtySmp    1
 --------------------
-Nsite          4
+Nsite          8
 Ncond          8    
 2Sz            0
 NSPGaussLeg    8

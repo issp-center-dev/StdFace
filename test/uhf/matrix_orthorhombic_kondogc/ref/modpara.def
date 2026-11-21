@@ -6,7 +6,7 @@ UHF_Cal_Parameters
 CDataFileHead  zvo
 CParaFileHead  zqp
 --------------------
-Nsite          8
+Nsite          16
 Ncond          8    
 IterationMax   1000
 EPS            8
