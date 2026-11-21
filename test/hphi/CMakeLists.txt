@@ -524,7 +524,8 @@ add_test(
   NAME fail_spinless_square
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_spinless_square ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
 )
-# C-binary checks: base mode only.
+# Generator checks: the C binary in base mode, the Python CLI (through the
+# exit-status adapter) in python mode.
 if(TEST_MODE STREQUAL "base")
 add_test(
   NAME fcc_kondo_local_field
@@ -535,6 +536,19 @@ add_test(
   NAME pyrochlore_kondo_pairing
   COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/check_pyrochlore_kondo_pairing.sh
     $<TARGET_FILE:hphi_dry.out> ${CMAKE_CURRENT_BINARY_DIR}/pyrochlore_kondo_pairing
+)
+else()
+add_test(
+  NAME fcc_kondo_local_field
+  COMMAND ${CMAKE_COMMAND} -E env STDFACE_SOLVER=HPhi
+    sh ${CMAKE_CURRENT_SOURCE_DIR}/check_fcc_kondo_field.sh
+    ${CMAKE_SOURCE_DIR}/test/common/python_cli.sh ${CMAKE_CURRENT_BINARY_DIR}/fcc_kondo_local_field
+)
+add_test(
+  NAME pyrochlore_kondo_pairing
+  COMMAND ${CMAKE_COMMAND} -E env STDFACE_SOLVER=HPhi
+    sh ${CMAKE_CURRENT_SOURCE_DIR}/check_pyrochlore_kondo_pairing.sh
+    ${CMAKE_SOURCE_DIR}/test/common/python_cli.sh ${CMAKE_CURRENT_BINARY_DIR}/pyrochlore_kondo_pairing
 )
 endif()
 
