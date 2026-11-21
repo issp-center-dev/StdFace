@@ -7,6 +7,10 @@ Purpose
 Version information and printing utility. Defines version macros following
 Semantic Versioning and provides a function to print the version string.
 
+``src/version.h`` is the only place where the version of the C generator is
+written; this documentation reads it from there. This build documents
+StdFace |release|.
+
 **Source reference**: ``src/version.h``
 
 Public Types
@@ -21,25 +25,18 @@ Public Macros/Constants
 
    Major version number.
 
-   **Current value**: 0
-
 .. c:macro:: VERSION_MINOR
 
    Minor version number.
-
-   **Current value**: 5
 
 .. c:macro:: VERSION_PATCH
 
    Patch version number.
 
-   **Current value**: 0
-
 .. c:macro:: VERSION_PRERELEASE
 
-   Prerelease identifier string (e.g., "alpha", "beta.1").
-
-   **Current value**: "" (empty string)
+   Prerelease identifier string (e.g., "alpha", "beta.1"); empty for a
+   release, "dev" on the development branch.
 
 .. c:macro:: _INCLUDE_VERSION
 
@@ -54,8 +51,8 @@ The version follows `Semantic Versioning <http://semver.org>`_::
 
 Examples:
 
-- ``0.5.0`` (current release)
-- ``1.0.0-alpha`` (hypothetical prerelease)
+- ``1.0.1`` (a release)
+- ``1.1.0-dev`` (development toward 1.1.0)
 
 Public Functions
 ----------------

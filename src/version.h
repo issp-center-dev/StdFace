@@ -19,10 +19,10 @@
 
 /* Semantic Versioning http://semver.org */
 /* <major>.<minor>.<patch>-<prerelease> */
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 5
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 1
 #define VERSION_PATCH 0
-#define VERSION_PRERELEASE "" /* "alpha", "beta.1", etc. */
+#define VERSION_PRERELEASE "dev" /* "alpha", "beta.1", etc. */
 
 /**
  * @brief Print the StdFace version string to standard output
