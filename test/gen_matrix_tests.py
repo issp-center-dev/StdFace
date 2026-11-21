@@ -50,7 +50,7 @@ LATTICES = {
 
 # Magnetic-field variants: the 3D lattices with a longitudinal and a
 # transverse field. Grand-canonical models only (Gamma does not conserve Sz).
-FIELD_LATTICES = ()
+FIELD_LATTICES = ("orthorhombic", "pyrochlore", "fco")
 FIELD_PARAMS = {"h": 0.5, "Gamma": 0.3}
 
 

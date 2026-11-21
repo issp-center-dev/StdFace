@@ -497,6 +497,42 @@ add_test(
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_fco_kondogc ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
 )
 add_test(
+  NAME matrix_orthorhombic_hubbardgc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_orthorhombic_hubbardgc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_orthorhombic_spingc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_orthorhombic_spingc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_orthorhombic_kondogc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_orthorhombic_kondogc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_pyrochlore_hubbardgc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_pyrochlore_hubbardgc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_pyrochlore_spingc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_pyrochlore_spingc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_pyrochlore_kondogc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_pyrochlore_kondogc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_fco_hubbardgc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_fco_hubbardgc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_fco_spingc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_fco_spingc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
+  NAME matrix_fco_kondogc_field
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh matrix_fco_kondogc_field ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
+add_test(
   NAME lanczos_spin_chain_momentum
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check.sh lanczos_spin_chain_momentum ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
 )
