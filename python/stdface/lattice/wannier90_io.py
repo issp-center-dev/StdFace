@@ -135,6 +135,8 @@ def _read_matrix_file(
             indx_tot[iWSC, :] = [int(vals[0]), int(vals[1]), int(vals[2])]
             iWan0 = int(vals[3])
             jWan0 = int(vals[4])
+            if not (1 <= iWan0 <= nWan and 1 <= jWan0 <= nWan):
+                raise _input_error(filename, "orbital index outside 1..num_wann")
             if iWan0 <= nsite and jWan0 <= nsite:
                 Mat_tot[iWSC, iWan0 - 1, jWan0 - 1] = (
                     float(vals[5]) + 1j * float(vals[6])

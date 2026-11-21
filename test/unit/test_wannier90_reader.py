@@ -177,3 +177,23 @@ def test_record_cut_mid_line_is_an_input_error(tmp_path, monkeypatch, ftype):
     files[ftype] = files[ftype].rstrip("\n").rsplit(" ", 1)[0]
     with pytest.raises(ValueError, match=rf"zvo_{ftype}\.dat: incomplete matrix record"):
         _run(tmp_path / "cut", monkeypatch, files, _GEOM_ORIGIN.format(n=2))
+
+
+@pytest.mark.parametrize("ftype", _TYPES)
+@pytest.mark.parametrize("pair", ["0 1", "1 0", "-1 1", "1 -1", "3 1", "1 3"])
+def test_orbital_index_out_of_range_is_an_input_error(tmp_path, monkeypatch, ftype, pair):
+    """Index 0 or below must not wrap round to the last orbital, and an
+    index above num_wann is not a dropped orbital."""
+    files = _valid_files()
+    lines = files[ftype].splitlines()
+    lines[4] = f"0 0 0 {pair} 0.5 0"
+    files[ftype] = "\n".join(lines) + "\n"
+    with pytest.raises(ValueError, match=rf"zvo_{ftype}\.dat: orbital index outside 1\.\.num_wann"):
+        _run(tmp_path / "index", monkeypatch, files, _GEOM_ORIGIN.format(n=2))
+
+
+def test_dropped_orbital_index_is_not_an_error(tmp_path, monkeypatch):
+    """Indices in nsite+1..num_wann belong to orbitals the geometry drops."""
+    out = _run(tmp_path / "drop", monkeypatch, _valid_files(),
+               "1 0 0\n0 1 0\n0 0 1\n1\n0 0 0\n")
+    assert "trans.def" in out
