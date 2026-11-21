@@ -7,7 +7,6 @@ CDataFileHead  zvo
 CParaFileHead  zqp
 --------------------
 Nsite          4
-Ncond          0    
 IterationMax   1000
 EPS            8
 Mix            0.5000000000

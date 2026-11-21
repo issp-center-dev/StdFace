@@ -1789,7 +1789,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "--------------------\n");
   fprintf(fp, "Nsite          %d\n", StdI->nsite);
   if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %-5d\n", StdI->Sz2);
-  fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
+  if (StdI->ncond != StdI->NaN_i) fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
   fprintf(fp, "IterationMax   %d\n", StdI->Iteration_max);
   fprintf(fp, "EPS            %d\n", StdI->eps);
   fprintf(fp, "Mix            %.10f\n", StdI->mix);
@@ -1804,7 +1804,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "--------------------\n");
   fprintf(fp, "Nsite          %d\n", StdI->nsite);
   if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %-5d\n", StdI->Sz2);
-  fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
+  if (StdI->ncond != StdI->NaN_i) fprintf(fp, "Ncond          %-5d\n", StdI->ncond);
   fprintf(fp, "IterationMax   %d\n", StdI->Iteration_max);
   fprintf(fp, "EPS            %d\n", StdI->eps);
   fprintf(fp, "Mix            %.10f\n", StdI->mix);
@@ -2277,9 +2277,7 @@ static void CheckModPara(struct StdIntList *StdI)
   }
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("ncond", StdI->ncond);
-#if !defined(_HPhi)
-    /* No conduction electrons. HPhi omits an unset Ncond from modpara.def;
-       the other generators always write it. */
+#if defined(_mVMC)
     StdI->ncond = 0;
 #endif
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
