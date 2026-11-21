@@ -705,6 +705,8 @@ def unsupported_system(model: str, lattice: str) -> None:
     ValueError
         Always raised after logging the error message.
     """
+    # A ModelType formats as "ModelType.SPIN"; the user wrote "spin".
+    model = getattr(model, "value", model)
     msg = (
         f"Unsupported combination in the STANDARD MODE: MODEL = {model}, "
         f"LATTICE = {lattice}. "

@@ -560,6 +560,10 @@ add_test(
   NAME fail_spinless_square
   COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_spinless_square ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
 )
+add_test(
+  NAME fail_square_boost
+  COMMAND ${CMAKE_SOURCE_DIR}/test/hphi/check_fail.sh fail_square_boost ${CMAKE_SOURCE_DIR}/test/hphi ${TEST_MODE}
+)
 # Generator checks: the C binary in base mode, the Python CLI (through the
 # exit-status adapter) in python mode.
 if(TEST_MODE STREQUAL "base")

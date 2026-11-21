@@ -290,6 +290,8 @@ _ladder_boost = ladder_boost
 class LadderPlugin(LatticePlugin):
     """Plugin for the 1D ladder lattice."""
 
+    supports_boost = True
+
     @property
     def name(self) -> str:
         return "ladder"

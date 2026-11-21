@@ -35,9 +35,12 @@ class LatticePlugin(ABC):
         Number of spatial dimensions (1, 2, or 3).
     supports_spinless_fermion : bool
         Whether :meth:`setup` implements the spinless-fermion model.
+    supports_boost : bool
+        Whether :meth:`boost` is implemented (HPhi Boost mode).
     """
 
     supports_spinless_fermion: bool = False
+    supports_boost: bool = False
 
     @property
     @abstractmethod
@@ -101,8 +104,9 @@ class LatticePlugin(ABC):
     def boost(self, StdI: StdIntList) -> None:
         """Build HPhi Boost-mode data for this lattice.
 
-        The default implementation does nothing.  Override in lattices
-        that support Boost (chain, honeycomb, kagome, ladder).
+        Override in lattices that support Boost (chain, honeycomb, kagome,
+        ladder) and set :attr:`supports_boost`.  It is called only for
+        those: the HPhi plugin rejects Boost on any other lattice.
 
         Parameters
         ----------

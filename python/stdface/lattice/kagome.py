@@ -294,6 +294,8 @@ _kagome_boost = kagome_boost
 class KagomePlugin(LatticePlugin):
     """Plugin for the 2D kagome lattice."""
 
+    supports_boost = True
+
     @property
     def name(self) -> str:
         return "kagome"

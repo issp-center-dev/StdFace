@@ -1,0 +1,7 @@
+W = 2
+L = 2
+model = "SpinGCBoost"
+method = "Lanczos"
+lattice = "square"
+J = 1.0
+2S = 1

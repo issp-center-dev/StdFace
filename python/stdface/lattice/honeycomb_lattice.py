@@ -280,6 +280,8 @@ from . import LatticePlugin, register_lattice
 class HoneycombPlugin(LatticePlugin):
     """Plugin for the 2D honeycomb lattice."""
 
+    supports_boost = True
+
     @property
     def name(self) -> str:
         return "honeycomb"

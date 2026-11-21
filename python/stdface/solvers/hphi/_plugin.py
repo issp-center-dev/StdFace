@@ -67,9 +67,10 @@ class HPhiPlugin(ExpertModeSolverPlugin):
             try:
                 lattice_plugin = get_lattice(StdI.lattice)
             except KeyError:
-                unsupported_system(StdI.model, StdI.lattice)
-            else:
-                lattice_plugin.boost(StdI)
+                lattice_plugin = None
+            if not getattr(lattice_plugin, "supports_boost", False):
+                unsupported_system(StdI.model, StdI.lattice)  # raises
+            lattice_plugin.boost(StdI)
 
     def build_solver_files(self, StdI: StdIntList) -> list:
         """Build the HPhi-specific files (excitation / pump / calcmod)."""

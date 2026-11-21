@@ -313,6 +313,7 @@ class ChainPlugin(LatticePlugin):
     """Plugin for the 1D chain lattice."""
 
     supports_spinless_fermion = True
+    supports_boost = True
 
     @property
     def name(self) -> str:
