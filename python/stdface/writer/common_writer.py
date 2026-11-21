@@ -419,7 +419,8 @@ def _write_modpara_uhf_hwave(fp, StdI: StdIntList) -> None:
     fp.write(f"Nsite          {StdI.nsite}\n")
     if StdI.Sz2 != NaN_i:
         fp.write(f"2Sz            {StdI.Sz2:<5d}\n")
-    fp.write(f"Ncond          {StdI.ncond:<5d}\n")
+    if StdI.ncond != NaN_i:
+        fp.write(f"Ncond          {StdI.ncond:<5d}\n")
     fp.write(f"IterationMax   {StdI.Iteration_max}\n")
     fp.write(f"EPS            {StdI.eps}\n")
     fp.write(f"Mix            {StdI.mix:.10f}\n")
