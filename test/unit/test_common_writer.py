@@ -1225,6 +1225,24 @@ class TestCheckConservedQuantities:
         _check_conserved_quantities(StdI)
         assert StdI.ncond == 0
 
+    # -- Spin + UHF / H-wave: ncond set to 0 (modpara.def always has Ncond) --
+
+    @pytest.mark.parametrize("solver", ["UHF", "HWAVE"])
+    @pytest.mark.parametrize("lGC", [0, 1])
+    def test_spin_non_hphi_sets_ncond_zero(self, solver, lGC):
+        StdI = _make_stdi_base(model="spin", solver=solver, lGC=lGC)
+        StdI.ncond = NaN_i
+        StdI.Sz2 = 0 if lGC == 0 else NaN_i
+        _check_conserved_quantities(StdI)
+        assert StdI.ncond == 0
+
+    def test_spin_hphi_keeps_ncond_unset(self):
+        StdI = _make_stdi_base(model="spin", solver="HPhi", lGC=0)
+        StdI.ncond = NaN_i
+        StdI.Sz2 = 0
+        _check_conserved_quantities(StdI)
+        assert StdI.ncond == NaN_i
+
     # -- Spin + HPhi + canonical: 2Sz required --
 
     def test_spin_hphi_canonical_passes_with_sz2(self):

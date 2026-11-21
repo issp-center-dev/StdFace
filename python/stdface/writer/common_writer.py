@@ -1079,8 +1079,8 @@ def _check_conserved_quantities(StdI: StdIntList) -> None:
     - **Hubbard** (HPhi, GC): ``nelec`` and ``2Sz`` unused.
     - **Hubbard** (other solvers): ``ncond`` required; ``2Sz`` defaults to 0
       in canonical, unused in GC.
-    - **Spin**: ``ncond`` unused (set to 0 for mVMC); ``2Sz`` required in
-      canonical, unused in GC.
+    - **Spin**: ``ncond`` unused (set to 0 except for HPhi, which omits an
+      unset ``Ncond``); ``2Sz`` required in canonical, unused in GC.
     - **Kondo** (HPhi, canonical): ``ncond`` required.
     - **Kondo** (HPhi, GC): ``nelec`` and ``2Sz`` unused.
     - **Kondo** (other solvers): ``ncond`` required; ``2Sz`` defaults to 0
@@ -1102,8 +1102,9 @@ def _check_conserved_quantities(StdI: StdIntList) -> None:
     if ncond_action is not None:
         _NCOND_ACTION_DISPATCH[ncond_action](ncond_label, StdI.ncond)
 
-    # Spin + mVMC: set ncond = 0 (after not_used check, matching C order)
-    if StdI.model == ModelType.SPIN and StdI.solver == SolverType.mVMC:
+    # Spin, except HPhi: no conduction electrons (after the not_used check,
+    # matching C order). HPhi omits an unset Ncond; the others always write it.
+    if StdI.model == ModelType.SPIN and not is_hphi:
         StdI.ncond = 0
 
     # Apply Sz2 validation via dispatch
