@@ -208,7 +208,7 @@ def cmake_entries(solver_name):
                 f"add_test(\n"
                 f"  NAME {name}\n"
                 f"  COMMAND ${{CMAKE_SOURCE_DIR}}/test/{solver_name}/check.sh"
-                f" {name} ${{CMAKE_SOURCE_DIR}}/test/{solver_name}\n"
+                f" {name} ${{CMAKE_SOURCE_DIR}}/test/{solver_name} ${{TEST_MODE}}\n"
                 f")"
             )
     return "\n".join(lines) + "\n"

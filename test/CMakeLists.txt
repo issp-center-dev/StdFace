@@ -81,3 +81,31 @@ foreach(mode hphi mvmc uhf hwave)
     endif()
 endforeach()
 endif()
+
+# In python mode, the generator scripts above run against the Python CLI
+# through an exit-status adapter. check_wannier_reader.cmake is left out: the
+# Python reader does not mirror the C reader's full structural validation.
+if(TEST_MODE STREQUAL "python")
+foreach(pair hphi:HPhi mvmc:mVMC uhf:UHF hwave:HWAVE)
+    string(REPLACE ":" ";" pair "${pair}")
+    list(GET pair 0 mode)
+    list(GET pair 1 solver)
+    string(TOUPPER ${mode} option)
+    if(${option})
+        foreach(check Unused3DParameters:unused_3d WannierSpinU:wannier_spin_u
+                WannierInitial:wannier_initial WannierDensity:wannier_density)
+            string(REPLACE ":" ";" check "${check}")
+            list(GET check 0 name)
+            list(GET check 1 script)
+            add_test(NAME ${name}_${mode}
+                COMMAND ${CMAKE_COMMAND} -E env STDFACE_SOLVER=${solver}
+                    ${CMAKE_COMMAND}
+                    -DPROGRAM=${CMAKE_CURRENT_SOURCE_DIR}/common/python_cli.sh
+                    -DMODE=${mode}
+                    -DWORK=${CMAKE_CURRENT_BINARY_DIR}/${script}-${mode}
+                    -P ${CMAKE_CURRENT_SOURCE_DIR}/check_${script}.cmake)
+            set_tests_properties(${name}_${mode} PROPERTIES TIMEOUT 900)
+        endforeach()
+    endif()
+endforeach()
+endif()
