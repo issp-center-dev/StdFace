@@ -419,7 +419,8 @@ def _write_modpara_uhf_hwave(fp, StdI: StdIntList) -> None:
     fp.write(f"Nsite          {StdI.nsite}\n")
     if StdI.Sz2 != NaN_i:
         fp.write(f"2Sz            {StdI.Sz2:<5d}\n")
-    fp.write(f"Ncond          {StdI.ncond:<5d}\n")
+    if StdI.ncond != NaN_i:
+        fp.write(f"Ncond          {StdI.ncond:<5d}\n")
     fp.write(f"IterationMax   {StdI.Iteration_max}\n")
     fp.write(f"EPS            {StdI.eps}\n")
     fp.write(f"Mix            {StdI.mix:.10f}\n")
@@ -1079,8 +1080,8 @@ def _check_conserved_quantities(StdI: StdIntList) -> None:
     - **Hubbard** (HPhi, GC): ``nelec`` and ``2Sz`` unused.
     - **Hubbard** (other solvers): ``ncond`` required; ``2Sz`` defaults to 0
       in canonical, unused in GC.
-    - **Spin**: ``ncond`` unused (set to 0 except for HPhi, which omits an
-      unset ``Ncond``); ``2Sz`` required in canonical, unused in GC.
+    - **Spin**: ``ncond`` unused (set to 0 for mVMC); ``2Sz`` required in
+      canonical, unused in GC.
     - **Kondo** (HPhi, canonical): ``ncond`` required.
     - **Kondo** (HPhi, GC): ``nelec`` and ``2Sz`` unused.
     - **Kondo** (other solvers): ``ncond`` required; ``2Sz`` defaults to 0
@@ -1102,9 +1103,8 @@ def _check_conserved_quantities(StdI: StdIntList) -> None:
     if ncond_action is not None:
         _NCOND_ACTION_DISPATCH[ncond_action](ncond_label, StdI.ncond)
 
-    # Spin, except HPhi: no conduction electrons (after the not_used check,
-    # matching C order). HPhi omits an unset Ncond; the others always write it.
-    if StdI.model == ModelType.SPIN and not is_hphi:
+    # Spin + mVMC: set ncond = 0 (after not_used check, matching C order)
+    if StdI.model == ModelType.SPIN and StdI.solver == SolverType.mVMC:
         StdI.ncond = 0
 
     # Apply Sz2 validation via dispatch

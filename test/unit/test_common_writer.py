@@ -827,6 +827,28 @@ class TestModparaBodyDispatch:
         assert "HWAVE_Cal_Parameters" in content
         assert "UHF_Cal_Parameters" not in content
 
+    @pytest.mark.parametrize("solver", ["UHF", "HWAVE"])
+    @pytest.mark.parametrize("ncond, expected", [(NaN_i, None), (0, "0"), (8, "8")])
+    def test_write_modpara_uhf_hwave_omits_unset_ncond(self, solver, ncond, expected):
+        """An unset Ncond is left out, as the HPhi writer does; a set one is written."""
+        StdI = _make_stdi_base(solver=solver, nsite=4)
+        StdI.CDataFileHead = "zvo"
+        StdI.Iteration_max = 1000
+        StdI.eps = 8
+        StdI.mix = 0.5
+        StdI.RndSeed = 123456789
+        StdI.eps_slater = 6
+        StdI.NMPTrans = 0
+        StdI.ncond = ncond
+
+        import io
+        fp = io.StringIO()
+        _write_modpara_uhf_hwave(fp, StdI)
+        content = fp.getvalue()
+        assert "2147483647" not in content
+        values = [ln.split()[1] for ln in content.splitlines() if ln.startswith("Ncond")]
+        assert values == ([] if expected is None else [expected])
+
     def test_hphi_omits_expand_coef_for_non_te(self):
         """ExpandCoef only written for time-evolution method."""
         StdI = _make_stdi_base(solver="HPhi", nsite=4)
@@ -1225,19 +1247,11 @@ class TestCheckConservedQuantities:
         _check_conserved_quantities(StdI)
         assert StdI.ncond == 0
 
-    # -- Spin + UHF / H-wave: ncond set to 0 (modpara.def always has Ncond) --
+    # -- Spin + other solvers: ncond stays unset (Ncond is then not written) --
 
-    @pytest.mark.parametrize("solver", ["UHF", "HWAVE"])
-    @pytest.mark.parametrize("lGC", [0, 1])
-    def test_spin_non_hphi_sets_ncond_zero(self, solver, lGC):
-        StdI = _make_stdi_base(model="spin", solver=solver, lGC=lGC)
-        StdI.ncond = NaN_i
-        StdI.Sz2 = 0 if lGC == 0 else NaN_i
-        _check_conserved_quantities(StdI)
-        assert StdI.ncond == 0
-
-    def test_spin_hphi_keeps_ncond_unset(self):
-        StdI = _make_stdi_base(model="spin", solver="HPhi", lGC=0)
+    @pytest.mark.parametrize("solver", ["HPhi", "UHF", "HWAVE"])
+    def test_spin_keeps_ncond_unset_except_mvmc(self, solver):
+        StdI = _make_stdi_base(model="spin", solver=solver, lGC=0)
         StdI.ncond = NaN_i
         StdI.Sz2 = 0
         _check_conserved_quantities(StdI)
