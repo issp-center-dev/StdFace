@@ -7,7 +7,7 @@ EPS = 1.0e-8
 
 if len(sys.argv) < 3:
     print("usage: {} file1 file2".format(sys.argv[0]))
-    sys.exit(0)
+    sys.exit(2)
 
 file_a = sys.argv[1]
 file_b = sys.argv[2]
@@ -18,10 +18,14 @@ with open(file_b, "r") as fp:
     lines_b = fp.readlines()
 
 err = 0
+if len(lines_a) != len(lines_b):
+    err += 1
+    print("DIFF: number of lines differ: {} {}".format(len(lines_a), len(lines_b)))
 for idx, (ta, tb) in enumerate(zip(lines_a, lines_b)):
     vas = ta.split()
     vbs = tb.split()
     if len(vas) != len(vbs):
+        err += 1
         print("DIFF: line {}: number of keywords differ: {} {}".format(idx, len(vas), len(vbs)))
         continue
     for va, vb in zip(vas, vbs):
